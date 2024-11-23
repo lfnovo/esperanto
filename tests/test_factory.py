@@ -34,7 +34,7 @@ class TestAIFactory:
         """Test creating LLM with invalid provider raises error."""
         with pytest.raises(ValueError) as exc_info:
             AIFactory.create_llm("invalid_provider", "model")
-        assert "Unsupported LLM provider" in str(exc_info.value)
+        assert "Provider 'invalid_provider' not supported for llm" in str(exc_info.value)
 
     def test_create_llm_case_insensitive(self):
         """Test provider name is case insensitive."""
@@ -49,15 +49,15 @@ class TestAIFactory:
 
     def test_create_stt_requires_model_name(self):
         """Test that STT requires a model name."""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(TypeError) as exc_info:
             AIFactory.create_stt("openai")
-        assert "model_name must be specified" in str(exc_info.value)
+        assert "missing 1 required positional argument: 'model_name'" in str(exc_info.value)
 
     def test_create_stt_with_invalid_provider(self):
         """Test creating STT with invalid provider raises error."""
         with pytest.raises(ValueError) as exc_info:
-            AIFactory.create_stt("invalid_provider")
-        assert "Unsupported speech-to-text provider" in str(exc_info.value)
+            AIFactory.create_stt("invalid_provider", "model")
+        assert "Provider 'invalid_provider' not supported for stt" in str(exc_info.value)
 
     def test_create_tts_with_valid_provider(self):
         """Test creating TTS with valid provider."""
@@ -75,7 +75,7 @@ class TestAIFactory:
         """Test creating TTS with invalid provider raises error."""
         with pytest.raises(ValueError) as exc_info:
             AIFactory.create_tts("invalid_provider")
-        assert "Unsupported text-to-speech provider" in str(exc_info.value)
+        assert "Provider 'invalid_provider' not supported for tts" in str(exc_info.value)
 
     @pytest.mark.parametrize(
         "provider,model_name,model_class",
