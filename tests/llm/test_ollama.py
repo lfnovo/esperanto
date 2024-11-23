@@ -1,6 +1,5 @@
 """Tests for the Ollama language model provider."""
 
-import os
 
 import pytest
 from langchain_ollama.chat_models import ChatOllama

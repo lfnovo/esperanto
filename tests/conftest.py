@@ -10,13 +10,6 @@ from google.cloud.speech_v1.types import RecognizeResponse
 from google.cloud.texttospeech_v1.types import SynthesizeSpeechResponse
 from openai import AsyncOpenAI
 
-from esperanto.base import (
-    AudioSynthesis,
-    AudioTranscription,
-    ChatCompletion,
-    Embedding,
-    Message,
-)
 from esperanto.providers.text_to_speech.gemini import GeminiTextToSpeechModel
 from esperanto.providers.text_to_speech.openai import OpenAITextToSpeechModel
 

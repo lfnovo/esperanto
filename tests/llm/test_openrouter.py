@@ -1,9 +1,9 @@
 """Tests for the OpenRouter language model provider."""
 
-import os
 import pytest
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
+
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 
 

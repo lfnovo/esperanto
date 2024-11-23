@@ -1,6 +1,5 @@
 """Tests for OpenAI language model implementation."""
 
-import os
 import pytest
 from langchain_openai.chat_models import ChatOpenAI
 from pydantic import SecretStr

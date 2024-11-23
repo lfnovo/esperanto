@@ -1,7 +1,6 @@
 """Tests for Anthropic language model implementation."""
 
 import pytest
-from anthropic import AsyncAnthropic
 from langchain_anthropic import ChatAnthropic
 from pydantic import SecretStr
 

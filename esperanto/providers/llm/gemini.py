@@ -1,10 +1,9 @@
 """Gemini language model implementation."""
 
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic import SecretStr
 
 from esperanto.base.types import LanguageModel
 
