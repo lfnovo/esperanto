@@ -11,13 +11,12 @@ from google.cloud.texttospeech_v1.types import SynthesizeSpeechResponse
 from openai import AsyncOpenAI
 
 from esperanto.base import (
-    Message,
+    AudioSynthesis,
+    AudioTranscription,
     ChatCompletion,
     Embedding,
-    AudioTranscription,
-    AudioSynthesis,
+    Message,
 )
-from esperanto.providers.speech_to_text.google import GoogleSpeechToTextModel
 from esperanto.providers.text_to_speech.gemini import GeminiTextToSpeechModel
 from esperanto.providers.text_to_speech.openai import OpenAITextToSpeechModel
 
@@ -99,12 +98,6 @@ def mock_xai_client() -> AsyncMock:
 def mock_litellm_client() -> AsyncMock:
     """Mock LiteLLM client."""
     return AsyncMock()
-
-
-@pytest.fixture
-def model():
-    """Create a model instance for testing."""
-    return GoogleSpeechToTextModel()
 
 
 @pytest.fixture

@@ -35,7 +35,6 @@ from .providers.llm import (
     XAILanguageModel,
 )
 from .providers.speech_to_text import (
-    GoogleSpeechToTextModel,
     GroqSpeechToTextModel,
     OpenAISpeechToTextModel,
 )
@@ -75,7 +74,6 @@ __all__ = [
     "VertexAnthropicLanguageModel",
     "XAILanguageModel",
     # Speech-to-text models
-    "GoogleSpeechToTextModel",
     "OpenAISpeechToTextModel",
     "GroqSpeechToTextModel",
     # Text-to-speech models
