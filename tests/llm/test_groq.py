@@ -16,6 +16,7 @@ def model():
             "max_tokens": 500,
             "streaming": False,
             "top_p": 0.8,
+            "api_key": "test-api-key",  # Mock API key for testing
         }
     )
 

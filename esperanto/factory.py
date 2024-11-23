@@ -1,9 +1,7 @@
 """Factory module for creating AI service instances."""
 
 import importlib
-from typing import Any, Dict, Optional, Type, Union
-
-from loguru import logger
+from typing import Any, Dict, Optional, Type
 
 from esperanto.base.types import LanguageModel, SpeechToTextModel, TextToSpeechModel
 

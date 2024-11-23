@@ -1,13 +1,13 @@
 """Tests for the AI factory module."""
 
+
 import pytest
-from unittest.mock import patch
 
 from esperanto.factory import AIFactory
 from esperanto.providers.llm import (
-    OpenAILanguageModel,
     AnthropicLanguageModel,
     GeminiLanguageModel,
+    OpenAILanguageModel,
 )
 from esperanto.providers.speech_to_text import OpenAISpeechToTextModel
 from esperanto.providers.text_to_speech import ElevenLabsTextToSpeechModel
@@ -87,7 +87,10 @@ class TestAIFactory:
     )
     def test_create_llm_all_providers(self, provider, model_name, model_class):
         """Test creating LLM with different providers."""
-        model = AIFactory.create_llm(provider, model_name)
+        config = {
+            "api_key": "test-api-key",  # Mock API key for testing
+        }
+        model = AIFactory.create_llm(provider, model_name, config)
         assert isinstance(model, model_class)
         assert model.model_name == model_name
 
