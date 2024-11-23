@@ -11,8 +11,6 @@ from esperanto.base.types import LanguageModel
 class GeminiLanguageModel(LanguageModel):
     """Gemini language model implementation."""
 
-    VALID_MODELS = ["gemini-pro"]
-
     def __init__(
         self,
         model_name: str,
@@ -29,9 +27,6 @@ class GeminiLanguageModel(LanguageModel):
         """
         if not model_name or len(model_name.strip()) == 0:
             raise ValueError("model_name must be specified for Gemini language model")
-
-        if model_name not in self.VALID_MODELS:
-            raise ValueError(f"Invalid model_name: {model_name}")
 
         super().__init__(model_name=model_name, config=config or {})
         self.streaming = True  # Only use streaming for consistency

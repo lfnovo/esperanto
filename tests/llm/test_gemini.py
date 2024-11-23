@@ -23,15 +23,6 @@ def test_initialization():
     assert model._api_key.get_secret_value() == "test-key"
 
 
-def test_initialization_invalid_model_name():
-    """Test initialization with invalid model name."""
-    with pytest.raises(ValueError, match="Invalid model_name: invalid-model"):
-        GeminiLanguageModel(
-            model_name="invalid-model",
-            config={"api_key": SecretStr("test-key")},
-        )
-
-
 def test_initialization_empty_model_name():
     """Test initialization with empty model name."""
     with pytest.raises(ValueError, match="model_name must be specified"):
