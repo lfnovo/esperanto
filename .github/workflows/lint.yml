@@ -34,7 +34,7 @@ jobs:
     
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --with dev
+      run: poetry install --no-interaction --with dev --extras "all"
     
     - name: Run ruff
       run: poetry run ruff check .
