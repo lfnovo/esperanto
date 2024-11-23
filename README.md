@@ -15,6 +15,16 @@ A powerful, unified interface for AI services that simplifies working with multi
 - **Async Support**: Built for modern, high-performance applications
 - **Type Safety**: Full type hints and Pydantic models for better development experience
 
+## 📚 Documentation
+
+For detailed documentation on each component, please refer to the following guides:
+
+- [Language Models (LLM)](docs/llm.md): Comprehensive guide to using Language Models
+- [Speech-to-Text (STT)](docs/speech_to_text.md): Guide to Speech-to-Text services
+- [Text-to-Speech (TTS)](docs/text_to_speech.md): Guide to Text-to-Speech services
+- [Embeddings](docs/embeddings.md): Guide to using Embedding Models
+- [LangChain Integration](docs/langchain.md): Guide to using Esperanto with LangChain
+
 ## 🚀 Quick Start
 
 ```bash
@@ -89,6 +99,104 @@ llm = AIFactory.create_llm("anthropic", "claude-3-opus-20240229")
 response = await llm.complete("Explain AI")  # Same code, different provider
 ```
 
+## 🛠️ Installation
+
+Esperanto can be installed using either Poetry (recommended) or pip. The base package is lightweight, including only core dependencies (pydantic and loguru). Additional features and providers can be installed as needed.
+
+### Using Poetry
+
+#### Basic Installation
+```bash
+poetry install
+```
+
+#### Installing LangChain Support
+If you want to use LangChain features:
+```bash
+poetry install --with langchain
+```
+
+#### Installing Provider Dependencies
+Install only the providers you need (each provider automatically includes LangChain):
+
+```bash
+# OpenAI (GPT models, Whisper, TTS)
+poetry install --with openai
+
+# Anthropic (Claude models)
+poetry install --with anthropic
+
+# Google (Gemini, Vertex AI, Speech)
+poetry install --with google
+
+# Groq
+poetry install --with groq
+
+# LiteLLM
+poetry install --with litellm
+
+# Ollama
+poetry install --with ollama
+
+# ElevenLabs (TTS)
+poetry install --with elevenlabs
+```
+
+You can install multiple providers at once:
+```bash
+poetry install --with openai,anthropic,google
+```
+
+### Using pip
+
+#### Basic Installation
+```bash
+pip install esperanto
+```
+
+#### Installing LangChain Support
+```bash
+pip install "esperanto[langchain]"
+```
+
+#### Installing Provider Dependencies
+Install providers using pip's "extras" syntax (each provider automatically includes LangChain):
+
+```bash
+# OpenAI (GPT models, Whisper, TTS)
+pip install "esperanto[openai]"
+
+# Anthropic (Claude models)
+pip install "esperanto[anthropic]"
+
+# Google (Gemini, Vertex AI, Speech)
+pip install "esperanto[google]"
+
+# Groq
+pip install "esperanto[groq]"
+
+# LiteLLM
+pip install "esperanto[litellm]"
+
+# Ollama
+pip install "esperanto[ollama]"
+
+# ElevenLabs (TTS)
+pip install "esperanto[elevenlabs]"
+```
+
+You can install multiple providers at once:
+```bash
+pip install "esperanto[openai,anthropic,google]"
+```
+
+To install all providers:
+```bash
+pip install "esperanto[all]"
+```
+
+If you try to use a provider without installing its dependencies, Esperanto will raise a helpful error message indicating which dependencies need to be installed.
+
 ## 🛠️ Configuration
 
 Esperanto supports configuration through environment variables or direct configuration in code:
@@ -124,10 +232,6 @@ poetry install
 # Run tests
 poetry run pytest
 ```
-
-## 📚 Documentation
-
-For detailed documentation, examples, and API reference, visit our [documentation](link-to-docs).
 
 ## 🤝 Contributing
 

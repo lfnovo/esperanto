@@ -9,25 +9,69 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-pydantic = "<2.10"
 python = "^3.11"
+pydantic = "<2.10"
 loguru = "^0.7.2"
-langchain = "^0.3.3"
-openai = "^1.52.0"
-litellm = "^1.50.1"
-langchain-openai = "^0.2.3"
-langchain-anthropic = "^0.2.3"
-langchain-ollama = "^0.2.0"
-langchain-google-vertexai = "^2.0.5"
-langchain-google-genai = "^2.0.1"
-langchain-groq = "^0.2.1"
-groq = "^0.12.0"
-ollama = "^0.4.0"
-anthropic = "^0.39.0"
-google-cloud-speech = "^2.28.1"
-google-cloud-texttospeech = "^2.21.1"
-langchain-community = "^0.3.7"
-elevenlabs = "^1.13.0"
+
+# Core optional dependencies
+langchain = { version = "^0.3.3", optional = true }
+langchain-community = { version = "^0.3.7", optional = true }
+
+# Provider optional dependencies
+openai = { version = "^1.52.0", optional = true }
+langchain-openai = { version = "^0.2.3", optional = true }
+anthropic = { version = "^0.39.0", optional = true }
+langchain-anthropic = { version = "^0.2.3", optional = true }
+ollama = { version = "^0.4.0", optional = true }
+langchain-ollama = { version = "^0.2.0", optional = true }
+langchain-google-vertexai = { version = "^2.0.5", optional = true }
+langchain-google-genai = { version = "^2.0.1", optional = true }
+google-cloud-speech = { version = "^2.28.1", optional = true }
+google-cloud-texttospeech = { version = "^2.21.1", optional = true }
+langchain-groq = { version = "^0.2.1", optional = true }
+groq = { version = "^0.12.0", optional = true }
+litellm = { version = "^1.50.1", optional = true }
+elevenlabs = { version = "^1.13.0", optional = true }
+
+[tool.poetry.extras]
+# Core functionality
+langchain = ["langchain", "langchain-community"]
+
+# Providers
+openai = ["openai", "langchain-openai", "langchain", "langchain-community"]
+anthropic = ["anthropic", "langchain-anthropic", "langchain", "langchain-community"]
+ollama = ["ollama", "langchain-ollama", "langchain", "langchain-community"]
+google = [
+    "langchain-google-vertexai",
+    "langchain-google-genai",
+    "google-cloud-speech",
+    "google-cloud-texttospeech",
+    "langchain",
+    "langchain-community"
+]
+groq = ["langchain-groq", "groq", "langchain", "langchain-community"]
+litellm = ["litellm", "langchain", "langchain-community"]
+elevenlabs = ["elevenlabs"]
+
+# All providers
+all = [
+    "langchain",
+    "langchain-community",
+    "openai",
+    "langchain-openai",
+    "anthropic",
+    "langchain-anthropic",
+    "ollama",
+    "langchain-ollama",
+    "langchain-google-vertexai",
+    "langchain-google-genai",
+    "google-cloud-speech",
+    "google-cloud-texttospeech",
+    "langchain-groq",
+    "groq",
+    "litellm",
+    "elevenlabs"
+]
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
