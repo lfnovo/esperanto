@@ -1,51 +1,142 @@
-# Esperanto
+# Esperanto 🌍
 
-A unified interface for various AI model providers, making it easy to work with different LLMs, Speech-to-Text, Text-to-Speech, and Embedding services.
+A powerful, unified interface for AI services that simplifies working with multiple providers. Esperanto provides a consistent API for Language Models (LLMs), Speech-to-Text, Text-to-Speech, and Embedding services, making it easy to switch between providers or use them in combination.
 
-## Features
+## 🌟 Key Features
 
-- LLM support for OpenAI, Anthropic, Google Vertex AI, Gemini, Groq, and more
-- Speech-to-Text services from Google Cloud and OpenAI
-- Text-to-Speech capabilities
-- Embedding generation from various providers
-- Unified interface for all providers
+- **Unified Interface**: Write once, use anywhere - switch providers without changing your code
+- **Extensive Provider Support**:
+  - **LLMs**: OpenAI, Anthropic, Google (Vertex AI & Gemini), Groq, Ollama, and more
+  - **Speech-to-Text**: OpenAI Whisper, Google Cloud Speech
+  - **Text-to-Speech**: ElevenLabs, OpenAI TTS, Google Cloud TTS
+  - **Embeddings**: Various providers through a consistent interface
+- **Provider-Specific Features**: Access unique capabilities of each provider while maintaining a consistent API
+- **LangChain Integration**: Seamlessly convert models to LangChain format for advanced workflows
+- **Async Support**: Built for modern, high-performance applications
+- **Type Safety**: Full type hints and Pydantic models for better development experience
 
-## Installation
+## 🚀 Quick Start
 
 ```bash
+# Install using poetry
 poetry add esperanto
+
+# Or using pip
+pip install esperanto
 ```
 
-## Usage
+## 💡 Usage Examples
+
+### Language Models (LLMs)
 
 ```python
-from esperanto.providers.llm import openai, anthropic, gemini
-from esperanto.providers.speech_to_text import google as stt
-from esperanto.providers.embedding import vertex
+from esperanto.factory import AIFactory
 
-# Using LLM
-response = await openai.complete("Tell me a joke")
+# OpenAI
+llm = AIFactory.create_llm(
+    provider="openai",
+    model_name="gpt-4",
+    config={"temperature": 0.7}
+)
+response = await llm.complete("What's the weather like?")
 
+# Anthropic
+llm = AIFactory.create_llm(
+    provider="anthropic",
+    model_name="claude-3-opus-20240229",
+    config={"max_tokens": 1000}
+)
+response = await llm.complete("Explain quantum computing")
+
+# Google Gemini
+llm = AIFactory.create_llm(
+    provider="gemini",
+    model_name="gemini-pro",
+    config={"temperature": 0.9}
+)
+response = await llm.complete("Translate to French")
+```
+
+### Speech Services
+
+```python
 # Speech to Text
+stt = AIFactory.create_stt(
+    provider="openai",
+    model_name="whisper-1"
+)
 text = await stt.transcribe("audio.mp3")
 
-# Generate embeddings
-embedding = await vertex.embed("Some text to embed")
+# Text to Speech
+tts = AIFactory.create_tts(
+    provider="elevenlabs",
+    config={"voice": "Adam"}
+)
+audio = await tts.synthesize("Hello, world!")
 ```
 
-## Development
+### Easy Provider Switching
 
-1. Clone the repository
-2. Install dependencies:
+One of the key benefits of using the factory is how easy it is to switch between providers:
+
+```python
+# Using OpenAI
+llm = AIFactory.create_llm("openai", "gpt-4")
+response = await llm.complete("Explain AI")
+
+# Switch to Anthropic by just changing the provider
+llm = AIFactory.create_llm("anthropic", "claude-3-opus-20240229")
+response = await llm.complete("Explain AI")  # Same code, different provider
+```
+
+## 🛠️ Configuration
+
+Esperanto supports configuration through environment variables or direct configuration in code:
+
+```python
+# Environment variables
+export OPENAI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
+export ELEVENLABS_API_KEY="your-key"
+
+# Or in code
+model = AIFactory.create_llm(
+    provider="openai",
+    model_name="gpt-4",
+    config={
+        "api_key": "your-key",
+        "temperature": 0.7,
+        "max_tokens": 500
+    }
+)
+```
+
+## 🧪 Development
+
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/esperanto.git
+cd esperanto
+
+# Install dependencies
 poetry install
-```
 
-3. Run tests:
-```bash
+# Run tests
 poetry run pytest
 ```
 
-## License
+## 📚 Documentation
 
-MIT License
+For detailed documentation, examples, and API reference, visit our [documentation](link-to-docs).
+
+## 🤝 Contributing
+
+We welcome contributions! Please check our [Contributing Guidelines](link-to-contributing) for details on how to get started.
+
+## 📄 License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+Special thanks to all the AI providers and the open-source community that make this project possible.
