@@ -28,11 +28,17 @@ For detailed documentation on each component, please refer to the following guid
 ## 🚀 Quick Start
 
 ```bash
-# Install using poetry
+# Install using poetry (minimal installation)
 poetry add esperanto
 
-# Or using pip
+# Install all providers using poetry
+poetry add "esperanto[all]"
+
+# Or using pip (minimal installation)
 pip install esperanto
+
+# Install all providers using pip
+pip install "esperanto[all]"
 ```
 
 ## 💡 Usage Examples
@@ -223,7 +229,7 @@ model = AIFactory.create_llm(
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/esperanto.git
+git clone https://github.com/lfnovo/esperanto.git
 cd esperanto
 
 # Install dependencies
