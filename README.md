@@ -235,7 +235,7 @@ poetry run pytest
 
 ## 🤝 Contributing
 
-We welcome contributions! Please check our [Contributing Guidelines](link-to-contributing) for details on how to get started.
+We welcome contributions! Please check our [Contributing Guidelines](CONTRIBUTING.md) for details on how to get started.
 
 ## 📄 License
 
