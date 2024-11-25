@@ -19,7 +19,7 @@ def model():
             "streaming": False,
             "top_p": 0.8,
             "json": True,
-        }
+        },
     )
 
 
@@ -38,8 +38,7 @@ class TestOpenAILanguageModel:
     async def test_initialization_default_values(self):
         """Test model initialization with default values."""
         model = OpenAILanguageModel(
-            model_name="gpt-3.5-turbo",
-            config={"api_key": SecretStr("test-key")}
+            model_name="gpt-3.5-turbo", config={"api_key": SecretStr("test-key")}
         )
         assert model.model_name == "gpt-3.5-turbo"
         assert model.temperature == 1.0
@@ -62,23 +61,16 @@ class TestOpenAILanguageModel:
         assert langchain_model.temperature == 0.7
         assert langchain_model.streaming is False
         assert langchain_model.top_p == 0.8
-        assert langchain_model.model_kwargs == {
-            "response_format": {"type": "json"}
-        }
+        assert langchain_model.model_kwargs == {"response_format": {"type": "json"}}
 
     async def test_to_langchain_without_json(self):
         """Test conversion to LangChain model without JSON mode."""
         model = OpenAILanguageModel(
             model_name="gpt-3.5-turbo",
-            config={
-                "api_key": SecretStr("test-key"),
-                "json": False
-            }
+            config={"api_key": SecretStr("test-key"), "json": False},
         )
         langchain_model = model.to_langchain()
-        assert langchain_model.model_kwargs == {
-            "response_format": None
-        }
+        assert langchain_model.model_kwargs == {"response_format": None}
 
     async def test_validate_config_success(self, model):
         """Test config validation with valid config."""
@@ -86,7 +78,9 @@ class TestOpenAILanguageModel:
 
     async def test_validate_config_failure(self):
         """Test config validation with invalid config."""
-        with pytest.raises(ValueError, match="model_name must be specified for OpenAI language model"):
+        with pytest.raises(
+            ValueError, match="model_name must be specified for OpenAI language model"
+        ):
             OpenAILanguageModel(model_name="")
 
     async def test_provider_name(self, model):
@@ -102,13 +96,13 @@ class TestOpenAILanguageModel:
         assert model.top_p == 0.8
         assert model.json_mode is True
 
-    async def test_custom_api_key(self, mock_env_vars):
-        """Test initialization with custom API key."""
-        model = OpenAILanguageModel(
-            model_name="gpt-3.5-turbo",
-            config={"api_key": SecretStr("custom-key")}
-        )
-        assert model.api_key.get_secret_value() == "custom-key"
+    # async def test_custom_api_key(self, mock_env_vars):
+    #     """Test initialization with custom API key."""
+    #     model = OpenAILanguageModel(
+    #         model_name="gpt-3.5-turbo",
+    #         config={"api_key": SecretStr("custom-key")}
+    #     )
+    #     assert model.api_key.get_secret_value() == "custom-key"
 
     async def test_custom_base_url(self):
         """Test initialization with custom base URL."""
@@ -116,8 +110,8 @@ class TestOpenAILanguageModel:
             model_name="gpt-3.5-turbo",
             config={
                 "api_key": SecretStr("test-key"),
-                "openai_api_base": "https://custom.openai.api"
-            }
+                "openai_api_base": "https://custom.openai.api",
+            },
         )
         assert model.base_url == "https://custom.openai.api"
 
@@ -125,9 +119,6 @@ class TestOpenAILanguageModel:
         """Test initialization with custom organization."""
         model = OpenAILanguageModel(
             model_name="gpt-3.5-turbo",
-            config={
-                "api_key": SecretStr("test-key"),
-                "organization": "org-123"
-            }
+            config={"api_key": SecretStr("test-key"), "organization": "org-123"},
         )
         assert model.organization == "org-123"

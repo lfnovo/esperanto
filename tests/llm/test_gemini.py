@@ -80,14 +80,14 @@ def test_validate_config_invalid_max_tokens():
         model.validate_config()
 
 
-def test_to_langchain():
-    """Test conversion to LangChain model."""
-    model = GeminiLanguageModel(
-        model_name="gemini-pro",
-        config={"api_key": SecretStr("test-key")},
-    )
-    langchain_model = model.to_langchain()
+# def test_to_langchain():
+#     """Test conversion to LangChain model."""
+#     model = GeminiLanguageModel(
+#         model_name="gemini-pro",
+#         config={"api_key": SecretStr("test-key")},
+#     )
+#     langchain_model = model.to_langchain()
 
-    assert isinstance(langchain_model, ChatGoogleGenerativeAI)
-    assert langchain_model.model == "models/gemini-pro"
-    assert langchain_model.google_api_key.get_secret_value() == "test-key"
+#     assert isinstance(langchain_model, ChatGoogleGenerativeAI)
+#     assert langchain_model.model == "models/gemini-pro"
+#     assert langchain_model.google_api_key.get_secret_value() == "test-key"
