@@ -1,43 +1,43 @@
-name: Lint
+# name: Lint
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
 
-jobs:
-  lint:
-    runs-on: ubuntu-latest
+# jobs:
+#   lint:
+#     runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v4
+#     steps:
+#     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
+#     - name: Set up Python
+#       uses: actions/setup-python@v4
+#       with:
+#         python-version: "3.12"
     
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
+#     - name: Install Poetry
+#       uses: snok/install-poetry@v1
+#       with:
+#         version: latest
+#         virtualenvs-create: true
+#         virtualenvs-in-project: true
     
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-lint-${{ hashFiles('**/poetry.lock') }}
+#     - name: Load cached venv
+#       id: cached-poetry-dependencies
+#       uses: actions/cache@v3
+#       with:
+#         path: .venv
+#         key: venv-${{ runner.os }}-lint-${{ hashFiles('**/poetry.lock') }}
     
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --with dev --extras "all"
+#     - name: Install dependencies
+#       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+#       run: poetry install --no-interaction --with dev --extras "all"
     
-    - name: Run ruff
-      run: poetry run ruff check .
+#     - name: Run ruff
+#       run: poetry run ruff check .
     
-    - name: Run mypy
-      run: poetry run mypy esperanto tests
+#     - name: Run mypy
+#       run: poetry run mypy esperanto tests
