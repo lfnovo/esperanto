@@ -36,9 +36,9 @@ class OpenRouterLanguageModel(LanguageModel):
     def to_langchain(self) -> BaseChatModel:
         """Convert to a LangChain chat model."""
         return ChatOpenAI(
-            model_name=self.model_name,
+            model=self.model_name,
             temperature=self.temperature,
-            openai_api_base=os.environ.get(
+            base_url=os.environ.get(
                 "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
             ),
             max_tokens=self.max_tokens,

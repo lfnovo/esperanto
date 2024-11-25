@@ -19,21 +19,21 @@ class OpenAILanguageModel(LanguageModel):
         if not model_name:
             raise ValueError("model_name must be specified for OpenAI language model")
         super().__init__(model_name, config)
-        self.max_tokens = self.config.get("max_tokens", 850)
-        self.temperature = self.config.get("temperature", 1.0)
-        self.streaming = self.config.get("streaming", True)
-        self.top_p = self.config.get("top_p", 0.9)
-        self.json_mode = self.config.get("json", False)
+        self.max_tokens: int = self.config.get("max_tokens", 850)
+        self.temperature: float = self.config.get("temperature", 1.0)
+        self.streaming: bool = self.config.get("streaming", True)
+        self.top_p: float = self.config.get("top_p", 0.9)
+        self.json_mode: bool = self.config.get("json", False)
 
         # Handle API configuration
         api_key = self.config.get("api_key") or os.environ.get(
             "OPENAI_API_KEY", ""
         )
-        self.api_key = api_key if isinstance(api_key, SecretStr) else SecretStr(api_key)
-        self.base_url = self.config.get("openai_api_base") or os.environ.get(
+        self.api_key: SecretStr = SecretStr(str(api_key)) if api_key else SecretStr("")
+        self.base_url: str | None = self.config.get("openai_api_base") or os.environ.get(
             "OPENAI_API_BASE", None
         )
-        self.organization = self.config.get("organization") or os.environ.get(
+        self.organization: str | None = self.config.get("organization") or os.environ.get(
             "OPENAI_ORGANIZATION", None
         )
 
@@ -52,24 +52,18 @@ class OpenAILanguageModel(LanguageModel):
 
     def to_langchain(self) -> BaseChatModel:
         """Convert to a LangChain chat model."""
-        if self.json_mode:
-            model_kwargs = {"response_format": {"type": "json"}}
-        else:
-            model_kwargs = {"response_format": None}
-
-        kwargs = {
-            "model_name": self.model_name,
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "streaming": self.streaming,
-            "top_p": self.top_p,
-            "openai_api_key": self.api_key.get_secret_value(),
-            "model_kwargs": model_kwargs,
+        model_kwargs: Dict[str, Any] = {
+            "response_format": {"type": "json"} if self.json_mode else None
         }
 
-        if self.base_url:
-            kwargs["base_url"] = self.base_url
-        if self.organization:
-            kwargs["organization"] = self.organization
-
-        return ChatOpenAI(**kwargs)
+        return ChatOpenAI(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            streaming=self.streaming,
+            top_p=self.top_p,
+            api_key=self.api_key,
+            base_url=self.base_url,
+            organization=self.organization,
+            model_kwargs=model_kwargs,
+        )

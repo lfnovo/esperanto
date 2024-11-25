@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import SecretStr
 
 from esperanto.base.types import LanguageModel
 
@@ -75,11 +76,10 @@ class GeminiLanguageModel(LanguageModel):
 
         model = ChatGoogleGenerativeAI(
             model=f"models/{self.model_name}",
-            api_key=self._api_key,
+            api_key=SecretStr(self._api_key),
             temperature=self.temperature,
             top_p=self.top_p,
             max_tokens=self.max_tokens,
-            streaming=self.streaming,
         )
 
         return model

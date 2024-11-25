@@ -127,19 +127,16 @@ class AnthropicLanguageModel(LanguageModel):
             ValueError: If configuration is invalid.
         """
         try:
-            kwargs = {
-                "model": self.model_name,
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "anthropic_api_key": self.api_key.get_secret_value(),
-                "streaming": self.streaming,
-            }
-
-            if self.base_url:
-                kwargs["base_url"] = self.base_url
-
-            return ChatAnthropic(**kwargs)
+            return ChatAnthropic(
+                model=self.model_name,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                timeout=None,
+                max_retries=2,
+                anthropic_api_key=self.api_key,
+                streaming=self.streaming,
+                top_p=self.top_p,
+            )
 
         except Exception as e:
             raise ValueError(f"Failed to create LangChain model: {str(e)}") from e

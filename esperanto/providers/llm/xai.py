@@ -34,9 +34,9 @@ class XAILanguageModel(LanguageModel):
     def to_langchain(self) -> BaseChatModel:
         """Convert to a LangChain chat model."""
         return ChatOpenAI(
-            model_name=self.model_name,
+            model=self.model_name,
             temperature=self.temperature,
-            openai_api_base=os.environ.get("XAI_BASE_URL", "https://api.x.ai/v1"),
+            base_url=os.environ.get("XAI_BASE_URL", "https://api.x.ai/v1"),
             max_tokens=self.max_tokens,
             streaming=self.streaming,
             api_key=SecretStr(os.environ.get("XAI_API_KEY", "xai")),
