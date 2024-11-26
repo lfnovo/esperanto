@@ -3,7 +3,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from loguru import logger
+from esperanto.utils.logging import logger
 
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 

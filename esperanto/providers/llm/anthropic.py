@@ -7,7 +7,7 @@ from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 from anthropic import Anthropic, AsyncAnthropic
 from anthropic.types import Message as AnthropicMessage
 from langchain_anthropic import ChatAnthropic
-from loguru import logger
+from esperanto.utils.logging import logger
 
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.types import (

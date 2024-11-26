@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 from langchain_openai import ChatOpenAI
-from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
 from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.utils.logging import logger
 
 
 @dataclass
