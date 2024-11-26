@@ -1,71 +1,89 @@
 # LLM Providers
 
-Esperanto supports various Large Language Model (LLM) providers, offering a unified interface while maintaining provider-specific optimizations.
+Esperanto supports various Large Language Model (LLM) providers through a unified interface.
 
 ## Supported Providers
 
-### OpenAI
-- Models: GPT-4, GPT-3.5
-- Features: 
-  - Streaming responses
-  - JSON structured output
-  - Custom API endpoints
-  - Organization-specific API support
+- OpenAI (GPT-4, GPT-3.5)
+- Anthropic (Claude 3 family)
+- OpenRouter (Multiple models)
+- xAI (Grok)
+- Google (Gemini)
+- Vertex AI (Google Cloud)
+- Ollama (Local deployment)
 
-### Anthropic
-- Models: Claude 3 family
-- Features:
-  - Streaming responses
-  - High-quality reasoning and analysis
+## Supported Platforms
 
-### OpenRouter
-- Access to multiple models from different providers
-- Unified billing and API access
-- Features:
-  - JSON structured output (model-dependent)
-  - Streaming responses
-
-### xAI
-- Models: Grok
-- Features:
-  - Real-time knowledge integration
-  - Streaming responses
-
-### Ollama
-- Local model deployment and inference
-- Support for various open-source models
-- Features:
-  - No API key required
-  - Custom model configuration
-  - Low latency for local deployments
+- Langchain
+- Llamaindex *(coming soon)*
 
 ## Usage Examples
 
-### Basic Usage
+### Using AI Factory
+
 ```python
-from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.factory import AIFactory
 
-model = OpenAILanguageModel(
-    api_key="your-api-key",
-    model_name="gpt-4"
-)
+# Create an LLM instance
+model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
 
-response = model.chat_complete([
-    {"role": "user", "content": "Hello!"}
-])
-```
+# Synchronous usage
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What's the capital of France?"},
+]
+response = model.chat_complete(messages)
 
-### Streaming Example
-```python
-model = OpenAILanguageModel(api_key="your-api-key", streaming=True)
+# Asynchronous usage
+async def get_response():
+    response = await model.achat_complete(messages)
+    print(response.choices[0].message.content)
 
+# Streaming usage
+model = AIFactory.create_llm("openai", "gpt-3.5-turbo", streaming=True)
 for chunk in model.chat_complete(messages):
+    print(chunk.choices[0].delta.content, end="", flush=True)
+
+# Async streaming
+async for chunk in model.achat_complete(messages):
     print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
-## Provider-Specific Configuration
+### Structured Output (JSON)
 
-Each provider may have specific configuration options. Here are some examples:
+```python
+model = AIFactory.create_llm("openai", "gpt-3.5-turbo", structured="json")
+
+messages = [
+    {"role": "user", "content": "List three European capitals"}
+]
+
+response = model.chat_complete(messages)
+# Response will be in JSON format
+```
+
+### LangChain Integration
+
+```python
+from esperanto.factory import AIFactory
+from langchain.chains import ConversationChain
+from langchain.prompts import PromptTemplate
+
+# Create LLM and convert to LangChain
+model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
+langchain_model = model.to_langchain()
+
+# Use with LangChain chains
+chain = ConversationChain(llm=langchain_model)
+response = chain.invoke("What's the capital of Paris?")
+
+# Use with custom prompts
+prompt = PromptTemplate.from_template("Tell me a {adjective} story about {subject}")
+formatted_prompt = prompt.format(adjective="funny", subject="a talking cat")
+response = langchain_model.invoke(formatted_prompt)
+```
+
+### Using Provider-Specific Classes
 
 ### OpenAI
 ```python

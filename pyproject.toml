@@ -11,7 +11,7 @@ keywords = ["ai", "llm", "text-to-speech", "speech-to-text", "openai", "anthropi
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.11,<3.14"
 loguru = "^0.7.2"
 
 # Optional dependencies
@@ -41,6 +41,7 @@ ipywidgets = "^8.1.5"
 pytest = "^8.3.3"
 pytest-mock = "^3.12.0"
 pytest-asyncio = "^0.23.5"
+pytest-cov = "^6.0.0"
 
 [build-system]
 requires = ["poetry-core"]

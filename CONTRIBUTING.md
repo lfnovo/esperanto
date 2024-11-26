@@ -53,6 +53,25 @@ If you have a suggestion for a new feature or enhancement, first check the issue
 3. Install dependencies: `poetry install`
 4. Run tests: `poetry run pytest`
 
+## Code Style and Linting
+
+We use `ruff` for code linting and formatting. Before submitting a PR, make sure to:
+
+1. Run the linter to check for issues:
+```bash
+poetry run ruff check .
+```
+
+2. Fix auto-fixable issues:
+```bash
+poetry run ruff check . --fix
+```
+
+The project's ruff configuration is in `pyproject.toml` and enforces:
+- Line length of 88 characters
+- Standard Python style rules (E, F)
+- Import sorting (I)
+
 ## Testing
 
 * Write tests for any new features

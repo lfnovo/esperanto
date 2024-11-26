@@ -1,39 +1,33 @@
 # Embedding Providers
 
-Esperanto supports multiple embedding providers for converting text into vector representations, useful for semantic search, text similarity, and other NLP tasks.
+Esperanto supports multiple embedding providers for converting text into vector representations.
 
 ## Supported Providers
 
-### OpenAI
-- Models: text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002
-- Features:
-  - High-quality embeddings
-  - Efficient dimensionality
-  - Batch processing support
-
-### Google Vertex AI (Gemini)
-- Models: textembedding-gecko
-- Features:
-  - Enterprise-grade embeddings
-  - Scalable API
-  - Regional availability options
-
-### Google Gemini
-- Direct access to Gemini embedding models
-- Features:
-  - Fast inference
-  - Competitive performance
-  - Simple API
-
-### Ollama
-- Local embedding model deployment
-- Support for various open-source models
-- Features:
-  - No API key required
-  - Custom model configuration
-  - Low latency for local deployments
+- OpenAI (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
+- Google Vertex AI (textembedding-gecko)
+- Google Gemini
+- Ollama (Local deployment)
 
 ## Usage Examples
+
+### Using AI Factory
+
+```python
+from esperanto.factory import AIFactory
+
+# Create an embedding instance
+model = AIFactory.create_embedding("openai", "text-embedding-3-small")
+
+# Synchronous usage
+texts = ["Hello, world!", "Another text"]
+embeddings = model.embed(texts)
+
+# Asynchronous usage
+async def get_embeddings():
+    texts = ["Hello, world!", "Another text"]
+    embeddings = await model.aembed(texts)
+```
 
 ### Basic Usage
 ```python
@@ -56,7 +50,7 @@ embeddings = model.embed_many(["Hello, world!", "How are you?"])
 from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
 
 model = OllamaEmbeddingModel(
-    model_name="llama2",  # or any other supported model
+    model_name="mxbai-embed-large",  # or any other supported model
     base_url="http://localhost:11434"  # default Ollama server
 )
 
@@ -82,7 +76,7 @@ Each provider may have specific configuration options. Here are some examples:
 ### OpenAI
 ```python
 model = OpenAIEmbeddingModel(
-    api_key="your-api-key",
+    api_key="your-api-key", # or use ENV
     model_name="text-embedding-3-small",
     organization=None  # Optional, for org-specific API
 )
@@ -93,6 +87,6 @@ model = OpenAIEmbeddingModel(
 from esperanto.providers.embedding.gemini import GeminiEmbeddingModel
 
 model = GeminiEmbeddingModel(
-    api_key="your-api-key"
+    api_key="your-api-key" # or use ENV
 )
 ```
