@@ -12,7 +12,6 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
-loguru = "^0.7.2"
 
 # Optional dependencies
 langchain = { version = "^0.3.8", optional = true }
@@ -28,7 +27,7 @@ ollama = { version =  "^0.4.1", optional = true }
 [tool.poetry.extras]
 openai = ["openai", "langchain-openai", "langchain"]
 anthropic = ["anthropic", "langchain-anthropic"]
-google = ["google-generativeai"]
+gemini = ["google-generativeai"]
 vertex = ["vertexai"]
 ollama = ["langchain", "langchain-ollama", "ollama"]
 all = [

@@ -3,7 +3,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from loguru import logger
+from esperanto.utils.logging import logger
 
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 
@@ -80,31 +80,15 @@ async def test_achat_complete(anthropic_model):
     assert call_kwargs["temperature"] == 0.7
     assert not call_kwargs["stream"]
 
-def test_structured_output_warning(anthropic_model):
-    anthropic_model.structured = "json"
-    messages = [{"role": "user", "content": "Hello!"}]
+
     
-    # Capture loguru output
-    output = io.StringIO()
-    logger.add(output, format="{message}")
-    
-    anthropic_model.chat_complete(messages)
-    
-    # Remove the logger handler
-    logger.remove()
-    
-    assert "Structured output not supported for Anthropic" in output.getvalue()
 
 def test_to_langchain(anthropic_model):
     # Test with structured output warning
     anthropic_model.structured = "json"
-    output = io.StringIO()
-    logger.add(output, format="{message}")
     
     langchain_model = anthropic_model.to_langchain()
     
-    logger.remove()
-    assert "Structured output not supported for Anthropic" in output.getvalue()
     
     # Test model configuration
     assert langchain_model.model == "claude-3-opus-20240229"

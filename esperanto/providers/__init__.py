@@ -1,34 +1,9 @@
 """
 Providers package for Esperanto.
-This module exports all available language model providers.
+This module exports base model classes.
 """
 
-from esperanto.providers.embedding import (
-    EmbeddingModel,
-    GeminiEmbeddingModel,
-    OllamaEmbeddingModel,
-    OpenAIEmbeddingModel,
-    VertexEmbeddingModel,
-)
-from esperanto.providers.llm import (
-    AnthropicLanguageModel,
-    LanguageModel,
-    OllamaLanguageModel,
-    OpenAILanguageModel,
-    OpenRouterLanguageModel,
-    XAILanguageModel,
-)
+from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.llm.base import LanguageModel
 
-__all__ = [
-    "OpenAILanguageModel",
-    "AnthropicLanguageModel", 
-    "OpenRouterLanguageModel",
-    "XAILanguageModel",
-    "LanguageModel",
-    "GeminiEmbeddingModel",
-    "OllamaEmbeddingModel",
-    "VertexEmbeddingModel",
-    "EmbeddingModel",
-    "OpenAIEmbeddingModel",
-    "OllamaLanguageModel"
-]
+__all__ = ["LanguageModel", "EmbeddingModel"]

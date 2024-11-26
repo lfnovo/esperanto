@@ -48,9 +48,9 @@ poetry add esperanto[openai]
 poetry add esperanto[anthropic]
 # or pip install esperanto[anthropic]
 
-# Google support
-poetry add esperanto[google]
-# or pip install esperanto[google]
+# Gemini support
+poetry add esperanto[gemini]
+# or pip install esperanto[gemini]
 
 # Vertex AI support
 poetry add esperanto[vertex]
@@ -61,8 +61,8 @@ poetry add esperanto[ollama]
 # or pip install esperanto[ollama]
 
 # Install multiple providers
-poetry add "esperanto[openai,anthropic,google]"
-# or pip install "esperanto[openai,anthropic,google]"
+poetry add "esperanto[openai,anthropic,gemini]"
+# or pip install "esperanto[openai,anthropic,gemini]"
 
 # Install all providers
 poetry add "esperanto[all]"
@@ -75,7 +75,7 @@ poetry add "esperanto[all]"
 |-----------|-------------|------------------|
 | OpenAI    | ✅          | ✅               |
 | Anthropic | ✅          | ❌               |
-| Google    | ✅          | ✅               |
+| Gemini    | ✅          | ✅               |
 | Vertex AI | ✅          | ✅               |
 | Ollama    | ✅          | ✅               |
 
