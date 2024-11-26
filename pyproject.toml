@@ -11,7 +11,7 @@ keywords = ["ai", "llm", "text-to-speech", "speech-to-text", "openai", "anthropi
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.14"
+python = ">=3.10,<3.14"
 loguru = "^0.7.2"
 
 # Optional dependencies
