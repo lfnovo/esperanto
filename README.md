@@ -59,8 +59,8 @@ poetry add "esperanto[openai,anthropic,google]"
 # or pip install "esperanto[openai,anthropic,google]"
 
 # Install all providers
-poetry add "esperanto[openai,anthropic,google,vertex,ollama]"
-# or pip install "esperanto[openai,anthropic,google,vertex,ollama]"
+poetry add "esperanto[all]"
+# or pip install "esperanto[all]"
 ```
 
 ## Provider Support Matrix

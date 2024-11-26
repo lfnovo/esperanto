@@ -3617,6 +3617,7 @@ multidict = ">=4.0"
 propcache = ">=0.2.0"
 
 [extras]
+all = ["anthropic", "google-generativeai", "langchain", "langchain-anthropic", "langchain-ollama", "langchain-openai", "ollama", "openai", "vertexai"]
 anthropic = ["anthropic", "langchain-anthropic"]
 google = ["google-generativeai"]
 ollama = ["langchain", "langchain-ollama", "ollama"]
@@ -3626,4 +3627,4 @@ vertex = ["vertexai"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.14"
-content-hash = "9d2262cc654df59240525c53e28882f56c09d725fe7d82e1c29acab2543cc29d"
+content-hash = "108b2f1d452f0143c745fe1fff801539db27f5ca8edc1790c42eead7c62ed4be"

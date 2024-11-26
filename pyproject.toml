@@ -31,6 +31,13 @@ anthropic = ["anthropic", "langchain-anthropic"]
 google = ["google-generativeai"]
 vertex = ["vertexai"]
 ollama = ["langchain", "langchain-ollama", "ollama"]
+all = [
+    "openai", "langchain-openai", "langchain",
+    "anthropic", "langchain-anthropic",
+    "google-generativeai",
+    "vertexai",
+    "langchain-ollama", "ollama"
+]
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
