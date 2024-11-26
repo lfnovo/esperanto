@@ -1,6 +1,6 @@
 """Tests for base model."""
-from typing import Dict, Any, List, Union, AsyncGenerator, Generator
-import pytest
+from typing import AsyncGenerator, Dict, Generator, List, Union
+
 from esperanto import LanguageModel
 from esperanto.types import ChatCompletion, ChatCompletionChunk
 

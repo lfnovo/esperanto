@@ -1,13 +1,13 @@
 """Anthropic language model implementation."""
 import os
-from typing import Any, Dict, List, Union, Generator, AsyncGenerator, Optional
-from dataclasses import dataclass
-from loguru import logger
 import time
-from langchain_anthropic import ChatAnthropic
+from dataclasses import dataclass
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
+
 from anthropic import Anthropic, AsyncAnthropic
 from anthropic.types import Message as AnthropicMessage
-from anthropic.types import TextDelta
+from langchain_anthropic import ChatAnthropic
+from loguru import logger
 
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.types import (
@@ -15,8 +15,8 @@ from esperanto.types import (
     ChatCompletionChunk,
     Choice,
     Message,
-    Usage,
     StreamChoice,
+    Usage,
 )
 
 

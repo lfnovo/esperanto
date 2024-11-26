@@ -2,11 +2,11 @@
 
 from esperanto.types.response import (
     ChatCompletion,
-    ChatCompletionChunk,
     ChatCompletionChoice,
+    ChatCompletionChunk,
     ChatCompletionMessage,
-    DeltaMessage,
     Choice,
+    DeltaMessage,
     Message,
     StreamChoice,
     Usage,

@@ -1,9 +1,9 @@
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-import os
+from unittest.mock import AsyncMock, MagicMock
 
-from esperanto.providers.llm.openai import OpenAILanguageModel
+import pytest
+
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
+from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 from esperanto.providers.llm.xai import XAILanguageModel
 

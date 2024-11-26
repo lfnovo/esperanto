@@ -1,8 +1,8 @@
 """Google Vertex AI embedding model provider."""
-import os
-from typing import Optional, Dict, Any, List
 import asyncio
 import functools
+import os
+from typing import Any, Dict, List, Optional
 
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 

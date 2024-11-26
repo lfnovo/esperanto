@@ -1,14 +1,13 @@
-import pytest
-from unittest.mock import patch, MagicMock
-import os
 
-from esperanto.providers.llm.openai import OpenAILanguageModel
+import pytest
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
+
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
+from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 from esperanto.providers.llm.xai import XAILanguageModel
 
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
 
 @pytest.fixture
 def openai_model():

@@ -1,12 +1,11 @@
 """OpenAI language model provider."""
 import os
-import time
-from typing import Optional, Dict, Any, List, Generator, AsyncGenerator, Union
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
-from openai import OpenAI, AsyncOpenAI
+from langchain_openai import ChatOpenAI
+from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import ChatCompletion as OpenAIChatCompletion
 from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
-from langchain_openai import ChatOpenAI
 
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.types import (
@@ -14,8 +13,8 @@ from esperanto.types import (
     ChatCompletionChunk,
     Choice,
     Message,
-    Usage,
     StreamChoice,
+    Usage,
 )
 
 

@@ -1,7 +1,10 @@
-import pytest
-from unittest.mock import patch
 import os
+from unittest.mock import patch
+
+import pytest
+
 from esperanto.providers.llm.openai import OpenAILanguageModel
+
 
 def test_provider_name(openai_model):
     assert openai_model.provider == "openai"
@@ -25,7 +28,7 @@ def test_chat_complete(openai_model):
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
     ]
-    response = openai_model.chat_complete(messages)
+    openai_model.chat_complete(messages)
     
     # Verify the client was called with correct parameters
     openai_model.client.chat.completions.create.assert_called_once()
@@ -41,7 +44,7 @@ async def test_achat_complete(openai_model):
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
     ]
-    response = await openai_model.achat_complete(messages)
+    await openai_model.achat_complete(messages)
     
     # Verify the async client was called with correct parameters
     openai_model.async_client.chat.completions.create.assert_called_once()
@@ -55,7 +58,7 @@ def test_json_structured_output(openai_model):
     openai_model.structured = "json_object"
     messages = [{"role": "user", "content": "Hello!"}]
     
-    response = openai_model.chat_complete(messages)
+    openai_model.chat_complete(messages)
     
     call_kwargs = openai_model.client.chat.completions.create.call_args[1]
     assert call_kwargs["response_format"] == {"type": "json_object"}
@@ -65,7 +68,7 @@ async def test_json_structured_output_async(openai_model):
     openai_model.structured = "json_object"
     messages = [{"role": "user", "content": "Hello!"}]
     
-    response = await openai_model.achat_complete(messages)
+    await openai_model.achat_complete(messages)
     
     call_kwargs = openai_model.async_client.chat.completions.create.call_args[1]
     assert call_kwargs["response_format"] == {"type": "json_object"}

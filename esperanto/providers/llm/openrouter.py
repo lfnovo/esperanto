@@ -1,14 +1,12 @@
 """OpenRouter language model implementation."""
 import os
 from dataclasses import dataclass
-from typing import Dict, Any, List, Union, Generator, AsyncGenerator, Optional
+from typing import Any, Dict
 
 from langchain_openai import ChatOpenAI
-from openai import OpenAI, AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 
-from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.llm.openai import OpenAILanguageModel
-from esperanto.types import ChatCompletion, ChatCompletionChunk
 
 
 @dataclass

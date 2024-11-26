@@ -3,7 +3,7 @@
 import os
 import time
 import uuid
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
+from typing import Any, AsyncIterator, Dict, Iterator, List, Union
 
 from langchain_ollama import ChatOllama
 from ollama import AsyncClient, Client

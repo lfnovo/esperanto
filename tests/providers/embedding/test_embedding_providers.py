@@ -2,7 +2,7 @@
 
 import os
 from typing import List
-from unittest.mock import AsyncMock, Mock, patch, call
+from unittest.mock import AsyncMock, Mock, call, patch
 
 import pytest
 
@@ -105,14 +105,6 @@ def ollama_embedding_model(mock_ollama_response):
     model.async_client = mock_ollama_response[1]
     return model
 
-
-@pytest.fixture
-def gemini_embedding_model():
-    with patch("google.generativeai.embed_content") as mock_embed:
-        mock_embed.return_value = {"embedding": [0.1, 0.2, 0.3]}
-
-        model = GeminiEmbeddingModel(api_key="test-key", model_name="embedding-001")
-        yield model
 
 
 @pytest.fixture
@@ -314,8 +306,9 @@ def test_ollama_embed_multiple_texts(ollama_embedding_model):
 
 
 # Tests for Gemini Embedding Provider
-def test_gemini_provider_name(gemini_embedding_model):
-    assert gemini_embedding_model.provider == "gemini"
+def test_gemini_provider_name():
+    model = GeminiEmbeddingModel(api_key="test-key")
+    assert model.provider == "gemini"
 
 
 def test_gemini_initialization_with_api_key():
@@ -333,6 +326,13 @@ def test_gemini_initialization_without_api_key():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="Google API key not found"):
             GeminiEmbeddingModel()
+
+
+@pytest.fixture
+def gemini_embedding_model():
+    with patch("google.generativeai.embed_content") as mock_embed:
+        mock_embed.return_value = {"embedding": [0.1, 0.2, 0.3]}
+        yield GeminiEmbeddingModel(api_key="test_key")
 
 
 def test_gemini_embed(gemini_embedding_model):
@@ -381,12 +381,3 @@ async def test_vertex_aembed(vertex_embedding_model):
     texts = ["Hello, world!"]
     embeddings = await vertex_embedding_model.aembed(texts)
     assert embeddings == [[0.1, 0.2, 0.3]]
-
-
-@pytest.fixture
-def gemini_embedding_model():
-    with patch("google.generativeai.embed_content") as mock_embed:
-        mock_embed.return_value = {"embedding": [0.1, 0.2, 0.3]}
-
-        model = GeminiEmbeddingModel(api_key="test-key", model_name="embedding-001")
-        yield model

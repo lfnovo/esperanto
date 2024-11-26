@@ -1,7 +1,8 @@
 """Base embedding model interface."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List, Union
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
 class EmbeddingModel(ABC):

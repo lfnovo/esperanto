@@ -1,8 +1,8 @@
 """OpenAI embedding model provider."""
 import os
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List
 
-from openai import OpenAI, AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 
 from esperanto.providers.embedding.base import EmbeddingModel
 

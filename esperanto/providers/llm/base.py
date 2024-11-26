@@ -1,7 +1,7 @@
 """Base language model interface."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List, AsyncGenerator, Generator, Union
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
 from esperanto.types import ChatCompletion, ChatCompletionChunk
 

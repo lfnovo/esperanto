@@ -1,10 +1,12 @@
-import pytest
-from unittest.mock import patch
-import os
-from esperanto.providers.llm.anthropic import AnthropicLanguageModel
-from loguru import logger
 import io
-from anthropic.types import TextDelta
+import os
+from unittest.mock import patch
+
+import pytest
+from loguru import logger
+
+from esperanto.providers.llm.anthropic import AnthropicLanguageModel
+
 
 def test_provider_name(anthropic_model):
     assert anthropic_model.provider == "anthropic"
@@ -46,7 +48,7 @@ def test_chat_complete(anthropic_model):
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
     ]
-    response = anthropic_model.chat_complete(messages)
+    anthropic_model.chat_complete(messages)
     
     # Verify the client was called with correct parameters
     anthropic_model.client.messages.create.assert_called_once()
@@ -65,7 +67,7 @@ async def test_achat_complete(anthropic_model):
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
     ]
-    response = await anthropic_model.achat_complete(messages)
+    await anthropic_model.achat_complete(messages)
     
     # Verify the async client was called with correct parameters
     anthropic_model.async_client.messages.create.assert_called_once()
@@ -86,7 +88,7 @@ def test_structured_output_warning(anthropic_model):
     output = io.StringIO()
     logger.add(output, format="{message}")
     
-    response = anthropic_model.chat_complete(messages)
+    anthropic_model.chat_complete(messages)
     
     # Remove the logger handler
     logger.remove()
