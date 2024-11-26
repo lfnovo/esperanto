@@ -8,7 +8,7 @@ Esperanto supports various Large Language Model (LLM) providers through a unifie
 - Anthropic (Claude 3 family)
 - OpenRouter (Multiple models)
 - xAI (Grok)
-- Google (Gemini)
+- Gemini
 - Vertex AI (Google Cloud)
 - Ollama (Local deployment)
 

@@ -28,7 +28,7 @@ ollama = { version =  "^0.4.1", optional = true }
 [tool.poetry.extras]
 openai = ["openai", "langchain-openai", "langchain"]
 anthropic = ["anthropic", "langchain-anthropic"]
-google = ["google-generativeai"]
+gemini = ["google-generativeai"]
 vertex = ["vertexai"]
 ollama = ["langchain", "langchain-ollama", "ollama"]
 all = [

@@ -3,7 +3,8 @@
 import importlib
 from typing import Any, Dict, Optional, Type
 
-from esperanto import EmbeddingModel, LanguageModel
+from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.llm.base import LanguageModel
 
 
 class AIFactory:
@@ -21,7 +22,7 @@ class AIFactory:
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
-            "groq": "esperanto.providers.embedding.gemini:GeminiEmbeddingModel",
+            "gemini": "esperanto.providers.embedding.gemini:GeminiEmbeddingModel",
             "ollama": "esperanto.providers.embedding.ollama:OllamaEmbeddingModel",
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
         },
@@ -65,7 +66,8 @@ class AIFactory:
             ]  # e.g., openai, anthropic, etc.
             raise ImportError(
                 f"Provider '{provider}' requires additional dependencies. "
-                f"Install them with: poetry install --with {provider_package}"
+                f"Install them with: pip install esperanto[{provider_package}] "
+                f"or poetry add esperanto[{provider_package}]"
             ) from e
 
     @classmethod
