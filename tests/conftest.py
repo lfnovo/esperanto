@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
+from esperanto.providers.llm.groq import GroqLanguageModel
 from esperanto.providers.llm.openai import OpenAILanguageModel
 
 
@@ -61,6 +62,35 @@ def mock_anthropic_response():
     return Message()
 
 @pytest.fixture
+def mock_groq_response():
+    class Choice:
+        def __init__(self):
+            self.index = 0
+            self.message = type('Message', (), {
+                'content': "Test response",
+                'role': "assistant",
+                'function_call': None,
+                'tool_calls': None
+            })
+            self.finish_reason = "stop"
+
+    class Usage:
+        def __init__(self):
+            self.completion_tokens = 10
+            self.prompt_tokens = 8
+            self.total_tokens = 18
+
+    class Response:
+        def __init__(self):
+            self.id = "chatcmpl-123"
+            self.created = 1677858242
+            self.model = "mixtral-8x7b-32768"
+            self.choices = [Choice()]
+            self.usage = Usage()
+
+    return Response()
+
+@pytest.fixture
 def mock_openai_client(mock_openai_response):
     client = Mock()
     async_client = AsyncMock()
@@ -95,6 +125,23 @@ def mock_anthropic_client(mock_anthropic_response):
     return client, async_client
 
 @pytest.fixture
+def mock_groq_client(mock_groq_response):
+    client = Mock()
+    async_client = AsyncMock()
+    
+    # Mock synchronous completion
+    mock_completion = Mock()
+    mock_completion.configure_mock(**mock_groq_response.__dict__)
+    client.chat.completions.create.return_value = mock_completion
+    
+    # Mock async completion
+    mock_async_completion = AsyncMock()
+    mock_async_completion.configure_mock(**mock_groq_response.__dict__)
+    async_client.chat.completions.create.return_value = mock_async_completion
+    
+    return client, async_client
+
+@pytest.fixture
 def openai_model(mock_openai_client):
     model = OpenAILanguageModel(
         api_key="test-key",
@@ -112,4 +159,18 @@ def anthropic_model(mock_anthropic_client):
         temperature=0.7
     )
     model.client, model.async_client = mock_anthropic_client
+    return model
+
+@pytest.fixture
+def groq_model(mock_groq_client):
+    model = GroqLanguageModel(
+        api_key="test-key",
+        model_name="mixtral-8x7b-32768",
+        temperature=1.0,
+        max_tokens=850,
+        streaming=False
+    )
+    client, async_client = mock_groq_client
+    model.client = client
+    model.async_client = async_client
     return model

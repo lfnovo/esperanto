@@ -16,6 +16,7 @@ class AIFactory:
             "openai": "esperanto.providers.llm.openai:OpenAILanguageModel",
             "anthropic": "esperanto.providers.llm.anthropic:AnthropicLanguageModel",
             "gemini": "esperanto.providers.llm.gemini:GeminiLanguageModel",
+            "groq": "esperanto.providers.llm.groq:GroqLanguageModel",
             "ollama": "esperanto.providers.llm.ollama:OllamaLanguageModel",
             "openrouter": "esperanto.providers.llm.openrouter:OpenRouterLanguageModel",
             "xai": "esperanto.providers.llm.xai:XAILanguageModel",

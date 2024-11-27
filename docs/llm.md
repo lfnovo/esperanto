@@ -8,6 +8,7 @@ Esperanto supports various Large Language Model (LLM) providers through a unifie
 - Anthropic (Claude 3 family)
 - OpenRouter (Multiple models)
 - xAI (Grok)
+- Groq (Mixtral, Llama)
 - Gemini
 - Vertex AI (Google Cloud)
 - Ollama (Local deployment)
@@ -90,6 +91,18 @@ response = langchain_model.invoke(formatted_prompt)
 model = OpenAILanguageModel(
     api_key="your-api-key",
     model_name="gpt-4",
+    temperature=0.7,
+    max_tokens=850,
+    streaming=False,
+    structured="json"
+)
+```
+
+### Groq
+```python
+model = GroqLanguageModel(
+    api_key="your-api-key",
+    model_name="mixtral-8x7b-32768",
     temperature=0.7,
     max_tokens=850,
     streaming=False,
