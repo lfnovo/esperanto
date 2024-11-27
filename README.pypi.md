@@ -16,6 +16,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Anthropic (Claude 3)
   - OpenRouter (Access to multiple models)
   - xAI (Grok)
+  - Groq (Mixtral, Llama)
   - Gemini
   - Vertex AI (Google Cloud)
   - Ollama (Local deployment)
@@ -68,9 +69,13 @@ poetry add esperanto[vertex]
 poetry add esperanto[ollama]
 # or pip install esperanto[ollama]
 
+# Groq support
+poetry add esperanto[groq]
+# or pip install esperanto[groq]
+
 # Install multiple providers
-poetry add "esperanto[openai,anthropic,gemini]"
-# or pip install "esperanto[openai,anthropic,gemini]"
+poetry add "esperanto[openai,anthropic,gemini,groq]"
+# or pip install "esperanto[openai,anthropic,gemini,groq]"
 
 # Install all providers
 poetry add "esperanto[all]"
@@ -83,6 +88,7 @@ poetry add "esperanto[all]"
 |-----------|-------------|------------------|
 | OpenAI    | ✅          | ✅               |
 | Anthropic | ✅          | ❌               |
+| Groq      | ✅          | ❌               |
 | Gemini    | ✅          | ✅               |
 | Vertex AI | ✅          | ✅               |
 | Ollama    | ✅          | ✅               |
