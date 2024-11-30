@@ -2,32 +2,42 @@ import os
 from unittest.mock import patch
 
 import pytest
-from langchain_groq import ChatGroq
 
-from esperanto.providers.llm.groq import GroqLanguageModel
+try:
+    from langchain_groq import ChatGroq
+    from esperanto.providers.llm.groq import GroqLanguageModel
+    HAS_GROQ = True
+except ImportError:
+    HAS_GROQ = False
+    pytestmark = pytest.mark.skip("Groq not installed")
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_provider_name(groq_model):
     assert groq_model.provider == "groq"
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_initialization_with_api_key():
     model = GroqLanguageModel(api_key="test-key")
     assert model.api_key == "test-key"
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_initialization_with_env_var():
     with patch.dict(os.environ, {"GROQ_API_KEY": "env-test-key"}):
         model = GroqLanguageModel()
         assert model.api_key == "env-test-key"
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_initialization_without_api_key():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="Groq API key not found"):
             GroqLanguageModel()
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_chat_complete(groq_model):
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
@@ -44,6 +54,7 @@ def test_chat_complete(groq_model):
     assert call_kwargs["temperature"] == 1.0
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 @pytest.mark.asyncio
 async def test_achat_complete(groq_model):
     messages = [
@@ -61,6 +72,7 @@ async def test_achat_complete(groq_model):
     assert call_kwargs["temperature"] == 1.0
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_to_langchain(groq_model):
     langchain_model = groq_model.to_langchain()
     
@@ -73,6 +85,7 @@ def test_to_langchain(groq_model):
     assert langchain_model.groq_api_key.get_secret_value() == "test-key"
 
 
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_response_normalization(groq_model, mock_groq_response):
     messages = [{"role": "user", "content": "Hello!"}]
     response = groq_model.chat_complete(messages)
