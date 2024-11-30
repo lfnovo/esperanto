@@ -250,7 +250,8 @@ class AnthropicLanguageModel(LanguageModel):
         if self.structured:
             logger.warning("Structured output not supported for Anthropic.")
         
-        langchain_kwargs = {
+        # Only include supported parameters
+        supported_params = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
@@ -260,6 +261,9 @@ class AnthropicLanguageModel(LanguageModel):
         }
 
         if self.base_url:
-            langchain_kwargs["anthropic_api_url"] = self.base_url
+            supported_params["anthropic_api_url"] = self.base_url
+
+        # Remove None values
+        langchain_kwargs = {k: v for k, v in supported_params.items() if v is not None}
 
         return ChatAnthropic(**langchain_kwargs)
