@@ -20,6 +20,12 @@ except ImportError:
     GeminiLanguageModel = None
 
 try:
+    from esperanto.providers.llm.ollama import OllamaLanguageModel
+except ImportError:
+    OllamaLanguageModel = None
+
+
+try:
     from esperanto.providers.llm.openai import OpenAILanguageModel
 except ImportError:
     OpenAILanguageModel = None
@@ -53,6 +59,12 @@ try:
     from esperanto.providers.embedding.xai import XAIEmbeddingModel
 except ImportError:
     XAIEmbeddingModel = None
+
+try:
+    from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
+except ImportError:
+    OllamaEmbeddingModel = None
+
 
 # Store all provider classes
 __provider_classes = {
