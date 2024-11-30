@@ -187,6 +187,24 @@ class AnthropicLanguageModel(LanguageModel):
         """Get the provider name."""
         return "anthropic"
 
+    def _clean_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Clean configuration dictionary."""
+        # Remove None values
+        config = {k: v for k, v in config.items() if v is not None}
+        
+        # List of supported parameters for the Anthropic client
+        supported_params = {
+            "api_key",
+            "base_url",
+            "timeout",
+            "max_retries",
+            "default_headers",
+            "default_query",
+        }
+        
+        # Remove unsupported parameters
+        return {k: v for k, v in config.items() if k in supported_params}
+
     def chat_complete(
         self, 
         messages: List[Dict[str, str]], 
