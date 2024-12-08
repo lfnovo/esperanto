@@ -1,6 +1,8 @@
 """Tests for base model."""
 from typing import AsyncGenerator, Dict, Generator, List, Union
 
+from langchain_core.language_models.chat_models import BaseChatModel
+
 from esperanto import LanguageModel
 from esperanto.types import ChatCompletion, ChatCompletionChunk
 
@@ -46,6 +48,11 @@ class TestLanguageModel(LanguageModel):
             messages=messages,
             usage={"total_tokens": 10}
         )
+
+    def to_langchain(self) -> BaseChatModel:
+        """Convert to a LangChain chat model."""
+        from langchain_core.chat_models.fake import FakeListChatModel
+        return FakeListChatModel(responses=["test response"])
 
 
 def test_language_model_config():
