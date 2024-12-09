@@ -7,7 +7,6 @@ from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 from anthropic import Anthropic, AsyncAnthropic
 from anthropic.types import Message as AnthropicMessage
 from langchain_anthropic import ChatAnthropic
-from esperanto.utils.logging import logger
 
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.types import (
@@ -18,6 +17,7 @@ from esperanto.types import (
     StreamChoice,
     Usage,
 )
+from esperanto.utils.logging import logger
 
 
 @dataclass
@@ -26,6 +26,7 @@ class AnthropicLanguageModel(LanguageModel):
 
     def __post_init__(self):
         """Initialize Anthropic client."""
+        super().__post_init__()
         self.api_key = self.api_key or os.getenv("ANTHROPIC_API_KEY")
 
         if not self.api_key:

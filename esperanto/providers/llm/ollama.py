@@ -22,12 +22,14 @@ from esperanto.types import (
 class OllamaLanguageModel(LanguageModel):
     """Ollama language model implementation."""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
+    def __post_init__(self):
+        """Initialize Ollama client."""
+        # Call parent's post_init to handle config initialization
+        super().__post_init__()
+        
         # Set default base URL if not provided
         self.base_url = (
-            kwargs.get("base_url")
+            self.base_url
             or os.getenv("OLLAMA_BASE_URL")
             or "http://localhost:11434"
         )

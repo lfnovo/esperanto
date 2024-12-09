@@ -21,17 +21,19 @@ from esperanto.types import (
 class GroqLanguageModel(LanguageModel):
     """Groq language model implementation."""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __post_init__(self):
+        """Initialize Groq client."""
+        # Call parent's post_init to handle config initialization
+        super().__post_init__()
         
         # Get API key
-        self.api_key = kwargs.get("api_key") or os.getenv("GROQ_API_KEY")
+        self.api_key = self.api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("Groq API key not found")
         
         # Update config with model_name if provided
-        if "model_name" in kwargs:
-            self._config["model_name"] = kwargs["model_name"]
+        if "model_name" in self._config:
+            self._config["model_name"] = self._config["model_name"]
         
         # Initialize clients
         self.client = Groq(

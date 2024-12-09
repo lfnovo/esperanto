@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "esperanto"
-version = "0.4.0"
+version = "0.4.1"
 description = "A unified interface for various AI model providers"
 authors = ["LUIS NOVO <lfnovo@gmail.com>"]
 readme = "README.pypi.md"
