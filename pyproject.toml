@@ -13,7 +13,11 @@ urls.repository = "https://github.com/lfnovo/esperanto"
 urls.homepage = "https://github.com/lfnovo/esperanto"
 urls.documentation = "https://github.com/lfnovo/esperanto#readme"
 
-dependencies = []
+dependencies = [
+    "elevenlabs>=0.3.0",
+    "google-cloud-texttospeech>=2.14.0",
+    "python-dotenv>=1.0.1",
+]
 
 [project.optional-dependencies]
 openai = [
@@ -34,7 +38,7 @@ gemini = [
     "langchain>=0.3.8",
     "langchain-core>=0.3.25"
 ]
-vertex = ["vertexai>=1.71.1"]
+vertex = ["vertexai>=1.71.1", "google-generativeai>=0.8.3",]
 groq = [
     "groq>=0.12.0",
     "langchain-groq>=0.2.1",
@@ -46,6 +50,12 @@ ollama = [
     "langchain-ollama>=0.2.0",
     "ollama>=0.4.1",
     "langchain-core>=0.3.25"
+]
+elevenlabs = ["elevenlabs>=0.3.0"]
+tts = [
+    "openai>=1.55.1",
+    "elevenlabs>=0.3.0",
+    "google-cloud-texttospeech>=2.14.0"
 ]
 all = [
     "openai>=1.55.1",
@@ -60,7 +70,9 @@ all = [
     "groq>=0.12.0",
     "langchain-groq>=0.2.1",
     "langchain>=0.3.8",
-    "langchain-core>=0.3.25"
+    "langchain-core>=0.3.25",
+    "elevenlabs>=0.3.0",
+    "google-cloud-texttospeech>=2.14.0"
 ]
 dev = [
     "ipykernel>=6.29.5",

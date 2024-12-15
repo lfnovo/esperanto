@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 from dotenv import load_dotenv
 from elevenlabs.client import AsyncElevenLabs, ElevenLabs
 
-from .base import TextToSpeechModel, AudioResponse, Voice
+from .base import AudioResponse, TextToSpeechModel, Voice
 
 # Load environment variables
 load_dotenv()
@@ -74,161 +74,89 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
         # Cache available voices
         self._available_voices = None
 
+    def _get_sync_client(self):
+        return self.client
+
+    async def _get_async_client(self):
+        return self.async_client
+
+    def generate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None) -> AudioResponse:
+        """Generate speech synchronously."""
+        client = self._get_sync_client()
+
+        # Convert text to speech using voice_id as a path parameter
+        response = client.text_to_speech.convert(
+            voice_id=voice,  # voice_id is a path parameter
+            text=text,
+            model_id=self.model_name
+        )
+
+        # Collect all bytes from the iterator
+        audio_bytes = b''.join(response)
+
+        response_audio = AudioResponse(
+            audio_data=audio_bytes,
+            content_type="audio/mp3",
+            model=self.model_name,
+            voice=voice,
+            provider="elevenlabs"
+        )
+
+        if output_file:
+            output_path = Path(output_file)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(audio_bytes)
+
+        return response_audio
+
+    async def agenerate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None) -> AudioResponse:
+        """Generate speech asynchronously."""
+        client = await self._get_async_client()
+
+        # Convert text to speech using voice_id as a path parameter
+        response = client.text_to_speech.convert(
+            voice_id=voice,  # voice_id is a path parameter
+            text=text,
+            model_id=self.model_name
+        )
+
+        # Collect all bytes from the async iterator
+        audio_bytes = b''
+        async for chunk in response:
+            audio_bytes += chunk
+
+        response_audio = AudioResponse(
+            audio_data=audio_bytes,
+            content_type="audio/mp3",
+            model=self.model_name,
+            voice=voice,
+            provider="elevenlabs"
+        )
+
+        if output_file:
+            output_path = Path(output_file)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(audio_bytes)
+
+        return response_audio
+
     @property
     def available_voices(self) -> Dict[str, Voice]:
-        """Get available voices from ElevenLabs.
-
-        Returns:
-            Dict[str, Voice]: Dictionary of available voices with their information
-        """
-        voices = {}
-        all_voices = self.client.voices.get_all()
+        """Get available voices."""
+        client = self._get_sync_client()
+        response = client.voices.get_all()
         
-        # GetVoicesResponse has a voices attribute containing the list of voices
-        for voice in all_voices.voices:
-            voices[voice.voice_id] = Voice(
-                name=voice.name,
-                id=voice.voice_id,
-                gender=voice.labels.get("gender", "UNKNOWN"),
-                language_code="en-US",  # ElevenLabs primarily supports English
-                description=voice.labels.get("description", ""),
-                accent=voice.labels.get("accent"),
-                age=voice.labels.get("age"),
-                use_case=voice.labels.get("use_case"),
-                preview_url=voice.preview_url
+        voices = {}
+        for voice_data in response.voices:
+            voices[voice_data.voice_id] = Voice(
+                name=voice_data.name,
+                id=voice_data.voice_id,
+                gender=voice_data.labels.get("gender", "unknown").upper(),
+                language_code=voice_data.labels.get("language", "en"),
+                description=voice_data.description,
+                preview_url=voice_data.preview_url
             )
         return voices
-
-    def _get_voice_info(self, voice: str):
-        """Get voice info from available voices.
-
-        Args:
-            voice: Voice name to look up
-
-        Returns:
-            Voice info if found, None otherwise
-        """
-        voice = voice or self.DEFAULT_VOICE
-        return self.available_voices.get(voice)
-
-    def generate_speech(
-        self,
-        text: str,
-        voice: str = "Adam",
-        output_file: Optional[Union[str, Path]] = None,
-        **kwargs
-    ) -> AudioResponse:
-        """Generate speech from text using ElevenLabs TTS.
-
-        Args:
-            text: Text to convert to speech
-            voice: Voice ID or name to use
-            output_file: Optional path to save the audio file
-            **kwargs: Additional parameters to pass to the ElevenLabs API
-
-        Returns:
-            AudioResponse containing the audio data and metadata
-
-        Raises:
-            RuntimeError: If speech generation fails
-        """
-        try:
-            # Extract settings from kwargs
-            voice_settings = {
-                **self.voice_settings,
-                **(kwargs.get("voice_settings", {}) or {})
-            }
-
-            # Generate speech - returns a generator
-            audio_generator = self.client.generate(
-                text=text,
-                voice=voice,
-                model=self.model_name,
-                voice_settings=voice_settings,
-                **kwargs
-            )
-            
-            # Read audio data
-            audio_data = b"".join(chunk for chunk in audio_generator)
-            
-            # Save to file if specified
-            if output_file:
-                output_file = Path(output_file)
-                output_file.parent.mkdir(parents=True, exist_ok=True)
-                output_file.write_bytes(audio_data)
-
-            return AudioResponse(
-                audio_data=audio_data,
-                content_type="audio/mp3",
-                model=self.model_name,
-                voice=voice,
-                provider=self.PROVIDER,
-                metadata={"text": text, "voice_settings": voice_settings}
-            )
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to generate speech: {str(e)}") from e
-
-    async def agenerate_speech(
-        self,
-        text: str,
-        voice: str = "Adam",
-        output_file: Optional[Union[str, Path]] = None,
-        **kwargs
-    ) -> AudioResponse:
-        """Generate speech from text asynchronously using ElevenLabs TTS.
-
-        Args:
-            text: Text to convert to speech
-            voice: Voice ID or name to use
-            output_file: Optional path to save the audio file
-            **kwargs: Additional parameters to pass to the ElevenLabs API
-
-        Returns:
-            AudioResponse containing the audio data and metadata
-
-        Raises:
-            RuntimeError: If speech generation fails
-        """
-        try:
-            # Extract settings from kwargs
-            voice_settings = {
-                **self.voice_settings,
-                **(kwargs.get("voice_settings", {}) or {})
-            }
-
-            # Generate speech using text_to_speech
-            audio_generator = self.async_client.text_to_speech.convert(
-                text=text,
-                voice_id=voice,  # ElevenLabs async client uses voice_id
-                model_id=self.model_name,
-                output_format="mp3_44100_128",
-                voice_settings=voice_settings,
-                **kwargs
-            )
-            
-            # Read audio data
-            audio_data = b""
-            async for chunk in audio_generator:
-                audio_data += chunk
-            
-            # Save to file if specified
-            if output_file:
-                output_file = Path(output_file)
-                output_file.parent.mkdir(parents=True, exist_ok=True)
-                output_file.write_bytes(audio_data)
-
-            return AudioResponse(
-                audio_data=audio_data,
-                content_type="audio/mp3",
-                model=self.model_name,
-                voice=voice,
-                provider=self.PROVIDER,
-                metadata={"text": text, "voice_settings": voice_settings}
-            )
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to generate speech: {str(e)}") from e
 
     def get_supported_tags(self) -> List[str]:
         """Get list of supported SSML tags.

@@ -12,7 +12,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
 
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Provider Support**:
-  - OpenAI (GPT-4, GPT-3.5, Whisper)
+  - OpenAI (GPT-4, GPT-3.5, Whisper, TTS)
   - Anthropic (Claude 3)
   - OpenRouter (Access to multiple models)
   - xAI (Grok)
@@ -20,8 +20,11 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Gemini
   - Vertex AI (Google Cloud)
   - Ollama (Local deployment)
+  - ElevenLabs (Text-to-Speech)
+  - Google Cloud TTS
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
+- **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
 - **Structured Output**: JSON output formatting (where supported)
@@ -31,6 +34,7 @@ For detailed information about our providers, check out:
 - [LLM Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/llm.md)
 - [Embedding Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/embedding.md)
 - [Speech-to-Text Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/speech_to_text.md)
+- [Text-to-Speech Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/text_to_speech.md)
 
 ## Installation 🚀
 
@@ -67,14 +71,16 @@ pip install "esperanto[all]"
 
 ## Provider Support Matrix
 
-| Provider  | LLM Support | Embedding Support | Speech-to-Text | JSON Mode |
-|-----------|-------------|------------------|----------------|-----------|
-| OpenAI    | ✅          | ✅               | ✅             | ✅        |
-| Anthropic | ✅          | ❌               | ❌             | ✅        |
-| Groq      | ✅          | ❌               | ✅             | ✅        |
-| Gemini    | ✅          | ✅               | ❌             | ✅        |
-| Vertex AI | ✅          | ✅               | ❌             | ❌        |
-| Ollama    | ✅          | ✅               | ❌             | ❌        |
+| Provider    | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | JSON Mode |
+|------------|-------------|------------------|----------------|----------------|-----------|
+| OpenAI     | ✅          | ✅               | ✅             | ✅             | ✅        |
+| Anthropic  | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Groq       | ✅          | ❌               | ✅             | ❌             | ✅        |
+| Gemini     | ✅          | ✅               | ❌             | ❌             | ✅        |
+| Vertex AI  | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Ollama     | ✅          | ✅               | ❌             | ❌             | ❌        |
+| ElevenLabs | ❌          | ❌               | ❌             | ✅             | ❌        |
+| Google TTS | ❌          | ❌               | ❌             | ✅             | ❌        |
 
 ## Quick Start 🏃‍♂️
 

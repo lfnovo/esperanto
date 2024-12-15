@@ -6,13 +6,14 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/esperanto)](https://pypi.org/project/esperanto/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Esperanto is a powerful Python library that provides a unified interface for interacting with various Large Language Model (LLM) providers. It simplifies the process of working with different AI models (LLMs, Embedders, Transcribers) APIs by offering a consistent interface while maintaining provider-specific optimizations.
+Esperanto is a powerful Python library that provides a unified interface for interacting with various Large Language Model (LLM) providers. It simplifies the process of working with different AI models (LLMs, Embedders, Transcribers, and TTS) APIs by offering a consistent interface while maintaining provider-specific optimizations.
 
 ## Features ✨
 
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
+- **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
 - **Structured Output**: JSON output formatting (where supported)
@@ -22,6 +23,7 @@ For detailed information about our providers, check out:
 - [LLM Providers Documentation](docs/llm.md)
 - [Embedding Providers Documentation](docs/embedding.md)
 - [Speech-to-Text Providers Documentation](docs/speech_to_text.md)
+- [Text-to-Speech Providers Documentation](docs/text_to_speech.md)
 
 ## Installation 🚀
 
@@ -52,20 +54,28 @@ pip install "esperanto[groq]"
 # For Ollama support
 pip install "esperanto[ollama]"
 
+# For ElevenLabs support
+pip install "esperanto[elevenlabs]"
+
+# For Google TTS support
+pip install "esperanto[googletts]"
+
 # For all providers
 pip install "esperanto[all]"
 ```
 
 ## Provider Support Matrix
 
-| Provider  | LLM Support | Embedding Support | Speech-to-Text | JSON Mode |
-|-----------|-------------|------------------|----------------|-----------|
-| OpenAI    | ✅          | ✅               | ✅             | ✅        |
-| Anthropic | ✅          | ❌               | ❌             | ✅        |
-| Groq      | ✅          | ❌               | ✅             | ✅        |
-| Gemini    | ✅          | ✅               | ❌             | ✅        |
-| Vertex AI | ✅          | ✅               | ❌             | ❌        |
-| Ollama    | ✅          | ✅               | ❌             | ❌        |
+| Provider    | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | JSON Mode |
+|------------|-------------|------------------|----------------|----------------|-----------|
+| OpenAI     | ✅          | ✅               | ✅             | ✅             | ✅        |
+| Anthropic  | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Groq       | ✅          | ❌               | ✅             | ❌             | ✅        |
+| Gemini     | ✅          | ✅               | ❌             | ❌             | ✅        |
+| Vertex AI  | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Ollama     | ✅          | ✅               | ❌             | ❌             | ❌        |
+| ElevenLabs | ❌          | ❌               | ❌             | ✅             | ❌        |
+| Google TTS | ❌          | ❌               | ❌             | ✅             | ❌        |
 
 ## Quick Start 🏃‍♂️
 
