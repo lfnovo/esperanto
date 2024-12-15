@@ -84,14 +84,14 @@ poetry add "esperanto[all]"
 
 ## Provider Support Matrix
 
-| Provider  | LLM Support | Embedding Support |
-|-----------|-------------|------------------|
-| OpenAI    | ✅          | ✅               |
-| Anthropic | ✅          | ❌               |
-| Groq      | ✅          | ❌               |
-| Gemini    | ✅          | ✅               |
-| Vertex AI | ✅          | ✅               |
-| Ollama    | ✅          | ✅               |
+| Provider  | LLM Support | Embedding Support | JSON Mode |
+|-----------|-------------|------------------|-----------|
+| OpenAI    | ✅          | ✅               | ✅        |
+| Anthropic | ✅          | ❌               | ✅        |
+| Groq      | ✅          | ❌               | ✅        |
+| Gemini    | ✅          | ✅               | ✅        |
+| Vertex AI | ✅          | ✅               | ❌        |
+| Ollama    | ✅          | ✅               | ❌        |
 
 ## Quick Start 🏃‍♂️
 

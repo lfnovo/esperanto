@@ -19,7 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
+.windsurfrules
 # Virtual Environment
 venv/
 env/

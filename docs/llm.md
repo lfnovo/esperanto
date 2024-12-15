@@ -129,3 +129,17 @@ model = AnthropicLanguageModel(
     model_name="claude-3-opus-20240229"
 )
 ```
+
+### Gemini
+```python
+from esperanto.providers.llm.gemini import GeminiLanguageModel
+
+model = GeminiLanguageModel(
+    api_key="your-api-key",
+    model_name="gemini-1.5-pro",
+    temperature=0.7,
+    max_tokens=850,
+    streaming=False,
+    structured="json"
+)
+```

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "esperanto"
-version = "0.4.1"
+version = "0.5.0"
 description = "A unified interface for various AI model providers"
 authors = ["LUIS NOVO <lfnovo@gmail.com>"]
 readme = "README.pypi.md"
@@ -25,20 +25,22 @@ langchain-ollama = { version = "^0.2.0", optional = true }
 ollama = { version =  "^0.4.1", optional = true }
 groq = { version="^0.12.0", optional = true }
 langchain-groq = { version = "^0.2.1", optional = true }
+langchain-google-genai = { version = "^2.0.7", optional = true }
+langchain-core = { version = "^0.3.25", optional = true }
 
 [tool.poetry.extras]
-openai = ["openai", "langchain-openai", "langchain"]
-anthropic = ["anthropic", "langchain-anthropic"]
-gemini = ["google-generativeai"]
+openai = ["openai", "langchain-openai", "langchain", "langchain-core"]
+anthropic = ["anthropic", "langchain-anthropic", "langchain", "langchain-core"]
+gemini = ["google-generativeai", "langchain-google-genai", "langchain", "langchain-core"]
 vertex = ["vertexai"]
-groq = ["groq", "langchain-groq"]
-ollama = ["langchain", "langchain-ollama", "ollama"]
+groq = ["groq", "langchain-groq", "langchain", "langchain-core"]
+ollama = ["langchain", "langchain-ollama", "ollama", "langchain", "langchain-core"]
 all = [
     "openai", "langchain-openai", "langchain",
     "anthropic", "langchain-anthropic",
-    "google-generativeai",
+    "google-generativeai", "langchain-google-genai",
     "vertexai",
-    "langchain-ollama", "ollama", "groq"
+    "langchain-ollama", "ollama", "groq", "langchain-groq", "langchain-core"
 ]
 
 [tool.poetry.group.dev.dependencies]
