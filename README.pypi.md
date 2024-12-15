@@ -32,54 +32,35 @@ For detailed information about our providers, check out:
 
 ## Installation 🚀
 
-Install Esperanto using Poetry:
-
-```bash
-poetry add esperanto
-```
-
-Or with pip:
+Install Esperanto using pip:
 
 ```bash
 pip install esperanto
 ```
 
-### Optional Dependencies
-
-Esperanto supports multiple providers through optional dependencies. Install only what you need:
+For specific providers, install with their extras:
 
 ```bash
-# OpenAI support
-poetry add esperanto[openai]
-# or pip install esperanto[openai]
+# For OpenAI support
+pip install "esperanto[openai]"
 
-# Anthropic support
-poetry add esperanto[anthropic]
-# or pip install esperanto[anthropic]
+# For Anthropic support
+pip install "esperanto[anthropic]"
 
-# Gemini support
-poetry add esperanto[gemini]
-# or pip install esperanto[gemini]
+# For Google (Gemini) support
+pip install "esperanto[gemini]"
 
-# Vertex AI support
-poetry add esperanto[vertex]
-# or pip install esperanto[vertex]
+# For Vertex AI support
+pip install "esperanto[vertex]"
 
-# Ollama support
-poetry add esperanto[ollama]
-# or pip install esperanto[ollama]
+# For Groq support
+pip install "esperanto[groq]"
 
-# Groq support
-poetry add esperanto[groq]
-# or pip install esperanto[groq]
+# For Ollama support
+pip install "esperanto[ollama]"
 
-# Install multiple providers
-poetry add "esperanto[openai,anthropic,gemini,groq]"
-# or pip install "esperanto[openai,anthropic,gemini,groq]"
-
-# Install all providers
-poetry add "esperanto[all]"
-# or pip install "esperanto[all]"
+# For all providers
+pip install "esperanto[all]"
 ```
 
 ## Provider Support Matrix

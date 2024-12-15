@@ -27,6 +27,7 @@ ENV/
 .env
 .venv
 .python-version
+.future
 
 # IDE - VSCode
 .vscode/

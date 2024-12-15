@@ -33,7 +33,7 @@ If you have a suggestion for a new feature or enhancement, first check the issue
 1. Fork the repository
 2. Create a new branch for your feature (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run the tests (`poetry run pytest`)
+4. Run the tests (`pytest`)
 5. Commit your changes (`git commit -m 'Add some amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
@@ -48,10 +48,29 @@ If you have a suggestion for a new feature or enhancement, first check the issue
 
 ## Development Setup
 
-1. Fork and clone the repository
-2. Install Poetry if you haven't already: `curl -sSL https://install.python-poetry.org | python3 -`
-3. Install dependencies: `poetry install`
-4. Run tests: `poetry run pytest`
+1. Clone the repository
+```bash
+git clone https://github.com/lfnovo/esperanto.git
+cd esperanto
+```
+
+2. Create a virtual environment and install dependencies:
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install -e ".[dev,all]"
+```
+
+3. Run tests:
+```bash
+pytest
+```
+
+4. Run linting:
+```bash
+ruff check .
+mypy .
+```
 
 ## Code Style and Linting
 
@@ -59,12 +78,12 @@ We use `ruff` for code linting and formatting. Before submitting a PR, make sure
 
 1. Run the linter to check for issues:
 ```bash
-poetry run ruff check .
+ruff check .
 ```
 
 2. Fix auto-fixable issues:
 ```bash
-poetry run ruff check . --fix
+ruff check . --fix
 ```
 
 The project's ruff configuration is in `pyproject.toml` and enforces:
@@ -76,7 +95,7 @@ The project's ruff configuration is in `pyproject.toml` and enforces:
 
 * Write tests for any new features
 * Ensure all tests pass before submitting a PR
-* Run the full test suite with `poetry run pytest`
+* Run the full test suite with `pytest`
 
 ## Documentation
 

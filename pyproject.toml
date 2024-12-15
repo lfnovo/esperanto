@@ -1,62 +1,85 @@
-[tool.poetry]
+[project]
 name = "esperanto"
 version = "0.5.0"
 description = "A unified interface for various AI model providers"
-authors = ["LUIS NOVO <lfnovo@gmail.com>"]
+authors = [
+    { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
+]
 readme = "README.pypi.md"
-repository = "https://github.com/lfnovo/esperanto"
-homepage = "https://github.com/lfnovo/esperanto"
-documentation = "https://github.com/lfnovo/esperanto#readme"
+requires-python = ">=3.10,<3.14"
+license = { text = "MIT" }
 keywords = ["ai", "llm", "text-to-speech", "speech-to-text", "openai", "anthropic", "google", "elevenlabs"]
-license = "MIT"
+urls.repository = "https://github.com/lfnovo/esperanto"
+urls.homepage = "https://github.com/lfnovo/esperanto"
+urls.documentation = "https://github.com/lfnovo/esperanto#readme"
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
+dependencies = []
 
-# Optional dependencies
-langchain = { version = "^0.3.8", optional = true }
-langchain-openai = { version = "^0.2.9", optional = true }
-openai = { version = "^1.55.1", optional = true }
-anthropic = { version = "^0.39.0", optional = true }
-langchain-anthropic = { version = "^0.3.0", optional = true }
-google-generativeai = { version = "^0.8.3", optional = true }
-vertexai = { version = "^1.71.1", optional = true }
-langchain-ollama = { version = "^0.2.0", optional = true }
-ollama = { version =  "^0.4.1", optional = true }
-groq = { version="^0.12.0", optional = true }
-langchain-groq = { version = "^0.2.1", optional = true }
-langchain-google-genai = { version = "^2.0.7", optional = true }
-langchain-core = { version = "^0.3.25", optional = true }
-
-[tool.poetry.extras]
-openai = ["openai", "langchain-openai", "langchain", "langchain-core"]
-anthropic = ["anthropic", "langchain-anthropic", "langchain", "langchain-core"]
-gemini = ["google-generativeai", "langchain-google-genai", "langchain", "langchain-core"]
-vertex = ["vertexai"]
-groq = ["groq", "langchain-groq", "langchain", "langchain-core"]
-ollama = ["langchain", "langchain-ollama", "ollama", "langchain", "langchain-core"]
+[project.optional-dependencies]
+openai = [
+    "openai>=1.55.1",
+    "langchain-openai>=0.2.9",
+    "langchain>=0.3.8",
+    "langchain-core>=0.3.25"
+]
+anthropic = [
+    "anthropic>=0.39.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain>=0.3.8",
+    "langchain-core>=0.3.25"
+]
+gemini = [
+    "google-generativeai>=0.8.3",
+    "langchain-google-genai>=2.0.7",
+    "langchain>=0.3.8",
+    "langchain-core>=0.3.25"
+]
+vertex = ["vertexai>=1.71.1"]
+groq = [
+    "groq>=0.12.0",
+    "langchain-groq>=0.2.1",
+    "langchain>=0.3.8",
+    "langchain-core>=0.3.25"
+]
+ollama = [
+    "langchain>=0.3.8",
+    "langchain-ollama>=0.2.0",
+    "ollama>=0.4.1",
+    "langchain-core>=0.3.25"
+]
 all = [
-    "openai", "langchain-openai", "langchain",
-    "anthropic", "langchain-anthropic",
-    "google-generativeai", "langchain-google-genai",
-    "vertexai",
-    "langchain-ollama", "ollama", "groq", "langchain-groq", "langchain-core"
+    "openai>=1.55.1",
+    "langchain-openai>=0.2.9",
+    "anthropic>=0.39.0",
+    "langchain-anthropic>=0.3.0",
+    "google-generativeai>=0.8.3",
+    "langchain-google-genai>=2.0.7",
+    "vertexai>=1.71.1",
+    "langchain-ollama>=0.2.0",
+    "ollama>=0.4.1",
+    "groq>=0.12.0",
+    "langchain-groq>=0.2.1",
+    "langchain>=0.3.8",
+    "langchain-core>=0.3.25"
+]
+dev = [
+    "ipykernel>=6.29.5",
+    "ruff>=0.5.5",
+    "mypy>=1.11.1",
+    "types-requests>=2.32.0.20241016",
+    "ipywidgets>=8.1.5",
+    "pytest>=8.3.3",
+    "pytest-mock>=3.12.0",
+    "pytest-asyncio>=0.23.5",
+    "pytest-cov>=6.0.0"
 ]
 
-[tool.poetry.group.dev.dependencies]
-ipykernel = "^6.29.5"
-ruff = "^0.5.5"
-mypy = "^1.11.1"
-types-requests = "^2.32.0.20241016"
-ipywidgets = "^8.1.5"
-pytest = "^8.3.3"
-pytest-mock = "^3.12.0"
-pytest-asyncio = "^0.23.5"
-pytest-cov = "^6.0.0"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["esperanto"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -64,13 +87,13 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --cov=esperanto --cov-report=term-missing"
 
-[tool.isort]
-profile = "black"
-line_length = 88
-
 [tool.ruff]
 line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = ["E501"]
+
+[tool.isort]
+profile = "black"
+line-length = 88

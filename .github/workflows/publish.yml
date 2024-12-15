@@ -16,23 +16,22 @@ jobs:
       with:
         python-version: "3.12"
     
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-
-    - name: Update lock
-      run: poetry lock --no-update
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         
     - name: Install dependencies
-      run: poetry install --no-interaction --extras "all"
+      run: |
+        uv venv
+        uv pip install -e ".[all]"
+        uv pip install build twine
     
     - name: Build package
-      run: poetry build
+      run: python -m build
     
     - name: Publish to PyPI
       env:
-        POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
-      run: poetry publish
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: twine upload dist/*
