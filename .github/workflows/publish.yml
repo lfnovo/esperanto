@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.12"
     
@@ -24,15 +24,13 @@ jobs:
     - name: Install dependencies and build tools
       run: |
         uv venv
-        uv pip install build twine
         rm -rf dist
         uv pip install -e ".[all]"
 
     - name: Build package
-      run: uv run python -m build
+      run: uv build
     
     - name: Publish to PyPI
       env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: uv run twine upload dist/*
+        PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      run: uv publish --token "$PYPI_TOKEN"
