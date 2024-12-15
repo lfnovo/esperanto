@@ -1,27 +1,24 @@
-"""Types module."""
+"""Types module for Esperanto."""
 
-from esperanto.types.response import (
-    ChatCompletion,
-    ChatCompletionChoice,
-    ChatCompletionChunk,
-    ChatCompletionMessage,
-    Choice,
-    DeltaMessage,
-    Message,
-    StreamChoice,
-    Usage,
+from .response import (
+    Usage, Message, ChatCompletionMessage, DeltaMessage,
+    Choice, ChatCompletionChoice, StreamChoice,
+    ChatCompletion, ChatCompletionChunk
 )
-from esperanto.types.stt import TranscriptionResponse
+from .stt import TranscriptionResponse
+from .tts import AudioResponse
+
 
 __all__ = [
-    "ChatCompletion",
-    "ChatCompletionChunk",
-    "ChatCompletionChoice",
+    "Usage",
+    "Message",
     "ChatCompletionMessage",
     "DeltaMessage",
     "Choice",
-    "Message",
+    "ChatCompletionChoice",
     "StreamChoice",
-    "Usage",
+    "ChatCompletion",
+    "ChatCompletionChunk",
     "TranscriptionResponse",
+    "AudioResponse"
 ]

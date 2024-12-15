@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Type
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.stt.base import SpeechToTextModel
+from esperanto.providers.tts.base import TextToSpeechModel
 
 
 class AIFactory:
@@ -31,6 +32,11 @@ class AIFactory:
         "stt": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
             "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
+        },
+        "tts": {
+            "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
+            "elevenlabs": "esperanto.providers.tts.elevenlabs:ElevenLabsTextToSpeechModel",
+            "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
         },
     }
 
@@ -137,3 +143,36 @@ class AIFactory:
         """
         config = config or {}
         return cls._create_instance("stt", provider, model_name=model_name, **config)
+
+    @classmethod
+    def create_tts(
+        cls,
+        provider: str,
+        model_name: Optional[str] = None,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        **kwargs
+    ) -> TextToSpeechModel:
+        """Create a text-to-speech model instance.
+
+        Args:
+            provider: Provider name (openai, elevenlabs, google)
+            model_name: Name of the model to use
+            api_key: API key for the provider
+            base_url: Optional base URL for the API
+            **kwargs: Additional provider-specific configuration
+
+        Returns:
+            TextToSpeechModel instance
+
+        Raises:
+            ValueError: If provider is not supported
+            ImportError: If provider module is not installed
+        """
+        provider_class = cls._import_provider_class("tts", provider)
+        return provider_class(
+            model_name=model_name,
+            api_key=api_key,
+            base_url=base_url,
+            **kwargs
+        )
