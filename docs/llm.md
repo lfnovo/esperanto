@@ -9,7 +9,7 @@ Esperanto supports various Large Language Model (LLM) providers through a unifie
 - OpenRouter (Multiple models)
 - xAI (Grok)
 - Groq (Mixtral, Llama)
-- Gemini
+- Google GenAI (Gemini)
 - Vertex AI (Google Cloud)
 - Ollama (Local deployment)
 
@@ -130,11 +130,11 @@ model = AnthropicLanguageModel(
 )
 ```
 
-### Gemini
+### Goggle Gen AI
 ```python
-from esperanto.providers.llm.gemini import GeminiLanguageModel
+from esperanto.providers.llm.google import GoogleLanguageModel
 
-model = GeminiLanguageModel(
+model = GoogleLanguageModel(
     api_key="your-api-key",
     model_name="gemini-1.5-pro",
     temperature=0.7,

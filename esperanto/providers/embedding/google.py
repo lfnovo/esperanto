@@ -1,4 +1,4 @@
-"""Google Gemini embedding model provider."""
+"""Google GenAI embedding model provider."""
 import asyncio
 import functools
 import os
@@ -9,18 +9,18 @@ import google.generativeai as genai  # type: ignore
 from esperanto.providers.embedding.base import EmbeddingModel
 
 
-class GeminiEmbeddingModel(EmbeddingModel):
-    """Google Gemini embedding model implementation."""
+class GoogleEmbeddingModel(EmbeddingModel):
+    """Google GenAI embedding model implementation."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
         # Get API key
-        self.api_key = kwargs.get("api_key") or os.getenv("GEMINI_API_KEY")
+        self.api_key = kwargs.get("api_key") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise ValueError("Google API key not found")
         
-        # Initialize Gemini
+        # Initialize GenAI
         genai.configure(api_key=self.api_key)
         
         # Update config with model_name if provided
@@ -30,7 +30,7 @@ class GeminiEmbeddingModel(EmbeddingModel):
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
-        # Remove provider-specific kwargs that Gemini doesn't expect
+        # Remove provider-specific kwargs that Google doesn't expect
         kwargs.pop("model_name", None)
         kwargs.pop("api_key", None)
         return kwargs
@@ -79,7 +79,7 @@ class GeminiEmbeddingModel(EmbeddingModel):
         Returns:
             List of embeddings, one for each input text.
         """
-        # Since Gemini's Python SDK doesn't provide async methods,
+        # Since Google's Python SDK doesn't provide async methods,
         # we'll run the sync version in a thread pool
         loop = asyncio.get_event_loop()
         partial_embed = functools.partial(self.embed, texts=texts, **kwargs)
@@ -92,4 +92,4 @@ class GeminiEmbeddingModel(EmbeddingModel):
     @property
     def provider(self) -> str:
         """Get the provider name."""
-        return "gemini"
+        return "google"

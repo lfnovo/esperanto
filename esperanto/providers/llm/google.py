@@ -1,4 +1,4 @@
-"""Gemini language model provider."""
+"""Google GenAI language model provider."""
 import datetime
 import os
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
@@ -21,19 +21,19 @@ from esperanto.types import (
 )
 
 
-class GeminiLanguageModel(LanguageModel):
-    """Gemini language model implementation."""
+class GoogleLanguageModel(LanguageModel):
+    """Google GenAI language model implementation."""
 
     def __post_init__(self):
-        """Initialize Gemini client."""
+        """Initialize Google client."""
         super().__post_init__()
 
         # Get API key
-        self.api_key = self.api_key or os.getenv("GEMINI_API_KEY")
+        self.api_key = self.api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
-            raise ValueError("Gemini API key not found. Please set GEMINI_API_KEY environment variable.")
+            raise ValueError("Google API key not found. Please set GOOGLE_API_KEY environment variable.")
 
-        # Configure Gemini
+        # Configure Google
         genai.configure(api_key=self.api_key)
         
         # Initialize model
@@ -44,7 +44,7 @@ class GeminiLanguageModel(LanguageModel):
     @property
     def provider(self) -> str:
         """Get the provider name."""
-        return "gemini"
+        return "google"
 
     def _get_default_model(self) -> str:
         """Get the default model name.
@@ -72,7 +72,7 @@ class GeminiLanguageModel(LanguageModel):
         return self._langchain_model
 
     def _format_messages(self, messages: List[Dict[str, str]]) -> str:
-        """Format messages into a single string for Gemini.
+        """Format messages into a single string for Google.
         
         Args:
             messages: List of messages in the conversation
@@ -93,7 +93,7 @@ class GeminiLanguageModel(LanguageModel):
         return "\n".join(formatted)
 
     def _create_generation_config(self) -> Any:
-        """Create generation config for Gemini."""
+        """Create generation config for Google."""
         config = genai.GenerationConfig(
             temperature=self.temperature,
             top_p=self.top_p,
@@ -131,10 +131,10 @@ class GeminiLanguageModel(LanguageModel):
         )
 
         if not response.text:
-            raise ValueError("Empty response from Gemini API")
+            raise ValueError("Empty response from Google API")
 
         return ChatCompletion(
-            id=f"gemini-{str(hash(formatted_messages))}",
+            id=f"google-{str(hash(formatted_messages))}",
             choices=[Choice(
                 index=0,
                 message=Message(
@@ -147,7 +147,7 @@ class GeminiLanguageModel(LanguageModel):
             model=self.model_name,
             provider=self.provider,
             usage=Usage(
-                completion_tokens=0,  # Gemini doesn't provide token counts
+                completion_tokens=0,  
                 prompt_tokens=0,
                 total_tokens=0
             )
@@ -156,7 +156,7 @@ class GeminiLanguageModel(LanguageModel):
     def _stream_response(
         self, formatted_messages: str
     ) -> Generator[ChatCompletionChunk, None, None]:
-        """Stream response from Gemini.
+        """Stream response from Google.
 
         Args:
             formatted_messages: Formatted string of messages
@@ -175,7 +175,7 @@ class GeminiLanguageModel(LanguageModel):
                 continue
                 
             yield ChatCompletionChunk(
-                id=f"gemini-chunk-{str(hash(formatted_messages))}",
+                id=f"google-chunk-{str(hash(formatted_messages))}",
                 choices=[StreamChoice(
                     index=0,
                     delta=DeltaMessage(
@@ -217,7 +217,7 @@ class GeminiLanguageModel(LanguageModel):
                         continue
                         
                     yield ChatCompletionChunk(
-                        id=f"gemini-chunk-{str(hash(formatted_messages))}",
+                        id=f"google-chunk-{str(hash(formatted_messages))}",
                         choices=[StreamChoice(
                             index=0,
                             delta=DeltaMessage(
@@ -241,11 +241,11 @@ class GeminiLanguageModel(LanguageModel):
         candidate = response.candidates[0]
         text = candidate.content.parts[0].text.strip()
 
-        # Map Gemini's STOP to our stop finish reason
+        # Map Google's STOP to our stop finish reason
         finish_reason = "stop" if candidate.finish_reason == "STOP" else candidate.finish_reason
 
         return ChatCompletion(
-            id="gemini-" + str(hash(formatted_messages)),
+            id="google-" + str(hash(formatted_messages)),
             choices=[ChatCompletionChoice(
                 index=0,
                 message=ChatCompletionMessage(

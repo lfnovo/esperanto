@@ -6,7 +6,7 @@ Esperanto supports multiple embedding providers for converting text into vector 
 
 - OpenAI (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
 - Google Vertex AI (textembedding-gecko)
-- Google Gemini
+- Google GenAI
 - Ollama (Local deployment)
 
 ## Usage Examples
@@ -82,11 +82,11 @@ model = OpenAIEmbeddingModel(
 )
 ```
 
-### Gemini
+### Google GenAI
 ```python
-from esperanto.providers.embedding.gemini import GeminiEmbeddingModel
+from esperanto.providers.embedding.google import GoogleEmbeddingModel
 
-model = GeminiEmbeddingModel(
+model = GoogleEmbeddingModel(
     api_key="your-api-key" # or use ENV
 )
 ```

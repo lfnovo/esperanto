@@ -1,6 +1,6 @@
 [project]
 name = "esperanto"
-version = "0.5.3"
+version = "0.6.0"
 description = "A unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
@@ -14,8 +14,6 @@ urls.homepage = "https://github.com/lfnovo/esperanto"
 urls.documentation = "https://github.com/lfnovo/esperanto#readme"
 
 dependencies = [
-    "elevenlabs>=0.3.0",
-    "google-cloud-texttospeech>=2.14.0",
     "python-dotenv>=1.0.1",
 ]
 
@@ -32,11 +30,12 @@ anthropic = [
     "langchain>=0.3.8",
     "langchain-core>=0.3.25"
 ]
-gemini = [
+google = [
     "google-generativeai>=0.8.3",
     "langchain-google-genai>=2.0.7",
     "langchain>=0.3.8",
-    "langchain-core>=0.3.25"
+    "langchain-core>=0.3.25",
+    "google-cloud-texttospeech>=2.14.0",
 ]
 vertex = ["vertexai>=1.71.1", "google-generativeai>=0.8.3",]
 groq = [
@@ -52,11 +51,7 @@ ollama = [
     "langchain-core>=0.3.25"
 ]
 elevenlabs = ["elevenlabs>=0.3.0"]
-tts = [
-    "openai>=1.55.1",
-    "elevenlabs>=0.3.0",
-    "google-cloud-texttospeech>=2.14.0"
-]
+
 all = [
     "openai>=1.55.1",
     "langchain-openai>=0.2.9",

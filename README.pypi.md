@@ -17,11 +17,11 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - OpenRouter (Access to multiple models)
   - xAI (Grok)
   - Groq (Mixtral, Llama, Whisper)
-  - Gemini
+  - Google GenAI (Gemini LLM, Text To Speech, Embedding)
   - Vertex AI (Google Cloud)
   - Ollama (Local deployment)
   - ElevenLabs (Text-to-Speech)
-  - Google Cloud TTS
+
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
@@ -53,8 +53,8 @@ pip install "esperanto[openai]"
 # For Anthropic support
 pip install "esperanto[anthropic]"
 
-# For Google (Gemini) support
-pip install "esperanto[gemini]"
+# For Google (GenAI) support
+pip install "esperanto[google]"
 
 # For Vertex AI support
 pip install "esperanto[vertex]"
@@ -76,11 +76,10 @@ pip install "esperanto[all]"
 | OpenAI     | ✅          | ✅               | ✅             | ✅             | ✅        |
 | Anthropic  | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Groq       | ✅          | ❌               | ✅             | ❌             | ✅        |
-| Gemini     | ✅          | ✅               | ❌             | ❌             | ✅        |
+| Google (GenAI)     | ✅          | ✅               | ❌             | ✅             | ✅        |
 | Vertex AI  | ✅          | ✅               | ❌             | ❌             | ❌        |
 | Ollama     | ✅          | ✅               | ❌             | ❌             | ❌        |
 | ElevenLabs | ❌          | ❌               | ❌             | ✅             | ❌        |
-| Google TTS | ❌          | ❌               | ❌             | ✅             | ❌        |
 
 ## Quick Start 🏃‍♂️
 

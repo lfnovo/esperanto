@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, call, patch
 import pytest
 
 from esperanto.providers.embedding.base import EmbeddingModel
-from esperanto.providers.embedding.gemini import GeminiEmbeddingModel
+from esperanto.providers.embedding.google import GoogleEmbeddingModel
 from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
 from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
 from esperanto.providers.embedding.vertex import VertexEmbeddingModel
@@ -40,7 +40,7 @@ def mock_ollama_embedding_response():
 
 
 @pytest.fixture
-def mock_gemini_embedding_response():
+def mock_google_embedding_response():
     return {"embedding": [0.1, 0.2, 0.3]}
 
 
@@ -305,46 +305,46 @@ def test_ollama_embed_multiple_texts(ollama_embedding_model):
         )
 
 
-# Tests for Gemini Embedding Provider
-def test_gemini_provider_name():
-    model = GeminiEmbeddingModel(api_key="test-key")
-    assert model.provider == "gemini"
+# Tests for Google Embedding Provider
+def test_google_provider_name():
+    model = GoogleEmbeddingModel(api_key="test-key")
+    assert model.provider == "google"
 
 
-def test_gemini_initialization_with_api_key():
-    model = GeminiEmbeddingModel(api_key="test-key")
+def test_google_initialization_with_api_key():
+    model = GoogleEmbeddingModel(api_key="test-key")
     assert model.api_key == "test-key"
 
 
-def test_gemini_initialization_with_env_var():
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "env-test-key"}):
-        model = GeminiEmbeddingModel()
+def test_google_initialization_with_env_var():
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "env-test-key"}):
+        model = GoogleEmbeddingModel()
         assert model.api_key == "env-test-key"
 
 
-def test_gemini_initialization_without_api_key():
+def test_google_initialization_without_api_key():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="Google API key not found"):
-            GeminiEmbeddingModel()
+            GoogleEmbeddingModel()
 
 
 @pytest.fixture
-def gemini_embedding_model():
+def google_embedding_model():
     with patch("google.generativeai.embed_content") as mock_embed:
         mock_embed.return_value = {"embedding": [0.1, 0.2, 0.3]}
-        yield GeminiEmbeddingModel(api_key="test_key")
+        yield GoogleEmbeddingModel(api_key="test_key")
 
 
-def test_gemini_embed(gemini_embedding_model):
+def test_google_embed(google_embedding_model):
     texts = ["Hello, world!"]
-    embeddings = gemini_embedding_model.embed(texts)
+    embeddings = google_embedding_model.embed(texts)
     assert embeddings == [[0.1, 0.2, 0.3]]
 
 
 @pytest.mark.asyncio
-async def test_gemini_aembed(gemini_embedding_model):
+async def test_google_aembed(google_embedding_model):
     texts = ["Hello, world!"]
-    embeddings = await gemini_embedding_model.aembed(texts)
+    embeddings = await google_embedding_model.aembed(texts)
     assert embeddings == [[0.1, 0.2, 0.3]]
 
 

@@ -17,7 +17,7 @@ class AIFactory:
         "llm": {
             "openai": "esperanto.providers.llm.openai:OpenAILanguageModel",
             "anthropic": "esperanto.providers.llm.anthropic:AnthropicLanguageModel",
-            "gemini": "esperanto.providers.llm.gemini:GeminiLanguageModel",
+            "google": "esperanto.providers.llm.google:GoogleLanguageModel",
             "groq": "esperanto.providers.llm.groq:GroqLanguageModel",
             "ollama": "esperanto.providers.llm.ollama:OllamaLanguageModel",
             "openrouter": "esperanto.providers.llm.openrouter:OpenRouterLanguageModel",
@@ -25,7 +25,7 @@ class AIFactory:
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
-            "gemini": "esperanto.providers.embedding.gemini:GeminiEmbeddingModel",
+            "google": "esperanto.providers.embedding.google:GoogleEmbeddingModel",
             "ollama": "esperanto.providers.embedding.ollama:OllamaEmbeddingModel",
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
         },

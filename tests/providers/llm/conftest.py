@@ -1,9 +1,10 @@
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from esperanto.providers.llm.gemini import GeminiLanguageModel
-from esperanto.providers.llm.openai import OpenAILanguageModel
+import pytest
+
+from esperanto.providers.llm.google import GoogleLanguageModel
 from esperanto.providers.llm.groq import GroqLanguageModel
+from esperanto.providers.llm.openai import OpenAILanguageModel
 
 
 @pytest.fixture
@@ -94,7 +95,7 @@ def openai_model():
 
 
 @pytest.fixture
-def gemini_model():
+def google_model():
     with patch("google.generativeai.configure") as mock_configure, \
          patch("google.generativeai.GenerativeModel") as mock_model:
         # Create a mock instance
@@ -102,7 +103,7 @@ def gemini_model():
         mock_model.return_value = mock_instance
         
         # Initialize model with test key
-        model = GeminiLanguageModel(api_key="test-key")
+        model = GoogleLanguageModel(api_key="test-key")
         
         yield model
 

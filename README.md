@@ -10,7 +10,18 @@ Esperanto is a powerful Python library that provides a unified interface for int
 
 ## Features ✨
 
+
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
+- **Provider Support**:
+  - OpenAI (GPT-4, GPT-3.5, Whisper, TTS)
+  - Anthropic (Claude 3)
+  - OpenRouter (Access to multiple models)
+  - xAI (Grok)
+  - Groq (Mixtral, Llama, Whisper)
+  - Google GenAI (Gemini LLM, Text To Speech, Embedding)
+  - Vertex AI (Google Cloud)
+  - Ollama (Local deployment)
+  - ElevenLabs (Text-to-Speech)
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
@@ -18,6 +29,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
 - **Streaming**: Support for streaming responses
 - **Structured Output**: JSON output formatting (where supported)
 - **LangChain Integration**: Easy conversion to LangChain chat models
+
 
 For detailed information about our providers, check out:
 - [LLM Providers Documentation](docs/llm.md)
@@ -42,8 +54,8 @@ pip install "esperanto[openai]"
 # For Anthropic support
 pip install "esperanto[anthropic]"
 
-# For Google (Gemini) support
-pip install "esperanto[gemini]"
+# For Google (GenAI) support
+pip install "esperanto[google]"
 
 # For Vertex AI support
 pip install "esperanto[vertex]"
@@ -71,11 +83,10 @@ pip install "esperanto[all]"
 | OpenAI     | ✅          | ✅               | ✅             | ✅             | ✅        |
 | Anthropic  | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Groq       | ✅          | ❌               | ✅             | ❌             | ✅        |
-| Gemini     | ✅          | ✅               | ❌             | ❌             | ✅        |
+| Google (GenAI)     | ✅          | ✅               | ❌             | ✅             | ✅        |
 | Vertex AI  | ✅          | ✅               | ❌             | ❌             | ❌        |
 | Ollama     | ✅          | ✅               | ❌             | ❌             | ❌        |
 | ElevenLabs | ❌          | ❌               | ❌             | ✅             | ❌        |
-| Google TTS | ❌          | ❌               | ❌             | ✅             | ❌        |
 
 ## Quick Start 🏃‍♂️
 

@@ -3,8 +3,6 @@ Esperanto: A unified interface for language models.
 This module exports all public components of the library.
 """
 
-from typing import Dict, List, Optional, Type
-
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
 
@@ -15,9 +13,9 @@ except ImportError:
     AnthropicLanguageModel = None
 
 try:
-    from esperanto.providers.llm.gemini import GeminiLanguageModel
+    from esperanto.providers.llm.google import GoogleLanguageModel
 except ImportError:
-    GeminiLanguageModel = None
+    GoogleLanguageModel = None
 
 try:
     from esperanto.providers.llm.ollama import OllamaLanguageModel
@@ -36,11 +34,6 @@ except ImportError:
     OpenRouterLanguageModel = None
 
 try:
-    from esperanto.providers.llm.mistral import MistralLanguageModel
-except ImportError:
-    MistralLanguageModel = None
-
-try:
     from esperanto.providers.llm.xai import XAILanguageModel
 except ImportError:
     XAILanguageModel = None
@@ -51,14 +44,9 @@ except ImportError:
     OpenAIEmbeddingModel = None
 
 try:
-    from esperanto.providers.embedding.gemini import GeminiEmbeddingModel
+    from esperanto.providers.embedding.google import GoogleEmbeddingModel
 except ImportError:
-    GeminiEmbeddingModel = None
-
-try:
-    from esperanto.providers.embedding.xai import XAIEmbeddingModel
-except ImportError:
-    XAIEmbeddingModel = None
+    GoogleEmbeddingModel = None
 
 try:
     from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
@@ -69,14 +57,14 @@ except ImportError:
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
-    'GeminiLanguageModel': GeminiLanguageModel,
+    'GoogleLanguageModel': GoogleLanguageModel,
     'OpenAILanguageModel': OpenAILanguageModel,
     'OpenRouterLanguageModel': OpenRouterLanguageModel,
-    'MistralLanguageModel': MistralLanguageModel,
     'XAILanguageModel': XAILanguageModel,
     'OpenAIEmbeddingModel': OpenAIEmbeddingModel,
-    'GeminiEmbeddingModel': GeminiEmbeddingModel,
-    'XAIEmbeddingModel': XAIEmbeddingModel,
+    'GoogleEmbeddingModel': GoogleEmbeddingModel,
+    "OllamaEmbeddingModel": OllamaEmbeddingModel,
+    "OllamaLanguageModel": OllamaLanguageModel
 }
 
 # Get list of available provider classes (excluding None values)

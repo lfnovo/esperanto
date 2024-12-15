@@ -1,35 +1,34 @@
 import os
-from unittest.mock import patch, MagicMock
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import google.generativeai as genai
+import pytest
 
-from esperanto.providers.llm.gemini import GeminiLanguageModel
+from esperanto.providers.llm.google import GoogleLanguageModel
 
 
-def test_provider_name(gemini_model):
-    assert gemini_model.provider == "gemini"
+def test_provider_name(google_model):
+    assert google_model.provider == "google"
 
 
 def test_initialization_with_api_key():
-    model = GeminiLanguageModel(api_key="test-key")
+    model = GoogleLanguageModel(api_key="test-key")
     assert model.api_key == "test-key"
 
 
 def test_initialization_with_env_var():
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "env-test-key"}):
-        model = GeminiLanguageModel()
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "env-test-key"}):
+        model = GoogleLanguageModel()
         assert model.api_key == "env-test-key"
 
 
 def test_initialization_without_api_key():
     with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ValueError, match="Gemini API key not found"):
-            GeminiLanguageModel()
+        with pytest.raises(ValueError, match="Google API key not found"):
+            GoogleLanguageModel()
 
 
-def test_chat_complete(gemini_model):
+def test_chat_complete(google_model):
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
@@ -39,13 +38,13 @@ def test_chat_complete(gemini_model):
     mock_response = MagicMock()
     mock_response.text = "Hello! How can I help you today?"
     mock_response.prompt_feedback.block_reason = None
-    gemini_model._client.generate_content.return_value = mock_response
+    google_model._client.generate_content.return_value = mock_response
     
-    result = gemini_model.chat_complete(messages)
+    result = google_model.chat_complete(messages)
     
     # Verify the client was called with correct parameters
-    gemini_model._client.generate_content.assert_called_once()
-    call_args = gemini_model._client.generate_content.call_args[1]
+    google_model._client.generate_content.assert_called_once()
+    call_args = google_model._client.generate_content.call_args[1]
     
     # Check generation config
     assert isinstance(call_args["generation_config"], genai.GenerationConfig)
@@ -58,7 +57,7 @@ def test_chat_complete(gemini_model):
 
 
 @pytest.mark.asyncio
-async def test_achat_complete(gemini_model):
+async def test_achat_complete(google_model):
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
@@ -80,13 +79,13 @@ async def test_achat_complete(gemini_model):
     mock_response.candidates = [mock_candidate]
     
     # Use AsyncMock for async method
-    gemini_model._client.generate_content_async = AsyncMock(return_value=mock_response)
+    google_model._client.generate_content_async = AsyncMock(return_value=mock_response)
     
-    result = await gemini_model.achat_complete(messages)
+    result = await google_model.achat_complete(messages)
     
     # Verify the async client was called with correct parameters
-    gemini_model._client.generate_content_async.assert_called_once()
-    call_args = gemini_model._client.generate_content_async.call_args[1]
+    google_model._client.generate_content_async.assert_called_once()
+    call_args = google_model._client.generate_content_async.call_args[1]
     
     # Check generation config
     assert isinstance(call_args["generation_config"], genai.GenerationConfig)
@@ -98,26 +97,26 @@ async def test_achat_complete(gemini_model):
     assert result.choices[0].finish_reason == "stop"
 
 
-def test_json_structured_output(gemini_model):
-    gemini_model.structured = "json"
+def test_json_structured_output(google_model):
+    google_model.structured = "json"
     messages = [{"role": "user", "content": "Hello!"}]
     
     # Mock response
     mock_response = MagicMock()
     mock_response.text = '{"greeting": "Hello!", "response": "How can I help?"}'
     mock_response.prompt_feedback.block_reason = None
-    gemini_model._client.generate_content.return_value = mock_response
+    google_model._client.generate_content.return_value = mock_response
     
-    gemini_model.chat_complete(messages)
+    google_model.chat_complete(messages)
     
     # Verify JSON mode was set correctly
-    call_args = gemini_model._client.generate_content.call_args[1]
+    call_args = google_model._client.generate_content.call_args[1]
     assert call_args["generation_config"].response_mime_type == "application/json"
 
 
 @pytest.mark.asyncio
-async def test_json_structured_output_async(gemini_model):
-    gemini_model.structured = "json"
+async def test_json_structured_output_async(google_model):
+    google_model.structured = "json"
     messages = [{"role": "user", "content": "Hello!"}]
     
     # Mock response
@@ -126,17 +125,17 @@ async def test_json_structured_output_async(gemini_model):
     mock_response.prompt_feedback.block_reason = None
     
     # Use AsyncMock for async method
-    gemini_model._client.generate_content_async = AsyncMock(return_value=mock_response)
+    google_model._client.generate_content_async = AsyncMock(return_value=mock_response)
     
-    await gemini_model.achat_complete(messages)
+    await google_model.achat_complete(messages)
     
     # Verify JSON mode was set correctly
-    call_args = gemini_model._client.generate_content_async.call_args[1]
+    call_args = google_model._client.generate_content_async.call_args[1]
     assert call_args["generation_config"].response_mime_type == "application/json"
 
 
-def test_to_langchain(gemini_model):
-    langchain_model = gemini_model.to_langchain()
+def test_to_langchain(google_model):
+    langchain_model = google_model.to_langchain()
     
     # Test model configuration
     assert langchain_model.model == "models/gemini-1.5-pro"
