@@ -19,6 +19,8 @@ class Message:
 
     content: Optional[str] = None
     role: Optional[str] = None
+    function_call: Optional[dict] = None
+    tool_calls: Optional[list] = None
 
 
 @dataclass

@@ -43,7 +43,7 @@ def test_chat_complete(groq_model):
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
     ]
-    groq_model.chat_complete(messages)
+    response = groq_model.chat_complete(messages)
     
     # Verify the client was called with correct parameters
     groq_model.client.chat.completions.create.assert_called_once()
@@ -52,6 +52,7 @@ def test_chat_complete(groq_model):
     assert call_kwargs["messages"] == messages
     assert call_kwargs["model"] == "mixtral-8x7b-32768"
     assert call_kwargs["temperature"] == 1.0
+    assert not call_kwargs["stream"]
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
@@ -61,7 +62,7 @@ async def test_achat_complete(groq_model):
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
     ]
-    await groq_model.achat_complete(messages)
+    response = await groq_model.achat_complete(messages)
     
     # Verify the async client was called with correct parameters
     groq_model.async_client.chat.completions.create.assert_called_once()
@@ -70,6 +71,7 @@ async def test_achat_complete(groq_model):
     assert call_kwargs["messages"] == messages
     assert call_kwargs["model"] == "mixtral-8x7b-32768"
     assert call_kwargs["temperature"] == 1.0
+    assert not call_kwargs["stream"]
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
@@ -86,7 +88,7 @@ def test_to_langchain(groq_model):
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
-def test_response_normalization(groq_model, mock_groq_response):
+def test_response_normalization(groq_model):
     messages = [{"role": "user", "content": "Hello!"}]
     response = groq_model.chat_complete(messages)
     
