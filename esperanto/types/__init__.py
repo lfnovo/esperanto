@@ -11,6 +11,7 @@ from esperanto.types.response import (
     StreamChoice,
     Usage,
 )
+from esperanto.types.stt import TranscriptionResponse
 
 __all__ = [
     "ChatCompletion",
@@ -22,4 +23,5 @@ __all__ = [
     "Message",
     "StreamChoice",
     "Usage",
+    "TranscriptionResponse",
 ]

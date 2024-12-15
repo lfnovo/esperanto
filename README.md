@@ -12,6 +12,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
 
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Embedding Support**: Multiple embedding providers for vector representations
+- **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
 - **Structured Output**: JSON output formatting (where supported)
@@ -20,6 +21,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
 For detailed information about our providers, check out:
 - [LLM Providers Documentation](docs/llm.md)
 - [Embedding Providers Documentation](docs/embedding.md)
+- [Speech-to-Text Providers Documentation](docs/speech_to_text.md)
 
 ## Installation 🚀
 
@@ -56,15 +58,14 @@ pip install "esperanto[all]"
 
 ## Provider Support Matrix
 
-| Provider  | LLM Support | Embedding Support | JSON Mode |
-|-----------|-------------|------------------|-----------|
-| OpenAI    | ✅          | ✅               | ✅        |
-| Anthropic | ✅          | ❌               | ✅        |
-| Groq      | ✅          | ❌               | ✅        |
-| Gemini    | ✅          | ✅               | ✅        |
-| Vertex AI | ✅          | ✅               | ❌        |
-| Ollama    | ✅          | ✅               | ❌        |
-
+| Provider  | LLM Support | Embedding Support | Speech-to-Text | JSON Mode |
+|-----------|-------------|------------------|----------------|-----------|
+| OpenAI    | ✅          | ✅               | ✅             | ✅        |
+| Anthropic | ✅          | ❌               | ❌             | ✅        |
+| Groq      | ✅          | ❌               | ✅             | ✅        |
+| Gemini    | ✅          | ✅               | ❌             | ✅        |
+| Vertex AI | ✅          | ✅               | ❌             | ❌        |
+| Ollama    | ✅          | ✅               | ❌             | ❌        |
 
 ## Quick Start 🏃‍♂️
 

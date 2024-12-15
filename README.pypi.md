@@ -12,15 +12,16 @@ Esperanto is a powerful Python library that provides a unified interface for int
 
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Provider Support**:
-  - OpenAI (GPT-4, GPT-3.5)
+  - OpenAI (GPT-4, GPT-3.5, Whisper)
   - Anthropic (Claude 3)
   - OpenRouter (Access to multiple models)
   - xAI (Grok)
-  - Groq (Mixtral, Llama)
+  - Groq (Mixtral, Llama, Whisper)
   - Gemini
   - Vertex AI (Google Cloud)
   - Ollama (Local deployment)
 - **Embedding Support**: Multiple embedding providers for vector representations
+- **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
 - **Structured Output**: JSON output formatting (where supported)
@@ -29,6 +30,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
 For detailed information about our providers, check out:
 - [LLM Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/llm.md)
 - [Embedding Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/embedding.md)
+- [Speech-to-Text Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/speech_to_text.md)
 
 ## Installation 🚀
 
@@ -65,14 +67,14 @@ pip install "esperanto[all]"
 
 ## Provider Support Matrix
 
-| Provider  | LLM Support | Embedding Support | JSON Mode |
-|-----------|-------------|------------------|-----------|
-| OpenAI    | ✅          | ✅               | ✅        |
-| Anthropic | ✅          | ❌               | ✅        |
-| Groq      | ✅          | ❌               | ✅        |
-| Gemini    | ✅          | ✅               | ✅        |
-| Vertex AI | ✅          | ✅               | ❌        |
-| Ollama    | ✅          | ✅               | ❌        |
+| Provider  | LLM Support | Embedding Support | Speech-to-Text | JSON Mode |
+|-----------|-------------|------------------|----------------|-----------|
+| OpenAI    | ✅          | ✅               | ✅             | ✅        |
+| Anthropic | ✅          | ❌               | ❌             | ✅        |
+| Groq      | ✅          | ❌               | ✅             | ✅        |
+| Gemini    | ✅          | ✅               | ❌             | ✅        |
+| Vertex AI | ✅          | ✅               | ❌             | ❌        |
+| Ollama    | ✅          | ✅               | ❌             | ❌        |
 
 ## Quick Start 🏃‍♂️
 

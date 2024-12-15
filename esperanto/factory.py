@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Type
 
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.stt.base import SpeechToTextModel
 
 
 class AIFactory:
@@ -26,6 +27,10 @@ class AIFactory:
             "gemini": "esperanto.providers.embedding.gemini:GeminiEmbeddingModel",
             "ollama": "esperanto.providers.embedding.ollama:OllamaEmbeddingModel",
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
+        },
+        "stt": {
+            "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
+            "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
         },
     }
 
@@ -72,6 +77,17 @@ class AIFactory:
             ) from e
 
     @classmethod
+    def _create_instance(
+        cls,
+        service_type: str,
+        provider: str,
+        model_name: Optional[str] = None,
+        **kwargs,
+    ):
+        provider_class = cls._import_provider_class(service_type, provider)
+        return provider_class(model_name=model_name, **kwargs)
+
+    @classmethod
     def create_llm(
         cls, provider: str, model_name: str, config: Optional[Dict[str, Any]] = None
     ) -> LanguageModel:
@@ -104,3 +120,20 @@ class AIFactory:
         """
         provider_class = cls._import_provider_class("embedding", provider)
         return provider_class(model_name=model_name, config=config or {})
+
+    @classmethod
+    def create_stt(
+        cls, provider: str, model_name: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+    ) -> SpeechToTextModel:
+        """Create a speech-to-text model instance.
+
+        Args:
+            provider: Provider name
+            model_name: Optional name of the model to use
+            config: Optional configuration for the model
+
+        Returns:
+            SpeechToTextModel: Speech-to-text model instance
+        """
+        config = config or {}
+        return cls._create_instance("stt", provider, model_name=model_name, **config)
