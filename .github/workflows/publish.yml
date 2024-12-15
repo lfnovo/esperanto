@@ -21,11 +21,11 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         
-    - name: Install dependencies
+    - name: Install dependencies and build tools
       run: |
         uv venv
+        uv pip install build twine
         uv pip install -e ".[all]"
-        uv pip install build
 
     - name: Build package
       run: uv run python -m build
@@ -34,6 +34,4 @@ jobs:
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        uv pip install twine
-        uv run twine upload dist/*
+      run: uv run twine upload dist/*
