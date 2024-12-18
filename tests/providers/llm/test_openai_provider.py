@@ -139,3 +139,77 @@ def test_to_langchain_with_organization(openai_model):
     openai_model.organization = "test-org"
     langchain_model = openai_model.to_langchain()
     assert langchain_model.openai_organization == "test-org"
+
+def test_o1_model_transformations(openai_model):
+    """Test that o1 models correctly transform parameters and messages."""
+    openai_model.model_name = "o1-model"  # Set model to o1
+    openai_model._config["model_name"] = "o1-model"  # Update config as well
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"}
+    ]
+    
+    # Test synchronous completion
+    response = openai_model.chat_complete(messages)
+    call_kwargs = openai_model.client.chat.completions.create.call_args[1]
+    
+    # Check message transformation
+    assert call_kwargs["messages"] == [
+        {"role": "user", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"}
+    ]
+    
+    # Check parameter transformations
+    assert call_kwargs["temperature"] == 1.0
+    assert "top_p" not in call_kwargs
+    assert "max_tokens" not in call_kwargs
+    if "max_completion_tokens" in call_kwargs:
+        assert call_kwargs["max_completion_tokens"] == openai_model.max_tokens
+
+@pytest.mark.asyncio
+async def test_o1_model_transformations_async(openai_model):
+    """Test that o1 models correctly transform parameters and messages in async mode."""
+    openai_model.model_name = "o1-model"  # Set model to o1
+    openai_model._config["model_name"] = "o1-model"  # Update config as well
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"}
+    ]
+    
+    # Test async completion
+    await openai_model.achat_complete(messages)
+    call_kwargs = openai_model.async_client.chat.completions.create.call_args[1]
+    
+    # Check message transformation
+    assert call_kwargs["messages"] == [
+        {"role": "user", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"}
+    ]
+    
+    # Check parameter transformations
+    assert call_kwargs["temperature"] == 1.0
+    assert "top_p" not in call_kwargs
+    assert "max_tokens" not in call_kwargs
+    if "max_completion_tokens" in call_kwargs:
+        assert call_kwargs["max_completion_tokens"] == openai_model.max_tokens
+
+def test_non_o1_model_unchanged(openai_model):
+    """Test that non-o1 models don't apply the special transformations."""
+    openai_model.model_name = "gpt-4"  # Set model to non-o1
+    openai_model._config["model_name"] = "gpt-4"  # Update config as well
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"}
+    ]
+    
+    # Test completion
+    response = openai_model.chat_complete(messages)
+    call_kwargs = openai_model.client.chat.completions.create.call_args[1]
+    
+    # Check messages remain unchanged
+    assert call_kwargs["messages"] == messages
+    
+    # Check parameters remain unchanged
+    assert "max_tokens" in call_kwargs
+    assert "max_completion_tokens" not in call_kwargs
+    assert "top_p" in call_kwargs

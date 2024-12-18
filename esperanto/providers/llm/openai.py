@@ -89,6 +89,13 @@ class OpenAILanguageModel(LanguageModel):
             model=chunk.model,
         )
 
+    def _transform_messages_for_o1(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """Transform messages for o1 models by replacing system role with user role."""
+        return [
+            {**msg, "role": "user"} if msg["role"] == "system" else {**msg}
+            for msg in messages
+        ]
+
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
         
@@ -102,6 +109,16 @@ class OpenAILanguageModel(LanguageModel):
         kwargs.pop("base_url", None)
         kwargs.pop("organization", None)
         kwargs.pop("structured", None)  # Remove structured param as it's handled separately
+
+        # Special handling for o1 models
+        model_name = self.get_model_name()
+        if model_name.startswith("o1"):
+            # Replace max_tokens with max_completion_tokens
+            if "max_tokens" in kwargs:
+                kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
+            # Force temperature to 1 and remove top_p
+            kwargs["temperature"] = 1.0
+            kwargs.pop("top_p", None)
         
         # Handle streaming parameter
         if exclude_stream:
@@ -130,10 +147,15 @@ class OpenAILanguageModel(LanguageModel):
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks if streaming.
         """
         should_stream = stream if stream is not None else self.streaming
+        model_name = self.get_model_name()
+        
+        # Transform messages for o1 models
+        if model_name.startswith("o1"):
+            messages = self._transform_messages_for_o1([{**msg} for msg in messages])  # Deep copy each message dict
         
         response = self.client.chat.completions.create(
             messages=messages,
-            model=self.get_model_name(),
+            model=model_name,
             stream=should_stream,
             **self._get_api_kwargs(exclude_stream=True)
         )
@@ -157,10 +179,15 @@ class OpenAILanguageModel(LanguageModel):
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks if streaming.
         """
         should_stream = stream if stream is not None else self.streaming
+        model_name = self.get_model_name()
+        
+        # Transform messages for o1 models
+        if model_name.startswith("o1"):
+            messages = self._transform_messages_for_o1([{**msg} for msg in messages])  # Deep copy each message dict
         
         response = await self.async_client.chat.completions.create(
             messages=messages,
-            model=self.get_model_name(),
+            model=model_name,
             stream=should_stream,
             **self._get_api_kwargs(exclude_stream=True)
         )
