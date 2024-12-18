@@ -12,7 +12,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
 
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Provider Support**:
-  - OpenAI (GPT-4, GPT-3.5, Whisper, TTS)
+  - OpenAI (GPT-4, GPT-3.5, o1, Whisper, TTS)
   - Anthropic (Claude 3)
   - OpenRouter (Access to multiple models)
   - xAI (Grok)

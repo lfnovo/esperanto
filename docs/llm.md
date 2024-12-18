@@ -4,7 +4,7 @@ Esperanto supports various Large Language Model (LLM) providers through a unifie
 
 ## Supported Providers
 
-- OpenAI (GPT-4, GPT-3.5)
+- OpenAI (GPT-4, GPT-3.5, o1)
 - Anthropic (Claude 3 family)
 - OpenRouter (Multiple models)
 - xAI (Grok)
@@ -96,6 +96,22 @@ model = OpenAILanguageModel(
     streaming=False,
     structured="json"
 )
+```
+
+### OpenAI o1 Model
+
+When using OpenAI's o1 model, Esperanto automatically handles the required transformations:
+- Replaces `max_tokens` with `max_completion_tokens`
+- Sets temperature to 1.0 (required by the model)
+- Removes `top_p` parameter
+- Converts system messages to user messages
+
+```python
+model = AIFactory.create_llm("openai", "o1-model")
+response = model.chat_complete([
+    {"role": "system", "content": "You are a helpful assistant."},  # Will be converted to user role
+    {"role": "user", "content": "Hello!"}
+])
 ```
 
 ### Groq
