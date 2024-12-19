@@ -167,7 +167,7 @@ class AnthropicLanguageModel(LanguageModel):
             if temp is not None:
                 kwargs["temperature"] = max(0.0, min(1.0, float(temp)))
 
-        # Handle max_tokens
+        # Handle max_tokens - required by Anthropic
         if "max_tokens" in kwargs:
             max_tokens = kwargs["max_tokens"]
             if max_tokens is not None:

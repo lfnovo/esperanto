@@ -91,14 +91,16 @@ class GroqLanguageModel(LanguageModel):
 
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
-        kwargs = self.get_completion_kwargs()
+        kwargs = {}
+        config = self.get_completion_kwargs()
         
-        # Remove provider-specific kwargs that Groq doesn't expect
-        kwargs.pop("model_name", None)
-        kwargs.pop("api_key", None)
-        kwargs.pop("base_url", None)
-        kwargs.pop("organization", None)
-        kwargs.pop("structured", None)
+        # Only include non-provider-specific args that were explicitly set
+        for key, value in config.items():
+            if key not in ["model_name", "api_key", "base_url", "organization", "structured"]:
+                # Skip max_tokens if it's the default value (850)
+                if key == "max_tokens" and value == 850:
+                    continue
+                kwargs[key] = value
         
         # Handle streaming parameter
         if exclude_stream:

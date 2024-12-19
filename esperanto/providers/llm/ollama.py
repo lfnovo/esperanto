@@ -40,12 +40,13 @@ class OllamaLanguageModel(LanguageModel):
 
     def _get_api_kwargs(self, **kwargs) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
-        kwargs = self.get_completion_kwargs(**kwargs)
-
-        # Remove provider-specific kwargs that Ollama doesn't expect
-        kwargs.pop("model_name", None)
-        kwargs.pop("base_url", None)
-        kwargs.pop("streaming", None)
+        kwargs = {}
+        config = self.get_completion_kwargs()
+        
+        # Only include non-provider-specific args that were explicitly set
+        for key, value in config.items():
+            if key not in ["model_name", "base_url", "streaming"]:
+                kwargs[key] = value
 
         # Handle JSON format if structured output is requested
         if self.structured == "json":
@@ -53,9 +54,13 @@ class OllamaLanguageModel(LanguageModel):
 
         # Move parameters to options dict as expected by Ollama client
         options = {}
-        for key in ["temperature", "top_p", "max_tokens"]:
+        for key in ["temperature", "top_p"]:
             if key in kwargs:
                 options[key] = kwargs.pop(key)
+                
+        # Only include max_tokens in options if it was explicitly set
+        if "max_tokens" in kwargs and kwargs["max_tokens"] != 850:
+            options["max_tokens"] = kwargs.pop("max_tokens")
 
         if options:
             kwargs["options"] = options
@@ -111,7 +116,7 @@ class OllamaLanguageModel(LanguageModel):
             model=self.get_model_name(),
             messages=messages,
             stream=False,
-            **api_kwargs,
+            options=api_kwargs,
         )
         return self._normalize_response(response)
 

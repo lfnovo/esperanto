@@ -102,16 +102,19 @@ class OpenAILanguageModel(LanguageModel):
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
         """
-        kwargs = self.get_completion_kwargs()
-        # Remove provider-specific kwargs that OpenAI doesn't expect
-        kwargs.pop("model_name", None)
-        kwargs.pop("api_key", None)
-        kwargs.pop("base_url", None)
-        kwargs.pop("organization", None)
-        kwargs.pop("structured", None)  # Remove structured param as it's handled separately
+        kwargs = {}
+        config = self.get_completion_kwargs()
+        model_name = self.get_model_name()
+        
+        # Only include non-provider-specific args that were explicitly set
+        for key, value in config.items():
+            if key not in ["model_name", "api_key", "base_url", "organization", "structured"]:
+                # Skip max_tokens if it's the default value (850) and we're using an o1 model
+                if key == "max_tokens" and value == 850 and model_name.startswith("o1"):
+                    continue
+                kwargs[key] = value
 
         # Special handling for o1 models
-        model_name = self.get_model_name()
         if model_name.startswith("o1"):
             # Replace max_tokens with max_completion_tokens
             if "max_tokens" in kwargs:
@@ -184,6 +187,7 @@ class OpenAILanguageModel(LanguageModel):
         # Transform messages for o1 models
         if model_name.startswith("o1"):
             messages = self._transform_messages_for_o1([{**msg} for msg in messages])  # Deep copy each message dict
+        
         
         response = await self.async_client.chat.completions.create(
             messages=messages,

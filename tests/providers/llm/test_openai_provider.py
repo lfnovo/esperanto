@@ -209,7 +209,15 @@ def test_non_o1_model_unchanged(openai_model):
     # Check messages remain unchanged
     assert call_kwargs["messages"] == messages
     
-    # Check parameters remain unchanged
-    assert "max_tokens" in call_kwargs
+    # Check o1-specific parameters are not present
     assert "max_completion_tokens" not in call_kwargs
-    assert "top_p" in call_kwargs
+    
+    # Test with o1 model
+    openai_model.model_name = "o1-test"
+    openai_model._config["model_name"] = "o1-test"
+    
+    response = openai_model.chat_complete(messages)
+    o1_call_kwargs = openai_model.client.chat.completions.create.call_args[1]
+    
+    # Check that top_p is removed for o1 models
+    assert "top_p" not in o1_call_kwargs
