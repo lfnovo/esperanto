@@ -5,6 +5,8 @@ This module exports all public components of the library.
 
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.stt.base import SpeechToTextModel
+from esperanto.providers.tts.base import TextToSpeechModel
 
 # Import providers conditionally to handle optional dependencies
 try:
@@ -73,7 +75,7 @@ provider_classes = [name for name, cls in __provider_classes.items() if cls is n
 # Import factory after defining providers
 from esperanto.factory import AIFactory
 
-__all__ = ["AIFactory", "LanguageModel", "EmbeddingModel"] + provider_classes
+__all__ = ["AIFactory", "LanguageModel", "EmbeddingModel", "SpeechToTextModel", "TextToSpeechModel"] + provider_classes
 
 # Make provider classes available at module level
 globals().update({k: v for k, v in __provider_classes.items() if v is not None})
