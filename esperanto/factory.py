@@ -1,6 +1,7 @@
 """Factory module for creating AI service instances."""
 
 import importlib
+import warnings
 from typing import Any, Dict, List, Optional, Type
 
 from esperanto.providers.embedding.base import EmbeddingModel
@@ -204,6 +205,12 @@ class AIFactory:
         Returns:
             Speech-to-text model instance
         """
+        warnings.warn(
+            "create_stt() is deprecated and will be removed in a future version. "
+            "Use create_speech_to_text() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return cls.create_speech_to_text(provider, model_name=model_name, config=config)
 
     @classmethod
@@ -225,4 +232,32 @@ class AIFactory:
         Returns:
             Text-to-speech model instance
         """
+        warnings.warn(
+            "create_tts() is deprecated and will be removed in a future version. "
+            "Use create_text_to_speech() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return cls.create_text_to_speech(provider, model_name=model_name, config=config, api_key=api_key)
+
+    @classmethod
+    def create_llm(
+        cls, provider: str, model_name: str, config: Optional[Dict[str, Any]] = None
+    ) -> LanguageModel:
+        """Create a language model instance (alias for create_language).
+
+        Args:
+            provider: Provider name
+            model_name: Name of the model to use
+            config: Optional configuration for the model
+
+        Returns:
+            Language model instance
+        """
+        warnings.warn(
+            "create_llm() is deprecated and will be removed in a future version. "
+            "Use create_language() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return cls.create_language(provider, model_name=model_name, config=config)
