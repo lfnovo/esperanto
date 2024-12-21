@@ -1,7 +1,7 @@
 """Factory module for creating AI service instances."""
 
 import importlib
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
@@ -14,7 +14,7 @@ class AIFactory:
 
     # Provider module mappings
     _provider_modules = {
-        "llm": {
+        "language": {
             "openai": "esperanto.providers.llm.openai:OpenAILanguageModel",
             "anthropic": "esperanto.providers.llm.anthropic:AnthropicLanguageModel",
             "google": "esperanto.providers.llm.google:GoogleLanguageModel",
@@ -29,11 +29,11 @@ class AIFactory:
             "ollama": "esperanto.providers.embedding.ollama:OllamaEmbeddingModel",
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
         },
-        "stt": {
+        "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
             "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
         },
-        "tts": {
+        "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
             "elevenlabs": "esperanto.providers.tts.elevenlabs:ElevenLabsTextToSpeechModel",
             "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
@@ -45,7 +45,7 @@ class AIFactory:
         """Dynamically import provider class.
 
         Args:
-            service_type: Type of service (llm, stt, tts)
+            service_type: Type of service (language, embedding, speech_to_text, text_to_speech)
             provider: Provider name
 
         Returns:
@@ -83,6 +83,19 @@ class AIFactory:
             ) from e
 
     @classmethod
+    def get_available_providers(cls) -> Dict[str, List[str]]:
+        """Get a dictionary of available providers for each model type.
+
+        Returns:
+            Dict[str, List[str]]: A dictionary where keys are model types (language, embedding, speech_to_text, text_to_speech)
+                and values are lists of available provider names.
+        """
+        return {
+            model_type: list(providers.keys())
+            for model_type, providers in cls._provider_modules.items()
+        }
+
+    @classmethod
     def _create_instance(
         cls,
         service_type: str,
@@ -94,7 +107,7 @@ class AIFactory:
         return provider_class(model_name=model_name, **kwargs)
 
     @classmethod
-    def create_llm(
+    def create_language(
         cls, provider: str, model_name: str, config: Optional[Dict[str, Any]] = None
     ) -> LanguageModel:
         """Create a language model instance.
@@ -107,7 +120,7 @@ class AIFactory:
         Returns:
             Language model instance
         """
-        provider_class = cls._import_provider_class("llm", provider)
+        provider_class = cls._import_provider_class("language", provider)
         return provider_class(model_name=model_name, config=config or {})
 
     @classmethod
@@ -128,7 +141,7 @@ class AIFactory:
         return provider_class(model_name=model_name, config=config or {})
 
     @classmethod
-    def create_stt(
+    def create_speech_to_text(
         cls, provider: str, model_name: Optional[str] = None, config: Optional[Dict[str, Any]] = None
     ) -> SpeechToTextModel:
         """Create a speech-to-text model instance.
@@ -139,13 +152,13 @@ class AIFactory:
             config: Optional configuration for the model
 
         Returns:
-            SpeechToTextModel: Speech-to-text model instance
+            Speech-to-text model instance
         """
         config = config or {}
-        return cls._create_instance("stt", provider, model_name=model_name, **config)
+        return cls._create_instance("speech_to_text", provider, model_name=model_name, **config)
 
     @classmethod
-    def create_tts(
+    def create_text_to_speech(
         cls,
         provider: str,
         model_name: Optional[str] = None,
@@ -169,10 +182,47 @@ class AIFactory:
             ValueError: If provider is not supported
             ImportError: If provider module is not installed
         """
-        provider_class = cls._import_provider_class("tts", provider)
+        provider_class = cls._import_provider_class("text_to_speech", provider)
         return provider_class(
             model_name=model_name,
             api_key=api_key,
             base_url=base_url,
             **kwargs
         )
+
+    @classmethod
+    def create_stt(
+        cls, provider: str, model_name: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+    ) -> SpeechToTextModel:
+        """Create a speech-to-text model instance (alias for create_speech_to_text).
+
+        Args:
+            provider: Provider name
+            model_name: Optional name of the model to use
+            config: Optional configuration for the model
+
+        Returns:
+            Speech-to-text model instance
+        """
+        return cls.create_speech_to_text(provider, model_name=model_name, config=config)
+
+    @classmethod
+    def create_tts(
+        cls,
+        provider: str,
+        model_name: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
+        api_key: Optional[str] = None,
+    ) -> TextToSpeechModel:
+        """Create a text-to-speech model instance (alias for create_text_to_speech).
+
+        Args:
+            provider: Provider name
+            model_name: Optional name of the model to use
+            config: Optional configuration for the model
+            api_key: Optional API key for authentication
+
+        Returns:
+            Text-to-speech model instance
+        """
+        return cls.create_text_to_speech(provider, model_name=model_name, config=config, api_key=api_key)
