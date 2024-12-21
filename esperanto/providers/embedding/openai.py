@@ -36,12 +36,15 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
-        kwargs = {}
+        # Start with a copy of the config
+        kwargs = self._config.copy()
+        
         # Remove provider-specific kwargs that OpenAI doesn't expect
         kwargs.pop("model_name", None)
         kwargs.pop("api_key", None)
         kwargs.pop("base_url", None)
         kwargs.pop("organization", None)
+        
         return kwargs
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
@@ -64,7 +67,8 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             **{**self._get_api_kwargs(), **kwargs}
         )
 
-        return [data.embedding for data in response.data]
+        # Convert embeddings to regular floats
+        return [[float(value) for value in data.embedding] for data in response.data]
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -86,7 +90,8 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             **{**self._get_api_kwargs(), **kwargs}
         )
 
-        return [data.embedding for data in response.data]
+        # Convert embeddings to regular floats
+        return [[float(value) for value in data.embedding] for data in response.data]
 
     def _get_default_model(self) -> str:
         """Get the default model name."""

@@ -29,7 +29,8 @@ class VertexEmbeddingModel(EmbeddingModel):
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
-        kwargs = {}
+        # Start with a copy of the config
+        kwargs = self._config.copy()
         # Remove provider-specific kwargs that Vertex doesn't expect
         kwargs.pop("model_name", None)
         kwargs.pop("project_id", None)
@@ -62,7 +63,8 @@ class VertexEmbeddingModel(EmbeddingModel):
         api_kwargs = {**self._get_api_kwargs(), **kwargs}
         embeddings = self.model.get_embeddings(inputs, **api_kwargs)
         
-        return [embedding.values for embedding in embeddings]
+        # Convert embeddings to regular floats
+        return [[float(value) for value in embedding.values] for embedding in embeddings]
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.

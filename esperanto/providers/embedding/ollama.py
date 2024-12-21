@@ -27,7 +27,8 @@ class OllamaEmbeddingModel(EmbeddingModel):
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
-        kwargs = {}
+        # Start with a copy of the config
+        kwargs = self._config.copy()
         # Remove provider-specific kwargs that Ollama doesn't expect
         kwargs.pop("model_name", None)
         kwargs.pop("base_url", None)
@@ -63,7 +64,8 @@ class OllamaEmbeddingModel(EmbeddingModel):
                 response = self.client.embeddings(
                     model=self.get_model_name(), prompt=text, **api_kwargs
                 )
-                results.append(response.embedding)  # Ollama client returns EmbeddingsResponse
+                # Convert embeddings to regular floats
+                results.append([float(value) for value in response.embedding])
             except Exception as e:
                 raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
 
@@ -99,7 +101,8 @@ class OllamaEmbeddingModel(EmbeddingModel):
                 response = await self.async_client.embeddings(
                     model=self.get_model_name(), prompt=text, **api_kwargs
                 )
-                results.append(response.embedding)  # Ollama client returns EmbeddingsResponse
+                # Convert embeddings to regular floats
+                results.append([float(value) for value in response.embedding])
             except Exception as e:
                 raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
 

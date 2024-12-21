@@ -29,7 +29,8 @@ class GoogleEmbeddingModel(EmbeddingModel):
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
-        kwargs = {}
+        # Start with a copy of the config
+        kwargs = self._config.copy()
         # Remove provider-specific kwargs that Google doesn't expect
         kwargs.pop("model_name", None)
         kwargs.pop("api_key", None)
@@ -65,7 +66,8 @@ class GoogleEmbeddingModel(EmbeddingModel):
                 content=text,
                 **api_kwargs
             )
-            results.append(result["embedding"])
+            # Convert embeddings to regular floats
+            results.append([float(value) for value in result["embedding"]])
         
         return results
 
