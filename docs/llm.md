@@ -26,7 +26,7 @@ Esperanto supports various Large Language Model (LLM) providers through a unifie
 from esperanto.factory import AIFactory
 
 # Create an LLM instance
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
+model = AIFactory.create_language("openai", "gpt-3.5-turbo")
 
 # Synchronous usage
 messages = [
@@ -41,7 +41,7 @@ async def get_response():
     print(response.choices[0].message.content)
 
 # Streaming usage
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo", streaming=True)
+model = AIFactory.create_language("openai", "gpt-3.5-turbo", streaming=True)
 for chunk in model.chat_complete(messages):
     print(chunk.choices[0].delta.content, end="", flush=True)
 
@@ -53,7 +53,7 @@ async for chunk in model.achat_complete(messages):
 ### Structured Output (JSON)
 
 ```python
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo", structured="json")
+model = AIFactory.create_language("openai", "gpt-3.5-turbo", structured="json")
 
 messages = [
     {"role": "user", "content": "List three European capitals"}
@@ -71,7 +71,7 @@ from langchain.chains import ConversationChain
 from langchain.prompts import PromptTemplate
 
 # Create LLM and convert to LangChain
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
+model = AIFactory.create_language("openai", "gpt-3.5-turbo")
 langchain_model = model.to_langchain()
 
 # Use with LangChain chains
@@ -107,7 +107,7 @@ When using OpenAI's o1 model, Esperanto automatically handles the required trans
 - Converts system messages to user messages
 
 ```python
-model = AIFactory.create_llm("openai", "o1-model")
+model = AIFactory.create_language("openai", "o1-model")
 response = model.chat_complete([
     {"role": "system", "content": "You are a helpful assistant."},  # Will be converted to user role
     {"role": "user", "content": "Hello!"}

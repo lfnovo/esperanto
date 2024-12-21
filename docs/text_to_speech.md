@@ -16,7 +16,7 @@ Esperanto supports multiple text-to-speech providers for converting text into na
 from esperanto.factory import AIFactory
 
 # Create a text-to-speech instance
-model = AIFactory.create_tts("openai", "tts-1")
+model = AIFactory.create_text_to_speech("openai", "tts-1")
 
 # Synchronous usage
 response = model.generate_speech(

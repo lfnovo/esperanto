@@ -15,7 +15,7 @@ Esperanto supports multiple speech-to-text providers for transcribing audio into
 from esperanto.factory import AIFactory
 
 # Create a speech-to-text instance
-model = AIFactory.create_stt("openai", "whisper-1")
+model = AIFactory.create_speech_to_text("openai", "whisper-1")
 
 # Synchronous usage
 with open("audio.mp3", "rb") as f:
@@ -106,4 +106,3 @@ print(response.text)  # The transcribed text
 print(response.language)  # The language (if available)
 print(response.model)  # The model used
 print(response.provider)  # The provider name
-```

@@ -90,8 +90,19 @@ You can use Esperanto in two ways: directly with provider-specific classes or th
 ```python
 from esperanto.factory import AIFactory
 
-# Create an LLM instance
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
+# Get available providers for each model type
+providers = AIFactory.get_available_providers()
+print(providers)
+# Output:
+# {
+#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex'],
+#     'speech_to_text': ['openai', 'groq'],
+#     'text_to_speech': ['openai', 'elevenlabs', 'google']
+# }
+
+# Create a language model instance
+model = AIFactory.create_language("openai", "gpt-3.5-turbo")
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},
     {"role": "user", "content": "What's the capital of France?"},
@@ -113,7 +124,7 @@ All providers in Esperanto return standardized response objects, making it easy 
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
+model = AIFactory.create_language("openai", "gpt-3.5-turbo")
 messages = [{"role": "user", "content": "Hello!"}]
 
 # All LLM responses follow this structure

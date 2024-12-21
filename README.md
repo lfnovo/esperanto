@@ -94,13 +94,28 @@ You can use Esperanto in two ways: directly with provider-specific classes or th
 
 ### Using AI Factory
 
-The AI Factory provides a convenient way to create LLM and embedding instances:
+The AI Factory provides a convenient way to create model instances and discover available providers:
 
 ```python
 from esperanto.factory import AIFactory
 
-# Create an LLM instance
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
+# Get available providers for each model type
+providers = AIFactory.get_available_providers()
+print(providers)
+# Output:
+# {
+#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex'],
+#     'speech_to_text': ['openai', 'groq'],
+#     'text_to_speech': ['openai', 'elevenlabs', 'google']
+# }
+
+# Create model instances
+model = AIFactory.create_language("openai", "gpt-3.5-turbo")  # Language model
+embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")  # Embedding model
+transcriber = AIFactory.create_speech_to_text("openai", "whisper-1")  # Speech-to-text model
+speaker = AIFactory.create_text_to_speech("openai", "tts-1")  # Text-to-speech model
+
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},
     {"role": "user", "content": "What's the capital of France?"},
@@ -108,12 +123,11 @@ messages = [
 response = model.chat_complete(messages)
 
 # Create an embedding instance
-model = AIFactory.create_embedding("openai", "text-embedding-3-small")
 texts = ["Hello, world!", "Another text"]
 # Synchronous usage
-embeddings = model.embed(texts)
+embeddings = embedder.embed(texts)
 # Async usage
-embeddings = await model.aembed(texts)
+embeddings = await embedder.aembed(texts)
 ```
 
 
@@ -156,7 +170,7 @@ All providers in Esperanto return standardized response objects, making it easy 
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_llm("openai", "gpt-3.5-turbo")
+model = AIFactory.create_language("openai", "gpt-3.5-turbo")
 messages = [{"role": "user", "content": "Hello!"}]
 
 # All LLM responses follow this structure
