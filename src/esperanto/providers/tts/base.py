@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from esperanto.types import Model
 from esperanto.types.tts import AudioResponse, Voice
 
 
@@ -89,6 +90,12 @@ class TextToSpeechModel(ABC):
         Returns:
             Dict[str, Voice]: Dictionary of available voices with their information.
         """
+        pass
+
+    @property
+    @abstractmethod
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
         pass
 
     def get_supported_tags(self) -> List[str]:

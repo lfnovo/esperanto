@@ -1,11 +1,11 @@
 """OpenAI speech-to-text provider."""
 import os
 from dataclasses import dataclass
-from typing import Any, BinaryIO, Dict, Optional, Union
+from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 from openai import AsyncOpenAI, OpenAI
 
-from esperanto.providers.stt.base import SpeechToTextModel
+from esperanto.providers.stt.base import Model, SpeechToTextModel
 from esperanto.types import TranscriptionResponse
 
 
@@ -41,6 +41,26 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
     def provider(self) -> str:
         """Get the provider name."""
         return "openai"
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        try:
+            models = self.client.models.list()
+        except Exception:
+            # Handle the case when the API key is not valid for model listing
+            return []
+        
+        return [
+            Model(
+                id=model.id,
+                owned_by=model.owned_by,
+                context_window=None,  # Audio models don't have context windows
+                type="speech_to_text"
+            )
+            for model in models
+            if model.id.startswith("whisper")
+        ]
 
     def _get_api_kwargs(self, language: Optional[str] = None, prompt: Optional[str] = None) -> Dict[str, Any]:
         """Get kwargs for API calls."""

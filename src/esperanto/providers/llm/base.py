@@ -5,7 +5,7 @@ from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from esperanto.types import ChatCompletion, ChatCompletionChunk
+from esperanto.types import ChatCompletion, ChatCompletionChunk, Model
 
 
 @dataclass
@@ -23,6 +23,16 @@ class LanguageModel(ABC):
     organization: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
     _config: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    @abstractmethod
+    def models(self) -> List[Model]:
+        """List all available models for this provider.
+        
+        Returns:
+            List[Model]: List of available models
+        """
+        pass
 
     def __post_init__(self):
         """Initialize configuration after dataclass initialization."""

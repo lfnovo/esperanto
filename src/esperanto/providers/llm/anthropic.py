@@ -14,6 +14,7 @@ from esperanto.types import (
     ChatCompletionChunk,
     Choice,
     Message,
+    Model,
     StreamChoice,
     Usage,
 )
@@ -40,6 +41,49 @@ class AnthropicLanguageModel(LanguageModel):
         
         self.client = Anthropic(**config)
         self.async_client = AsyncAnthropic(**config)
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        available_models = [
+            Model(
+                id="claude-3-opus-20240229",
+                owned_by="Anthropic",
+                context_window=200000,
+                type="language"
+            ),
+            Model(
+                id="claude-3-sonnet-20240229",
+                owned_by="Anthropic",
+                context_window=200000,
+                type="language"
+            ),
+            Model(
+                id="claude-3-haiku-20240307",
+                owned_by="Anthropic",
+                context_window=200000,
+                type="language"
+            ),
+            Model(
+                id="claude-2.1",
+                owned_by="Anthropic",
+                context_window=200000,
+                type="language"
+            ),
+            Model(
+                id="claude-2.0",
+                owned_by="Anthropic",
+                context_window=100000,
+                type="language"
+            ),
+            Model(
+                id="claude-instant-1.2",
+                owned_by="Anthropic",
+                context_window=100000,
+                type="language"
+            ),
+        ]
+        return available_models
 
     def _prepare_messages(self, messages: List[Dict[str, str]]) -> tuple[Optional[str], List[Dict[str, str]]]:
         """Handle Anthropic-specific message preparation."""

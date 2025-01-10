@@ -11,6 +11,11 @@ class TestLanguageModel(LanguageModel):
     """Test implementation of LanguageModel."""
     
     @property
+    def models(self):
+        """List all available models for this provider."""
+        return []
+
+    @property
     def provider(self) -> str:
         """Get the provider name."""
         return "test"

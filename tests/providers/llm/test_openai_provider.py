@@ -101,7 +101,7 @@ async def test_achat_complete(openai_model):
     assert response.usage.total_tokens == response.usage.completion_tokens + response.usage.prompt_tokens
 
 def test_json_structured_output(openai_model):
-    openai_model.structured = "json_object"
+    openai_model.structured = {"type": "json_object"}
     messages = [{"role": "user", "content": "Hello!"}]
     
     response = openai_model.chat_complete(messages)
@@ -111,7 +111,7 @@ def test_json_structured_output(openai_model):
 
 @pytest.mark.asyncio
 async def test_json_structured_output_async(openai_model):
-    openai_model.structured = "json_object"
+    openai_model.structured = {"type": "json_object"}
     messages = [{"role": "user", "content": "Hello!"}]
     
     response = await openai_model.achat_complete(messages)

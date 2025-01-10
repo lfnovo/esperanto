@@ -121,17 +121,26 @@ class TestEmbeddingModel(EmbeddingModel):
     """Test implementation of EmbeddingModel."""
 
     @property
-    def provider(self) -> str:
+    def models(self):
+        """List all available models for this provider."""
+        return []
+
+    @property
+    def provider(self):
+        """Get the provider name."""
         return "test"
 
-    def _get_default_model(self) -> str:
+    def _get_default_model(self):
+        """Get the default model name."""
         return "test-default-model"
 
-    def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
-        return [[0.1, 0.2, 0.3]]
+    def embed(self, texts: List[str], **kwargs):
+        """Embed texts."""
+        return [[0.1, 0.2, 0.3] for _ in texts]
 
-    async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
-        return [[0.1, 0.2, 0.3]]
+    async def aembed(self, texts: List[str], **kwargs):
+        """Async embed texts."""
+        return [[0.1, 0.2, 0.3] for _ in texts]
 
 
 def test_embedding_model_config():

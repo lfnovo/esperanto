@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 import google.generativeai as genai  # type: ignore
 
-from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.embedding.base import EmbeddingModel, Model
 
 
 class GoogleEmbeddingModel(EmbeddingModel):
@@ -95,3 +95,18 @@ class GoogleEmbeddingModel(EmbeddingModel):
     def provider(self) -> str:
         """Get the provider name."""
         return "google"
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models_list = genai.list_models()
+        return [
+            Model(
+                id=model.name.split('/')[-1],
+                owned_by="Google",
+                context_window=model.input_token_limit if hasattr(model, 'input_token_limit') else None,
+                type="embedding"
+            )
+            for model in models_list
+            if "embedText" in model.supported_generation_methods
+        ]

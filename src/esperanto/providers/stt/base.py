@@ -1,9 +1,9 @@
 """Base speech-to-text model interface."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO, Dict, Optional, Union
+from typing import Any, BinaryIO, Dict, List, Optional, Union
 
-from esperanto.types import TranscriptionResponse
+from esperanto.types import Model, TranscriptionResponse
 
 
 @dataclass
@@ -91,6 +91,12 @@ class SpeechToTextModel(ABC):
         Returns:
             str: The default model name.
         """
+        pass
+
+    @property
+    @abstractmethod
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
         pass
 
     def get_model_name(self) -> str:

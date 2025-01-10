@@ -16,6 +16,7 @@ from esperanto.types import (
     Choice,
     DeltaMessage,
     Message,
+    Model,
     StreamChoice,
     Usage,
 )
@@ -40,6 +41,21 @@ class GoogleLanguageModel(LanguageModel):
         self.model_name = self.model_name or self._get_default_model()
         self._client = genai.GenerativeModel(model_name=self.model_name)
         self._langchain_model = None
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models_list = genai.list_models()
+        return [
+            Model(
+                id=model.name.split('/')[-1],
+                owned_by="Google",
+                context_window=model.input_token_limit if hasattr(model, 'input_token_limit') else None,
+                type="language"
+            )
+            for model in models_list
+            if "generateContent" in model.supported_generation_methods  # Only include text generation models
+        ]
 
     @property
     def provider(self) -> str:
@@ -100,8 +116,12 @@ class GoogleLanguageModel(LanguageModel):
             max_output_tokens=self.max_tokens if self.max_tokens else None,
         )
         
-        if self.structured == "json":
-            config.response_mime_type = "application/json"
+        if self.structured:
+            if not isinstance(self.structured, dict):
+                raise TypeError("structured parameter must be a dictionary")
+            structured_type = self.structured.get("type")
+            if structured_type in ["json", "json_object"]:
+                config.response_mime_type = "application/json"
             
         return config
 

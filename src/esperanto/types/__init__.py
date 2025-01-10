@@ -7,6 +7,7 @@ from .response import (
 )
 from .stt import TranscriptionResponse
 from .tts import AudioResponse
+from .model import Model
 
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "ChatCompletion",
     "ChatCompletionChunk",
     "TranscriptionResponse",
-    "AudioResponse"
+    "AudioResponse",
+    "Model"
 ]

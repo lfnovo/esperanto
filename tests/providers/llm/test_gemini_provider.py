@@ -98,40 +98,30 @@ async def test_achat_complete(google_model):
 
 
 def test_json_structured_output(google_model):
-    google_model.structured = "json"
+    google_model.structured = {"type": "json"}
     messages = [{"role": "user", "content": "Hello!"}]
     
-    # Mock response
-    mock_response = MagicMock()
-    mock_response.text = '{"greeting": "Hello!", "response": "How can I help?"}'
-    mock_response.prompt_feedback.block_reason = None
-    google_model._client.generate_content.return_value = mock_response
+    response = google_model.chat_complete(messages)
     
-    google_model.chat_complete(messages)
-    
-    # Verify JSON mode was set correctly
-    call_args = google_model._client.generate_content.call_args[1]
-    assert call_args["generation_config"].response_mime_type == "application/json"
+    call_args = google_model._client.generate_content.call_args
+    assert call_args[1]["generation_config"].response_mime_type == "application/json"
 
 
 @pytest.mark.asyncio
 async def test_json_structured_output_async(google_model):
-    google_model.structured = "json"
+    google_model.structured = {"type": "json"}
     messages = [{"role": "user", "content": "Hello!"}]
     
-    # Mock response
+    # Mock the async response
     mock_response = MagicMock()
     mock_response.text = '{"greeting": "Hello!", "response": "How can I help?"}'
     mock_response.prompt_feedback.block_reason = None
-    
-    # Use AsyncMock for async method
     google_model._client.generate_content_async = AsyncMock(return_value=mock_response)
     
-    await google_model.achat_complete(messages)
+    response = await google_model.achat_complete(messages)
     
-    # Verify JSON mode was set correctly
-    call_args = google_model._client.generate_content_async.call_args[1]
-    assert call_args["generation_config"].response_mime_type == "application/json"
+    call_args = google_model._client.generate_content_async.call_args
+    assert call_args[1]["generation_config"].response_mime_type == "application/json"
 
 
 def test_to_langchain(google_model):
