@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
-from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.embedding.base import EmbeddingModel, Model
 
 
 class VertexEmbeddingModel(EmbeddingModel):
@@ -90,3 +90,8 @@ class VertexEmbeddingModel(EmbeddingModel):
     def provider(self) -> str:
         """Get the provider name."""
         return "vertex"
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        return []  # For now, return empty list as requested

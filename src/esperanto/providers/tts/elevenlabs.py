@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 from dotenv import load_dotenv
 from elevenlabs.client import AsyncElevenLabs, ElevenLabs
 
-from .base import AudioResponse, TextToSpeechModel, Voice
+from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
 # Load environment variables
 load_dotenv()
@@ -157,6 +157,11 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
                 preview_url=voice_data.preview_url
             )
         return voices
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        return []  # For now, return empty list as requested
 
     def get_supported_tags(self) -> List[str]:
         """Get list of supported SSML tags.

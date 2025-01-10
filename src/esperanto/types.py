@@ -1,6 +1,6 @@
 """Common type definitions for Esperanto."""
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 
 @dataclass
@@ -11,6 +11,15 @@ class Usage:
     completion_tokens: Optional[int] = None
     total_characters: Optional[int] = None
     audio_duration: Optional[float] = None  # Duration in seconds
+
+
+@dataclass
+class Model:
+    """Model information from providers."""
+    id: str
+    owned_by: str
+    context_window: Optional[int] = None
+    type: Literal["language", "embedding", "text_to_speech", "speech_to_text"] = "language"
 
 
 @dataclass

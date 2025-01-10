@@ -2,11 +2,11 @@
 import os
 import asyncio
 from pathlib import Path
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Union, Dict, Any, List
 
 from openai import AsyncOpenAI, OpenAI
 
-from .base import TextToSpeechModel, AudioResponse, Voice
+from .base import TextToSpeechModel, AudioResponse, Voice, Model
 
 
 class OpenAITextToSpeechModel(TextToSpeechModel):
@@ -104,6 +104,21 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             ),
         }
         return voices
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models = self.client.models.list()
+        return [
+            Model(
+                id=model.id,
+                owned_by=model.owned_by,
+                context_window=None,  # Audio models don't have context windows
+                type="text_to_speech"
+            )
+            for model in models
+            if model.id.startswith("tts")
+        ]
 
     def generate_speech(
         self,

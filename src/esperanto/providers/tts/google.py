@@ -10,7 +10,7 @@ from google.cloud.texttospeech_v1.types import (
     VoiceSelectionParams,
 )
 
-from .base import TextToSpeechModel, AudioResponse, Voice
+from .base import TextToSpeechModel, AudioResponse, Voice, Model
 
 class GoogleTextToSpeechModel(TextToSpeechModel):
     """Google Cloud Text-to-Speech provider implementation.
@@ -84,6 +84,21 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
             )
 
         return voices
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models_list = texttospeech.TextToSpeechClient.list_voices()
+        return [
+            Model(
+                id=model.name.split('/')[-1],
+                owned_by="Google",
+                context_window=None,  # Audio models don't have context windows
+                type="text_to_speech"
+            )
+            for model in models_list.voices
+            if "generateSpeech" in ["generateSpeech"]  # Assuming this is the correct method
+        ]
 
     def generate_speech(
         self,

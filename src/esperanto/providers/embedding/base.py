@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from esperanto.types import Model
+
 
 @dataclass
 class EmbeddingModel(ABC):
@@ -75,6 +77,12 @@ class EmbeddingModel(ABC):
     @abstractmethod
     def provider(self) -> str:
         """Get the provider name."""
+        pass
+
+    @property
+    @abstractmethod
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
         pass
 
     @abstractmethod

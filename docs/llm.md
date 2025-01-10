@@ -53,7 +53,11 @@ async for chunk in model.achat_complete(messages):
 ### Structured Output (JSON)
 
 ```python
-model = AIFactory.create_language("openai", "gpt-3.5-turbo", structured="json")
+model = AIFactory.create_language(
+    "openai", 
+    "gpt-3.5-turbo", 
+    structured={"type": "json"}
+)
 
 messages = [
     {"role": "user", "content": "List three European capitals"}
@@ -94,7 +98,7 @@ model = OpenAILanguageModel(
     temperature=0.7,
     max_tokens=850,
     streaming=False,
-    structured="json"
+    structured={"type": "json"}
 )
 ```
 
@@ -122,7 +126,7 @@ model = GroqLanguageModel(
     temperature=0.7,
     max_tokens=850,
     streaming=False,
-    structured="json"
+    structured={"type": "json"}
 )
 ```
 
@@ -156,6 +160,6 @@ model = GoogleLanguageModel(
     temperature=0.7,
     max_tokens=850,
     streaming=False,
-    structured="json"
+    structured={"type": "json"}
 )
 ```

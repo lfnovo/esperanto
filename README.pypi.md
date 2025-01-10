@@ -101,13 +101,17 @@ print(providers)
 #     'text_to_speech': ['openai', 'elevenlabs', 'google']
 # }
 
-# Create a language model instance
-model = AIFactory.create_language("openai", "gpt-3.5-turbo")
+# Create a language model instance with structured output (JSON)
+model = AIFactory.create_language(
+    "openai", 
+    "gpt-3.5-turbo",
+    structured={"type": "json"}
+)
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},
     {"role": "user", "content": "What's the capital of France?"},
 ]
-response = model.chat_complete(messages)
+response = model.chat_complete(messages)  # Response will be in JSON format
 
 # Create an embedding instance
 model = AIFactory.create_embedding("openai", "text-embedding-3-small")

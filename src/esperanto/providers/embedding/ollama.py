@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from ollama import AsyncClient, Client
 
-from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.embedding.base import EmbeddingModel, Model
 
 
 class OllamaEmbeddingModel(EmbeddingModel):
@@ -116,3 +116,20 @@ class OllamaEmbeddingModel(EmbeddingModel):
     def provider(self) -> str:
         """Get the provider name."""
         return "ollama"
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        try:
+            models = self.client.list()
+            return [
+                Model(
+                    id=model['name'],
+                    owned_by="Ollama",
+                    context_window=32768,  # Default context window for Ollama
+                    type="embedding"
+                )
+                for model in models
+            ]
+        except Exception:
+            return []

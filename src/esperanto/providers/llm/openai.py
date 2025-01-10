@@ -13,6 +13,7 @@ from esperanto.types import (
     ChatCompletionChunk,
     Choice,
     Message,
+    Model,
     StreamChoice,
     Usage,
 )
@@ -42,6 +43,21 @@ class OpenAILanguageModel(LanguageModel):
             base_url=self.base_url,
             organization=self.organization,
         )
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models = self.client.models.list()
+        return [
+            Model(
+                id=model.id,
+                owned_by=model.owned_by,
+                context_window=getattr(model, 'context_window', None),
+                type="language"
+            )
+            for model in models
+            if model.id.startswith(("gpt-"))  # Only include GPT models for language tasks
+        ]
 
     def _normalize_response(self, response: OpenAIChatCompletion) -> ChatCompletion:
         """Normalize OpenAI response to our format."""
@@ -130,8 +146,12 @@ class OpenAILanguageModel(LanguageModel):
             kwargs["stream"] = kwargs.pop("streaming")
         
         # Handle structured output
-        if self.structured == "json" or self.structured == "json_object":
-            kwargs["response_format"] = {"type": "json_object"}
+        if self.structured:
+            if not isinstance(self.structured, dict):
+                raise TypeError("structured parameter must be a dictionary")
+            structured_type = self.structured.get("type")
+            if structured_type in ["json", "json_object"]:
+                kwargs["response_format"] = {"type": "json_object"}
             
         return kwargs
 

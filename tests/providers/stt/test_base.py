@@ -50,7 +50,13 @@ def test_concrete_implementation_works():
         
         @property
         def provider(self) -> str:
+            """Get the provider name."""
             return "test"
+        
+        @property
+        def models(self):
+            """List all available models for this provider."""
+            return []
         
         def _get_default_model(self) -> str:
             return "test-model"
@@ -86,6 +92,11 @@ def test_model_name_from_config():
         @property
         def provider(self) -> str:
             return "test"
+        
+        @property
+        def models(self):
+            """List all available models for this provider."""
+            return []
         
         def _get_default_model(self) -> str:
             return "default-model"

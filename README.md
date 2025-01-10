@@ -111,7 +111,11 @@ print(providers)
 # }
 
 # Create model instances
-model = AIFactory.create_language("openai", "gpt-3.5-turbo")  # Language model
+model = AIFactory.create_language(
+    "openai", 
+    "gpt-3.5-turbo",
+    structured={"type": "json"}
+)  # Language model
 embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")  # Embedding model
 transcriber = AIFactory.create_speech_to_text("openai", "whisper-1")  # Speech-to-text model
 speaker = AIFactory.create_text_to_speech("openai", "tts-1")  # Text-to-speech model
@@ -139,26 +143,27 @@ Here's a simple example to get you started:
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 
-# Initialize a provider
+# Initialize a provider with structured output
 model = OpenAILanguageModel(
     api_key="your-api-key",
-    model_name="gpt-4"  # Optional, defaults to gpt-4
+    model_name="gpt-4",  # Optional, defaults to gpt-4
+    structured={"type": "json"}  # Optional, for JSON output
 )
 
 # Simple chat completion
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "What is the capital of France?"}
+    {"role": "user", "content": "List three colors in JSON format"}
 ]
 
 # Synchronous call
 response = model.chat_complete(messages)
-print(response.choices[0].message.content)
+print(response.choices[0].message.content)  # Will be in JSON format
 
 # Async call
 async def get_response():
     response = await model.achat_complete(messages)
-    print(response.choices[0].message.content)
+    print(response.choices[0].message.content)  # Will be in JSON format
 ```
 
 ## Standardized Responses
@@ -170,7 +175,11 @@ All providers in Esperanto return standardized response objects, making it easy 
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_language("openai", "gpt-3.5-turbo")
+model = AIFactory.create_language(
+    "openai", 
+    "gpt-3.5-turbo",
+    structured={"type": "json"}
+)
 messages = [{"role": "user", "content": "Hello!"}]
 
 # All LLM responses follow this structure
@@ -220,7 +229,7 @@ model = OpenAILanguageModel(
     max_tokens=850,         # Optional
     streaming=False,        # Optional
     top_p=0.9,             # Optional
-    structured="json",      # Optional, for JSON output
+    structured={"type": "json"},      # Optional, for JSON output
     base_url=None,         # Optional, for custom endpoint
     organization=None      # Optional, for org-specific API
 )
@@ -250,7 +259,7 @@ Request JSON-formatted responses (supported by OpenAI and some OpenRouter models
 ```python
 model = OpenAILanguageModel(
     api_key="your-api-key", # or use ENV
-    structured="json"
+    structured={"type": "json"}
 )
 
 messages = [

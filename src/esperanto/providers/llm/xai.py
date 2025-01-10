@@ -1,33 +1,43 @@
-"""OpenRouter language model implementation."""
+"""XAI language model implementation."""
+
 import os
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI, OpenAI
 
 from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.types import Model
+from esperanto.utils.logging import logger
 
 
 @dataclass
-class OpenRouterLanguageModel(OpenAILanguageModel):
-    """OpenRouter language model implementation using OpenAI-compatible API."""
-    
+class XAILanguageModel(OpenAILanguageModel):
+    """XAI language model implementation using OpenAI-compatible API."""
+
     base_url: str = None
     api_key: str = None
-    
+
     def __post_init__(self):
-        # Initialize OpenRouter-specific configuration
-        self.base_url = self.base_url or os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-        self.api_key = self.api_key or os.getenv("OPENROUTER_API_KEY")
+        # Initialize XAI-specific configuration
+        self.base_url = self.base_url or os.getenv(
+            "XAI_BASE_URL", "https://api.x.ai/v1"
+        )
+        self.api_key = self.api_key or os.getenv("XAI_API_KEY")
 
         if not self.api_key:
-            raise ValueError("OpenRouter API key not found. Set the OPENROUTER_API_KEY environment variable.")
+            raise ValueError(
+                "XAI API key not found. Set the XAI_API_KEY environment variable."
+            )
 
         # Call parent's post_init to set up normalized response handling
         super().__post_init__()
-        
-        # Initialize OpenAI clients with OpenRouter configuration
+
+        if self.structured:
+            logger.warning("Structured output not supported for X.AI.")
+
+        # Initialize OpenAI clients with XAI configuration
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=self.base_url,
@@ -38,37 +48,46 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             base_url=self.base_url,
             organization=self.organization,
         )
-    
+
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
-        
-        Note: OpenRouter doesn't support JSON response format for non-OpenAI models.
+
+        Note: XAI doesn't support response_format parameter.
         """
         kwargs = super()._get_api_kwargs(exclude_stream)
-        
-        # Remove response_format for non-OpenAI models
-        model = self.get_model_name().lower()
-        if "response_format" in kwargs and not model.startswith(("openai/", "gpt-")):
-            kwargs.pop("response_format")
-            
+
+        # Remove response_format as XAI doesn't support it
+        kwargs.pop("response_format", None)
+
         return kwargs
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models = self.client.models.list()
+        return [
+            Model(
+                id=model.id,
+                owned_by="X.AI",
+                context_window=getattr(model, 'context_window', None),
+                type="language"
+            )
+            for model in models
+            if model.id.startswith("grok")  # Only include Grok models
+        ]
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "anthropic/claude-2"
+        return "grok-2-latest"
 
     @property
     def provider(self) -> str:
         """Get the provider name."""
-        return "openrouter"
+        return "xai"
 
     def to_langchain(self) -> ChatOpenAI:
         """Convert to a LangChain chat model."""
-        
-        model_kwargs = {}
-        if self.structured == "json" and self.get_model_name().lower().startswith(("openai/", "gpt-")):
-            model_kwargs["response_format"] = {"type": "json_object"}
-        
+
         langchain_kwargs = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
@@ -78,11 +97,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "base_url": self.base_url,
             "organization": self.organization,
             "model": self.get_model_name(),
-            "model_kwargs": model_kwargs,
-            "default_headers": {
-                "HTTP-Referer": "https://github.com/lfnovo/esperanto",  # Required by OpenRouter
-                "X-Title": "Esperanto",  # Required by OpenRouter
-            }
+            "model_kwargs": {},  # XAI doesn't support response_format
         }
-        
+
         return ChatOpenAI(**self._clean_config(langchain_kwargs))

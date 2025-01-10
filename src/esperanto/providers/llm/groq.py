@@ -13,6 +13,7 @@ from esperanto.types import (
     ChatCompletionChunk,
     Choice,
     Message,
+    Model,
     StreamChoice,
     Usage,
 )
@@ -42,6 +43,20 @@ class GroqLanguageModel(LanguageModel):
         self.async_client = AsyncGroq(
             api_key=self.api_key,
         )
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models = self.client.models.list()
+        return [
+            Model(
+                id=model.id,
+                owned_by="Groq",
+                context_window=128000,  # All Groq models currently support 128k context
+                type="language"
+            )
+            for model in models
+        ]
 
     def _normalize_response(self, response: GroqChatCompletion) -> ChatCompletion:
         """Normalize Groq response to our format."""
@@ -107,6 +122,14 @@ class GroqLanguageModel(LanguageModel):
             kwargs.pop("streaming", None)
         elif "streaming" in kwargs:
             kwargs["stream"] = kwargs.pop("streaming")
+            
+        # Handle structured output
+        if self.structured:
+            if not isinstance(self.structured, dict):
+                raise TypeError("structured parameter must be a dictionary")
+            structured_type = self.structured.get("type")
+            if structured_type in ["json", "json_object"]:
+                kwargs["response_format"] = {"type": "json_object"}
             
         return kwargs
 

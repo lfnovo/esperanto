@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 
 from openai import AsyncOpenAI, OpenAI
 
-from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.embedding.base import EmbeddingModel, Model
 
 
 class OpenAIEmbeddingModel(EmbeddingModel):
@@ -101,3 +101,18 @@ class OpenAIEmbeddingModel(EmbeddingModel):
     def provider(self) -> str:
         """Get the provider name."""
         return "openai"
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        models = self.client.models.list()
+        return [
+            Model(
+                id=model.id,
+                owned_by=model.owned_by,
+                context_window=getattr(model, 'context_window', None),
+                type="embedding"
+            )
+            for model in models
+            if model.id.startswith("text-embedding")
+        ]

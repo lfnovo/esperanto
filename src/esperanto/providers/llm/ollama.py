@@ -15,6 +15,7 @@ from esperanto.types import (
     ChatCompletionChunk,
     ChatCompletionMessage,
     DeltaMessage,
+    Model,
     StreamChoice,
 )
 
@@ -49,8 +50,12 @@ class OllamaLanguageModel(LanguageModel):
                 kwargs[key] = value
 
         # Handle JSON format if structured output is requested
-        if self.structured == "json":
-            kwargs["format"] = "json"
+        if self.structured:
+            if not isinstance(self.structured, dict):
+                raise TypeError("structured parameter must be a dictionary")
+            structured_type = self.structured.get("type")
+            if structured_type in ["json", "json_object"]:
+                kwargs["format"] = "json"
 
         # Move parameters to options dict as expected by Ollama client
         options = {}
@@ -58,9 +63,9 @@ class OllamaLanguageModel(LanguageModel):
             if key in kwargs:
                 options[key] = kwargs.pop(key)
                 
-        # Only include max_tokens in options if it was explicitly set
-        if "max_tokens" in kwargs and kwargs["max_tokens"] != 850:
-            options["max_tokens"] = kwargs.pop("max_tokens")
+        # Convert max_tokens to num_predict for Ollama
+        if "max_tokens" in kwargs:
+            options["num_predict"] = kwargs.pop("max_tokens")
 
         if options:
             kwargs["options"] = options
@@ -88,6 +93,7 @@ class OllamaLanguageModel(LanguageModel):
 
         api_kwargs = self._get_api_kwargs(**kwargs)
 
+        print(api_kwargs)
         if stream:
             return self._stream_chat_complete(messages, api_kwargs)
         return self._chat_complete(messages, api_kwargs)
@@ -220,6 +226,20 @@ class OllamaLanguageModel(LanguageModel):
     def _get_default_model(self) -> str:
         """Get the default model name."""
         return "gemma2"  # Default model available on the server
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        response = self.client.list()
+        return [
+            Model(
+                id=model.model,
+                owned_by="Ollama",
+                context_window=32768,  # Default context window for most Ollama models
+                type="language"
+            )
+            for model in response.models
+        ]
 
     @property
     def provider(self) -> str:

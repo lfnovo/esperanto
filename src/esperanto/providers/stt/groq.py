@@ -1,11 +1,11 @@
 """Groq speech-to-text provider."""
 import os
 from dataclasses import dataclass
-from typing import Any, BinaryIO, Dict, Optional, Union
+from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 from groq import AsyncGroq, Groq
 
-from esperanto.providers.stt.base import SpeechToTextModel
+from esperanto.providers.stt.base import Model, SpeechToTextModel
 from esperanto.types import TranscriptionResponse
 
 
@@ -41,6 +41,26 @@ class GroqSpeechToTextModel(SpeechToTextModel):
     def provider(self) -> str:
         """Get the provider name."""
         return "groq"
+
+
+    @property
+    def models(self) -> List[Model]:
+        """List all available models for this provider."""
+        try:
+            models = self.client.models.list()
+            return [
+                Model(
+                    id=model_id,  # The model ID is the first item in the tuple
+                    owned_by="Groq",  # Groq owns all models in their API
+                    context_window=None,  # Audio models don't have context windows
+                    type="speech_to_text"
+                )
+                for model_id, *_ in models  # Unpack the tuple, we only need the ID
+                if model_id.startswith("whisper")  # Groq uses OpenAI's Whisper models
+            ]
+        except Exception:
+            # Return empty list if we can't fetch models
+            return []
 
     def _get_api_kwargs(self, language: Optional[str] = None, prompt: Optional[str] = None) -> Dict[str, Any]:
         """Get kwargs for API calls."""
