@@ -270,4 +270,17 @@ class OpenAILanguageModel(LanguageModel):
             "model_kwargs": model_kwargs,
         }
 
+        is_reasoning_model = self.get_model_name().startswith(
+            "o1"
+        ) or self.get_model_name().startswith("o3")
+
+        if is_reasoning_model:
+            # Replace max_tokens with max_completion_tokens
+            if "max_tokens" in langchain_kwargs:
+                langchain_kwargs["max_completion_tokens"] = langchain_kwargs.pop(
+                    "max_tokens"
+                )
+            langchain_kwargs["temperature"] = 1
+            langchain_kwargs["top_p"] = None
+
         return ChatOpenAI(**self._clean_config(langchain_kwargs))
