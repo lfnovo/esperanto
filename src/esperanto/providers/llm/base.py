@@ -1,4 +1,5 @@
 """Base language model interface."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
@@ -23,12 +24,14 @@ class LanguageModel(ABC):
     organization: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
     _config: Dict[str, Any] = field(default_factory=dict)
+    client: Any = None
+    async_client: Any = None
 
     @property
     @abstractmethod
     def models(self) -> List[Model]:
         """List all available models for this provider.
-        
+
         Returns:
             List[Model]: List of available models
         """
@@ -44,11 +47,11 @@ class LanguageModel(ABC):
             "streaming": self.streaming,
             "structured": self.structured,
         }
-        
+
         # Update with any provided config
         if hasattr(self, "config") and self.config:
             self._config.update(self.config)
-            
+
             # Update instance attributes from config
             for key, value in self._config.items():
                 if hasattr(self, key):
@@ -60,9 +63,7 @@ class LanguageModel(ABC):
 
     @abstractmethod
     def chat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -77,9 +78,7 @@ class LanguageModel(ABC):
 
     @abstractmethod
     async def achat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -104,7 +103,9 @@ class LanguageModel(ABC):
                 config[key] = value
         return config
 
-    def get_completion_kwargs(self, override_kwargs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def get_completion_kwargs(
+        self, override_kwargs: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Get kwargs for completion API calls."""
         kwargs = {
             "max_tokens": self.max_tokens,
@@ -112,10 +113,10 @@ class LanguageModel(ABC):
             "top_p": self.top_p,
             "streaming": self.streaming,
         }
-        
+
         if override_kwargs:
             kwargs.update(override_kwargs)
-            
+
         return kwargs
 
     def get_model_name(self) -> str:
@@ -128,7 +129,7 @@ class LanguageModel(ABC):
         model_name = self._config.get("model_name")
         if model_name:
             return model_name
-        
+
         # If not in config, use default
         return self._get_default_model()
 
@@ -150,7 +151,7 @@ class LanguageModel(ABC):
     @abstractmethod
     def to_langchain(self) -> BaseChatModel:
         """Convert to a LangChain chat model.
-        
+
         Returns:
             BaseChatModel: A LangChain chat model instance specific to the provider.
         """

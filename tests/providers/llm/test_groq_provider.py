@@ -5,7 +5,9 @@ import pytest
 
 try:
     from langchain_groq import ChatGroq
+
     from esperanto.providers.llm.groq import GroqLanguageModel
+
     HAS_GROQ = True
 except ImportError:
     HAS_GROQ = False
@@ -15,6 +17,31 @@ except ImportError:
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_provider_name(groq_model):
     assert groq_model.provider == "groq"
+
+
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
+def test_client_properties(groq_model):
+    """Test that client properties are properly initialized."""
+    # Verify clients are not None
+    assert groq_model.client is not None
+    assert groq_model.async_client is not None
+
+    # Verify clients have expected chat attribute
+    assert hasattr(groq_model.client, "chat")
+    assert hasattr(groq_model.async_client, "chat")
+
+    # Verify chat attribute has expected completions method
+    assert hasattr(groq_model.client.chat, "completions")
+    assert hasattr(groq_model.async_client.chat, "completions")
+
+    # Verify completions has create method
+    assert hasattr(groq_model.client.chat.completions, "create")
+    assert hasattr(groq_model.async_client.chat.completions, "create")
+
+    # Verify async client's create method is an AsyncMock
+    from unittest.mock import AsyncMock
+
+    assert isinstance(groq_model.async_client.chat.completions.create, AsyncMock)
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
@@ -41,14 +68,14 @@ def test_initialization_without_api_key():
 def test_chat_complete(groq_model):
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Hello!"}
+        {"role": "user", "content": "Hello!"},
     ]
     response = groq_model.chat_complete(messages)
-    
+
     # Verify the client was called with correct parameters
     groq_model.client.chat.completions.create.assert_called_once()
     call_kwargs = groq_model.client.chat.completions.create.call_args[1]
-    
+
     assert call_kwargs["messages"] == messages
     assert call_kwargs["model"] == "mixtral-8x7b-32768"
     assert call_kwargs["temperature"] == 1.0
@@ -60,14 +87,14 @@ def test_chat_complete(groq_model):
 async def test_achat_complete(groq_model):
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Hello!"}
+        {"role": "user", "content": "Hello!"},
     ]
     response = await groq_model.achat_complete(messages)
-    
+
     # Verify the async client was called with correct parameters
     groq_model.async_client.chat.completions.create.assert_called_once()
     call_kwargs = groq_model.async_client.chat.completions.create.call_args[1]
-    
+
     assert call_kwargs["messages"] == messages
     assert call_kwargs["model"] == "mixtral-8x7b-32768"
     assert call_kwargs["temperature"] == 1.0
@@ -77,7 +104,7 @@ async def test_achat_complete(groq_model):
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_to_langchain(groq_model):
     langchain_model = groq_model.to_langchain()
-    
+
     assert isinstance(langchain_model, ChatGroq)
     assert langchain_model.model_name == "mixtral-8x7b-32768"
     assert langchain_model.temperature == 1.0
@@ -91,19 +118,19 @@ def test_to_langchain(groq_model):
 def test_response_normalization(groq_model):
     messages = [{"role": "user", "content": "Hello!"}]
     response = groq_model.chat_complete(messages)
-    
+
     assert response.id == "chatcmpl-123"
     assert response.created == 1677858242
     assert response.model == "mixtral-8x7b-32768"
     assert response.provider == "groq"
     assert len(response.choices) == 1
-    
+
     choice = response.choices[0]
     assert choice.index == 0
     assert choice.message.content == "Test response"
     assert choice.message.role == "assistant"
     assert choice.finish_reason == "stop"
-    
+
     assert response.usage.completion_tokens == 10
     assert response.usage.prompt_tokens == 8
     assert response.usage.total_tokens == 18

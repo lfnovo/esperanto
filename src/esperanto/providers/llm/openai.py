@@ -11,8 +11,9 @@ from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.types import (
     ChatCompletion,
+    ChatCompletionChoice,
     ChatCompletionChunk,
-    Choice,
+    DeltaMessage,
     Message,
     Model,
     StreamChoice,
@@ -67,7 +68,7 @@ class OpenAILanguageModel(LanguageModel):
         return ChatCompletion(
             id=response.id,
             choices=[
-                Choice(
+                ChatCompletionChoice(
                     index=choice.index,
                     message=Message(
                         content=choice.message.content or "",
@@ -81,9 +82,11 @@ class OpenAILanguageModel(LanguageModel):
             model=response.model,
             provider=self.provider,
             usage=Usage(
-                completion_tokens=response.usage.completion_tokens,
-                prompt_tokens=response.usage.prompt_tokens,
-                total_tokens=response.usage.total_tokens,
+                completion_tokens=(
+                    response.usage.completion_tokens if response.usage else 0
+                ),
+                prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
+                total_tokens=response.usage.total_tokens if response.usage else 0,
             ),
         )
 
@@ -94,12 +97,16 @@ class OpenAILanguageModel(LanguageModel):
             choices=[
                 StreamChoice(
                     index=choice.index,
-                    delta={
-                        "content": choice.delta.content,
-                        "role": choice.delta.role,
-                        "function_call": choice.delta.function_call,
-                        "tool_calls": choice.delta.tool_calls,
-                    },
+                    delta=DeltaMessage(
+                        content=choice.delta.content or "",
+                        role=choice.delta.role or "assistant",
+                        function_call=(
+                            dict(choice.delta.function_call)
+                            if choice.delta.function_call
+                            else None
+                        ),
+                        tool_calls=choice.delta.tool_calls,
+                    ),
                     finish_reason=choice.finish_reason,
                 )
                 for choice in chunk.choices
@@ -180,9 +187,9 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-
+        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3")
         # Transform messages for o1 models
-        if model_name.startswith("o1"):
+        if is_reasoning_model:
             messages = self._transform_messages_for_o1(
                 [{**msg} for msg in messages]
             )  # Deep copy each message dict
@@ -212,9 +219,9 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-
+        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3")
         # Transform messages for o1 models
-        if model_name.startswith("o1"):
+        if is_reasoning_model:
             messages = self._transform_messages_for_o1(
                 [{**msg} for msg in messages]
             )  # Deep copy each message dict

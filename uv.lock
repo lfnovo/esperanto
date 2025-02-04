@@ -549,7 +549,7 @@ wheels = [
 
 [[package]]
 name = "esperanto"
-version = "0.7.5"
+version = "0.8.2"
 source = { editable = "." }
 dependencies = [
     { name = "python-dotenv" },
