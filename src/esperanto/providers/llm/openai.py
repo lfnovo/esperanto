@@ -1,4 +1,5 @@
 """OpenAI language model provider."""
+
 import os
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
@@ -26,12 +27,12 @@ class OpenAILanguageModel(LanguageModel):
         """Initialize OpenAI client."""
         # Call parent's post_init to handle config initialization
         super().__post_init__()
-        
+
         # Get API key
         self.api_key = self.api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key not found")
-        
+
         # Initialize clients
         self.client = OpenAI(
             api_key=self.api_key,
@@ -52,11 +53,13 @@ class OpenAILanguageModel(LanguageModel):
             Model(
                 id=model.id,
                 owned_by=model.owned_by,
-                context_window=getattr(model, 'context_window', None),
-                type="language"
+                context_window=getattr(model, "context_window", None),
+                type="language",
             )
             for model in models
-            if model.id.startswith(("gpt-"))  # Only include GPT models for language tasks
+            if model.id.startswith(
+                ("gpt-")
+            )  # Only include GPT models for language tasks
         ]
 
     def _normalize_response(self, response: OpenAIChatCompletion) -> ChatCompletion:
@@ -105,7 +108,9 @@ class OpenAILanguageModel(LanguageModel):
             model=chunk.model,
         )
 
-    def _transform_messages_for_o1(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def _transform_messages_for_o1(
+        self, messages: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
         """Transform messages for o1 models by replacing system role with user role."""
         return [
             {**msg, "role": "user"} if msg["role"] == "system" else {**msg}
@@ -114,37 +119,43 @@ class OpenAILanguageModel(LanguageModel):
 
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
-        
+
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
         """
         kwargs = {}
         config = self.get_completion_kwargs()
         model_name = self.get_model_name()
-        
+        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3")
+
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
-            if key not in ["model_name", "api_key", "base_url", "organization", "structured"]:
+            if key not in [
+                "model_name",
+                "api_key",
+                "base_url",
+                "organization",
+                "structured",
+            ]:
                 # Skip max_tokens if it's the default value (850) and we're using an o1 model
-                if key == "max_tokens" and value == 850 and model_name.startswith("o1"):
+                if key == "max_tokens" and value == 850 and is_reasoning_model:
                     continue
                 kwargs[key] = value
 
         # Special handling for o1 models
-        if model_name.startswith("o1"):
+        if is_reasoning_model:
             # Replace max_tokens with max_completion_tokens
             if "max_tokens" in kwargs:
                 kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
-            # Force temperature to 1 and remove top_p
-            kwargs["temperature"] = 1.0
+            kwargs.pop("temperature", None)
             kwargs.pop("top_p", None)
-        
+
         # Handle streaming parameter
         if exclude_stream:
             kwargs.pop("streaming", None)
         elif "streaming" in kwargs:
             kwargs["stream"] = kwargs.pop("streaming")
-        
+
         # Handle structured output
         if self.structured:
             if not isinstance(self.structured, dict):
@@ -152,13 +163,11 @@ class OpenAILanguageModel(LanguageModel):
             structured_type = self.structured.get("type")
             if structured_type in ["json", "json_object"]:
                 kwargs["response_format"] = {"type": "json_object"}
-            
+
         return kwargs
 
     def chat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -171,26 +180,26 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        
+
         # Transform messages for o1 models
         if model_name.startswith("o1"):
-            messages = self._transform_messages_for_o1([{**msg} for msg in messages])  # Deep copy each message dict
-        
+            messages = self._transform_messages_for_o1(
+                [{**msg} for msg in messages]
+            )  # Deep copy each message dict
+
         response = self.client.chat.completions.create(
             messages=messages,
             model=model_name,
             stream=should_stream,
-            **self._get_api_kwargs(exclude_stream=True)
+            **self._get_api_kwargs(exclude_stream=True),
         )
-        
+
         if should_stream:
             return (self._normalize_chunk(chunk) for chunk in response)
         return self._normalize_response(response)
 
     async def achat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -203,23 +212,26 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        
+
         # Transform messages for o1 models
         if model_name.startswith("o1"):
-            messages = self._transform_messages_for_o1([{**msg} for msg in messages])  # Deep copy each message dict
-        
-        
+            messages = self._transform_messages_for_o1(
+                [{**msg} for msg in messages]
+            )  # Deep copy each message dict
+
         response = await self.async_client.chat.completions.create(
             messages=messages,
             model=model_name,
             stream=should_stream,
-            **self._get_api_kwargs(exclude_stream=True)
+            **self._get_api_kwargs(exclude_stream=True),
         )
-        
+
         if should_stream:
+
             async def generate():
                 async for chunk in response:
                     yield self._normalize_chunk(chunk)
+
             return generate()
         return self._normalize_response(response)
 
@@ -234,11 +246,11 @@ class OpenAILanguageModel(LanguageModel):
 
     def to_langchain(self) -> ChatOpenAI:
         """Convert to a LangChain chat model."""
-        
+
         model_kwargs = {}
         if self.structured == "json":
             model_kwargs["response_format"] = {"type": "json_object"}
-        
+
         langchain_kwargs = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
@@ -248,7 +260,7 @@ class OpenAILanguageModel(LanguageModel):
             "base_url": self.base_url,
             "organization": self.organization,
             "model": self.get_model_name(),
-            "model_kwargs": model_kwargs
+            "model_kwargs": model_kwargs,
         }
-        
+
         return ChatOpenAI(**self._clean_config(langchain_kwargs))
