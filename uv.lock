@@ -549,7 +549,7 @@ wheels = [
 
 [[package]]
 name = "esperanto"
-version = "0.8.2"
+version = "0.8.4"
 source = { editable = "." }
 dependencies = [
     { name = "python-dotenv" },
@@ -575,9 +575,7 @@ all = [
 ]
 anthropic = [
     { name = "anthropic" },
-    { name = "langchain" },
     { name = "langchain-anthropic" },
-    { name = "langchain-core" },
 ]
 dev = [
     { name = "build" },
@@ -598,25 +596,17 @@ elevenlabs = [
 google = [
     { name = "google-cloud-texttospeech" },
     { name = "google-generativeai" },
-    { name = "langchain" },
-    { name = "langchain-core" },
     { name = "langchain-google-genai" },
 ]
 groq = [
     { name = "groq" },
-    { name = "langchain" },
-    { name = "langchain-core" },
     { name = "langchain-groq" },
 ]
 ollama = [
-    { name = "langchain" },
-    { name = "langchain-core" },
     { name = "langchain-ollama" },
     { name = "ollama" },
 ]
 openai = [
-    { name = "langchain" },
-    { name = "langchain-core" },
     { name = "langchain-openai" },
     { name = "openai" },
 ]
@@ -649,20 +639,10 @@ requires-dist = [
     { name = "groq", marker = "extra == 'groq'", specifier = ">=0.12.0" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
     { name = "ipywidgets", marker = "extra == 'dev'", specifier = ">=8.1.5" },
-    { name = "langchain", marker = "extra == 'all'", specifier = ">=0.3.8" },
-    { name = "langchain", marker = "extra == 'anthropic'", specifier = ">=0.3.8" },
-    { name = "langchain", marker = "extra == 'google'", specifier = ">=0.3.8" },
-    { name = "langchain", marker = "extra == 'groq'", specifier = ">=0.3.8" },
-    { name = "langchain", marker = "extra == 'ollama'", specifier = ">=0.3.8" },
-    { name = "langchain", marker = "extra == 'openai'", specifier = ">=0.3.8" },
+    { name = "langchain", marker = "extra == 'all'", specifier = ">=0.3.8,<0.4.0" },
     { name = "langchain-anthropic", marker = "extra == 'all'", specifier = ">=0.3.0" },
     { name = "langchain-anthropic", marker = "extra == 'anthropic'", specifier = ">=0.3.0" },
-    { name = "langchain-core", marker = "extra == 'all'", specifier = ">=0.3.29" },
-    { name = "langchain-core", marker = "extra == 'anthropic'", specifier = ">=0.3.29" },
-    { name = "langchain-core", marker = "extra == 'google'", specifier = ">=0.3.29" },
-    { name = "langchain-core", marker = "extra == 'groq'", specifier = ">=0.3.29" },
-    { name = "langchain-core", marker = "extra == 'ollama'", specifier = ">=0.3.29" },
-    { name = "langchain-core", marker = "extra == 'openai'", specifier = ">=0.3.29" },
+    { name = "langchain-core", marker = "extra == 'all'", specifier = ">=0.3.29,<0.4.0" },
     { name = "langchain-google-genai", marker = "extra == 'all'", specifier = ">=2.0.7" },
     { name = "langchain-google-genai", marker = "extra == 'google'", specifier = ">=2.0.7" },
     { name = "langchain-groq", marker = "extra == 'all'", specifier = ">=0.2.1" },
