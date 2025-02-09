@@ -1,6 +1,6 @@
 [project]
 name = "esperanto"
-version = "0.8.4"
+version = "0.9.1"
 description = "A unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
@@ -18,46 +18,41 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-openai = [
-    "openai>=1.55.1",
-    "langchain-openai>=0.2.9"
-]
-anthropic = [
-    "anthropic>=0.39.0",
-    "langchain-anthropic>=0.3.0"
-]
+openai = ["openai>=1.55.1"]
+anthropic = ["anthropic>=0.39.0"]
 google = [
     "google-generativeai>=0.8.3",
-    "langchain-google-genai>=2.0.7",
     "google-cloud-texttospeech>=2.14.0",
 ]
 vertex = ["vertexai>=1.71.1", "google-generativeai>=0.8.3"]
-groq = [
-    "groq>=0.12.0",
+groq = ["groq>=0.12.0"]
+ollama = ["ollama>=0.4.1"]
+elevenlabs = ["elevenlabs>=0.3.0"]
+
+langchain = [
+    "langchain>=0.3.8,<0.4.0",
+    "langchain-core>=0.3.29,<0.4.0",
+    "langchain-openai>=0.2.9",
+    "langchain-anthropic>=0.3.0",
+    "langchain-google-genai>=2.0.7",
+    "langchain-ollama>=0.2.0",
     "langchain-groq>=0.2.1"
 ]
-ollama = [
-    "langchain-ollama>=0.2.0",
-    "ollama>=0.4.1"
-]
-elevenlabs = ["elevenlabs>=0.3.0"]
 
 all = [
     "openai>=1.55.1",
-    "langchain-openai>=0.2.9",
     "anthropic>=0.39.0",
-    "langchain-anthropic>=0.3.0",
     "google-generativeai>=0.8.3",
-    "langchain-google-genai>=2.0.7",
     "vertexai>=1.71.1",
-    "langchain-ollama>=0.2.0",
     "ollama>=0.4.1",
     "groq>=0.12.0",
-    "langchain-groq>=0.2.1",
-    "langchain>=0.3.8,<0.4.0",
-    "langchain-core>=0.3.29,<0.4.0",
     "elevenlabs>=0.3.0",
     "google-cloud-texttospeech>=2.14.0",
+]
+
+all_with_langchain = [
+    "esperanto[all]",
+    "esperanto[langchain]"
 ]
 
 dev = [

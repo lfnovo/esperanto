@@ -549,7 +549,7 @@ wheels = [
 
 [[package]]
 name = "esperanto"
-version = "0.8.4"
+version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "python-dotenv" },
@@ -557,6 +557,16 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
+    { name = "anthropic" },
+    { name = "elevenlabs" },
+    { name = "google-cloud-texttospeech" },
+    { name = "google-generativeai" },
+    { name = "groq" },
+    { name = "ollama" },
+    { name = "openai" },
+    { name = "vertexai" },
+]
+all-with-langchain = [
     { name = "anthropic" },
     { name = "elevenlabs" },
     { name = "google-cloud-texttospeech" },
@@ -575,7 +585,6 @@ all = [
 ]
 anthropic = [
     { name = "anthropic" },
-    { name = "langchain-anthropic" },
 ]
 dev = [
     { name = "build" },
@@ -596,18 +605,23 @@ elevenlabs = [
 google = [
     { name = "google-cloud-texttospeech" },
     { name = "google-generativeai" },
-    { name = "langchain-google-genai" },
 ]
 groq = [
     { name = "groq" },
+]
+langchain = [
+    { name = "langchain" },
+    { name = "langchain-anthropic" },
+    { name = "langchain-core" },
+    { name = "langchain-google-genai" },
     { name = "langchain-groq" },
+    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
 ]
 ollama = [
-    { name = "langchain-ollama" },
     { name = "ollama" },
 ]
 openai = [
-    { name = "langchain-openai" },
     { name = "openai" },
 ]
 vertex = [
@@ -630,6 +644,8 @@ requires-dist = [
     { name = "build", marker = "extra == 'dev'" },
     { name = "elevenlabs", marker = "extra == 'all'", specifier = ">=0.3.0" },
     { name = "elevenlabs", marker = "extra == 'elevenlabs'", specifier = ">=0.3.0" },
+    { name = "esperanto", extras = ["all"], marker = "extra == 'all-with-langchain'" },
+    { name = "esperanto", extras = ["langchain"], marker = "extra == 'all-with-langchain'" },
     { name = "google-cloud-texttospeech", marker = "extra == 'all'", specifier = ">=2.14.0" },
     { name = "google-cloud-texttospeech", marker = "extra == 'google'", specifier = ">=2.14.0" },
     { name = "google-generativeai", marker = "extra == 'all'", specifier = ">=0.8.3" },
@@ -639,18 +655,13 @@ requires-dist = [
     { name = "groq", marker = "extra == 'groq'", specifier = ">=0.12.0" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
     { name = "ipywidgets", marker = "extra == 'dev'", specifier = ">=8.1.5" },
-    { name = "langchain", marker = "extra == 'all'", specifier = ">=0.3.8,<0.4.0" },
-    { name = "langchain-anthropic", marker = "extra == 'all'", specifier = ">=0.3.0" },
-    { name = "langchain-anthropic", marker = "extra == 'anthropic'", specifier = ">=0.3.0" },
-    { name = "langchain-core", marker = "extra == 'all'", specifier = ">=0.3.29,<0.4.0" },
-    { name = "langchain-google-genai", marker = "extra == 'all'", specifier = ">=2.0.7" },
-    { name = "langchain-google-genai", marker = "extra == 'google'", specifier = ">=2.0.7" },
-    { name = "langchain-groq", marker = "extra == 'all'", specifier = ">=0.2.1" },
-    { name = "langchain-groq", marker = "extra == 'groq'", specifier = ">=0.2.1" },
-    { name = "langchain-ollama", marker = "extra == 'all'", specifier = ">=0.2.0" },
-    { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = ">=0.2.0" },
-    { name = "langchain-openai", marker = "extra == 'all'", specifier = ">=0.2.9" },
-    { name = "langchain-openai", marker = "extra == 'openai'", specifier = ">=0.2.9" },
+    { name = "langchain", marker = "extra == 'langchain'", specifier = ">=0.3.8,<0.4.0" },
+    { name = "langchain-anthropic", marker = "extra == 'langchain'", specifier = ">=0.3.0" },
+    { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=0.3.29,<0.4.0" },
+    { name = "langchain-google-genai", marker = "extra == 'langchain'", specifier = ">=2.0.7" },
+    { name = "langchain-groq", marker = "extra == 'langchain'", specifier = ">=0.2.1" },
+    { name = "langchain-ollama", marker = "extra == 'langchain'", specifier = ">=0.2.0" },
+    { name = "langchain-openai", marker = "extra == 'langchain'", specifier = ">=0.2.9" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.1" },
     { name = "ollama", marker = "extra == 'all'", specifier = ">=0.4.1" },
     { name = "ollama", marker = "extra == 'ollama'", specifier = ">=0.4.1" },

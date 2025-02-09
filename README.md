@@ -72,8 +72,14 @@ pip install "esperanto[elevenlabs]"
 # For Google TTS support
 pip install "esperanto[googletts]"
 
-# For all providers
+# For LangChain integration
+pip install "esperanto[langchain]"
+
+# For all providers without LangChain
 pip install "esperanto[all]"
+
+# For all providers including LangChain
+pip install "esperanto[all_with_langchain]"
 ```
 
 ## Provider Support Matrix
