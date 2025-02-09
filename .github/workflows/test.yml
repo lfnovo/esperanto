@@ -39,7 +39,7 @@ jobs:
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
       run: |
         uv venv
-        uv pip install -e ".[dev,all]"
+        uv pip install -e ".[dev,all_with_langchain]"
     
     - name: Run tests
       run: uv run pytest -v
