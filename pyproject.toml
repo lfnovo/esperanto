@@ -1,12 +1,12 @@
 [project]
 name = "esperanto"
-version = "0.9.1"
+version = "0.10.0"
 description = "A unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
 ]
 readme = "README.pypi.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.9,<3.14"
 license = { text = "MIT" }
 keywords = ["ai", "llm", "text-to-speech", "speech-to-text", "openai", "anthropic", "google", "elevenlabs"]
 urls.repository = "https://github.com/lfnovo/esperanto"
@@ -102,5 +102,5 @@ dev = [
     "ipywidgets>=8.1.5",
     "ruff>=0.8.4",
     "mypy>=1.14.1",
-
+    "pytest>=8.3.4",
 ]
