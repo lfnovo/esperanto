@@ -8,6 +8,7 @@ Esperanto supports multiple embedding providers for converting text into vector 
 - Google Vertex AI (textembedding-gecko)
 - Google GenAI
 - Ollama (Local deployment)
+- Transformers (Local deployment with Hugging Face models)
 
 ## Usage Examples
 
@@ -55,6 +56,23 @@ model = OllamaEmbeddingModel(
 )
 
 embedding = model.embed("Hello, world!")
+```
+
+### Local Deployment with Transformers
+```python
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_embedding(
+    provider="transformers",
+    model_name="bert-base-uncased",  # or any other Hugging Face model
+    config={
+        "device": "auto",  # 'auto', 'cpu', 'cuda', or 'mps'
+        "pooling_strategy": "mean",  # 'mean', 'max', or 'cls'
+        "quantize": "8bit",  # optional: '4bit' or '8bit'
+    }
+)
+
+embeddings = model.embed(["Hello, world!"])
 ```
 
 ### Google Vertex AI

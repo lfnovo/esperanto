@@ -20,8 +20,8 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Google GenAI (Gemini LLM, Text To Speech, Embedding)
   - Vertex AI (Google Cloud)
   - Ollama (Local deployment)
+  - Transformers (Local Hugging Face models)
   - ElevenLabs (Text-to-Speech)
-
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
@@ -65,6 +65,12 @@ pip install "esperanto[groq]"
 # For Ollama support
 pip install "esperanto[ollama]"
 
+# For Transformers support
+pip install "esperanto[transformers]"
+
+# For ElevenLabs support
+pip install "esperanto[elevenlabs]"
+
 # For LangChain integration
 pip install "esperanto[langchain]"
 
@@ -77,15 +83,16 @@ pip install "esperanto[all_with_langchain]"
 
 ## Provider Support Matrix
 
-| Provider    | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | JSON Mode |
-|------------|-------------|------------------|----------------|----------------|-----------|
-| OpenAI     | ✅          | ✅               | ✅             | ✅             | ✅        |
-| Anthropic  | ✅          | ❌               | ❌             | ❌             | ✅        |
-| Groq       | ✅          | ❌               | ✅             | ❌             | ✅        |
-| Google (GenAI)     | ✅          | ✅               | ❌             | ✅             | ✅        |
-| Vertex AI  | ✅          | ✅               | ❌             | ❌             | ❌        |
-| Ollama     | ✅          | ✅               | ❌             | ❌             | ❌        |
-| ElevenLabs | ❌          | ❌               | ❌             | ✅             | ❌        |
+| Provider     | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | JSON Mode |
+|--------------|-------------|------------------|----------------|----------------|-----------|
+| OpenAI       | ✅          | ✅               | ✅             | ✅             | ✅        |
+| Anthropic    | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Groq         | ✅          | ❌               | ✅             | ❌             | ✅        |
+| Google (GenAI) | ✅          | ✅               | ❌             | ✅             | ✅        |
+| Vertex AI    | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Ollama       | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
+| ElevenLabs   | ❌          | ❌               | ❌             | ✅             | ❌        |
 
 ## Quick Start 🏃‍♂️
 
@@ -102,7 +109,7 @@ print(providers)
 # Output:
 # {
 #     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai'],
-#     'embedding': ['openai', 'google', 'ollama', 'vertex'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers'],
 #     'speech_to_text': ['openai', 'groq'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google']
 # }

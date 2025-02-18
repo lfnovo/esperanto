@@ -10,7 +10,6 @@ Esperanto is a powerful Python library that provides a unified interface for int
 
 ## Features ✨
 
-
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Provider Support**:
   - OpenAI (GPT-4, GPT-3.5, o1, Whisper, TTS)
@@ -21,6 +20,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Google GenAI (Gemini LLM, Text To Speech, Embedding)
   - Vertex AI (Google Cloud)
   - Ollama (Local deployment)
+  - Transformers (Local Hugging Face models)
   - ElevenLabs (Text-to-Speech)
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
@@ -29,7 +29,6 @@ Esperanto is a powerful Python library that provides a unified interface for int
 - **Streaming**: Support for streaming responses
 - **Structured Output**: JSON output formatting (where supported)
 - **LangChain Integration**: Easy conversion to LangChain chat models
-
 
 For detailed information about our providers, check out:
 - [LLM Providers Documentation](docs/llm.md)
@@ -66,6 +65,9 @@ pip install "esperanto[groq]"
 # For Ollama support
 pip install "esperanto[ollama]"
 
+# For Transformers support
+pip install "esperanto[transformers]"
+
 # For ElevenLabs support
 pip install "esperanto[elevenlabs]"
 
@@ -84,15 +86,16 @@ pip install "esperanto[all_with_langchain]"
 
 ## Provider Support Matrix
 
-| Provider    | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | JSON Mode |
-|------------|-------------|------------------|----------------|----------------|-----------|
-| OpenAI     | ✅          | ✅               | ✅             | ✅             | ✅        |
-| Anthropic  | ✅          | ❌               | ❌             | ❌             | ✅        |
-| Groq       | ✅          | ❌               | ✅             | ❌             | ✅        |
-| Google (GenAI)     | ✅          | ✅               | ❌             | ✅             | ✅        |
-| Vertex AI  | ✅          | ✅               | ❌             | ❌             | ❌        |
-| Ollama     | ✅          | ✅               | ❌             | ❌             | ❌        |
-| ElevenLabs | ❌          | ❌               | ❌             | ✅             | ❌        |
+| Provider     | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | JSON Mode |
+|--------------|-------------|------------------|----------------|----------------|-----------|
+| OpenAI       | ✅          | ✅               | ✅             | ✅             | ✅        |
+| Anthropic    | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Groq         | ✅          | ❌               | ✅             | ❌             | ✅        |
+| Google (GenAI) | ✅          | ✅               | ❌             | ✅             | ✅        |
+| Vertex AI    | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Ollama       | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
+| ElevenLabs   | ❌          | ❌               | ❌             | ✅             | ❌        |
 
 ## Quick Start 🏃‍♂️
 
@@ -111,7 +114,7 @@ print(providers)
 # Output:
 # {
 #     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai'],
-#     'embedding': ['openai', 'google', 'ollama', 'vertex'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers'],
 #     'speech_to_text': ['openai', 'groq'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google']
 # }
@@ -139,7 +142,6 @@ embeddings = embedder.embed(texts)
 # Async usage
 embeddings = await embedder.aembed(texts)
 ```
-
 
 ### Using Provider-Specific Classes
 
@@ -313,4 +315,3 @@ pip install -r requirements.txt
 3. Run tests:
 ```bash
 pytest
-```

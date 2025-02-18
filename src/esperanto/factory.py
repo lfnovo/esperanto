@@ -29,6 +29,7 @@ class AIFactory:
             "google": "esperanto.providers.embedding.google:GoogleEmbeddingModel",
             "ollama": "esperanto.providers.embedding.ollama:OllamaEmbeddingModel",
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
+            "transformers": "esperanto.providers.embedding.transformers:TransformersEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
@@ -143,7 +144,10 @@ class AIFactory:
 
     @classmethod
     def create_speech_to_text(
-        cls, provider: str, model_name: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+        cls,
+        provider: str,
+        model_name: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
     ) -> SpeechToTextModel:
         """Create a speech-to-text model instance.
 
@@ -156,7 +160,9 @@ class AIFactory:
             Speech-to-text model instance
         """
         config = config or {}
-        return cls._create_instance("speech_to_text", provider, model_name=model_name, **config)
+        return cls._create_instance(
+            "speech_to_text", provider, model_name=model_name, **config
+        )
 
     @classmethod
     def create_text_to_speech(
@@ -165,7 +171,7 @@ class AIFactory:
         model_name: Optional[str] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> TextToSpeechModel:
         """Create a text-to-speech model instance.
 
@@ -185,15 +191,15 @@ class AIFactory:
         """
         provider_class = cls._import_provider_class("text_to_speech", provider)
         return provider_class(
-            model_name=model_name,
-            api_key=api_key,
-            base_url=base_url,
-            **kwargs
+            model_name=model_name, api_key=api_key, base_url=base_url, **kwargs
         )
 
     @classmethod
     def create_stt(
-        cls, provider: str, model_name: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+        cls,
+        provider: str,
+        model_name: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
     ) -> SpeechToTextModel:
         """Create a speech-to-text model instance (alias for create_speech_to_text).
 
@@ -238,7 +244,9 @@ class AIFactory:
             DeprecationWarning,
             stacklevel=2,
         )
-        return cls.create_text_to_speech(provider, model_name=model_name, config=config, api_key=api_key)
+        return cls.create_text_to_speech(
+            provider, model_name=model_name, config=config, api_key=api_key
+        )
 
     @classmethod
     def create_llm(
