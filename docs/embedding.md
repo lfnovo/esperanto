@@ -62,6 +62,13 @@ embedding = model.embed("Hello, world!")
 ```python
 from esperanto.factory import AIFactory
 
+# Basic usage with defaults
+model = AIFactory.create_embedding(
+    provider="transformers",
+    model_name="bert-base-uncased",  # or any other Hugging Face model
+)
+
+# Advanced configuration
 model = AIFactory.create_embedding(
     provider="transformers",
     model_name="bert-base-uncased",  # or any other Hugging Face model
@@ -69,10 +76,33 @@ model = AIFactory.create_embedding(
         "device": "auto",  # 'auto', 'cpu', 'cuda', or 'mps'
         "pooling_strategy": "mean",  # 'mean', 'max', or 'cls'
         "quantize": "8bit",  # optional: '4bit' or '8bit'
+        "tokenizer_config": {  # optional tokenizer configuration
+            "max_length": 512,  # maximum sequence length (default for BERT)
+            "padding": True,
+            "truncation": True
+        }
+    }
+)
+
+# Example with a multilingual model
+model = AIFactory.create_embedding(
+    provider="transformers",
+    model_name="neuralmind/bert-base-portuguese-cased",  # Portuguese BERT
+    config={
+        "tokenizer_config": {
+            "max_length": 256,  # shorter for memory efficiency
+            "padding": True,
+            "truncation": True
+        }
     }
 )
 
 embeddings = model.embed(["Hello, world!"])
+
+# Pooling Strategies:
+# - "mean": Average of all token embeddings (default, good for semantic similarity)
+# - "max": Maximum value across token embeddings (good for key feature extraction)
+# - "cls": Use the [CLS] token embedding (good for sentence classification)
 ```
 
 ### Google Vertex AI

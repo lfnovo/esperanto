@@ -152,9 +152,17 @@ class TransformersEmbeddingModel(EmbeddingModel):
 
             # Clean and tokenize texts
             cleaned_texts = [text.replace("\n", " ") for text in batch_texts]
-            encoded = self.tokenizer(
-                cleaned_texts, padding=True, truncation=True, return_tensors="pt"
-            )
+
+            # Get tokenizer config from kwargs or use defaults
+            tokenizer_config = {
+                "padding": True,
+                "truncation": True,
+                "max_length": 512,  # Default BERT max length
+                "return_tensors": "pt",
+                **kwargs.get("tokenizer_config", {}),
+            }
+
+            encoded = self.tokenizer(cleaned_texts, **tokenizer_config)
 
             # Move inputs to device
             encoded = {k: v.to(self.device) for k, v in encoded.items()}
