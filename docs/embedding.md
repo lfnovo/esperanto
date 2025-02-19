@@ -9,6 +9,7 @@ Esperanto supports multiple embedding providers for converting text into vector 
 - Google GenAI
 - Ollama (Local deployment)
 - Transformers (Local deployment with Hugging Face models)
+- Voyage AI (voyage-large-2, voyage-code-2)
 
 ## Usage Examples
 
@@ -137,4 +138,24 @@ from esperanto.providers.embedding.google import GoogleEmbeddingModel
 model = GoogleEmbeddingModel(
     api_key="your-api-key" # or use ENV
 )
+```
+
+### Voyage AI
+```python
+from esperanto.factory import AIFactory
+
+# Basic usage
+model = AIFactory.create_embedding(
+    provider="voyage",
+    model_name="voyage-large-2",  # or voyage-code-2 for code embeddings
+    api_key="your-api-key"  # or set VOYAGE_API_KEY env var
+)
+
+# Get embeddings
+texts = ["Hello, world!", "Another text"]
+embeddings = model.embed(texts)
+
+# Async usage
+async def get_embeddings():
+    embeddings = await model.aembed(texts)
 ```
