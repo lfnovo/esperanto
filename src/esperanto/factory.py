@@ -30,6 +30,7 @@ class AIFactory:
             "ollama": "esperanto.providers.embedding.ollama:OllamaEmbeddingModel",
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
             "transformers": "esperanto.providers.embedding.transformers:TransformersEmbeddingModel",
+            "voyage": "esperanto.providers.embedding.voyage:VoyageEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
