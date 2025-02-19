@@ -147,7 +147,7 @@ from esperanto.factory import AIFactory
 # Basic usage
 model = AIFactory.create_embedding(
     provider="voyage",
-    model_name="voyage-large-2",  # or voyage-code-2 for code embeddings
+    model_name="voyage-3",  # or voyage-code-2 for code embeddings
     api_key="your-api-key"  # or set VOYAGE_API_KEY env var
 )
 
