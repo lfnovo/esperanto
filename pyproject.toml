@@ -1,6 +1,6 @@
 [project]
 name = "esperanto"
-version = "0.12.3"
+version = "0.12.4"
 description = "A unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-voyage = ["requests>=2.31.0"]
+voyage = ["voyageai>=0.1.4"]
 transformers = [
     "transformers>=4.40.0",
     "torch>=2.2.2",
@@ -60,7 +60,7 @@ all = [
     "torch>=2.2.2",
     "tokenizers>=0.15.2",
     "bitsandbytes>=0.43.0",
-    "requests>=2.31.0",  # For Voyage AI
+    "voyageai>=0.1.4",  # For Voyage AI
 ]
 
 all_with_langchain = [

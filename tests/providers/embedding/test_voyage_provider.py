@@ -4,7 +4,8 @@ import os
 from unittest.mock import patch
 
 import pytest
-import responses
+import voyageai
+from voyageai.error import VoyageError
 
 from esperanto.providers.embedding.voyage import VoyageEmbeddingModel
 
@@ -13,6 +14,7 @@ def test_init_with_api_key():
     """Test initialization with API key."""
     model = VoyageEmbeddingModel(api_key="test-key")
     assert model.api_key == "test-key"
+    assert voyageai.api_key == "test-key"
 
 
 def test_init_with_env_api_key():
@@ -20,6 +22,7 @@ def test_init_with_env_api_key():
     with patch.dict(os.environ, {"VOYAGE_API_KEY": "test-key"}):
         model = VoyageEmbeddingModel()
         assert model.api_key == "test-key"
+        assert voyageai.api_key == "test-key"
 
 
 def test_init_without_api_key():
@@ -50,57 +53,50 @@ def test_models_list():
     assert models[1].id == "voyage-code-2"
 
 
-@responses.activate
 def test_embed():
     """Test embedding creation."""
-    # Mock response
-    responses.add(
-        responses.POST,
-        "https://api.voyageai.com/v1/embeddings",
-        json={
-            "data": [
-                {"embedding": [0.1, 0.2, 0.3]},
-                {"embedding": [0.4, 0.5, 0.6]},
-            ]
-        },
-        status=200,
-    )
+    with patch.object(voyageai, "get_embeddings") as mock_get_embeddings:
+        mock_get_embeddings.return_value = [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
+        ]
 
-    model = VoyageEmbeddingModel(api_key="test-key")
-    texts = ["Hello", "World"]
-    embeddings = model.embed(texts)
+        model = VoyageEmbeddingModel(api_key="test-key")
+        texts = ["Hello", "World"]
+        embeddings = model.embed(texts)
 
-    assert len(embeddings) == 2
-    assert len(embeddings[0]) == 3
-    assert embeddings[0] == [0.1, 0.2, 0.3]
-    assert embeddings[1] == [0.4, 0.5, 0.6]
+        assert len(embeddings) == 2
+        assert len(embeddings[0]) == 3
+        assert embeddings[0] == [0.1, 0.2, 0.3]
+        assert embeddings[1] == [0.4, 0.5, 0.6]
+        mock_get_embeddings.assert_called_once_with(
+            texts,
+            model="voyage-large-2",
+        )
 
 
-@responses.activate
 def test_embed_error():
     """Test error handling in embedding creation."""
-    # Mock error response
-    responses.add(
-        responses.POST,
-        "https://api.voyageai.com/v1/embeddings",
-        json={"error": {"message": "Invalid API key"}},
-        status=401,
-    )
+    with patch.object(voyageai, "get_embeddings") as mock_get_embeddings:
+        mock_get_embeddings.side_effect = VoyageError("Invalid API key")
 
-    model = VoyageEmbeddingModel(api_key="invalid-key")
-    with pytest.raises(RuntimeError, match="Voyage API error: Invalid API key"):
-        model.embed(["test"])
+        model = VoyageEmbeddingModel(api_key="invalid-key")
+        with pytest.raises(VoyageError, match="Invalid API key"):
+            model.embed(["test"])
 
 
 @pytest.mark.asyncio
 async def test_aembed():
     """Test async embedding creation."""
-    with patch.object(VoyageEmbeddingModel, "embed") as mock_embed:
-        mock_embed.return_value = [[0.1, 0.2, 0.3]]
+    with patch.object(voyageai, "get_embeddings") as mock_get_embeddings:
+        mock_get_embeddings.return_value = [[0.1, 0.2, 0.3]]
 
         model = VoyageEmbeddingModel(api_key="test-key")
         embeddings = await model.aembed(["test"])
 
         assert len(embeddings) == 1
         assert embeddings[0] == [0.1, 0.2, 0.3]
-        mock_embed.assert_called_once_with(texts=["test"])
+        mock_get_embeddings.assert_called_once_with(
+            ["test"],
+            model="voyage-large-2",
+        )

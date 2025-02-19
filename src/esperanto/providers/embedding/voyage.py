@@ -5,7 +5,7 @@ import functools
 import os
 from typing import Any, Dict, List
 
-import requests
+import voyageai
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
 
@@ -26,12 +26,8 @@ class VoyageEmbeddingModel(EmbeddingModel):
         if not self.api_key:
             raise ValueError("Voyage API key not found")
 
-        # Set base URL
-        self.base_url = (
-            kwargs.get("base_url")
-            or os.getenv("VOYAGE_BASE_URL")
-            or "https://api.voyageai.com/v1"
-        )
+        # Initialize client
+        voyageai.api_key = self.api_key
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
@@ -58,32 +54,15 @@ class VoyageEmbeddingModel(EmbeddingModel):
         # Clean texts by replacing newlines with spaces
         texts = [text.replace("\n", " ") for text in texts]
 
-        # Prepare request
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-        }
-
-        data = {
-            "model": self.get_model_name(),
-            "input": texts,
+        # Get embeddings using the SDK
+        response = voyageai.get_embeddings(
+            texts,
+            model=self.get_model_name(),
             **self._get_api_kwargs(),
             **kwargs,
-        }
-
-        # Make request
-        response = requests.post(
-            f"{self.base_url}/embeddings", headers=headers, json=data
         )
 
-        # Handle errors
-        if response.status_code != 200:
-            error_msg = response.json().get("error", {}).get("message", "Unknown error")
-            raise RuntimeError(f"Voyage API error: {error_msg}")
-
-        # Parse response
-        result = response.json()
-        return [data["embedding"] for data in result["data"]]
+        return response
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -95,7 +74,7 @@ class VoyageEmbeddingModel(EmbeddingModel):
         Returns:
             List of embeddings, one for each input text.
         """
-        # Since we're using requests, run in thread pool
+        # Since the SDK doesn't provide async methods, run in thread pool
         loop = asyncio.get_event_loop()
         partial_embed = functools.partial(self.embed, texts=texts, **kwargs)
         return await loop.run_in_executor(None, partial_embed)
