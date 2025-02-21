@@ -27,7 +27,7 @@ class VoyageEmbeddingModel(EmbeddingModel):
             raise ValueError("Voyage API key not found")
 
         # Initialize client
-        voyageai.api_key = self.api_key
+        self.client = voyageai.Client(api_key=self.api_key)
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
@@ -55,14 +55,14 @@ class VoyageEmbeddingModel(EmbeddingModel):
         texts = [text.replace("\n", " ") for text in texts]
 
         # Get embeddings using the SDK
-        response = voyageai.get_embeddings(
+        response = self.client.embed(
             texts,
             model=self.get_model_name(),
             **self._get_api_kwargs(),
             **kwargs,
         )
 
-        return response
+        return [embedding.embedding for embedding in response.embeddings]
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
