@@ -57,8 +57,8 @@ def test_models_list():
         assert models[1].id == "voyage-code-2"
 
 
-def test_embed():
-    """Test embedding creation."""
+def test_embed_old_format():
+    """Test embedding creation with old response format."""
     with patch("voyageai.Client") as mock_client_class:
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -66,6 +66,33 @@ def test_embed():
         mock_response.embeddings = [
             Mock(embedding=[0.1, 0.2, 0.3]),
             Mock(embedding=[0.4, 0.5, 0.6]),
+        ]
+        mock_client.embed.return_value = mock_response
+
+        model = VoyageEmbeddingModel(api_key="test-key")
+        texts = ["Hello", "World"]
+        embeddings = model.embed(texts)
+
+        assert len(embeddings) == 2
+        assert len(embeddings[0]) == 3
+        assert embeddings[0] == [0.1, 0.2, 0.3]
+        assert embeddings[1] == [0.4, 0.5, 0.6]
+        mock_client.embed.assert_called_once_with(
+            texts,
+            model="voyage-large-2",
+        )
+
+
+def test_embed_new_format():
+    """Test embedding creation with new response format."""
+    with patch("voyageai.Client") as mock_client_class:
+        mock_client = Mock()
+        mock_client_class.return_value = mock_client
+        mock_response = Mock()
+        # New format: response.embeddings is a list of embeddings directly
+        mock_response.embeddings = [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
         ]
         mock_client.embed.return_value = mock_response
 
@@ -96,13 +123,35 @@ def test_embed_error():
 
 
 @pytest.mark.asyncio
-async def test_aembed():
-    """Test async embedding creation."""
+async def test_aembed_old_format():
+    """Test async embedding creation with old response format."""
     with patch("voyageai.Client") as mock_client_class:
         mock_client = Mock()
         mock_client_class.return_value = mock_client
         mock_response = Mock()
         mock_response.embeddings = [Mock(embedding=[0.1, 0.2, 0.3])]
+        mock_client.embed.return_value = mock_response
+
+        model = VoyageEmbeddingModel(api_key="test-key")
+        embeddings = await model.aembed(["test"])
+
+        assert len(embeddings) == 1
+        assert embeddings[0] == [0.1, 0.2, 0.3]
+        mock_client.embed.assert_called_once_with(
+            ["test"],
+            model="voyage-large-2",
+        )
+
+
+@pytest.mark.asyncio
+async def test_aembed_new_format():
+    """Test async embedding creation with new response format."""
+    with patch("voyageai.Client") as mock_client_class:
+        mock_client = Mock()
+        mock_client_class.return_value = mock_client
+        mock_response = Mock()
+        # New format: response.embeddings is a list of embeddings directly
+        mock_response.embeddings = [[0.1, 0.2, 0.3]]
         mock_client.embed.return_value = mock_response
 
         model = VoyageEmbeddingModel(api_key="test-key")

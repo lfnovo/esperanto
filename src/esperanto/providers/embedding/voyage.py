@@ -62,7 +62,13 @@ class VoyageEmbeddingModel(EmbeddingModel):
             **kwargs,
         )
 
-        return [embedding.embedding for embedding in response.embeddings]
+        # Handle both old and new response formats
+        # Old format: response.embeddings is a list of objects with an embedding attribute
+        # New format: response.embeddings is a list of embeddings directly
+        if response.embeddings and isinstance(response.embeddings[0], list):
+            return response.embeddings
+        else:
+            return [embedding.embedding for embedding in response.embeddings]
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
