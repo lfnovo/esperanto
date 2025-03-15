@@ -1,87 +1,62 @@
-"""Types for text-to-speech functionality."""
-from dataclasses import dataclass
+"""Text-to-speech type definitions for Esperanto."""
+
 from typing import Any, Dict, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
-@dataclass
-class AudioResponse:
-    """Response from a text-to-speech generation.
-    
-    Attributes:
-        audio_data: Raw audio data in bytes.
-        duration: Duration of the audio in seconds.
-        content_type: MIME type of the audio (e.g., 'audio/mp3').
-        model: Name of the model used.
-        voice: Voice ID or name used.
-        provider: Name of the provider.
-        metadata: Additional provider-specific metadata.
-    """
-    audio_data: bytes
-    duration: Optional[float] = None
-    content_type: str = "audio/mp3"
-    model: Optional[str] = None
-    voice: Optional[str] = None
-    provider: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+from esperanto.types.response import Usage
 
 
-@dataclass
-class Voice:
-    """Common voice representation across all TTS providers."""
+class Voice(BaseModel):
+    """Voice information for text-to-speech."""
 
-    name: str
-    """The name of the voice."""
+    name: str = Field(description="Display name of the voice")
+    id: str = Field(description="Unique identifier for the voice")
+    gender: str = Field(description="Gender of the voice (e.g., 'FEMALE', 'MALE')")
+    language_code: str = Field(description="Language code (e.g., 'en-US')")
+    description: Optional[str] = Field(
+        default=None, description="Description of the voice"
+    )
+    accent: Optional[str] = Field(
+        default=None, description="Accent of the voice (e.g., 'American')"
+    )
+    age: Optional[str] = Field(
+        default=None, description="Age category of the voice (e.g., 'young')"
+    )
+    use_case: Optional[str] = Field(
+        default=None, description="Recommended use case for the voice"
+    )
+    preview_url: Optional[str] = Field(
+        default=None, description="URL to a preview audio sample"
+    )
 
-    id: str
-    """The unique identifier for the voice."""
+    model_config = ConfigDict(frozen=True)
 
-    gender: str
-    """The gender of the voice (MALE, FEMALE, NEUTRAL)."""
 
-    language_code: str
-    """The language code of the voice (e.g., 'en-US', 'pt-BR')."""
+class AudioResponse(BaseModel):
+    """Response from text-to-speech generation."""
 
-    description: Optional[str] = None
-    """Optional description of the voice."""
+    audio_data: bytes = Field(description="The generated audio data")
+    duration: Optional[float] = Field(
+        default=None, description="Duration of the audio in seconds"
+    )
+    content_type: str = Field(
+        default="audio/mp3", description="MIME type of the audio data"
+    )
+    usage: Optional[Usage] = Field(
+        default=None, description="Usage statistics for this generation"
+    )
+    model: Optional[str] = Field(
+        default=None, description="The model used for generation"
+    )
+    voice: Optional[str] = Field(
+        default=None, description="The voice used for generation"
+    )
+    provider: Optional[str] = Field(
+        default=None, description="The provider that generated this audio"
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="Additional metadata from the provider"
+    )
 
-    accent: Optional[str] = None
-    """Optional accent of the voice (e.g., 'british', 'american')."""
-
-    age: Optional[str] = None
-    """Optional age category of the voice (e.g., 'young', 'middle-aged', 'old')."""
-
-    use_case: Optional[str] = None
-    """Optional primary use case of the voice (e.g., 'narration', 'conversational')."""
-
-    preview_url: Optional[str] = None
-    """Optional URL to preview the voice."""
-
-    @staticmethod
-    def normalize_gender(gender: str) -> str:
-        """Normalize gender values across providers."""
-        gender = gender.upper()
-        if gender in ["MALE", "M"]:
-            return "MALE"
-        elif gender in ["FEMALE", "F"]:
-            return "FEMALE"
-        else:
-            return "NEUTRAL"
-
-    @staticmethod
-    def normalize_language_code(language_code: str) -> str:
-        """Normalize language codes across providers."""
-        # Add language code normalization as needed
-        return language_code
-
-    @staticmethod
-    def normalize_age(age: Optional[str]) -> Optional[str]:
-        """Normalize age categories across providers."""
-        if not age:
-            return None
-        age = age.lower()
-        if "young" in age:
-            return "young"
-        elif "old" in age:
-            return "old"
-        else:
-            return "middle-aged"
+    model_config = ConfigDict(frozen=True)

@@ -1,12 +1,23 @@
 """Model type definitions for Esperanto."""
-from dataclasses import dataclass
+
 from typing import Literal, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
-@dataclass
-class Model:
+
+class Model(BaseModel):
     """Model information from providers."""
-    id: str
-    owned_by: str
-    context_window: Optional[int] = None
-    type: Literal["language", "embedding", "text_to_speech", "speech_to_text"] = "language"
+
+    id: str = Field(description="The unique identifier of the model")
+    owned_by: str = Field(description="The organization that owns the model")
+    context_window: Optional[int] = Field(
+        default=None,
+        description="Maximum number of tokens the model can process in a single request",
+        ge=0,  # context window must be non-negative
+    )
+    type: Literal["language", "embedding", "text_to_speech", "speech_to_text"] = Field(
+        default="language",
+        description="The type of model (language model, embedding model, etc.)",
+    )
+
+    model_config = ConfigDict(frozen=True)  # Make models immutable
