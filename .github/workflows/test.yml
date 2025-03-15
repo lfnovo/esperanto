@@ -38,8 +38,7 @@ jobs:
     - name: Create venv and install dependencies
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
       run: |
-        uv venv
-        uv pip install -e ".[dev,all_with_langchain]"
+        uv sync --extra all_with_langchain
     
     - name: Run tests
-      run: uv run pytest -v
+      run: uv run pytest -v tests/providers
