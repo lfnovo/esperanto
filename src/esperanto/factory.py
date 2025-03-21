@@ -75,15 +75,20 @@ class AIFactory:
             module = importlib.import_module(module_name)
             return getattr(module, class_name)
         except ImportError as e:
-            # Get the provider package name from the module path
+            # Extract the missing package from the ImportError
+            missing_package = str(e).split("'")[1] if "'" in str(e) else None
             provider_package = module_name.split(".")[
                 3
             ]  # e.g., openai, anthropic, etc.
-            raise ImportError(
-                f"Provider '{provider}' requires additional dependencies. "
-                f"Install them with: pip install esperanto[{provider_package}] "
-                f"or poetry add esperanto[{provider_package}]"
-            ) from e
+
+            error_msg = f"Provider '{provider}' requires additional dependencies."
+            if missing_package:
+                error_msg += f" Missing package: {missing_package}."
+            error_msg += (
+                f"\nInstall with: uv add esperanto[{provider_package}] "
+                f"or pip install esperanto[{provider_package}]"
+            )
+            raise ImportError(error_msg) from e
 
     @classmethod
     def get_available_providers(cls) -> Dict[str, List[str]]:
