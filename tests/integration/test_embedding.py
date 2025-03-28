@@ -1,10 +1,11 @@
 """Integration tests for embedding providers."""
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
 
 from esperanto.factory import AIFactory
+from esperanto.providers.embedding.google import GoogleEmbeddingModel
 
 
 @pytest.fixture
@@ -59,6 +60,62 @@ async def test_transformers_async_embedding(transformers_model):
 
     # Verify embeddings are different for different texts
     assert embeddings[0] != embeddings[1]
+
+
+@pytest.fixture
+def google_model():
+    """Create a Google embedding model instance with mocked responses."""
+    model = GoogleEmbeddingModel(api_key="test-key")
+
+    # Mock embed and aembed methods
+    sample_embedding = [[0.1, 0.2, 0.3, 0.4] * 64]  # 256-dimensional embedding
+    model.embed = MagicMock(return_value=sample_embedding)
+    model.aembed = AsyncMock(return_value=sample_embedding)
+
+    return model
+
+
+def test_google_embedding(google_model):
+    """Test Google embedding generation."""
+    texts = [
+        "This is a test sentence.",
+        "Another example for embedding.",
+    ]
+
+    embeddings = google_model.embed(texts)
+
+    # Verify the method was called with the correct texts
+    google_model.embed.assert_called_once_with(texts)
+
+    # Basic validation
+    assert isinstance(embeddings, list)
+    assert all(isinstance(emb, list) for emb in embeddings)
+    assert all(isinstance(val, float) for emb in embeddings for val in emb)
+
+    # Length check - our mock returns a 256-dim embedding
+    assert len(embeddings[0]) == 256
+
+
+@pytest.mark.asyncio
+async def test_google_async_embedding(google_model):
+    """Test async Google embedding generation."""
+    texts = [
+        "This is a test sentence.",
+        "Another example for embedding.",
+    ]
+
+    embeddings = await google_model.aembed(texts)
+
+    # Verify the method was called with the correct texts
+    google_model.aembed.assert_called_once_with(texts)
+
+    # Basic validation
+    assert isinstance(embeddings, list)
+    assert all(isinstance(emb, list) for emb in embeddings)
+    assert all(isinstance(val, float) for emb in embeddings for val in emb)
+
+    # Length check - our mock returns a 256-dim embedding
+    assert len(embeddings[0]) == 256
 
 
 def test_transformers_pooling_strategies(transformers_model):

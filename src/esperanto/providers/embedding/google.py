@@ -1,10 +1,11 @@
 """Google GenAI embedding model provider."""
+
 import asyncio
 import functools
 import os
 from typing import Any, Dict, List
 
-import google.generativeai as genai  # type: ignore
+from google import genai  # type: ignore
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
 
@@ -14,15 +15,18 @@ class GoogleEmbeddingModel(EmbeddingModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        
+
         # Get API key
-        self.api_key = kwargs.get("api_key") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.api_key = (
+            kwargs.get("api_key")
+            or os.getenv("GOOGLE_API_KEY")
+            or os.getenv("GEMINI_API_KEY")
+        )
         if not self.api_key:
             raise ValueError("Google API key not found")
-        
-        # Initialize GenAI
-        genai.configure(api_key=self.api_key)
-        
+
+        self._client = genai.Client(api_key=self.api_key)
+
         # Update config with model_name if provided
         if "model_name" in kwargs:
             self._config["model_name"] = kwargs["model_name"]
@@ -40,9 +44,7 @@ class GoogleEmbeddingModel(EmbeddingModel):
         """Get the full model path."""
         model_name = self.get_model_name()
         return (
-            model_name
-            if model_name.startswith("models/")
-            else f"models/{model_name}"
+            model_name if model_name.startswith("models/") else f"models/{model_name}"
         )
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
@@ -58,17 +60,15 @@ class GoogleEmbeddingModel(EmbeddingModel):
         results = []
         api_kwargs = {**self._get_api_kwargs(), **kwargs}
         model_name = self._get_model_path()
-        
+
         for text in texts:
             text = text.replace("\n", " ")
-            result = genai.embed_content(
-                model=model_name,
-                content=text,
-                **api_kwargs
+            result = self._client.models.embed_content(
+                model=model_name, content=text, **api_kwargs
             )
             # Convert embeddings to regular floats
             results.append([float(value) for value in result["embedding"]])
-        
+
         return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
@@ -102,10 +102,14 @@ class GoogleEmbeddingModel(EmbeddingModel):
         models_list = genai.list_models()
         return [
             Model(
-                id=model.name.split('/')[-1],
+                id=model.name.split("/")[-1],
                 owned_by="Google",
-                context_window=model.input_token_limit if hasattr(model, 'input_token_limit') else None,
-                type="embedding"
+                context_window=(
+                    model.input_token_limit
+                    if hasattr(model, "input_token_limit")
+                    else None
+                ),
+                type="embedding",
             )
             for model in models_list
             if "embedText" in model.supported_generation_methods
