@@ -342,8 +342,15 @@ def test_google_initialization_without_api_key():
 
 @pytest.fixture
 def google_embedding_model():
-    with patch("google.genai.embed_content") as mock_embed:
-        mock_embed.return_value = {"embedding": [0.1, 0.2, 0.3]}
+    with patch("google.genai.Client") as mock_client:
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+
+        # Mock the models object with embed_content method
+        mock_models = Mock()
+        mock_client_instance.models = mock_models
+        mock_models.embed_content.return_value = {"embedding": [0.1, 0.2, 0.3]}
+
         yield GoogleEmbeddingModel(api_key="test_key")
 
 

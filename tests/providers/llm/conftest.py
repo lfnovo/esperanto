@@ -98,16 +98,40 @@ def openai_model():
 
 @pytest.fixture
 def google_model():
-    with (
-        patch("google.genai.configure") as mock_configure,
-        patch("google.genai.GenerativeModel") as mock_model,
-    ):
-        # Create a mock instance
-        mock_instance = MagicMock()
-        mock_model.return_value = mock_instance
+    with patch("google.genai.Client") as mock_client:
+        # Create mock client instance
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+
+        # Mock the models object
+        mock_models = MagicMock()
+        mock_client_instance.models = mock_models
+
+        # Mock generate_content method
+        mock_response = MagicMock()
+        mock_response.text = "Test response"
+        mock_response.prompt_feedback = MagicMock()
+        mock_response.prompt_feedback.block_reason = None
+
+        # Set up response for async methods
+        mock_candidate = MagicMock()
+        mock_content = MagicMock()
+        mock_part = MagicMock()
+        mock_part.text = "Test response"
+        mock_content.parts = [mock_part]
+        mock_candidate.content = mock_content
+        mock_candidate.finish_reason = "STOP"
+        mock_async_response = MagicMock()
+        mock_async_response.candidates = [mock_candidate]
+
+        # Assign the mocks
+        mock_models.generate_content = MagicMock(return_value=mock_response)
+        mock_models.generate_content_async = AsyncMock(return_value=mock_async_response)
+        mock_models.list_models = MagicMock(return_value=[])
 
         # Initialize model with test key
         model = GoogleLanguageModel(api_key="test-key")
+        model._client = mock_client_instance
 
         yield model
 

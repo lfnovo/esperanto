@@ -1,8 +1,8 @@
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import google.genai as genai
 import pytest
+from google.genai import types
 
 from esperanto.providers.llm.google import GoogleLanguageModel
 
@@ -38,18 +38,18 @@ def test_chat_complete(google_model):
     mock_response = MagicMock()
     mock_response.text = "Hello! How can I help you today?"
     mock_response.prompt_feedback.block_reason = None
-    google_model._client.generate_content.return_value = mock_response
+    google_model._client.models.generate_content.return_value = mock_response
 
     result = google_model.chat_complete(messages)
 
     # Verify the client was called with correct parameters
-    google_model._client.generate_content.assert_called_once()
-    call_args = google_model._client.generate_content.call_args[1]
+    google_model._client.models.generate_content.assert_called_once()
+    call_args = google_model._client.models.generate_content.call_args[1]
 
     # Check generation config
-    assert isinstance(call_args["generation_config"], genai.GenerationConfig)
-    assert call_args["generation_config"].temperature == 1.0
-    assert call_args["generation_config"].top_p == 0.9
+    assert isinstance(call_args["config"], types.GenerateContentConfig)
+    assert call_args["config"].temperature == 1.0
+    assert call_args["config"].top_p == 0.9
 
     # Check response format
     assert result.choices[0].message.content == "Hello! How can I help you today?"
@@ -79,18 +79,20 @@ async def test_achat_complete(google_model):
     mock_response.candidates = [mock_candidate]
 
     # Use AsyncMock for async method
-    google_model._client.generate_content_async = AsyncMock(return_value=mock_response)
+    google_model._client.models.generate_content_async = AsyncMock(
+        return_value=mock_response
+    )
 
     result = await google_model.achat_complete(messages)
 
     # Verify the async client was called with correct parameters
-    google_model._client.generate_content_async.assert_called_once()
-    call_args = google_model._client.generate_content_async.call_args[1]
+    google_model._client.models.generate_content_async.assert_called_once()
+    call_args = google_model._client.models.generate_content_async.call_args[1]
 
     # Check generation config
-    assert isinstance(call_args["generation_config"], genai.GenerationConfig)
-    assert call_args["generation_config"].temperature == 1.0
-    assert call_args["generation_config"].top_p == 0.9
+    assert isinstance(call_args["config"], types.GenerateContentConfig)
+    assert call_args["config"].temperature == 1.0
+    assert call_args["config"].top_p == 0.9
 
     # Check response format
     assert result.choices[0].message.content == mock_text
@@ -103,8 +105,8 @@ def test_json_structured_output(google_model):
 
     response = google_model.chat_complete(messages)
 
-    call_args = google_model._client.generate_content.call_args
-    assert call_args[1]["generation_config"].response_mime_type == "application/json"
+    call_args = google_model._client.models.generate_content.call_args
+    assert call_args[1]["config"].response_mime_type == "application/json"
 
 
 @pytest.mark.asyncio
@@ -113,15 +115,28 @@ async def test_json_structured_output_async(google_model):
     messages = [{"role": "user", "content": "Hello!"}]
 
     # Mock the async response
+    mock_text = '{"greeting": "Hello!", "response": "How can I help?"}'
+    mock_part = MagicMock()
+    mock_part.text = mock_text
+
+    mock_content = MagicMock()
+    mock_content.parts = [mock_part]
+
+    mock_candidate = MagicMock()
+    mock_candidate.content = mock_content
+    mock_candidate.finish_reason = "STOP"
+
     mock_response = MagicMock()
-    mock_response.text = '{"greeting": "Hello!", "response": "How can I help?"}'
-    mock_response.prompt_feedback.block_reason = None
-    google_model._client.generate_content_async = AsyncMock(return_value=mock_response)
+    mock_response.candidates = [mock_candidate]
+
+    google_model._client.models.generate_content_async = AsyncMock(
+        return_value=mock_response
+    )
 
     response = await google_model.achat_complete(messages)
 
-    call_args = google_model._client.generate_content_async.call_args
-    assert call_args[1]["generation_config"].response_mime_type == "application/json"
+    call_args = google_model._client.models.generate_content_async.call_args
+    assert call_args[1]["config"].response_mime_type == "application/json"
 
 
 def test_to_langchain(google_model):
@@ -131,4 +146,4 @@ def test_to_langchain(google_model):
     assert langchain_model.model == "models/gemini-1.5-pro"
     assert langchain_model.temperature == 1.0
     assert langchain_model.top_p == 0.9
-    # Skip API key check since it's masked in SecretStr
+    # Skip API key check since it's masked
