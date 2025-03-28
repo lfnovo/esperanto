@@ -1,4 +1,5 @@
 """Anthropic language model implementation."""
+
 import os
 import time
 from dataclasses import dataclass
@@ -8,8 +9,7 @@ from anthropic import Anthropic, AsyncAnthropic
 from anthropic.types import Message as AnthropicMessage
 from langchain_anthropic import ChatAnthropic
 
-from esperanto.providers.llm.base import LanguageModel
-from esperanto.types import (
+from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
     Choice,
@@ -18,6 +18,7 @@ from esperanto.types import (
     StreamChoice,
     Usage,
 )
+from esperanto.providers.llm.base import LanguageModel
 from esperanto.utils.logging import logger
 
 
@@ -31,14 +32,16 @@ class AnthropicLanguageModel(LanguageModel):
         self.api_key = self.api_key or os.getenv("ANTHROPIC_API_KEY")
 
         if not self.api_key:
-            raise ValueError("Anthropic API key not found. Set the ANTHROPIC_API_KEY environment variable.")
-        
+            raise ValueError(
+                "Anthropic API key not found. Set the ANTHROPIC_API_KEY environment variable."
+            )
+
         config = {
             "api_key": self.api_key,
             "base_url": self.base_url,
         }
         config = self._clean_config(config)
-        
+
         self.client = Anthropic(**config)
         self.async_client = AsyncAnthropic(**config)
 
@@ -50,53 +53,55 @@ class AnthropicLanguageModel(LanguageModel):
                 id="claude-3-opus-20240229",
                 owned_by="Anthropic",
                 context_window=200000,
-                type="language"
+                type="language",
             ),
             Model(
                 id="claude-3-sonnet-20240229",
                 owned_by="Anthropic",
                 context_window=200000,
-                type="language"
+                type="language",
             ),
             Model(
                 id="claude-3-haiku-20240307",
                 owned_by="Anthropic",
                 context_window=200000,
-                type="language"
+                type="language",
             ),
             Model(
                 id="claude-2.1",
                 owned_by="Anthropic",
                 context_window=200000,
-                type="language"
+                type="language",
             ),
             Model(
                 id="claude-2.0",
                 owned_by="Anthropic",
                 context_window=100000,
-                type="language"
+                type="language",
             ),
             Model(
                 id="claude-instant-1.2",
                 owned_by="Anthropic",
                 context_window=100000,
-                type="language"
+                type="language",
             ),
         ]
         return available_models
 
-    def _prepare_messages(self, messages: List[Dict[str, str]]) -> tuple[Optional[str], List[Dict[str, str]]]:
+    def _prepare_messages(
+        self, messages: List[Dict[str, str]]
+    ) -> tuple[Optional[str], List[Dict[str, str]]]:
         """Handle Anthropic-specific message preparation."""
         if messages[0]["role"] == "system":
             system_message = messages[0]["content"]
             messages = messages[1:]
         else:
             system_message = None
-            
+
         formatted_messages = [
             {
                 "role": "assistant" if msg["role"] == "assistant" else "user",
-                "content": msg["content"]
+                "content": msg["content"],
             }
             for msg in messages
         ]
@@ -107,7 +112,7 @@ class AnthropicLanguageModel(LanguageModel):
         # Extract timestamp from message ID (msg_01L8KAo2eC4nf2HUCXNF9SWb)
         # Using a simple timestamp as fallback since message ID format might change
         created = int(time.time())
-        
+
         return ChatCompletion(
             id=response.id,
             choices=[
@@ -149,7 +154,7 @@ class AnthropicLanguageModel(LanguageModel):
                 created=0,  # Not available in delta events
                 model="",  # Not available in delta events
             )
-        
+
         # Handle message completion event
         elif event.type == "message_delta":
             return ChatCompletionChunk(
@@ -167,14 +172,14 @@ class AnthropicLanguageModel(LanguageModel):
                 created=0,
                 model="",
             )
-        
+
         # Ignore other event types
         return None
 
     def _prepare_api_kwargs(self, **kwargs) -> dict:
         """Prepare kwargs for API call."""
         kwargs = super()._prepare_api_kwargs(**kwargs)
-        
+
         # Handle temperature - Anthropic expects 0-1 range
         if "temperature" in kwargs:
             temp = kwargs["temperature"]
@@ -192,19 +197,19 @@ class AnthropicLanguageModel(LanguageModel):
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = self.get_completion_kwargs()
-        
+
         # Remove provider-specific kwargs that Anthropic doesn't expect
         kwargs.pop("model_name", None)
         kwargs.pop("api_key", None)
         kwargs.pop("base_url", None)
         kwargs.pop("organization", None)
-        
+
         # Handle streaming
         if exclude_stream:
             kwargs.pop("streaming", None)
         elif "streaming" in kwargs:
             kwargs["stream"] = kwargs.pop("streaming")
-            
+
         # Handle temperature - Anthropic expects 0-1 range
         if "temperature" in kwargs:
             temp = kwargs["temperature"]
@@ -216,7 +221,7 @@ class AnthropicLanguageModel(LanguageModel):
             max_tokens = kwargs["max_tokens"]
             if max_tokens is not None:
                 kwargs["max_tokens"] = int(max_tokens)
-                
+
         return kwargs
 
     def get_model_name(self) -> str:
@@ -236,7 +241,7 @@ class AnthropicLanguageModel(LanguageModel):
         """Clean configuration dictionary."""
         # Remove None values
         config = {k: v for k, v in config.items() if v is not None}
-        
+
         # List of supported parameters for the Anthropic client
         supported_params = {
             "api_key",
@@ -246,65 +251,65 @@ class AnthropicLanguageModel(LanguageModel):
             "default_headers",
             "default_query",
         }
-        
+
         # Remove unsupported parameters
         return {k: v for k, v in config.items() if k in supported_params}
 
     def chat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request."""
         if self.structured:
             logger.warning("Structured output not supported for Anthropic.")
-        
+
         should_stream = stream if stream is not None else self.streaming
         system_message, messages = self._prepare_messages(messages)
-        
+
         response = self.client.messages.create(
             model=self.get_model_name(),
             system=system_message,
             messages=messages,
             stream=should_stream,
-            **self._get_api_kwargs(exclude_stream=True)
+            **self._get_api_kwargs(exclude_stream=True),
         )
-        
+
         if should_stream:
+
             def generate():
                 for event in response:
                     chunk = self._normalize_stream_event(event)
                     if chunk:
                         yield chunk
+
             return generate()
         return self._normalize_response(response)
 
     async def achat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request."""
         if self.structured:
             logger.warning("Structured output not supported for Anthropic.")
-        
+
         should_stream = stream if stream is not None else self.streaming
         system_message, messages = self._prepare_messages(messages)
-        
+
         response = await self.async_client.messages.create(
             model=self.get_model_name(),
             system=system_message,
             messages=messages,
             stream=should_stream,
-            **self._get_api_kwargs(exclude_stream=True)
+            **self._get_api_kwargs(exclude_stream=True),
         )
-        
+
         if should_stream:
+
             async def generate():
                 async for event in response:
                     chunk = self._normalize_stream_event(event)
                     if chunk:
                         yield chunk
+
             return generate()
         return self._normalize_response(response)
 
@@ -312,7 +317,7 @@ class AnthropicLanguageModel(LanguageModel):
         """Convert to a LangChain chat model."""
         if self.structured:
             logger.warning("Structured output not supported for Anthropic.")
-        
+
         # Only include supported parameters
         supported_params = {
             "max_tokens": self.max_tokens,

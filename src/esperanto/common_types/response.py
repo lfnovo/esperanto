@@ -79,12 +79,6 @@ class Message(BaseModel):
     )
 
 
-class ChatCompletionMessage(Message):
-    """A message in a chat completion."""
-
-    pass
-
-
 class DeltaMessage(Message):
     """A delta message in a streaming chat completion."""
 
@@ -124,30 +118,6 @@ class Choice(BaseModel):
     )
 
 
-class ChatCompletionChoice(Choice):
-    """A single choice in a chat completion."""
-
-    message: ChatCompletionMessage = Field(
-        description="The message content for this choice"
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def ensure_message_type(cls, data: Any) -> Any:
-        """Ensure message is the correct type."""
-        if not isinstance(data, dict):
-            data = to_dict(data)
-        if "message" in data:
-            if not isinstance(data["message"], ChatCompletionMessage):
-                data["message"] = ChatCompletionMessage(**to_dict(data["message"]))
-        if "finish_reason" in data:
-            try:
-                data["finish_reason"] = str(data["finish_reason"])
-            except Exception:
-                data["finish_reason"] = "stop"
-        return data
-
-
 class StreamChoice(BaseModel):
     """A single choice in a streaming chat completion."""
 
@@ -185,9 +155,7 @@ class ChatCompletion(BaseModel):
     """A chat completion response."""
 
     id: str = Field(description="Unique identifier for this chat completion")
-    choices: List[ChatCompletionChoice] = Field(
-        description="List of completion choices"
-    )
+    choices: List[Choice] = Field(description="List of completion choices")
     model: str = Field(description="The model used for completion")
     provider: str = Field(description="The provider of the model")
     created: Optional[int] = Field(
@@ -218,8 +186,8 @@ class ChatCompletion(BaseModel):
         if "choices" in data:
             data["choices"] = [
                 (
-                    ChatCompletionChoice(**to_dict(choice))
-                    if not isinstance(choice, ChatCompletionChoice)
+                    Choice(**to_dict(choice))
+                    if not isinstance(choice, Choice)
                     else choice
                 )
                 for choice in data["choices"]

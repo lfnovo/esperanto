@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from esperanto.types.response import Usage
+from esperanto.common_types.response import Usage
 
 
 class TranscriptionResponse(BaseModel):

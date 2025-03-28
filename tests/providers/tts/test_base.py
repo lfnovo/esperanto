@@ -1,9 +1,11 @@
 """Tests for the base TTS provider."""
-import pytest
+
 from pathlib import Path
 
+import pytest
+
+from esperanto.common_types.tts import AudioResponse, Voice
 from esperanto.providers.tts.base import TextToSpeechModel
-from esperanto.types.tts import AudioResponse, Voice
 
 
 def test_voice_class():
@@ -17,9 +19,9 @@ def test_voice_class():
         accent="American",
         age="young",
         use_case="general",
-        preview_url="https://example.com/preview.mp3"
+        preview_url="https://example.com/preview.mp3",
     )
-    
+
     assert voice.name == "Test Voice"
     assert voice.id == "test-voice-1"
     assert voice.gender == "FEMALE"
@@ -40,9 +42,9 @@ def test_audio_response():
         model="test-model",
         voice="test-voice",
         provider="test-provider",
-        metadata={"test": "metadata"}
+        metadata={"test": "metadata"},
     )
-    
+
     assert response.audio_data == audio_data
     assert response.content_type == "audio/mp3"
     assert response.model == "test-model"

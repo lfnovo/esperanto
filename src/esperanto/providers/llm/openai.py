@@ -8,10 +8,9 @@ from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import ChatCompletion as OpenAIChatCompletion
 from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
 
-from esperanto.providers.llm.base import LanguageModel
-from esperanto.types import (
+from esperanto.common_types import (
     ChatCompletion,
-    ChatCompletionChoice,
+    Choice,
     ChatCompletionChunk,
     DeltaMessage,
     Message,
@@ -19,6 +18,7 @@ from esperanto.types import (
     StreamChoice,
     Usage,
 )
+from esperanto.providers.llm.base import LanguageModel
 
 
 class OpenAILanguageModel(LanguageModel):
@@ -68,7 +68,7 @@ class OpenAILanguageModel(LanguageModel):
         return ChatCompletion(
             id=response.id,
             choices=[
-                ChatCompletionChoice(
+                Choice(
                     index=choice.index,
                     message=Message(
                         content=choice.message.content or "",

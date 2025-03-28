@@ -7,8 +7,8 @@ from typing import Any, Dict, List
 from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI, OpenAI
 
+from esperanto.common_types import Model
 from esperanto.providers.llm.openai import OpenAILanguageModel
-from esperanto.types import Model
 from esperanto.utils.logging import logger
 
 
@@ -69,8 +69,8 @@ class XAILanguageModel(OpenAILanguageModel):
             Model(
                 id=model.id,
                 owned_by="X.AI",
-                context_window=getattr(model, 'context_window', None),
-                type="language"
+                context_window=getattr(model, "context_window", None),
+                type="language",
             )
             for model in models
             if model.id.startswith("grok")  # Only include Grok models

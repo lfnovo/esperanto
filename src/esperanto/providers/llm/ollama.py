@@ -8,16 +8,16 @@ from typing import Any, AsyncIterator, Dict, Iterator, List, Union
 from langchain_ollama import ChatOllama
 from ollama import AsyncClient, Client
 
-from esperanto.providers.llm.base import LanguageModel
-from esperanto.types import (
+from esperanto.common_types import (
     ChatCompletion,
-    ChatCompletionChoice,
+    Choice,
     ChatCompletionChunk,
-    ChatCompletionMessage,
+    Message,
     DeltaMessage,
     Model,
     StreamChoice,
 )
+from esperanto.providers.llm.base import LanguageModel
 
 
 class OllamaLanguageModel(LanguageModel):
@@ -27,12 +27,10 @@ class OllamaLanguageModel(LanguageModel):
         """Initialize Ollama client."""
         # Call parent's post_init to handle config initialization
         super().__post_init__()
-        
+
         # Set default base URL if not provided
         self.base_url = (
-            self.base_url
-            or os.getenv("OLLAMA_BASE_URL")
-            or "http://localhost:11434"
+            self.base_url or os.getenv("OLLAMA_BASE_URL") or "http://localhost:11434"
         )
 
         # Initialize clients
@@ -43,7 +41,7 @@ class OllamaLanguageModel(LanguageModel):
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
-        
+
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
             if key not in ["model_name", "base_url", "streaming"]:
@@ -62,7 +60,7 @@ class OllamaLanguageModel(LanguageModel):
         for key in ["temperature", "top_p"]:
             if key in kwargs:
                 options[key] = kwargs.pop(key)
-                
+
         # Convert max_tokens to num_predict for Ollama
         if "max_tokens" in kwargs:
             options["num_predict"] = kwargs.pop("max_tokens")
@@ -189,9 +187,9 @@ class OllamaLanguageModel(LanguageModel):
         return ChatCompletion(
             id=str(uuid.uuid4()),
             choices=[
-                ChatCompletionChoice(
+                Choice(
                     index=0,
-                    message=ChatCompletionMessage(
+                    message=Message(
                         role=message.get("role", "assistant"),
                         content=message.get("content", ""),
                     ),
@@ -236,7 +234,7 @@ class OllamaLanguageModel(LanguageModel):
                 id=model.model,
                 owned_by="Ollama",
                 context_window=32768,  # Default context window for most Ollama models
-                type="language"
+                type="language",
             )
             for model in response.models
         ]

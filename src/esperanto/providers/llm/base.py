@@ -6,7 +6,7 @@ from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from esperanto.types import ChatCompletion, ChatCompletionChunk, Model
+from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model
 
 
 @dataclass

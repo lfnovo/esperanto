@@ -1,21 +1,23 @@
 """Base speech-to-text model interface."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
-from esperanto.types import Model, TranscriptionResponse
+from esperanto.common_types import Model, TranscriptionResponse
 
 
 @dataclass
 class SpeechToTextModel(ABC):
     """Base class for speech-to-text models.
-    
+
     Attributes:
         model_name: Name of the model to use. If not provided, a default will be used.
         api_key: API key for the provider. If not provided, will try to get from environment.
         base_url: Optional base URL for the API endpoint.
         config: Additional configuration options.
     """
+
     model_name: Optional[str] = None
     api_key: Optional[str] = None
     base_url: Optional[str] = None
@@ -28,11 +30,11 @@ class SpeechToTextModel(ABC):
         self._config = {
             "model_name": self.model_name,
         }
-        
+
         # Update with any provided config
         if hasattr(self, "config") and self.config:
             self._config.update(self.config)
-            
+
             # Update instance attributes from config
             for key, value in self._config.items():
                 if hasattr(self, key):
@@ -40,19 +42,19 @@ class SpeechToTextModel(ABC):
 
     @abstractmethod
     def transcribe(
-        self, 
+        self,
         audio_file: Union[str, BinaryIO],
         language: Optional[str] = None,
         prompt: Optional[str] = None,
     ) -> TranscriptionResponse:
         """Transcribe audio to text.
-        
+
         Args:
             audio_file: Path to audio file or file-like object.
             language: Optional language code (e.g., 'en', 'es'). If not provided,
                      the model will try to detect the language.
             prompt: Optional text to guide the transcription.
-        
+
         Returns:
             TranscriptionResponse containing the transcribed text and metadata.
         """
@@ -66,13 +68,13 @@ class SpeechToTextModel(ABC):
         prompt: Optional[str] = None,
     ) -> TranscriptionResponse:
         """Async transcribe audio to text.
-        
+
         Args:
             audio_file: Path to audio file or file-like object.
             language: Optional language code (e.g., 'en', 'es'). If not provided,
                      the model will try to detect the language.
             prompt: Optional text to guide the transcription.
-        
+
         Returns:
             TranscriptionResponse containing the transcribed text and metadata.
         """
@@ -109,7 +111,7 @@ class SpeechToTextModel(ABC):
         model_name = self._config.get("model_name")
         if model_name:
             return model_name
-        
+
         # If not in config, use default
         return self._get_default_model()
 

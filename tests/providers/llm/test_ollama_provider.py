@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from esperanto.common_types import ChatCompletion, ChatCompletionChunk
 from esperanto.providers.llm.ollama import OllamaLanguageModel
-from esperanto.types import ChatCompletion, ChatCompletionChunk
 
 
 @pytest.fixture

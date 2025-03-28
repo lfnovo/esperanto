@@ -1,9 +1,10 @@
 """Base embedding model interface."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from esperanto.types import Model
+from esperanto.common_types import Model
 
 
 @dataclass
@@ -23,11 +24,11 @@ class EmbeddingModel(ABC):
         self._config = {
             "model_name": self.model_name,
         }
-        
+
         # Update with any provided config
         if hasattr(self, "config") and self.config:
             self._config.update(self.config)
-            
+
             # Update instance attributes from config
             for key, value in self._config.items():
                 if hasattr(self, key):
@@ -69,7 +70,7 @@ class EmbeddingModel(ABC):
         model_name = self._config.get("model_name")
         if model_name:
             return model_name
-        
+
         # If not in config, use default
         return self._get_default_model()
 

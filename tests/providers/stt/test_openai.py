@@ -1,11 +1,13 @@
 """Tests for OpenAI speech-to-text provider."""
-import os
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
+import os
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+
+import pytest
+
+from esperanto.common_types import TranscriptionResponse
 from esperanto.factory import AIFactory
 from esperanto.providers.stt.openai import OpenAISpeechToTextModel
-from esperanto.types import TranscriptionResponse
 
 
 @pytest.fixture
@@ -36,7 +38,9 @@ def mock_openai_client(mock_openai_response):
 def mock_async_openai_client(mock_openai_response):
     """Mock async OpenAI client."""
     mock_client = MagicMock()
-    mock_client.audio.transcriptions.create = AsyncMock(return_value=mock_openai_response)
+    mock_client.audio.transcriptions.create = AsyncMock(
+        return_value=mock_openai_response
+    )
     return mock_client
 
 
@@ -57,7 +61,9 @@ def test_openai_transcribe(audio_file, mock_openai_client):
     """Test OpenAI transcribe method."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
         with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch("openai.AsyncOpenAI.__init__", return_value=None) as mock_async_init:
+            with patch(
+                "openai.AsyncOpenAI.__init__", return_value=None
+            ) as mock_async_init:
                 model = OpenAISpeechToTextModel()
                 model.client.audio = mock_openai_client.audio
                 model.async_client.audio = mock_openai_client.audio
@@ -71,7 +77,9 @@ async def test_openai_atranscribe(audio_file, mock_async_openai_client):
     """Test OpenAI async transcribe method."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
         with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch("openai.AsyncOpenAI.__init__", return_value=None) as mock_async_init:
+            with patch(
+                "openai.AsyncOpenAI.__init__", return_value=None
+            ) as mock_async_init:
                 model = OpenAISpeechToTextModel()
                 model.client.audio = mock_async_openai_client.audio
                 model.async_client.audio = mock_async_openai_client.audio
@@ -84,7 +92,9 @@ def test_openai_transcribe_with_options(audio_file, mock_openai_client):
     """Test OpenAI transcribe with language and prompt."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
         with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch("openai.AsyncOpenAI.__init__", return_value=None) as mock_async_init:
+            with patch(
+                "openai.AsyncOpenAI.__init__", return_value=None
+            ) as mock_async_init:
                 model = OpenAISpeechToTextModel()
                 model.client.audio = mock_openai_client.audio
                 model.async_client.audio = mock_openai_client.audio
@@ -101,7 +111,9 @@ def test_openai_transcribe_file_object(mock_openai_client):
     """Test OpenAI transcribe with file object."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
         with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch("openai.AsyncOpenAI.__init__", return_value=None) as mock_async_init:
+            with patch(
+                "openai.AsyncOpenAI.__init__", return_value=None
+            ) as mock_async_init:
                 model = OpenAISpeechToTextModel()
                 model.client.audio = mock_openai_client.audio
                 model.async_client.audio = mock_openai_client.audio

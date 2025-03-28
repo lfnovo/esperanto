@@ -1,4 +1,5 @@
 """Groq language model provider."""
+
 import os
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
@@ -7,8 +8,7 @@ from groq.types.chat import ChatCompletion as GroqChatCompletion
 from groq.types.chat import ChatCompletionChunk as GroqChatCompletionChunk
 from langchain_groq import ChatGroq
 
-from esperanto.providers.llm.base import LanguageModel
-from esperanto.types import (
+from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
     Choice,
@@ -17,6 +17,7 @@ from esperanto.types import (
     StreamChoice,
     Usage,
 )
+from esperanto.providers.llm.base import LanguageModel
 
 
 class GroqLanguageModel(LanguageModel):
@@ -26,16 +27,16 @@ class GroqLanguageModel(LanguageModel):
         """Initialize Groq client."""
         # Call parent's post_init to handle config initialization
         super().__post_init__()
-        
+
         # Get API key
         self.api_key = self.api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("Groq API key not found")
-        
+
         # Update config with model_name if provided
         if "model_name" in self._config:
             self._config["model_name"] = self._config["model_name"]
-        
+
         # Initialize clients
         self.client = Groq(
             api_key=self.api_key,
@@ -53,7 +54,7 @@ class GroqLanguageModel(LanguageModel):
                 id=model.id,
                 owned_by="Groq",
                 context_window=128000,  # All Groq models currently support 128k context
-                type="language"
+                type="language",
             )
             for model in models
         ]
@@ -108,21 +109,27 @@ class GroqLanguageModel(LanguageModel):
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
-        
+
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
-            if key not in ["model_name", "api_key", "base_url", "organization", "structured"]:
+            if key not in [
+                "model_name",
+                "api_key",
+                "base_url",
+                "organization",
+                "structured",
+            ]:
                 # Skip max_tokens if it's the default value (850)
                 if key == "max_tokens" and value == 850:
                     continue
                 kwargs[key] = value
-        
+
         # Handle streaming parameter
         if exclude_stream:
             kwargs.pop("streaming", None)
         elif "streaming" in kwargs:
             kwargs["stream"] = kwargs.pop("streaming")
-            
+
         # Handle structured output
         if self.structured:
             if not isinstance(self.structured, dict):
@@ -130,13 +137,11 @@ class GroqLanguageModel(LanguageModel):
             structured_type = self.structured.get("type")
             if structured_type in ["json", "json_object"]:
                 kwargs["response_format"] = {"type": "json_object"}
-            
+
         return kwargs
 
     def chat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -148,22 +153,20 @@ class GroqLanguageModel(LanguageModel):
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks if streaming.
         """
         should_stream = stream if stream is not None else self.streaming
-        
+
         response = self.client.chat.completions.create(
             messages=messages,
             model=self.get_model_name(),
             stream=should_stream,
-            **self._get_api_kwargs(exclude_stream=True)
+            **self._get_api_kwargs(exclude_stream=True),
         )
-        
+
         if should_stream:
             return (self._normalize_chunk(chunk) for chunk in response)
         return self._normalize_response(response)
 
     async def achat_complete(
-        self, 
-        messages: List[Dict[str, str]], 
-        stream: Optional[bool] = None
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -175,18 +178,20 @@ class GroqLanguageModel(LanguageModel):
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks if streaming.
         """
         should_stream = stream if stream is not None else self.streaming
-        
+
         response = await self.async_client.chat.completions.create(
             messages=messages,
             model=self.get_model_name(),
             stream=should_stream,
-            **self._get_api_kwargs(exclude_stream=True)
+            **self._get_api_kwargs(exclude_stream=True),
         )
-        
+
         if should_stream:
+
             async def generate():
                 async for chunk in response:
                     yield self._normalize_chunk(chunk)
+
             return generate()
         return self._normalize_response(response)
 

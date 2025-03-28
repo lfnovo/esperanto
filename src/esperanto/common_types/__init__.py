@@ -1,26 +1,29 @@
 """Types module for Esperanto."""
 
+from .model import Model
 from .response import (
-    Usage, Message, ChatCompletionMessage, DeltaMessage,
-    Choice, ChatCompletionChoice, StreamChoice,
-    ChatCompletion, ChatCompletionChunk
+    ChatCompletion,
+    Choice,
+    ChatCompletionChunk,
+    Choice,
+    DeltaMessage,
+    Message,
+    StreamChoice,
+    Usage,
 )
 from .stt import TranscriptionResponse
 from .tts import AudioResponse
-from .model import Model
-
 
 __all__ = [
     "Usage",
     "Message",
-    "ChatCompletionMessage",
     "DeltaMessage",
     "Choice",
-    "ChatCompletionChoice",
+    "Choice",
     "StreamChoice",
     "ChatCompletion",
     "ChatCompletionChunk",
     "TranscriptionResponse",
     "AudioResponse",
-    "Model"
+    "Model",
 ]

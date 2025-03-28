@@ -1,11 +1,13 @@
 """Tests for Groq speech-to-text provider."""
-import os
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
+import os
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+
+import pytest
+
+from esperanto.common_types import TranscriptionResponse
 from esperanto.factory import AIFactory
 from esperanto.providers.stt.groq import GroqSpeechToTextModel
-from esperanto.types import TranscriptionResponse
 
 
 @pytest.fixture

@@ -106,7 +106,6 @@ def ollama_embedding_model(mock_ollama_response):
     return model
 
 
-
 @pytest.fixture
 def vertex_embedding_model(mock_vertex_model):
     model = VertexEmbeddingModel(
@@ -275,7 +274,9 @@ def test_ollama_embed(ollama_embedding_model):
         embeddings = ollama_embedding_model.embed(texts)
         assert len(embeddings) == 1
         assert embeddings[0] == [0.1, 0.2, 0.3]
-        mock_embed.assert_called_once_with(model="mxbai-embed-large", prompt="Hello, world!")
+        mock_embed.assert_called_once_with(
+            model="mxbai-embed-large", prompt="Hello, world!"
+        )
 
 
 @pytest.mark.asyncio
@@ -289,7 +290,9 @@ async def test_ollama_aembed(ollama_embedding_model):
         embeddings = await ollama_embedding_model.aembed(texts)
         assert len(embeddings) == 1
         assert embeddings[0] == [0.1, 0.2, 0.3]
-        mock_embed.assert_called_once_with(model="mxbai-embed-large", prompt="Hello, world!")
+        mock_embed.assert_called_once_with(
+            model="mxbai-embed-large", prompt="Hello, world!"
+        )
 
 
 def test_ollama_embed_multiple_texts(ollama_embedding_model):
@@ -339,7 +342,7 @@ def test_google_initialization_without_api_key():
 
 @pytest.fixture
 def google_embedding_model():
-    with patch("google.generativeai.embed_content") as mock_embed:
+    with patch("google.genai.embed_content") as mock_embed:
         mock_embed.return_value = {"embedding": [0.1, 0.2, 0.3]}
         yield GoogleEmbeddingModel(api_key="test_key")
 
