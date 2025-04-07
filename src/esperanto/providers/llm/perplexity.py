@@ -2,12 +2,18 @@
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+
+# Add Union, Generator, AsyncGenerator to imports
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
 from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI, OpenAI
 
-from esperanto.common_types import Model
+from esperanto.common_types import (
+    ChatCompletion,
+    ChatCompletionChunk,
+    Model,
+)  # Import necessary types
 from esperanto.providers.llm.base import LanguageModel  # Import the base class
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.utils.logging import logger
@@ -57,25 +63,76 @@ class PerplexityLanguageModel(OpenAILanguageModel):
         )
 
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
-        """Get kwargs for API calls, including Perplexity-specific args."""
-        # Start with kwargs from the parent class (OpenAI)
+        """Get standard API kwargs compatible with the openai library signature."""
+        # Get kwargs from the parent class (OpenAI), which handles standard params
+        # This ensures we only include args the 'create' method signature expects.
         kwargs = super()._get_api_kwargs(exclude_stream=exclude_stream)
-
-        # Add Perplexity-specific parameters if they are set
-        if self.search_domain_filter is not None:
-            kwargs["search_domain_filter"] = self.search_domain_filter
-        if self.return_images is not None:
-            kwargs["return_images"] = self.return_images
-        if self.return_related_questions is not None:
-            kwargs["return_related_questions"] = self.return_related_questions
-        if self.search_recency_filter is not None:
-            kwargs["search_recency_filter"] = self.search_recency_filter
-        if self.web_search_options is not None:
-            kwargs["web_search_options"] = self.web_search_options
-
-        # Perplexity supports response_format, so no need to remove it like in XAI
-
         return kwargs
+
+    def _get_perplexity_extra_body(self) -> Dict[str, Any]:
+        """Get Perplexity-specific parameters for the 'extra_body'."""
+        # Initialize directly as Dict[str, Any]
+        extra_body: Dict[str, Any] = {}
+        if self.search_domain_filter is not None:
+            extra_body["search_domain_filter"] = self.search_domain_filter
+        if self.return_images is not None:
+            extra_body["return_images"] = self.return_images
+        if self.return_related_questions is not None:
+            extra_body["return_related_questions"] = self.return_related_questions
+        if self.search_recency_filter is not None:
+            extra_body["search_recency_filter"] = self.search_recency_filter
+        if self.web_search_options is not None:
+            extra_body["web_search_options"] = self.web_search_options
+        return extra_body
+
+    def chat_complete(
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+    ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
+        """Send a chat completion request, including Perplexity params."""
+        should_stream = stream if stream is not None else self.streaming
+        model_name = self.get_model_name()
+        api_kwargs = self._get_api_kwargs(exclude_stream=True)
+        extra_body = self._get_perplexity_extra_body()
+
+        # Note: Perplexity doesn't seem to have special message transformations like o1
+        response = self.client.chat.completions.create(
+            messages=messages,
+            model=model_name,
+            stream=should_stream,
+            extra_body=extra_body,  # Pass Perplexity params here
+            **api_kwargs,
+        )
+
+        if should_stream:
+            return (self._normalize_chunk(chunk) for chunk in response)
+        return self._normalize_response(response)
+
+    async def achat_complete(
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+    ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
+        """Send an async chat completion request, including Perplexity params."""
+        should_stream = stream if stream is not None else self.streaming
+        model_name = self.get_model_name()
+        api_kwargs = self._get_api_kwargs(exclude_stream=True)
+        extra_body = self._get_perplexity_extra_body()
+
+        # Note: Perplexity doesn't seem to have special message transformations like o1
+        response = await self.async_client.chat.completions.create(
+            messages=messages,
+            model=model_name,
+            stream=should_stream,
+            extra_body=extra_body,  # Pass Perplexity params here
+            **api_kwargs,
+        )
+
+        if should_stream:
+
+            async def generate():
+                async for chunk in response:
+                    yield self._normalize_chunk(chunk)
+
+            return generate()
+        return self._normalize_response(response)
 
     @property
     def models(self) -> List[Model]:

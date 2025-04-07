@@ -70,16 +70,23 @@ def test_perplexity_get_api_kwargs(perplexity_provider):
     perplexity_provider.web_search_options = {"search_context_size": "medium"}
 
     kwargs = perplexity_provider._get_api_kwargs()
+    extra_body = perplexity_provider._get_perplexity_extra_body()
 
-    # Model is passed separately, not part of these kwargs
+    # Test standard kwargs
     assert kwargs["temperature"] == 0.8
     assert kwargs["max_tokens"] == 500
-    assert kwargs["search_domain_filter"] == ["example.com"]
-    assert kwargs["return_images"] is True
-    assert "return_related_questions" not in kwargs  # Not set
-    assert "search_recency_filter" not in kwargs  # Not set
-    assert kwargs["web_search_options"] == {"search_context_size": "medium"}
     assert kwargs["stream"] is False  # Should be present and False by default
+    # Ensure Perplexity params are NOT in standard kwargs
+    assert "search_domain_filter" not in kwargs
+    assert "return_images" not in kwargs
+    assert "web_search_options" not in kwargs
+
+    # Test extra_body kwargs
+    assert extra_body["search_domain_filter"] == ["example.com"]
+    assert extra_body["return_images"] is True
+    assert "return_related_questions" not in extra_body  # Not set
+    assert "search_recency_filter" not in extra_body  # Not set
+    assert extra_body["web_search_options"] == {"search_context_size": "medium"}
 
 
 def test_perplexity_get_api_kwargs_exclude_stream(perplexity_provider):
@@ -127,7 +134,8 @@ async def test_perplexity_async_call(perplexity_provider, mock_async_openai_clie
     mock_async_openai_client.chat.completions.create.assert_awaited_once()
     call_args = mock_async_openai_client.chat.completions.create.call_args[1]
     assert call_args["model"] == perplexity_provider.get_model_name()
-    assert call_args["messages"] == messages  # Check message format
+    assert call_args["messages"] == messages
+    assert call_args["extra_body"] == {}  # Should be passed as empty dict
 
 
 def test_perplexity_call(perplexity_provider, mock_openai_client):
@@ -167,6 +175,43 @@ def test_perplexity_call(perplexity_provider, mock_openai_client):
     call_args = mock_openai_client.chat.completions.create.call_args[1]
     assert call_args["model"] == perplexity_provider.get_model_name()
     assert call_args["messages"] == messages
+    assert call_args["extra_body"] == {}  # Should be passed as empty dict
+
+
+def test_perplexity_call_with_extra_params(perplexity_provider, mock_openai_client):
+    """Test synchronous call with extra Perplexity parameters."""
+    perplexity_provider.search_domain_filter = ["test.com"]
+    perplexity_provider.return_images = True
+    messages = [{"role": "user", "content": "Hi"}]
+    expected_response_text = "Hello."
+
+    mock_completion = ChatCompletion(
+        id="chatcmpl-test-sync-extra",
+        choices=[
+            Choice(
+                finish_reason="stop",
+                index=0,
+                message=ChatCompletionMessage(
+                    content=expected_response_text, role="assistant"
+                ),
+            )
+        ],
+        created=1677652290,
+        model=perplexity_provider.get_model_name(),
+        object="chat.completion",
+    )
+    mock_openai_client.chat.completions.create.return_value = mock_completion
+    perplexity_provider.client = mock_openai_client
+
+    response = perplexity_provider.chat_complete(messages)
+
+    assert response.choices[0].message.content == expected_response_text
+    mock_openai_client.chat.completions.create.assert_called_once()
+    call_args = mock_openai_client.chat.completions.create.call_args[1]
+    assert call_args["model"] == perplexity_provider.get_model_name()
+    assert call_args["messages"] == messages
+    assert call_args["extra_body"]["search_domain_filter"] == ["test.com"]
+    assert call_args["extra_body"]["return_images"] is True
 
 
 def test_perplexity_to_langchain(perplexity_provider):
