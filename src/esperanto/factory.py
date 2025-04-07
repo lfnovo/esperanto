@@ -23,6 +23,7 @@ class AIFactory:
             "ollama": "esperanto.providers.llm.ollama:OllamaLanguageModel",
             "openrouter": "esperanto.providers.llm.openrouter:OpenRouterLanguageModel",
             "xai": "esperanto.providers.llm.xai:XAILanguageModel",
+            "perplexity": "esperanto.providers.llm.perplexity:PerplexityLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",

@@ -11,6 +11,7 @@ Esperanto provides a unified interface for working with various language model p
 - Ollama
 - OpenRouter
 - XAI
+- Perplexity
 
 ## Basic Usage
 
@@ -72,6 +73,31 @@ async_client = openai_model.async_client  # Get the async OpenAI client instance
 
 # Use the raw client for provider-specific operations
 models = raw_client.models.list()
+```
+
+### Perplexity
+
+Perplexity uses an OpenAI-compatible API but includes additional parameters for controlling search behavior.
+
+```python
+from esperanto.providers.llm.perplexity import PerplexityLanguageModel
+
+model = PerplexityLanguageModel(
+    api_key="your-api-key",  # Or set PERPLEXITY_API_KEY env var
+    model_name="llama-3-sonar-large-32k-online", # Recommended default
+    temperature=0.7,         # Optional
+    max_tokens=850,         # Optional
+    streaming=False,        # Optional
+    top_p=0.9,             # Optional
+    structured={"type": "json"}, # Optional, for JSON output
+
+    # Perplexity-specific parameters
+    search_domain_filter=["example.com", "-excluded.com"], # Optional, limit search domains
+    return_images=False,             # Optional, include images in search results
+    return_related_questions=True,  # Optional, return related questions
+    search_recency_filter="week",    # Optional, filter search by time ('day', 'week', 'month', 'year')
+    web_search_options={"search_context_size": "high"} # Optional, control search context ('low', 'medium', 'high')
+)
 ```
 
 ## LangChain Integration

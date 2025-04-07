@@ -16,6 +16,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Anthropic (Claude 3)
   - OpenRouter (Access to multiple models)
   - xAI (Grok)
+  - Perplexity (Sonar models)
   - Groq (Mixtral, Llama, Whisper)
   - Google GenAI (Gemini LLM, Text To Speech, Embedding)
   - Vertex AI (Google Cloud)
@@ -71,6 +72,9 @@ pip install "esperanto[transformers]"
 # For ElevenLabs support
 pip install "esperanto[elevenlabs]"
 
+# For Perplexity support
+pip install "esperanto[perplexity]"
+
 # For Google TTS support
 pip install "esperanto[googletts]"
 
@@ -94,6 +98,7 @@ pip install "esperanto[all_with_langchain]"
 | Google (GenAI) | ✅          | ✅               | ❌             | ✅             | ✅        |
 | Vertex AI    | ✅          | ✅               | ❌             | ❌             | ❌        |
 | Ollama       | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Perplexity   | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ❌             | ✅             | ❌        |
 
@@ -113,8 +118,8 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai'],
-#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers'],
+#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage'],
 #     'speech_to_text': ['openai', 'groq'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google']
 # }
@@ -240,6 +245,31 @@ model = OpenAILanguageModel(
     structured={"type": "json"},      # Optional, for JSON output
     base_url=None,         # Optional, for custom endpoint
     organization=None      # Optional, for org-specific API
+)
+```
+
+### Perplexity
+
+Perplexity uses an OpenAI-compatible API but includes additional parameters for controlling search behavior.
+
+```python
+from esperanto.providers.llm.perplexity import PerplexityLanguageModel
+
+model = PerplexityLanguageModel(
+    api_key="your-api-key",  # Or set PERPLEXITY_API_KEY env var
+    model_name="llama-3-sonar-large-32k-online", # Recommended default
+    temperature=0.7,         # Optional
+    max_tokens=850,         # Optional
+    streaming=False,        # Optional
+    top_p=0.9,             # Optional
+    structured={"type": "json"}, # Optional, for JSON output
+
+    # Perplexity-specific parameters
+    search_domain_filter=["example.com", "-excluded.com"], # Optional, limit search domains
+    return_images=False,             # Optional, include images in search results
+    return_related_questions=True,  # Optional, return related questions
+    search_recency_filter="week",    # Optional, filter search by time ('day', 'week', 'month', 'year')
+    web_search_options={"search_context_size": "high"} # Optional, control search context ('low', 'medium', 'high')
 )
 ```
 
