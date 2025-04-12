@@ -3,21 +3,34 @@
 import os
 import time
 import uuid
-from typing import Any, AsyncIterator, Dict, Iterator, List, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,  # Added AsyncGenerator
+    AsyncIterator,
+    Dict,
+    Generator,  # Added Generator
+    Iterator,
+    List,
+    Optional,
+    Union,
+)
 
-from langchain_ollama import ChatOllama
 from ollama import AsyncClient, Client
 
 from esperanto.common_types import (
     ChatCompletion,
-    Choice,
     ChatCompletionChunk,
-    Message,
+    Choice,
     DeltaMessage,
+    Message,
     Model,
     StreamChoice,
 )
 from esperanto.providers.llm.base import LanguageModel
+
+if TYPE_CHECKING:
+    from langchain_ollama import ChatOllama
 
 
 class OllamaLanguageModel(LanguageModel):
@@ -71,12 +84,13 @@ class OllamaLanguageModel(LanguageModel):
         return kwargs
 
     def chat_complete(
-        self,
-        messages: List[Dict[str, str]],
-        stream: bool = False,
-        **kwargs,
-    ) -> Union[ChatCompletion, Iterator[ChatCompletionChunk]]:
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+    ) -> Union[
+        ChatCompletion, Generator[ChatCompletionChunk, None, None]
+    ]:  # Use Generator
         """Generate a chat completion for the given messages."""
+        should_stream = stream if stream is not None else self.streaming
+
         if not messages:
             raise ValueError("Messages cannot be empty")
 
@@ -89,10 +103,11 @@ class OllamaLanguageModel(LanguageModel):
             if "content" not in message:
                 raise ValueError("Missing content in message")
 
-        api_kwargs = self._get_api_kwargs(**kwargs)
+        # Pass only relevant kwargs from self._get_api_kwargs
+        api_kwargs = self._get_api_kwargs()  # Don't pass external kwargs here
 
         print(api_kwargs)
-        if stream:
+        if should_stream:
             return self._stream_chat_complete(messages, api_kwargs)
         return self._chat_complete(messages, api_kwargs)
 
@@ -125,15 +140,17 @@ class OllamaLanguageModel(LanguageModel):
         return self._normalize_response(response)
 
     async def achat_complete(
-        self,
-        messages: List[Dict[str, str]],
-        stream: bool = False,
-        **kwargs,
-    ) -> Union[ChatCompletion, AsyncIterator[ChatCompletionChunk]]:
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+    ) -> Union[
+        ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]
+    ]:  # Use AsyncGenerator
         """Generate a chat completion for the given messages asynchronously."""
-        api_kwargs = self._get_api_kwargs(**kwargs)
+        should_stream = stream if stream is not None else self.streaming
 
-        if stream:
+        # Pass only relevant kwargs from self._get_api_kwargs
+        api_kwargs = self._get_api_kwargs()  # Don't pass external kwargs here
+
+        if should_stream:
             return self._astream_chat_complete(messages, api_kwargs)
         return await self._achat_complete(messages, api_kwargs)
 
@@ -244,13 +261,30 @@ class OllamaLanguageModel(LanguageModel):
         """Get the provider name."""
         return "ollama"
 
-    def to_langchain(self) -> ChatOllama:
-        """Convert to a LangChain chat model."""
+    def to_langchain(self) -> "ChatOllama":
+        """Convert to a LangChain chat model.
+
+        Raises:
+            ImportError: If langchain_ollama is not installed.
+        """
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain_ollama. "
+                "Install with: uv add esperanto[ollama,langchain] or pip install esperanto[ollama,langchain]"
+            ) from e
+
+        # Ensure model name is set
+        model_name = self.get_model_name()
+        if not model_name:
+            raise ValueError("Model name is required for Langchain integration.")
+
         return ChatOllama(
-            model=self.model_name,
+            model=model_name,
             temperature=self.temperature,
             top_p=self.top_p,
             num_predict=self.max_tokens,
-            streaming=self.streaming,
+            # streaming=self.streaming, # Not a constructor arg
             base_url=self.base_url,
         )

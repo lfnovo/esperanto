@@ -1,23 +1,35 @@
 """Groq language model provider."""
 
 import os
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
 from groq import AsyncGroq, Groq
 from groq.types.chat import ChatCompletion as GroqChatCompletion
 from groq.types.chat import ChatCompletionChunk as GroqChatCompletionChunk
-from langchain_groq import ChatGroq
 
 from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
     Choice,
+    DeltaMessage,  # Import DeltaMessage
     Message,
     Model,
     StreamChoice,
     Usage,
 )
 from esperanto.providers.llm.base import LanguageModel
+
+if TYPE_CHECKING:
+    from langchain_groq import ChatGroq
 
 
 class GroqLanguageModel(LanguageModel):
@@ -77,10 +89,12 @@ class GroqLanguageModel(LanguageModel):
             created=response.created,
             model=response.model,
             provider=self.provider,
-            usage=Usage(
-                completion_tokens=response.usage.completion_tokens,
-                prompt_tokens=response.usage.prompt_tokens,
-                total_tokens=response.usage.total_tokens,
+            usage=Usage(  # Handle potential None usage
+                completion_tokens=(
+                    response.usage.completion_tokens if response.usage else 0
+                ),
+                prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
+                total_tokens=response.usage.total_tokens if response.usage else 0,
             ),
         )
 
@@ -91,12 +105,23 @@ class GroqLanguageModel(LanguageModel):
             choices=[
                 StreamChoice(
                     index=choice.index,
-                    delta={
-                        "content": choice.delta.content,
-                        "role": choice.delta.role,
-                        "function_call": choice.delta.function_call,
-                        "tool_calls": choice.delta.tool_calls,
-                    },
+                    delta=DeltaMessage(
+                        content=choice.delta.content or "",
+                        role=choice.delta.role or "assistant",
+                        function_call=(
+                            choice.delta.function_call.model_dump()  # Use model_dump()
+                            if choice.delta.function_call
+                            else None
+                        ),
+                        tool_calls=(
+                            [
+                                tool_call.model_dump()  # Use model_dump()
+                                for tool_call in choice.delta.tool_calls
+                            ]
+                            if choice.delta.tool_calls
+                            else None
+                        ),
+                    ),
                     finish_reason=choice.finish_reason,
                 )
                 for choice in chunk.choices
@@ -204,13 +229,32 @@ class GroqLanguageModel(LanguageModel):
         """Get the provider name."""
         return "groq"
 
-    def to_langchain(self) -> ChatGroq:
-        """Convert to a LangChain chat model."""
+    def to_langchain(self) -> "ChatGroq":
+        """Convert to a LangChain chat model.
+
+        Raises:
+            ImportError: If langchain_groq is not installed.
+        """
+        try:
+            from langchain_groq import ChatGroq
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain_groq. "
+                "Install with: uv add esperanto[groq,langchain] or pip install esperanto[groq,langchain]"
+            ) from e
+
+        # SecretStr import removed, rely on ChatGroq internal handling
+
+        # Ensure model name is a string
+        model_name = self.get_model_name()
+        if not model_name:
+            raise ValueError("Model name must be set to use Langchain integration.")
+
         return ChatGroq(
-            max_tokens=self.max_tokens,
+            model=model_name,
             temperature=self.temperature,
-            top_p=self.top_p,
+            max_tokens=self.max_tokens,
+            # top_p=self.top_p, # Still not supported
             streaming=self.streaming,
-            groq_api_key=self.api_key,
-            model=self.get_model_name(),
+            api_key=self.api_key,  # Pass the raw API key string
         )

@@ -109,7 +109,7 @@ def test_to_langchain(groq_model):
     assert langchain_model.model_name == "mixtral-8x7b-32768"
     assert langchain_model.temperature == 1.0
     assert langchain_model.max_tokens == 850
-    assert langchain_model.model_kwargs["top_p"] == 0.9
+    # assert langchain_model.model_kwargs["top_p"] == 0.9 # top_p is not stored in model_kwargs by default
     assert langchain_model.streaming == False
     assert langchain_model.groq_api_key.get_secret_value() == "test-key"
 

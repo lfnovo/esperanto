@@ -1,17 +1,25 @@
 """OpenAI language model provider."""
 
 import os
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
-from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import ChatCompletion as OpenAIChatCompletion
 from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
 
 from esperanto.common_types import (
     ChatCompletion,
-    Choice,
     ChatCompletionChunk,
+    Choice,
     DeltaMessage,
     Message,
     Model,
@@ -19,6 +27,9 @@ from esperanto.common_types import (
     Usage,
 )
 from esperanto.providers.llm.base import LanguageModel
+
+if TYPE_CHECKING:
+    from langchain_openai import ChatOpenAI
 
 
 class OpenAILanguageModel(LanguageModel):
@@ -105,7 +116,14 @@ class OpenAILanguageModel(LanguageModel):
                             if choice.delta.function_call
                             else None
                         ),
-                        tool_calls=choice.delta.tool_calls,
+                        tool_calls=(
+                            [
+                                dict(tool_call.model_dump())  # Explicitly cast to dict
+                                for tool_call in choice.delta.tool_calls
+                            ]
+                            if choice.delta.tool_calls
+                            else None
+                        ),
                     ),
                     finish_reason=choice.finish_reason,
                 )
@@ -251,8 +269,19 @@ class OpenAILanguageModel(LanguageModel):
         """Get the provider name."""
         return "openai"
 
-    def to_langchain(self) -> ChatOpenAI:
-        """Convert to a LangChain chat model."""
+    def to_langchain(self) -> "ChatOpenAI":
+        """Convert to a LangChain chat model.
+
+        Raises:
+            ImportError: If langchain_openai is not installed.
+        """
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain_openai. "
+                "Install with: uv add esperanto[openai,langchain] or pip install esperanto[openai,langchain]"
+            ) from e
 
         model_kwargs = {}
         if self.structured == "json":

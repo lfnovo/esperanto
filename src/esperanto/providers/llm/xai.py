@@ -2,22 +2,24 @@
 
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional  # Added Optional
 
-from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI, OpenAI
 
 from esperanto.common_types import Model
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.utils.logging import logger
 
+if TYPE_CHECKING:
+    from langchain_openai import ChatOpenAI
+
 
 @dataclass
 class XAILanguageModel(OpenAILanguageModel):
     """XAI language model implementation using OpenAI-compatible API."""
 
-    base_url: str = None
-    api_key: str = None
+    base_url: Optional[str] = None  # Changed type hint
+    api_key: Optional[str] = None  # Changed type hint
 
     def __post_init__(self):
         # Initialize XAI-specific configuration
@@ -85,19 +87,36 @@ class XAILanguageModel(OpenAILanguageModel):
         """Get the provider name."""
         return "xai"
 
-    def to_langchain(self) -> ChatOpenAI:
-        """Convert to a LangChain chat model."""
+    def to_langchain(self) -> "ChatOpenAI":
+        """Convert to a LangChain chat model.
+
+        Raises:
+            ImportError: If langchain_openai is not installed.
+        """
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain_openai. "
+                "Install with: uv add esperanto[xai,langchain] or pip install esperanto[xai,langchain]"
+            ) from e
 
         langchain_kwargs = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "streaming": self.streaming,
-            "api_key": self.api_key,
+            "api_key": self.api_key,  # Pass raw string
             "base_url": self.base_url,
             "organization": self.organization,
             "model": self.get_model_name(),
             "model_kwargs": {},  # XAI doesn't support response_format
         }
+
+        # Ensure model name is set
+        model_name = self.get_model_name()
+        if not model_name:
+            raise ValueError("Model name is required for Langchain integration.")
+        langchain_kwargs["model"] = model_name  # Update model name in kwargs
 
         return ChatOpenAI(**self._clean_config(langchain_kwargs))

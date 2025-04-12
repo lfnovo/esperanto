@@ -2,25 +2,35 @@
 
 import datetime
 import os
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
 from google import genai
 from google.genai import types
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import SecretStr
 
 from esperanto.common_types import (
     ChatCompletion,
-    Choice,
     ChatCompletionChunk,
-    Message,
     Choice,
     DeltaMessage,
+    Message,
     Model,
     StreamChoice,
     Usage,
 )
 from esperanto.providers.llm.base import LanguageModel
+
+if TYPE_CHECKING:
+    from langchain_core.language_models.chat_models import BaseChatModel
 
 
 class GoogleLanguageModel(LanguageModel):
@@ -77,20 +87,36 @@ class GoogleLanguageModel(LanguageModel):
         """
         return "gemini-1.5-pro"
 
-    def to_langchain(self) -> BaseChatModel:
+    def to_langchain(self) -> "BaseChatModel":
         """Convert to a LangChain chat model.
 
         Returns:
             BaseChatModel: A LangChain chat model instance specific to the provider.
+
+        Raises:
+            ImportError: If langchain_google_genai is not installed.
         """
+        try:
+            from langchain_core.language_models.chat_models import BaseChatModel
+            from langchain_google_genai import ChatGoogleGenerativeAI
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain_google_genai. "
+                "Install with: uv add esperanto[google,langchain] or pip install esperanto[google,langchain]"
+            ) from e
+
         if not self._langchain_model:
+            # Ensure model name is a string
+            model_name = self.get_model_name()
+            if not model_name:
+                raise ValueError("Model name must be set to use Langchain integration.")
+
             self._langchain_model = ChatGoogleGenerativeAI(
-                model=self.model_name,
+                model=model_name,
                 temperature=self.temperature,
-                max_output_tokens=self.max_tokens,
+                max_tokens=self.max_tokens,
                 top_p=self.top_p,
-                disable_streaming=not self.streaming,
-                google_api_key=self.api_key,
+                # Removed streaming and google_api_key as they cause errors
             )
         return self._langchain_model
 

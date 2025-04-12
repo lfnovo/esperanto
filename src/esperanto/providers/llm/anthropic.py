@@ -3,16 +3,25 @@
 import os
 import time
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
 from anthropic import Anthropic, AsyncAnthropic
 from anthropic.types import Message as AnthropicMessage
-from langchain_anthropic import ChatAnthropic
 
 from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
     Choice,
+    DeltaMessage,  # Added DeltaMessage import
     Message,
     Model,
     StreamChoice,
@@ -20,6 +29,9 @@ from esperanto.common_types import (
 )
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.utils.logging import logger
+
+if TYPE_CHECKING:
+    from langchain_anthropic import ChatAnthropic
 
 
 @dataclass
@@ -113,13 +125,23 @@ class AnthropicLanguageModel(LanguageModel):
         # Using a simple timestamp as fallback since message ID format might change
         created = int(time.time())
 
+        # Find the first TextBlock content safely
+        content_text = ""
+        if response.content:
+            from anthropic.types import TextBlock  # Import locally for type check
+
+            for block in response.content:
+                if isinstance(block, TextBlock):
+                    content_text = block.text
+                    break
+
         return ChatCompletion(
             id=response.id,
             choices=[
                 Choice(
                     index=0,
                     message=Message(
-                        content=response.content[0].text,
+                        content=content_text,
                         role="assistant",
                     ),
                     finish_reason=response.stop_reason or "stop",
@@ -144,10 +166,10 @@ class AnthropicLanguageModel(LanguageModel):
                 choices=[
                     StreamChoice(
                         index=0,
-                        delta={
-                            "content": event.delta.text,
-                            "role": "assistant",
-                        },
+                        delta=DeltaMessage(  # Instantiate DeltaMessage correctly
+                            content=event.delta.text,
+                            role="assistant",
+                        ),
                         finish_reason=None,
                     )
                 ],
@@ -162,10 +184,10 @@ class AnthropicLanguageModel(LanguageModel):
                 choices=[
                     StreamChoice(
                         index=0,
-                        delta={
-                            "content": None,
-                            "role": "assistant",
-                        },
+                        delta=DeltaMessage(  # Instantiate DeltaMessage correctly
+                            content=None,
+                            role="assistant",
+                        ),
                         finish_reason=event.delta.stop_reason or "stop",
                     )
                 ],
@@ -176,23 +198,7 @@ class AnthropicLanguageModel(LanguageModel):
         # Ignore other event types
         return None
 
-    def _prepare_api_kwargs(self, **kwargs) -> dict:
-        """Prepare kwargs for API call."""
-        kwargs = super()._prepare_api_kwargs(**kwargs)
-
-        # Handle temperature - Anthropic expects 0-1 range
-        if "temperature" in kwargs:
-            temp = kwargs["temperature"]
-            if temp is not None:
-                kwargs["temperature"] = max(0.0, min(1.0, float(temp)))
-
-        # Handle max_tokens
-        if "max_tokens" in kwargs:
-            max_tokens = kwargs["max_tokens"]
-            if max_tokens is not None:
-                kwargs["max_tokens"] = int(max_tokens)
-
-        return kwargs
+    # Removed the faulty _prepare_api_kwargs method
 
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
@@ -313,25 +319,35 @@ class AnthropicLanguageModel(LanguageModel):
             return generate()
         return self._normalize_response(response)
 
-    def to_langchain(self) -> ChatAnthropic:
-        """Convert to a LangChain chat model."""
+    def to_langchain(self) -> "ChatAnthropic":
+        """Convert to a LangChain chat model.
+
+        Raises:
+            ImportError: If langchain_anthropic is not installed.
+        """
+        try:
+            from langchain_anthropic import ChatAnthropic
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain_anthropic. "
+                "Install with: uv add esperanto[anthropic,langchain] or pip install esperanto[anthropic,langchain]"
+            ) from e
+
         if self.structured:
             logger.warning("Structured output not supported for Anthropic.")
 
-        # Only include supported parameters
-        supported_params = {
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "streaming": self.streaming,
-            "model": self.get_model_name(),
-            "anthropic_api_key": self.api_key,
-        }
+        # Ensure model name is set
+        model_name = self.get_model_name()
+        if not model_name:
+            raise ValueError("Model name is required for Langchain integration.")
 
-        if self.base_url:
-            supported_params["anthropic_api_url"] = self.base_url
-
-        # Remove None values
-        langchain_kwargs = {k: v for k, v in supported_params.items() if v is not None}
-
-        return ChatAnthropic(**langchain_kwargs)
+        # Pass arguments directly to ChatAnthropic
+        return ChatAnthropic(
+            model=model_name,
+            temperature=self.temperature,
+            max_tokens_to_sample=self.max_tokens,  # Correct param name for Anthropic
+            top_p=self.top_p,
+            anthropic_api_key=self.api_key,  # Pass raw string
+            anthropic_api_url=self.base_url,  # Pass base_url as api_url
+            # streaming is not an init param
+        )

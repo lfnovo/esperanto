@@ -3,10 +3,18 @@
 import os
 from dataclasses import dataclass, field
 
-# Add Union, Generator, AsyncGenerator to imports
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
+# Add Union, Generator, AsyncGenerator, TYPE_CHECKING to imports
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
-from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI, OpenAI
 
 from esperanto.common_types import (
@@ -14,9 +22,12 @@ from esperanto.common_types import (
     ChatCompletionChunk,
     Model,
 )  # Import necessary types
-from esperanto.providers.llm.base import LanguageModel  # Import the base class
+from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.utils.logging import logger
+
+if TYPE_CHECKING:
+    from langchain_openai import ChatOpenAI
 
 
 @dataclass
@@ -175,8 +186,19 @@ class PerplexityLanguageModel(OpenAILanguageModel):
         """Get the provider name."""
         return "perplexity"
 
-    def to_langchain(self) -> ChatOpenAI:
-        """Convert to a LangChain chat model."""
+    def to_langchain(self) -> "ChatOpenAI":
+        """Convert to a LangChain chat model.
+
+        Raises:
+            ImportError: If langchain_openai is not installed.
+        """
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain_openai. "
+                "Install with: uv add esperanto[perplexity,langchain] or pip install esperanto[perplexity,langchain]"
+            ) from e
 
         model_kwargs: Dict[str, Any] = {}
         if self.structured and isinstance(self.structured, dict):
@@ -201,11 +223,17 @@ class PerplexityLanguageModel(OpenAILanguageModel):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "streaming": self.streaming,
-            "api_key": self.api_key,
+            "api_key": self.api_key,  # Pass raw string
             "base_url": self.base_url,
             "organization": self.organization,
             "model": self.get_model_name(),
             "model_kwargs": model_kwargs,
         }
+
+        # Ensure model name is set
+        model_name = self.get_model_name()
+        if not model_name:
+            raise ValueError("Model name is required for Langchain integration.")
+        langchain_kwargs["model"] = model_name  # Update model name in kwargs
 
         return ChatOpenAI(**self._clean_config(langchain_kwargs))
