@@ -321,6 +321,12 @@ from langchain.chains import ConversationChain
 chain = ConversationChain(llm=langchain_model)
 ```
 
+## Documentation 📚
+
+You can find the documentation for Esperanto in the [docs](docs) directory.
+
+There is also a cool beginner's tutorial in the [tutorial](docs/tutorial/index.md) directory.
+
 ## Contributing 🤝
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to get started.
