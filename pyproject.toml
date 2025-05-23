@@ -1,6 +1,6 @@
 [project]
 name = "esperanto"
-version = "1.3.0"
+version = "1.4.0"
 description = "A unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
