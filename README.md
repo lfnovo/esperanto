@@ -23,6 +23,7 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Ollama (Local deployment)
   - Transformers (Local Hugging Face models)
   - ElevenLabs (Text-to-Speech)
+  - Azure OpenAI (via `openai` SDK)
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
@@ -78,6 +79,9 @@ pip install "esperanto[perplexity]"
 # For Google TTS support
 pip install "esperanto[googletts]"
 
+# For Azure OpenAI support
+pip install "esperanto[azure]"
+
 # For LangChain integration
 pip install "esperanto[langchain]"
 
@@ -101,6 +105,7 @@ pip install "esperanto[all_with_langchain]"
 | Perplexity   | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ❌             | ✅             | ❌        |
+| Azure OpenAI | ✅          | ❌               | ❌             | ❌             | ✅        |
 
 ## Quick Start 🏃‍♂️
 
@@ -118,7 +123,7 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity'],
+#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure'],
 #     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage'],
 #     'speech_to_text': ['openai', 'groq'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google']
@@ -204,7 +209,11 @@ print(response.usage.total_tokens)          # Token usage information
 
 # For streaming responses
 for chunk in model.chat_complete(messages):
-    print(chunk.choices[0].delta.content)   # Partial response text
+    print(chunk.choices[0].delta.content, end="", flush=True)
+
+# Async streaming
+async for chunk in model.achat_complete(messages):
+    print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
 ### Embedding Responses

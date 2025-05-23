@@ -12,6 +12,7 @@ Esperanto provides a unified interface for working with various language model p
 - OpenRouter
 - XAI
 - Perplexity
+- Azure OpenAI
 
 ## Basic Usage
 
@@ -75,6 +76,64 @@ async_client = openai_model.async_client  # Get the async OpenAI client instance
 models = raw_client.models.list()
 ```
 
+### Azure OpenAI
+
+Esperanto supports Azure OpenAI Service via the official `openai` Python SDK. This allows you to use your Azure-hosted OpenAI models with the familiar Esperanto interface.
+
+**Key Considerations:**
+
+-   **Deployment Name**: When using Azure OpenAI with Esperanto, the `model_name` parameter you provide corresponds to your **Azure OpenAI deployment name**, not the underlying model ID (e.g., "gpt-35-turbo").
+-   **Environment Variables**: The Azure provider requires the following environment variables to be set:
+    -   `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key.
+    -   `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI resource endpoint (e.g., `https://your-resource-name.openai.azure.com/`).
+    -   `OPENAI_API_VERSION`: The API version to use (e.g., `2023-12-01-preview`).
+
+**Initialization:**
+
+*Using AI Factory:*
+
+```python
+from esperanto.factory import AIFactory
+
+# Ensure environment variables are set
+azure_model = AIFactory.create_language(
+    provider="azure",
+    model_name="your-azure-deployment-name", # This is your deployment name
+    # Optional parameters
+    temperature=0.7,
+    max_tokens=1000,
+    structured={"type": "json"} # Azure OpenAI supports JSON mode
+)
+
+messages = [{"role": "user", "content": "Translate 'hello' to Esperanto."}]
+response = azure_model.chat_complete(messages)
+print(response.choices[0].message.content)
+```
+
+*Direct Initialization:*
+
+```python
+from esperanto.providers.llm.azure import AzureLanguageModel
+
+# Ensure environment variables are set or pass parameters directly
+azure_model = AzureLanguageModel(
+    model_name="your-azure-deployment-name", # This is your deployment name
+    # api_key="your_azure_key", # Can be set via env or directly
+    # config={
+    #     "azure_endpoint": "https://your-resource.openai.azure.com/",
+    #     "api_version": "2023-12-01-preview"
+    # }, 
+    temperature=0.7,
+    structured={"type": "json"}
+)
+
+messages = [{"role": "user", "content": "What is the capital of Portugal?"}]
+response = azure_model.chat_complete(messages)
+print(response.choices[0].message.content)
+```
+
+Azure OpenAI also supports streaming and asynchronous operations just like other LLM providers in Esperanto.
+
 ### Perplexity
 
 Perplexity uses an OpenAI-compatible API but includes additional parameters for controlling search behavior. You can pass these parameters via the `config` dictionary when using the `AIFactory`.
@@ -127,4 +186,3 @@ model = LanguageModel.create(
     api_key="your-api-key",
     structured={"type": "json"}  # Request JSON output
 )
-```

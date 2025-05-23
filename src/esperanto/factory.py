@@ -28,6 +28,7 @@ class AIFactory:
             "openrouter": "esperanto.providers.llm.openrouter:OpenRouterLanguageModel",
             "xai": "esperanto.providers.llm.xai:XAILanguageModel",
             "perplexity": "esperanto.providers.llm.perplexity:PerplexityLanguageModel",
+            "azure": "esperanto.providers.llm.azure:AzureLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",

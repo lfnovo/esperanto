@@ -55,6 +55,10 @@ try:
 except ImportError:
     OllamaEmbeddingModel = None
 
+try:
+    from esperanto.providers.llm.azure import AzureLanguageModel
+except ImportError:
+    AzureLanguageModel = None
 
 # Store all provider classes
 __provider_classes = {
@@ -66,7 +70,8 @@ __provider_classes = {
     'OpenAIEmbeddingModel': OpenAIEmbeddingModel,
     'GoogleEmbeddingModel': GoogleEmbeddingModel,
     "OllamaEmbeddingModel": OllamaEmbeddingModel,
-    "OllamaLanguageModel": OllamaLanguageModel
+    "OllamaLanguageModel": OllamaLanguageModel,
+    "AzureLanguageModel": AzureLanguageModel
 }
 
 # Get list of available provider classes (excluding None values)

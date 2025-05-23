@@ -28,6 +28,7 @@ transformers = [
     "bitsandbytes>=0.43.0",
 ]
 openai = ["openai>=1.55.1"]
+azure = ["openai>=1.55.1"]
 anthropic = ["anthropic>=0.39.0"]
 google = [
     "google-genai>=1.8.0",
@@ -61,6 +62,7 @@ all = [
     "torch>=2.2.2",
     "tokenizers>=0.15.2",
     "voyageai>=0.1.4",  # For Voyage AI
+    # Azure is covered by openai in 'all'
 ]
 
 all_with_langchain = [
