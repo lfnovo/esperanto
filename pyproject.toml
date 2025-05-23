@@ -25,7 +25,6 @@ transformers = [
     "transformers>=4.40.0",
     "torch>=2.2.2",
     "tokenizers>=0.15.2",
-    "bitsandbytes>=0.43.0",
 ]
 openai = ["openai>=1.55.1"]
 azure = ["openai>=1.55.1"]

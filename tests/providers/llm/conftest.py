@@ -103,31 +103,46 @@ def google_model():
         mock_client_instance = MagicMock()
         mock_client.return_value = mock_client_instance
 
-        # Mock the models object
+        # Mock the models object (sync)
         mock_models = MagicMock()
         mock_client_instance.models = mock_models
+        # Mock the aio.models object (async)
+        mock_aio = MagicMock()
+        mock_client_instance.aio = MagicMock()
+        mock_client_instance.aio.models = mock_aio
 
-        # Mock generate_content method
+        # Mock generate_content method for sync
+        mock_part = MagicMock()
+        mock_part.text = "Hello! How can I help you today?"
+        mock_part.strip = lambda: "Hello! How can I help you today?"
+
+        mock_content = MagicMock()
+        mock_content.parts = [mock_part]
+
+        mock_candidate = MagicMock()
+        mock_candidate.content = mock_content
+        mock_candidate.finish_reason = "STOP"
+
         mock_response = MagicMock()
-        mock_response.text = "Test response"
+        mock_response.candidates = [mock_candidate]
         mock_response.prompt_feedback = MagicMock()
         mock_response.prompt_feedback.block_reason = None
 
-        # Set up response for async methods
-        mock_candidate = MagicMock()
-        mock_content = MagicMock()
-        mock_part = MagicMock()
-        mock_part.text = "Test response"
-        mock_content.parts = [mock_part]
-        mock_candidate.content = mock_content
-        mock_candidate.finish_reason = "STOP"
+        # Async response
         mock_async_response = MagicMock()
         mock_async_response.candidates = [mock_candidate]
+
+        # Streaming async generator
+        async def async_stream_response(*args, **kwargs):
+            yield mock_response
 
         # Assign the mocks
         mock_models.generate_content = MagicMock(return_value=mock_response)
         mock_models.generate_content_async = AsyncMock(return_value=mock_async_response)
         mock_models.list_models = MagicMock(return_value=[])
+        # Patch aio.models for new SDK async usage
+        mock_aio.generate_content = AsyncMock(return_value=mock_async_response)
+        mock_aio.generate_content_stream = AsyncMock(return_value=async_stream_response())
 
         # Initialize model with test key
         model = GoogleLanguageModel(api_key="test-key")

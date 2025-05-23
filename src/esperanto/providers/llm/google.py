@@ -57,21 +57,16 @@ class GoogleLanguageModel(LanguageModel):
     @property
     def models(self) -> List[Model]:
         """List all available models for this provider."""
-        models_list = genai.list_models()
+        models_list = list(self._client.models.list())
         return [
             Model(
-                id=model.name.split("/")[-1],
+                id=getattr(model, "name", str(model)).split("/")[-1],
                 owned_by="Google",
-                context_window=(
-                    model.input_token_limit
-                    if hasattr(model, "input_token_limit")
-                    else None
-                ),
+                context_window=getattr(model, "input_token_limit", None),
                 type="language",
             )
             for model in models_list
-            if "generateContent"
-            in model.supported_generation_methods  # Only include text generation models
+            if hasattr(model, "supported_generation_methods") and "generateContent" in model.supported_generation_methods
         ]
 
     @property
@@ -120,42 +115,43 @@ class GoogleLanguageModel(LanguageModel):
             )
         return self._langchain_model
 
-    def _format_messages(self, messages: List[Dict[str, str]]) -> str:
-        """Format messages into a single string for Google.
-
-        Args:
-            messages: List of messages in the conversation
-
-        Returns:
-            Formatted string of messages
+    def _format_messages(self, messages: List[Dict[str, str]]):
+        """Return (formatted_messages, system_instruction) tuple.
+        - formatted_messages: list of Content with only user/model roles
+        - system_instruction: str or None
         """
+        from google.genai import types
         formatted = []
+        system_instruction = None
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
             if role == "system":
-                formatted.append(f"System: {content}")
+                # Only the first system message is used
+                if system_instruction is None:
+                    system_instruction = content
             elif role == "user":
-                formatted.append(f"User: {content}")
+                formatted.append(types.Content(role="user", parts=[types.Part.from_text(text=content)]))
             elif role == "assistant":
-                formatted.append(f"Assistant: {content}")
-        return "\n".join(formatted)
+                formatted.append(types.Content(role="model", parts=[types.Part.from_text(text=content)]))
+        return formatted, system_instruction
 
-    def _create_generation_config(self) -> Any:
-        """Create generation config for Google."""
+    def _create_generation_config(self, system_instruction=None) -> Any:
+        """Create generation config for Google, optionally with system_instruction."""
+        from google.genai import types
         config = types.GenerateContentConfig(
             temperature=self.temperature,
             top_p=self.top_p,
             max_output_tokens=self.max_tokens if self.max_tokens else None,
         )
-
+        if system_instruction:
+            config.system_instruction = system_instruction
         if self.structured:
             if not isinstance(self.structured, dict):
                 raise TypeError("structured parameter must be a dictionary")
             structured_type = self.structured.get("type")
             if structured_type in ["json", "json_object"]:
                 config.response_mime_type = "application/json"
-
         return config
 
     def chat_complete(
@@ -172,29 +168,27 @@ class GoogleLanguageModel(LanguageModel):
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks if streaming
         """
-        formatted_messages = self._format_messages(messages)
+        formatted_messages, system_instruction = self._format_messages(messages)
         stream = stream if stream is not None else self.streaming
-
         if stream:
-            return self._stream_response(formatted_messages)
-
+            return self._stream_response(formatted_messages, system_instruction)
         response = self._client.models.generate_content(
             model=self.model_name,
             contents=formatted_messages,
-            config=self._create_generation_config(),
+            config=self._create_generation_config(system_instruction),
         )
-
-        print(response)
-        if not response.text:
-            raise ValueError("Empty response from Google API")
-
+        candidate = response.candidates[0]
+        text = candidate.content.parts[0].text.strip()
+        finish_reason = (
+            "stop" if getattr(candidate, "finish_reason", None) == "STOP" else getattr(candidate, "finish_reason", None)
+        )
         return ChatCompletion(
-            id=f"google-{str(hash(formatted_messages))}",
+            id=f"google-{str(hash(str(messages)))}",
             choices=[
                 Choice(
                     index=0,
-                    message=Message(role="assistant", content=response.text),
-                    finish_reason=response.prompt_feedback.block_reason or "stop",
+                    message=Message(role="assistant", content=text),
+                    finish_reason=finish_reason or "stop",
                 )
             ],
             created=int(datetime.datetime.now().timestamp()),
@@ -204,33 +198,33 @@ class GoogleLanguageModel(LanguageModel):
         )
 
     def _stream_response(
-        self, formatted_messages: str
+        self, formatted_messages: list, system_instruction=None
     ) -> Generator[ChatCompletionChunk, None, None]:
         """Stream response from Google.
 
         Args:
-            formatted_messages: Formatted string of messages
+            formatted_messages: List of types.Content messages
+            system_instruction: Optional system instruction string
 
         Returns:
             ChatCompletionChunk objects
         """
-        response_stream = self._client.models.generate_content(
+        response_stream = self._client.models.generate_content_stream(
             model=self.model_name,
             contents=formatted_messages,
-            config=self._create_generation_config(),
-            stream=True,
+            config=self._create_generation_config(system_instruction),
         )
-
         for chunk in response_stream:
-            if not chunk.text:  # Skip empty chunks
+            candidate = chunk.candidates[0]
+            text = candidate.content.parts[0].text.strip() if candidate.content.parts else ""
+            if not text:
                 continue
-
             yield ChatCompletionChunk(
-                id=f"google-chunk-{str(hash(formatted_messages))}",
+                id=f"google-chunk-{str(hash(str(formatted_messages)))}",
                 choices=[
                     StreamChoice(
                         index=0,
-                        delta=DeltaMessage(role="assistant", content=chunk.text),
+                        delta=DeltaMessage(role="assistant", content=text),
                         finish_reason=None,
                     )
                 ],
@@ -252,29 +246,27 @@ class GoogleLanguageModel(LanguageModel):
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks if streaming
         """
-        formatted_messages = self._format_messages(messages)
+        formatted_messages, system_instruction = self._format_messages(messages)
         stream = stream if stream is not None else self.streaming
 
         if stream:
-
             async def astream_response():
-                response_stream = await self._client.models.generate_content_async(
+                async for chunk in await self._client.aio.models.generate_content_stream(
                     model=self.model_name,
                     contents=formatted_messages,
-                    config=self._create_generation_config(),
-                    stream=True,
-                )
-                async for chunk in response_stream:
-                    if not chunk.text:  # Skip empty chunks
+                    config=self._create_generation_config(system_instruction),
+                ):
+                    candidate = chunk.candidates[0]
+                    text = candidate.content.parts[0].text.strip() if candidate.content.parts else ""
+                    if not text:
                         continue
-
                     yield ChatCompletionChunk(
-                        id=f"google-chunk-{str(hash(formatted_messages))}",
+                        id=f"google-chunk-{str(hash(str(formatted_messages)))}",
                         choices=[
                             StreamChoice(
                                 index=0,
                                 delta=DeltaMessage(
-                                    role="assistant", content=chunk.text
+                                    role="assistant", content=text
                                 ),
                                 finish_reason=None,
                             )
@@ -282,27 +274,19 @@ class GoogleLanguageModel(LanguageModel):
                         model=self.model_name,
                         created=int(datetime.datetime.now().timestamp()),
                     )
-
             return astream_response()
-
-        response = await self._client.models.generate_content_async(
+        response = await self._client.aio.models.generate_content(
             model=self.model_name,
             contents=formatted_messages,
-            config=self._create_generation_config(),
-            stream=False,
+            config=self._create_generation_config(system_instruction),
         )
-
-        # Get the first candidate's content
         candidate = response.candidates[0]
         text = candidate.content.parts[0].text.strip()
-
-        # Map Google's STOP to our stop finish reason
         finish_reason = (
-            "stop" if candidate.finish_reason == "STOP" else candidate.finish_reason
+            "stop" if getattr(candidate, "finish_reason", None) == "STOP" else getattr(candidate, "finish_reason", None)
         )
-
         return ChatCompletion(
-            id="google-" + str(hash(formatted_messages)),
+            id="google-" + str(hash(str(messages))),
             choices=[
                 Choice(
                     index=0,
