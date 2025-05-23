@@ -75,10 +75,16 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
 
         response = client.list_voices()
         for voice in response.voices:
+            # Convert Enum to string for gender
+            gender = voice.ssml_gender
+            if hasattr(gender, 'name'):
+                gender = gender.name  # Enum to string (e.g., 'FEMALE')
+            elif isinstance(gender, str):
+                gender = gender.upper()
             voices[voice.name] = Voice(
                 name=voice.name,
                 id=voice.name,
-                gender=voice.ssml_gender,
+                gender=gender,
                 language_code=voice.language_codes[0],
                 description=f"{voice.name} - {voice.language_codes[0]}"
             )
