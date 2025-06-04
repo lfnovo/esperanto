@@ -10,6 +10,7 @@ Esperanto supports multiple embedding providers for converting text into vector 
 - Ollama (Local deployment)
 - Transformers (Local deployment with Hugging Face models)
 - Voyage AI (voyage-large-2, voyage-code-2)
+- Mistral (mistral-embed, etc.) [NEW]
 
 ## Usage Examples
 
