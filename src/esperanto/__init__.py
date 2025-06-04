@@ -65,6 +65,11 @@ try:
 except ImportError:
     MistralLanguageModel = None
 
+try:
+    from esperanto.providers.llm.deepseek import DeepSeekLanguageModel
+except ImportError:
+    DeepSeekLanguageModel = None
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,

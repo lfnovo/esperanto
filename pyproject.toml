@@ -28,6 +28,9 @@ transformers = [
 ]
 openai = ["openai>=1.55.1"]
 azure = ["openai>=1.55.1"]
+xai = ["openai>=1.55.1"]
+openrouter = ["openai>=1.55.1"]
+deepseek = ["openai>=1.55.1"]
 anthropic = ["anthropic>=0.39.0"]
 google = [
     "google-genai>=1.8.0",
@@ -46,7 +49,8 @@ langchain = [
     "langchain-google-genai>=2.1.2",
     "langchain-ollama>=0.2.0",
     "langchain-groq>=0.2.1",
-    "langchain_mistralai>=0.2.1"
+    "langchain_mistralai>=0.2.1",
+    "langchain_deepseek>=0.1.3"
 ]
 
 all = [

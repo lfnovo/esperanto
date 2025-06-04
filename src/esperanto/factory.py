@@ -30,6 +30,7 @@ class AIFactory:
             "perplexity": "esperanto.providers.llm.perplexity:PerplexityLanguageModel",
             "azure": "esperanto.providers.llm.azure:AzureLanguageModel",
             "mistral": "esperanto.providers.llm.mistral:MistralLanguageModel",
+            "deepseek": "esperanto.providers.llm.deepseek:DeepSeekLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
