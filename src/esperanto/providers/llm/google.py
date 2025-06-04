@@ -14,8 +14,6 @@ from typing import (
 )
 
 from google import genai
-from google.genai import types
-from pydantic import SecretStr
 
 from esperanto.common_types import (
     ChatCompletion,
