@@ -29,6 +29,8 @@ class AIFactory:
             "xai": "esperanto.providers.llm.xai:XAILanguageModel",
             "perplexity": "esperanto.providers.llm.perplexity:PerplexityLanguageModel",
             "azure": "esperanto.providers.llm.azure:AzureLanguageModel",
+            "mistral": "esperanto.providers.llm.mistral:MistralLanguageModel",
+            "deepseek": "esperanto.providers.llm.deepseek:DeepSeekLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
@@ -37,6 +39,7 @@ class AIFactory:
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
             "transformers": "esperanto.providers.embedding.transformers:TransformersEmbeddingModel",
             "voyage": "esperanto.providers.embedding.voyage:VoyageEmbeddingModel",
+            "mistral": "esperanto.providers.embedding.mistral:MistralEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",

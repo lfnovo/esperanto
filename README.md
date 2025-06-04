@@ -24,6 +24,8 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Transformers (Local Hugging Face models)
   - ElevenLabs (Text-to-Speech)
   - Azure OpenAI (via `openai` SDK)
+  - Mistral (Mistral Large, Small, Embed, etc.)
+  - DeepSeek (deepseek-chat) [NEW]
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
@@ -82,6 +84,12 @@ pip install "esperanto[googletts]"
 # For Azure OpenAI support
 pip install "esperanto[azure]"
 
+# For Mistral support
+pip install "esperanto[mistral]"
+
+# For DeepSeek support
+pip install "esperanto[deepseek]"
+
 # For LangChain integration
 pip install "esperanto[langchain]"
 
@@ -106,6 +114,8 @@ pip install "esperanto[all_with_langchain]"
 | Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ❌             | ✅             | ❌        |
 | Azure OpenAI | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Mistral      | ✅          | ✅               | ❌             | ❌             | ✅        |
+| DeepSeek     | ✅          | ❌               | ❌             | ❌             | ✅        |  <!-- New -->
 
 ## Quick Start 🏃‍♂️
 
@@ -123,8 +133,8 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure'],
-#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage'],
+#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral'],
 #     'speech_to_text': ['openai', 'groq'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google']
 # }

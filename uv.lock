@@ -621,7 +621,7 @@ wheels = [
 
 [[package]]
 name = "esperanto"
-version = "1.4.0"
+version = "1.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
@@ -636,6 +636,7 @@ all = [
     { name = "google-cloud-texttospeech" },
     { name = "google-genai" },
     { name = "groq" },
+    { name = "mistralai" },
     { name = "ollama" },
     { name = "openai" },
     { name = "tokenizers" },
@@ -653,10 +654,13 @@ all-with-langchain = [
     { name = "langchain" },
     { name = "langchain-anthropic" },
     { name = "langchain-core" },
+    { name = "langchain-deepseek" },
     { name = "langchain-google-genai" },
     { name = "langchain-groq" },
+    { name = "langchain-mistralai" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
+    { name = "mistralai" },
     { name = "ollama" },
     { name = "openai" },
     { name = "tokenizers" },
@@ -669,6 +673,9 @@ anthropic = [
     { name = "anthropic" },
 ]
 azure = [
+    { name = "openai" },
+]
+deepseek = [
     { name = "openai" },
 ]
 dev = [
@@ -698,15 +705,23 @@ langchain = [
     { name = "langchain" },
     { name = "langchain-anthropic" },
     { name = "langchain-core" },
+    { name = "langchain-deepseek" },
     { name = "langchain-google-genai" },
     { name = "langchain-groq" },
+    { name = "langchain-mistralai" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
+]
+mistral = [
+    { name = "mistralai" },
 ]
 ollama = [
     { name = "ollama" },
 ]
 openai = [
+    { name = "openai" },
+]
+openrouter = [
     { name = "openai" },
 ]
 transformers = [
@@ -720,6 +735,9 @@ vertex = [
 ]
 voyage = [
     { name = "voyageai" },
+]
+xai = [
+    { name = "openai" },
 ]
 
 [package.dev-dependencies]
@@ -756,16 +774,23 @@ requires-dist = [
     { name = "langchain", marker = "extra == 'langchain'", specifier = ">=0.3.8,<0.4.0" },
     { name = "langchain-anthropic", marker = "extra == 'langchain'", specifier = ">=0.3.0" },
     { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=0.3.29,<0.4.0" },
+    { name = "langchain-deepseek", marker = "extra == 'langchain'", specifier = ">=0.1.3" },
     { name = "langchain-google-genai", marker = "extra == 'langchain'", specifier = ">=2.1.2" },
     { name = "langchain-groq", marker = "extra == 'langchain'", specifier = ">=0.2.1" },
+    { name = "langchain-mistralai", marker = "extra == 'langchain'", specifier = ">=0.2.1" },
     { name = "langchain-ollama", marker = "extra == 'langchain'", specifier = ">=0.2.0" },
     { name = "langchain-openai", marker = "extra == 'langchain'", specifier = ">=0.2.9" },
+    { name = "mistralai", marker = "extra == 'all'", specifier = ">=1.8.0" },
+    { name = "mistralai", marker = "extra == 'mistral'", specifier = ">=1.8.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.1" },
     { name = "ollama", marker = "extra == 'all'", specifier = ">=0.4.1" },
     { name = "ollama", marker = "extra == 'ollama'", specifier = ">=0.4.1" },
     { name = "openai", marker = "extra == 'all'", specifier = ">=1.55.1" },
     { name = "openai", marker = "extra == 'azure'", specifier = ">=1.55.1" },
+    { name = "openai", marker = "extra == 'deepseek'", specifier = ">=1.55.1" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.55.1" },
+    { name = "openai", marker = "extra == 'openrouter'", specifier = ">=1.55.1" },
+    { name = "openai", marker = "extra == 'xai'", specifier = ">=1.55.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.3" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.5" },
@@ -799,6 +824,15 @@ dev = [
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "responses", specifier = ">=0.25.6" },
     { name = "ruff", specifier = ">=0.8.4" },
+]
+
+[[package]]
+name = "eval-type-backport"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/ea/8b0ac4469d4c347c6a385ff09dc3c048c2d021696664e26c7ee6791631b5/eval_type_backport-0.2.2.tar.gz", hash = "sha256:f0576b4cf01ebb5bd358d02314d31846af5e07678387486e2c798af0e7d849c1", size = 9079 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/31/55cd413eaccd39125368be33c46de24a1f639f2e12349b0361b4678f3915/eval_type_backport-0.2.2-py3-none-any.whl", hash = "sha256:cb6ad7c393517f476f96d456d0412ea80f0a8cf96f6892834cd9340149111b0a", size = 5830 },
 ]
 
 [[package]]
@@ -1402,6 +1436,15 @@ wheels = [
 ]
 
 [[package]]
+name = "httpx-sse"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/60/8f4281fa9bbf3c8034fd54c0e7412e66edbab6bc74c4996bd616f8d0406e/httpx-sse-0.4.0.tar.gz", hash = "sha256:1e81a3a3070ce322add1d3529ed42eb5f70817f45ed6ec915ab753f961139721", size = 12624 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/9b/a181f281f65d776426002f330c31849b86b31fc9d848db62e16f03ff739f/httpx_sse-0.4.0-py3-none-any.whl", hash = "sha256:f329af6eae57eaa2bdfd962b42524764af68075ea87370a2de920af5341e318f", size = 7819 },
+]
+
+[[package]]
 name = "huggingface-hub"
 version = "0.31.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1794,6 +1837,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-deepseek"
+version = "0.1.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "langchain-openai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ed/7f/be5bcf99b3814214a02ac205bda66d49d55a7d5440d47223105cef5df063/langchain_deepseek-0.1.3.tar.gz", hash = "sha256:89dd6aa120fb50dcfcd3d593626d34c1c40deefe4510710d0807fcc19481adf5", size = 7860 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/7d/51b60aa91fa77742fc461704e5a8497e856156ae878102e6942799a78915/langchain_deepseek-0.1.3-py3-none-any.whl", hash = "sha256:8588e826371b417fca65c02f4273b4061eb9815a7bfcd5eb05acaa40d603aa89", size = 7123 },
+]
+
+[[package]]
 name = "langchain-google-genai"
 version = "2.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1819,6 +1875,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/4c/973faadcc54fc74352c6758208f48b08dd072025ab33beea52e6c31d4cd1/langchain_groq-0.3.2.tar.gz", hash = "sha256:033f459d4c0515e22a6e64f5a402e366933a6c827fd5915547419cb62fd7b34a", size = 22074 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/58/0d5a19168119c1bd7758ab28d9e6b5c12ba1091bb283f4dc13ca5df7651b/langchain_groq-0.3.2-py3-none-any.whl", hash = "sha256:bc111dea17a3510498c4697c42bf97e629bcf8f00b97fa25e51ea7947fc0b540", size = 15253 },
+]
+
+[[package]]
+name = "langchain-mistralai"
+version = "0.2.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "httpx-sse" },
+    { name = "langchain-core" },
+    { name = "pydantic" },
+    { name = "tokenizers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dc/04/cd75dd40f55925b5fdcc96b0f9a22cc05e3711c2d270cf8b7948d5f389f0/langchain_mistralai-0.2.10.tar.gz", hash = "sha256:698620c7dee8ae85bf1ca1ed5b544285c0764c453efead9a4ae34ab884704ce1", size = 21560 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/d2/d1238951c6f522b7442558cb860dbde9658b8c5d766c6d5d7f7fde0b7f76/langchain_mistralai-0.2.10-py3-none-any.whl", hash = "sha256:fc3bc813eab034335236a3b01ba189cd00bcf2b7e6ac57628d0409438bd13425", size = 16526 },
 ]
 
 [[package]]
@@ -1977,6 +2049,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979 },
+]
+
+[[package]]
+name = "mistralai"
+version = "1.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "eval-type-backport" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "typing-inspection" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/23/c1/b3cecb41695fd6cb5483fbb8ecaceb5586346c3ed53a78808d10c1b537c4/mistralai-1.8.1.tar.gz", hash = "sha256:b967ca443726b71ec45632cb33825ee2e55239a652e73c2bda11f7cc683bf6e5", size = 175819 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/14/e9ef675928768f508dfcedbb0e0ed601784a6911620a2bc25c9065921420/mistralai-1.8.1-py3-none-any.whl", hash = "sha256:badfc7e6832d894b3e9071d92ad621212b7cccd7df622c6cacdb525162ae338f", size = 373197 },
 ]
 
 [[package]]

@@ -13,6 +13,8 @@ Esperanto provides a unified interface for working with various language model p
 - XAI
 - Perplexity
 - Azure OpenAI
+- Mistral (Mistral Large, Small, etc.) [NEW]
+- DeepSeek (deepseek-chat) [NEW]
 
 ## Basic Usage
 
@@ -142,6 +144,40 @@ Perplexity uses an OpenAI-compatible API but includes additional parameters for 
 from esperanto.factory import AIFactory
 
 # Ensure PERPLEXITY_API_KEY environment variable is set
+
+# ...
+
+### DeepSeek
+
+DeepSeek provides a powerful chat model via an OpenAI-compatible API endpoint. It supports JSON mode and can be used with the same interface as OpenAI providers.
+
+**Default model:** `deepseek-chat`
+
+**Environment variable:** `DEEPSEEK_API_KEY`
+
+**Base URL:** `https://api.deepseek.com`
+
+**JSON mode:** Supported (set `structured={"type": "json"}`)
+
+**Example usage:**
+
+```python
+from esperanto.factory import AIFactory
+
+# Ensure DEEPSEEK_API_KEY environment variable is set
+model = AIFactory.create_language(
+    provider="deepseek",
+    model_name="deepseek-chat",  # Default model
+    structured={"type": "json"}, # Enable JSON mode
+    temperature=0.7
+)
+
+messages = [{"role": "user", "content": "Give me a JSON with a random number and a greeting."}]
+response = model.chat_complete(messages)
+print(response.choices[0].message.content)
+```
+
+---
 
 model = AIFactory.create_language(
     provider="perplexity",
