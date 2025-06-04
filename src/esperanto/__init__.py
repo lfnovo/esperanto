@@ -60,6 +60,11 @@ try:
 except ImportError:
     AzureLanguageModel = None
 
+try:
+    from esperanto.providers.llm.mistral import MistralLanguageModel
+except ImportError:
+    MistralLanguageModel = None
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
@@ -71,7 +76,8 @@ __provider_classes = {
     'GoogleEmbeddingModel': GoogleEmbeddingModel,
     "OllamaEmbeddingModel": OllamaEmbeddingModel,
     "OllamaLanguageModel": OllamaLanguageModel,
-    "AzureLanguageModel": AzureLanguageModel
+    "AzureLanguageModel": AzureLanguageModel,
+    "MistralLanguageModel": MistralLanguageModel
 }
 
 # Get list of available provider classes (excluding None values)
