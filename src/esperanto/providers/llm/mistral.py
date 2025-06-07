@@ -1,5 +1,6 @@
 """Mistral language model provider."""
 
+import json
 import os
 from typing import (
     Any,
@@ -12,15 +13,9 @@ from typing import (
     Union,
 )
 
-from mistralai import Mistral
-from mistralai.models import (
-    AssistantMessage,
-    ChatCompletionResponse as MistralChatCompletion,
-    CompletionChunk as MistralChatCompletionChunk,
-    SystemMessage,
-    UserMessage,
-)
-if TYPE_CHECKING:  # Grouped with mistralai/langchain
+import httpx
+
+if TYPE_CHECKING:
     from langchain_mistralai import ChatMistralAI
 
 from esperanto.common_types import (
@@ -42,45 +37,68 @@ class MistralLanguageModel(LanguageModel):
     """Mistral language model implementation."""
 
     def __post_init__(self):
-        """Initialize Mistral client."""
-        if self.model_name is None:
-            self.model_name = self._get_default_model()
+        """Initialize HTTP clients."""
+        # Call parent's post_init to handle config initialization
         super().__post_init__()
 
         self.api_key = self.api_key or os.getenv("MISTRAL_API_KEY")
         if not self.api_key:
             raise ValueError("Mistral API key not found. Set MISTRAL_API_KEY environment variable.")
 
-        self.client = Mistral(api_key=self.api_key)
-        # Mistral Python client does not have a separate async client,
-        # the same client handles both sync and async operations.
-        self.async_client = self.client # For consistency
+        # Set base URL
+        self.base_url = self.base_url or "https://api.mistral.ai/v1"
+
+        # Initialize HTTP clients
+        self.client = httpx.Client(timeout=30.0)
+        self.async_client = httpx.AsyncClient(timeout=30.0)
 
 
     def _get_default_model(self) -> str:
         """Get the default model name for Mistral."""
         return MISTRAL_DEFAULT_MODEL_NAME
 
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers for Mistral API requests."""
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Handle HTTP error responses."""
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"Mistral API error: {error_message}")
+
     @property
     def models(self) -> List[Model]:
         """List available Mistral models."""
         try:
-            client_models_response = self.client.models.list()
-            # Note: The model object from client.models.list() might not have 'context_window'.
-            # This information might need to be supplemented or managed differently if crucial.
+            response = self.client.get(
+                f"{self.base_url}/models",
+                headers=self._get_headers()
+            )
+            self._handle_error(response)
+            
+            models_data = response.json()
             return [
                 Model(
-                    id=model.id,
-                    owned_by=model.owned_by if hasattr(model, 'owned_by') else 'mistralai',
-                    context_window=None,  # Placeholder, as context_window is not directly in model object
+                    id=model["id"],
+                    owned_by=model.get("owned_by", "mistralai"),
+                    context_window=None,  # Context window not provided in API response
                     type="language",
                 )
-                for model in client_models_response.data
-                if "embed" not in model.id  # Filter out embedding models
+                for model in models_data["data"]
+                if "embed" not in model["id"]  # Filter out embedding models
             ]
         except Exception as e:
             print(f"Warning: Could not dynamically list models from Mistral API: {e}. Falling back to a known list.")
-            # Fallback to a known list if API call fails or if dynamic listing is not preferred
+            # Fallback to a known list if API call fails
             known_models = [
                 {"id": "open-mistral-7b", "context_window": 32000, "owned_by": "mistralai"},
                 {"id": "open-mixtral-8x7b", "context_window": 32000, "owned_by": "mistralai"},
@@ -93,84 +111,85 @@ class MistralLanguageModel(LanguageModel):
                 for m in known_models
             ]
 
-    def _normalize_response(self, response: MistralChatCompletion) -> ChatCompletion:
+    def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
         """Normalize Mistral response to our format."""
         return ChatCompletion(
-            id=response.id,
+            id=response_data["id"],
             choices=[
                 Choice(
-                    index=choice.index,
+                    index=choice["index"],
                     message=Message(
-                        content=choice.message.content or "",
-                        role=choice.message.role,
+                        content=choice["message"]["content"] or "",
+                        role=choice["message"]["role"],
                     ),
-                    finish_reason=choice.finish_reason,
+                    finish_reason=choice["finish_reason"],
                 )
-                for choice in response.choices
+                for choice in response_data["choices"]
             ],
-            created=response.created,
-            model=response.model,
+            created=response_data["created"],
+            model=response_data["model"],
             provider=self.provider,
             usage=Usage(
-                completion_tokens=(
-                    response.usage.completion_tokens if response.usage else 0
-                ),
-                prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
-                total_tokens=response.usage.total_tokens if response.usage else 0,
+                completion_tokens=response_data.get("usage", {}).get("completion_tokens", 0),
+                prompt_tokens=response_data.get("usage", {}).get("prompt_tokens", 0),
+                total_tokens=response_data.get("usage", {}).get("total_tokens", 0),
             ),
         )
 
-    def _normalize_chunk(self, chunk: MistralChatCompletionChunk) -> ChatCompletionChunk:
+    def _normalize_chunk(self, chunk_data: Dict[str, Any]) -> ChatCompletionChunk:
         """Normalize Mistral stream chunk to our format."""
-        delta_content = ""
-        delta_role = "assistant"  # Default role for stream delta
-        finish_reason = None
-        tool_calls = None # Placeholder for future tool call support
-
-        # Accessing data as per MIGRATION.MD: chunk.data.choices[0].delta.content
-        choice_data = None
-        if chunk.data and chunk.data.choices:
-            choice_data = chunk.data.choices[0]
-            if choice_data.delta:
-                delta_content = choice_data.delta.content or ""
-                if choice_data.delta.role:
-                    delta_role = choice_data.delta.role
-                # Placeholder for tool calls if they appear in delta
-                # if hasattr(choice_data.delta, 'tool_calls') and choice_data.delta.tool_calls:
-                #     tool_calls = [dict(tc.model_dump()) for tc in choice_data.delta.tool_calls]
-
-            if choice_data.finish_reason:
-                finish_reason = choice_data.finish_reason
-        
-        choice_index = choice_data.index if choice_data else 0
-
-        # Attempt to get id and model from chunk.data if available, otherwise use None or a default.
-        # The CompletionEvent itself (chunk) might not have id/model directly.
-        # These are often part of the ChatCompletionResponse which chunk.data might resemble.
-        chunk_id = getattr(chunk.data, 'id', None) if hasattr(chunk, 'data') else getattr(chunk, 'id', None)
-        chunk_model = getattr(chunk.data, 'model', None) if hasattr(chunk, 'data') else getattr(chunk, 'model', None)
-        # If chunk.created is not available, we might need to omit it or use a default
-        chunk_created = getattr(chunk.data, 'created', None) if hasattr(chunk, 'data') else getattr(chunk, 'created', None)
-
         return ChatCompletionChunk(
-            id=chunk_id,
+            id=chunk_data["id"],
             choices=[
                 StreamChoice(
-                    index=choice_index,
+                    index=choice["index"],
                     delta=DeltaMessage(
-                        content=delta_content,
-                        role=delta_role,
-                        function_call=None,  # Mistral doesn't use 'function_call'
-                        tool_calls=tool_calls,
+                        content=choice.get("delta", {}).get("content", ""),
+                        role=choice.get("delta", {}).get("role", "assistant"),
+                        function_call=choice.get("delta", {}).get("function_call"),
+                        tool_calls=choice.get("delta", {}).get("tool_calls"),
                     ),
-                    finish_reason=finish_reason,
+                    finish_reason=choice.get("finish_reason"),
                 )
+                for choice in chunk_data["choices"]
             ],
-            created=chunk_created,
-            model=chunk_model,
+            created=chunk_data["created"],
+            model=chunk_data.get("model", ""),
         )
 
-    def _get_api_kwargs(self) -> Dict[str, Any]:
+    def _parse_sse_stream(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
+        """Parse Server-Sent Events stream from Mistral chat completions."""
+        for chunk in response.iter_text():
+            for line in chunk.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("data: "):
+                    data = line[6:]  # Remove "data: " prefix
+                    if data.strip() == "[DONE]":
+                        break
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+
+    async def _parse_sse_stream_async(self, response: httpx.Response) -> AsyncGenerator[Dict[str, Any], None]:
+        """Parse Server-Sent Events stream from Mistral chat completions asynchronously."""
+        async for chunk in response.aiter_text():
+            for line in chunk.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("data: "):
+                    data = line[6:]  # Remove "data: " prefix
+                    if data.strip() == "[DONE]":
+                        return
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+
+    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for Mistral API calls."""
         kwargs = {}
         config = self.get_completion_kwargs() 
@@ -180,8 +199,12 @@ class MistralLanguageModel(LanguageModel):
         for key, value in config.items():
             if key in supported_params and value is not None:
                 kwargs[key] = value
-            elif key == "streaming": # map streaming to stream for Mistral
-                kwargs["stream"] = value
+        
+        # Handle streaming parameter
+        if exclude_stream:
+            kwargs.pop("streaming", None)
+        elif "streaming" in config:
+            kwargs["stream"] = config["streaming"]
         
         if self.structured and isinstance(self.structured, dict):
             if self.structured.get("type") == "json_object" or self.structured.get("type") == "json":
@@ -189,80 +212,66 @@ class MistralLanguageModel(LanguageModel):
 
         return kwargs
 
-    def _convert_messages_to_mistral_format(
-        self, messages: List[Dict[str, str]]
-    ) -> List[Union[UserMessage, AssistantMessage, SystemMessage]]:
-        mistral_messages = []
-        for msg in messages:
-            role = msg.get("role")
-            content = msg.get("content")
-            if role == "user":
-                mistral_messages.append(UserMessage(content=content))
-            elif role == "assistant":
-                mistral_messages.append(AssistantMessage(content=content))
-            elif role == "system":
-                mistral_messages.append(SystemMessage(content=content))
-            # TODO: Add support for 'tool' role if ToolMessage is fully integrated
-            else:
-                # Consider raising ValueError for unsupported roles for stricter error handling
-                print(f"Warning: Unsupported message role '{role}' encountered. Message content: '{content}'")
-        return mistral_messages
 
     def chat_complete(
         self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request."""
-        actual_stream = stream if stream is not None else self.streaming
-        api_kwargs = self._get_api_kwargs()
-        # Override stream based on actual_stream for the current call
-        api_kwargs["stream"] = actual_stream
+        should_stream = stream if stream is not None else self.streaming
         
-        mistral_messages = self._convert_messages_to_mistral_format(messages)
+        # Prepare request payload
+        payload = {
+            "model": self.get_model_name(),
+            "messages": messages,
+            "stream": should_stream,
+            **self._get_api_kwargs(exclude_stream=True),
+        }
 
-        if actual_stream:
-            response_generator = self.client.chat.stream(
-                model=self.get_model_name(),
-                messages=mistral_messages,
-                **{k: v for k, v in api_kwargs.items() if k != 'stream'}
-            )
-            return (self._normalize_chunk(chunk) for chunk in response_generator)
-        else:
-            response = self.client.chat.complete(
-                model=self.get_model_name(),
-                messages=mistral_messages,
-                **{k: v for k, v in api_kwargs.items() if k != 'stream'}
-            )
-            return self._normalize_response(response)
+        # Make HTTP request
+        response = self.client.post(
+            f"{self.base_url}/chat/completions",
+            headers=self._get_headers(),
+            json=payload
+        )
+        self._handle_error(response)
+
+        if should_stream:
+            return (self._normalize_chunk(chunk_data) for chunk_data in self._parse_sse_stream(response))
+        
+        response_data = response.json()
+        return self._normalize_response(response_data)
 
     async def achat_complete(
         self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request."""
-        actual_stream = stream if stream is not None else self.streaming
-        api_kwargs = self._get_api_kwargs()
-        api_kwargs["stream"] = actual_stream
+        should_stream = stream if stream is not None else self.streaming
+        
+        # Prepare request payload
+        payload = {
+            "model": self.get_model_name(),
+            "messages": messages,
+            "stream": should_stream,
+            **self._get_api_kwargs(exclude_stream=True),
+        }
 
-        mistral_messages = self._convert_messages_to_mistral_format(messages)
+        # Make async HTTP request
+        response = await self.async_client.post(
+            f"{self.base_url}/chat/completions",
+            headers=self._get_headers(),
+            json=payload
+        )
+        self._handle_error(response)
 
-        if actual_stream:
-            # Correctly await the stream_async method to get the async generator
-            async_response_generator = await self.async_client.chat.stream_async(
-                model=self.get_model_name(),
-                messages=mistral_messages,
-                **{k: v for k, v in api_kwargs.items() if k != 'stream'}
-            )
-            async def normalize_async_chunks():
-                # Iterate over the actual async generator
-                async for chunk in async_response_generator:
-                    yield self._normalize_chunk(chunk)
-            return normalize_async_chunks()
-        else:
-            response = await self.async_client.chat.complete_async(
-                model=self.get_model_name(),
-                messages=mistral_messages,
-                **{k: v for k, v in api_kwargs.items() if k != 'stream'}
-            )
-            return self._normalize_response(response)
+        if should_stream:
+            async def generate():
+                async for chunk_data in self._parse_sse_stream_async(response):
+                    yield self._normalize_chunk(chunk_data)
+
+            return generate()
+        
+        response_data = response.json()
+        return self._normalize_response(response_data)
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
