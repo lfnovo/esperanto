@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional  # Added Optional
 
-from openai import AsyncOpenAI, OpenAI
+from esperanto.utils.openai_http import AsyncOpenAIHTTPClient, OpenAIHTTPClient
 
 from esperanto.common_types import Model
 from esperanto.providers.llm.openai import OpenAILanguageModel
@@ -35,16 +35,24 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         # Call parent's post_init to set up normalized response handling
         super().__post_init__()
 
-        # Initialize OpenAI clients with OpenRouter configuration
-        self.client = OpenAI(
+        # Initialize HTTP clients with OpenRouter configuration
+        self.client = OpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,
+            extra_headers={
+                "HTTP-Referer": "https://github.com/lfnovo/esperanto",
+                "X-Title": "Esperanto",
+            },
         )
-        self.async_client = AsyncOpenAI(
+        self.async_client = AsyncOpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,
+            extra_headers={
+                "HTTP-Referer": "https://github.com/lfnovo/esperanto",
+                "X-Title": "Esperanto",
+            },
         )
 
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:

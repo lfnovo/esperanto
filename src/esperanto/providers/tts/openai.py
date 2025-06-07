@@ -4,7 +4,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Union, Dict, Any, List
 
-from openai import AsyncOpenAI, OpenAI
+from esperanto.utils.openai_http import AsyncOpenAIHTTPClient, OpenAIHTTPClient
 
 from .base import TextToSpeechModel, AudioResponse, Voice, Model
 
@@ -43,13 +43,13 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             config=kwargs
         )
         
-        self.client = OpenAI(
+        self.client = OpenAIHTTPClient(
             api_key=self.api_key,
-            base_url=self.base_url
+            base_url=self.base_url,
         )
-        self.async_client = AsyncOpenAI(
+        self.async_client = AsyncOpenAIHTTPClient(
             api_key=self.api_key,
-            base_url=self.base_url
+            base_url=self.base_url,
         )
 
     @property
@@ -111,13 +111,13 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
         models = self.client.models.list()
         return [
             Model(
-                id=model.id,
-                owned_by=model.owned_by,
-                context_window=None,  # Audio models don't have context windows
-                type="text_to_speech"
+                id=m["id"],
+                owned_by=m.get("owned_by"),
+                context_window=None,
+                type="text_to_speech",
             )
-            for model in models
-            if model.id.startswith("tts")
+            for m in models
+            if m.get("id", "").startswith("tts")
         ]
 
     def generate_speech(

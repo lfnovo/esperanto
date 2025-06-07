@@ -36,64 +36,48 @@ def mock_openai_response():
 
 @pytest.fixture
 def openai_model():
-    with (
-        patch("openai.OpenAI") as mock_openai,
-        patch("openai.AsyncOpenAI") as mock_async_openai,
-    ):
+    mock_response = MagicMock()
+    mock_response.id = "chatcmpl-123"
+    mock_response.created = 1677858242
+    mock_response.model = "gpt-4"
+    mock_response.object = "chat.completion"
 
-        # Create mock response
-        mock_response = MagicMock()
-        mock_response.id = "chatcmpl-123"
-        mock_response.created = 1677858242
-        mock_response.model = "gpt-4"
-        mock_response.object = "chat.completion"
+    mock_message = MagicMock()
+    mock_message.content = "Test response"
+    mock_message.role = "assistant"
+    mock_message.function_call = None
+    mock_message.tool_calls = None
 
-        mock_message = MagicMock()
-        mock_message.content = "Test response"
-        mock_message.role = "assistant"
-        mock_message.function_call = None
-        mock_message.tool_calls = None
+    mock_choice = MagicMock()
+    mock_choice.index = 0
+    mock_choice.message = mock_message
+    mock_choice.finish_reason = "stop"
+    mock_choice.logprobs = None
 
-        mock_choice = MagicMock()
-        mock_choice.index = 0
-        mock_choice.message = mock_message
-        mock_choice.finish_reason = "stop"
-        mock_choice.logprobs = None
+    mock_response.choices = [mock_choice]
 
-        mock_response.choices = [mock_choice]
+    mock_usage = MagicMock()
+    mock_usage.completion_tokens = 10
+    mock_usage.prompt_tokens = 20
+    mock_usage.total_tokens = 30
+    mock_response.usage = mock_usage
 
-        mock_usage = MagicMock()
-        mock_usage.completion_tokens = 10
-        mock_usage.prompt_tokens = 20
-        mock_usage.total_tokens = 30
-        mock_response.usage = mock_usage
+    mock_chat = MagicMock()
+    mock_chat.completions = MagicMock()
+    mock_chat.completions.create = MagicMock(return_value=mock_response)
+    mock_sync_instance = MagicMock()
+    mock_sync_instance.chat = mock_chat
 
-        # Mock the sync client
-        mock_chat = MagicMock()
-        mock_chat.completions = MagicMock()
-        mock_chat.completions.create = MagicMock(return_value=mock_response)
+    mock_async_chat = MagicMock()
+    mock_async_chat.completions = MagicMock()
+    mock_async_chat.completions.create = AsyncMock(return_value=mock_response)
+    mock_async_instance = MagicMock()
+    mock_async_instance.chat = mock_async_chat
 
-        mock_sync_instance = MagicMock()
-        mock_sync_instance.chat = mock_chat
-        mock_openai.return_value = mock_sync_instance
-
-        # Mock the async client
-        mock_async_chat = MagicMock()
-        mock_async_chat.completions = MagicMock()
-        mock_async_chat.completions.create = AsyncMock(return_value=mock_response)
-
-        mock_async_instance = MagicMock()
-        mock_async_instance.chat = mock_async_chat
-        mock_async_openai.return_value = mock_async_instance
-
-        # Create the model with a test API key
-        model = OpenAILanguageModel(api_key="test-key")
-
-        # Replace the actual clients with our mocked ones
-        model.client = mock_sync_instance
-        model.async_client = mock_async_instance
-
-        yield model
+    model = OpenAILanguageModel(api_key="test-key")
+    model.client = mock_sync_instance
+    model.async_client = mock_async_instance
+    yield model
 
 
 @pytest.fixture

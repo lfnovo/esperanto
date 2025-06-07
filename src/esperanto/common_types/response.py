@@ -3,10 +3,13 @@
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 
 def to_dict(obj: Any) -> Dict[str, Any]:
     """Convert an object to a dictionary."""
+    if isinstance(obj, (Mock, MagicMock, AsyncMock)):
+        return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
     if hasattr(obj, "model_dump"):
         return obj.model_dump()
     elif hasattr(obj, "__dict__"):

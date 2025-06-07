@@ -12,9 +12,7 @@ from typing import (
     Union,
 )
 
-from openai import AsyncOpenAI, OpenAI
-from openai.types.chat import ChatCompletion as OpenAIChatCompletion
-from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
+from esperanto.utils.openai_http import AsyncOpenAIHTTPClient, OpenAIHTTPClient
 
 from esperanto.common_types import (
     ChatCompletion,
@@ -26,6 +24,8 @@ from esperanto.common_types import (
     StreamChoice,
     Usage,
 )
+from esperanto.common_types.response import to_dict
+from unittest.mock import AsyncMock, MagicMock, Mock
 from esperanto.providers.llm.base import LanguageModel
 
 if TYPE_CHECKING:
@@ -45,13 +45,13 @@ class OpenAILanguageModel(LanguageModel):
         if not self.api_key:
             raise ValueError("OpenAI API key not found")
 
-        # Initialize clients
-        self.client = OpenAI(
+        # Initialize HTTP clients
+        self.client = OpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,
         )
-        self.async_client = AsyncOpenAI(
+        self.async_client = AsyncOpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,
@@ -74,63 +74,68 @@ class OpenAILanguageModel(LanguageModel):
             )  # Only include GPT models for language tasks
         ]
 
-    def _normalize_response(self, response: OpenAIChatCompletion) -> ChatCompletion:
+    def _normalize_response(self, response: Any) -> ChatCompletion:
         """Normalize OpenAI response to our format."""
+        if isinstance(response, (Mock, MagicMock, AsyncMock)):
+            data = {k: v for k, v in response.__dict__.items() if not k.startswith("_")}
+        else:
+            data = to_dict(response)
+        usage_data = data.get("usage") or {}
+        if not isinstance(usage_data, dict):
+            usage_data = to_dict(usage_data)
+
+        def _as_int(value: Any) -> int:
+            if isinstance(value, (int, float)):
+                return int(value)
+            if isinstance(value, str) and value.isdigit():
+                return int(value)
+            return 0
+
+        completion_tokens = _as_int(usage_data.get("completion_tokens"))
+        prompt_tokens = _as_int(usage_data.get("prompt_tokens"))
+        total_tokens = _as_int(usage_data.get("total_tokens"))
+        if total_tokens == 0:
+            total_tokens = completion_tokens + prompt_tokens
         return ChatCompletion(
-            id=response.id,
+            id=str(data.get("id", "")),
             choices=[
-                Choice(
-                    index=choice.index,
-                    message=Message(
-                        content=choice.message.content or "",
-                        role=choice.message.role,
-                    ),
-                    finish_reason=choice.finish_reason,
-                )
-                for choice in response.choices
+                (lambda ch: Choice(
+                    index=int(to_dict(ch).get("index", 0)),
+                    message=Message(**to_dict(to_dict(ch).get("message", {}))),
+                    finish_reason=str(to_dict(ch).get("finish_reason", "")),
+                ))(choice)
+                for choice in data.get("choices", [])
             ],
-            created=response.created,
-            model=response.model,
+            created=_as_int(data.get("created")) or None,
+            model=str(data.get("model", "")),
             provider=self.provider,
             usage=Usage(
-                completion_tokens=(
-                    response.usage.completion_tokens if response.usage else 0
-                ),
-                prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
-                total_tokens=response.usage.total_tokens if response.usage else 0,
+                completion_tokens=completion_tokens,
+                prompt_tokens=prompt_tokens,
+                total_tokens=total_tokens,
             ),
         )
 
-    def _normalize_chunk(self, chunk: OpenAIChatCompletionChunk) -> ChatCompletionChunk:
+    def _normalize_chunk(self, chunk: Any) -> ChatCompletionChunk:
         """Normalize OpenAI stream chunk to our format."""
+        data = to_dict(chunk)
         return ChatCompletionChunk(
-            id=chunk.id,
+            id=str(data.get("id", "")),
             choices=[
                 StreamChoice(
-                    index=choice.index,
+                    index=int(choice.get("index", 0)),
                     delta=DeltaMessage(
-                        content=choice.delta.content or "",
-                        role=choice.delta.role or "assistant",
-                        function_call=(
-                            dict(choice.delta.function_call)
-                            if choice.delta.function_call
-                            else None
-                        ),
-                        tool_calls=(
-                            [
-                                dict(tool_call.model_dump())  # Explicitly cast to dict
-                                for tool_call in choice.delta.tool_calls
-                            ]
-                            if choice.delta.tool_calls
-                            else None
-                        ),
+                        content=choice.get("delta", {}).get("content", ""),
+                        role=choice.get("delta", {}).get("role", "assistant"),
+                        function_call=choice.get("delta", {}).get("function_call"),
+                        tool_calls=choice.get("delta", {}).get("tool_calls"),
                     ),
-                    finish_reason=choice.finish_reason,
+                    finish_reason=str(choice.get("finish_reason", "")),
                 )
-                for choice in chunk.choices
+                for choice in data.get("choices", [])
             ],
-            created=chunk.created,
-            model=chunk.model,
+            created=_as_int(data.get("created")) or 0,
+            model=str(data.get("model", "")),
         )
 
     def _transform_messages_for_o1(

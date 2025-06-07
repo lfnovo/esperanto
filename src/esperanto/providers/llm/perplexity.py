@@ -15,7 +15,7 @@ from typing import (
     Union,
 )
 
-from openai import AsyncOpenAI, OpenAI
+from esperanto.utils.openai_http import AsyncOpenAIHTTPClient, OpenAIHTTPClient
 
 from esperanto.common_types import (
     ChatCompletion,
@@ -61,13 +61,13 @@ class PerplexityLanguageModel(OpenAILanguageModel):
         # Call grandparent's post_init to handle config, skipping OpenAI's __post_init__
         LanguageModel.__post_init__(self)
 
-        # Initialize OpenAI clients with Perplexity configuration
-        self.client = OpenAI(
+        # Initialize HTTP clients with Perplexity configuration
+        self.client = OpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,
         )
-        self.async_client = AsyncOpenAI(
+        self.async_client = AsyncOpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,

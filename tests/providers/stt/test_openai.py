@@ -59,65 +59,45 @@ def test_factory_creates_openai_stt():
 
 def test_openai_transcribe(audio_file, mock_openai_client):
     """Test OpenAI transcribe method."""
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-        with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch(
-                "openai.AsyncOpenAI.__init__", return_value=None
-            ) as mock_async_init:
-                model = OpenAISpeechToTextModel()
-                model.client.audio = mock_openai_client.audio
-                model.async_client.audio = mock_openai_client.audio
-                response = model.transcribe(audio_file)
-                assert isinstance(response, TranscriptionResponse)
-                assert response.text == "This is a test transcription"
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client = mock_openai_client
+    model.async_client = mock_openai_client
+    response = model.transcribe(audio_file)
+    assert isinstance(response, TranscriptionResponse)
+    assert response.text == "This is a test transcription"
 
 
 @pytest.mark.asyncio
 async def test_openai_atranscribe(audio_file, mock_async_openai_client):
     """Test OpenAI async transcribe method."""
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-        with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch(
-                "openai.AsyncOpenAI.__init__", return_value=None
-            ) as mock_async_init:
-                model = OpenAISpeechToTextModel()
-                model.client.audio = mock_async_openai_client.audio
-                model.async_client.audio = mock_async_openai_client.audio
-                response = await model.atranscribe(audio_file)
-                assert isinstance(response, TranscriptionResponse)
-                assert response.text == "This is a test transcription"
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client = mock_async_openai_client
+    model.async_client = mock_async_openai_client
+    response = await model.atranscribe(audio_file)
+    assert isinstance(response, TranscriptionResponse)
+    assert response.text == "This is a test transcription"
 
 
 def test_openai_transcribe_with_options(audio_file, mock_openai_client):
     """Test OpenAI transcribe with language and prompt."""
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-        with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch(
-                "openai.AsyncOpenAI.__init__", return_value=None
-            ) as mock_async_init:
-                model = OpenAISpeechToTextModel()
-                model.client.audio = mock_openai_client.audio
-                model.async_client.audio = mock_openai_client.audio
-                response = model.transcribe(
-                    audio_file,
-                    language="en",
-                    prompt="This is a podcast about AI",
-                )
-                assert isinstance(response, TranscriptionResponse)
-                assert response.text == "This is a test transcription"
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client = mock_openai_client
+    model.async_client = mock_openai_client
+    response = model.transcribe(
+        audio_file,
+        language="en",
+        prompt="This is a podcast about AI",
+    )
+    assert isinstance(response, TranscriptionResponse)
+    assert response.text == "This is a test transcription"
 
 
 def test_openai_transcribe_file_object(mock_openai_client):
     """Test OpenAI transcribe with file object."""
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-        with patch("openai.OpenAI.__init__", return_value=None) as mock_init:
-            with patch(
-                "openai.AsyncOpenAI.__init__", return_value=None
-            ) as mock_async_init:
-                model = OpenAISpeechToTextModel()
-                model.client.audio = mock_openai_client.audio
-                model.async_client.audio = mock_openai_client.audio
-                with open(__file__, "rb") as f:
-                    response = model.transcribe(f)
-                assert isinstance(response, TranscriptionResponse)
-                assert response.text == "This is a test transcription"
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client = mock_openai_client
+    model.async_client = mock_openai_client
+    with open(__file__, "rb") as f:
+        response = model.transcribe(f)
+    assert isinstance(response, TranscriptionResponse)
+    assert response.text == "This is a test transcription"
