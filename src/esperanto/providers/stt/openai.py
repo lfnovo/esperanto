@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
-from openai import AsyncOpenAI, OpenAI
+from esperanto.utils.openai_http import AsyncOpenAIHTTPClient, OpenAIHTTPClient
 
 from esperanto.common_types import TranscriptionResponse
 from esperanto.providers.stt.base import Model, SpeechToTextModel
@@ -31,8 +31,8 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if self.base_url:
             config["base_url"] = self.base_url
 
-        self.client = OpenAI(**config)
-        self.async_client = AsyncOpenAI(**config)
+        self.client = OpenAIHTTPClient(**config)
+        self.async_client = AsyncOpenAIHTTPClient(**config)
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
@@ -49,18 +49,17 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         try:
             models = self.client.models.list()
         except Exception:
-            # Handle the case when the API key is not valid for model listing
             return []
 
         return [
             Model(
-                id=model.id,
-                owned_by=model.owned_by,
-                context_window=None,  # Audio models don't have context windows
+                id=m["id"],
+                owned_by=m.get("owned_by"),
+                context_window=None,
                 type="speech_to_text",
             )
-            for model in models
-            if model.id.startswith("whisper")
+            for m in models
+            if m.get("id", "").startswith("whisper")
         ]
 
     def _get_api_kwargs(
@@ -95,10 +94,10 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
             response = self.client.audio.transcriptions.create(
                 file=audio_file, **kwargs
             )
-
+        text = response.get("text", "") if isinstance(response, dict) else getattr(response, "text", "")
         return TranscriptionResponse(
-            text=response.text,
-            language=language,  # OpenAI doesn't return detected language
+            text=text,
+            language=language,
             model=self.get_model_name(),
             provider=self.provider,
         )
@@ -122,10 +121,10 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
             response = await self.async_client.audio.transcriptions.create(
                 file=audio_file, **kwargs
             )
-
+        text = response.get("text", "") if isinstance(response, dict) else getattr(response, "text", "")
         return TranscriptionResponse(
-            text=response.text,
-            language=language,  # OpenAI doesn't return detected language
+            text=text,
+            language=language,
             model=self.get_model_name(),
             provider=self.provider,
         )

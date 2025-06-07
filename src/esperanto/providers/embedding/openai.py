@@ -2,7 +2,7 @@
 import os
 from typing import Any, Dict, List
 
-from openai import AsyncOpenAI, OpenAI
+from esperanto.utils.openai_http import AsyncOpenAIHTTPClient, OpenAIHTTPClient
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
 
@@ -22,13 +22,13 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         if "model_name" in kwargs:
             self._config["model_name"] = kwargs["model_name"]
         
-        # Initialize clients
-        self.client = OpenAI(
+        # Initialize HTTP clients
+        self.client = OpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,
         )
-        self.async_client = AsyncOpenAI(
+        self.async_client = AsyncOpenAIHTTPClient(
             api_key=self.api_key,
             base_url=self.base_url,
             organization=self.organization,
@@ -66,9 +66,9 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             model=self.get_model_name(),
             **{**self._get_api_kwargs(), **kwargs}
         )
-
-        # Convert embeddings to regular floats
-        return [[float(value) for value in data.embedding] for data in response.data]
+        data = response.get("data") if isinstance(response, dict) else getattr(response, "data", None)
+        data = data or []
+        return [[float(v) for v in (item["embedding"] if isinstance(item, dict) else getattr(item, "embedding", []))] for item in data]
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -89,9 +89,9 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             model=self.get_model_name(),
             **{**self._get_api_kwargs(), **kwargs}
         )
-
-        # Convert embeddings to regular floats
-        return [[float(value) for value in data.embedding] for data in response.data]
+        data = response.get("data") if isinstance(response, dict) else getattr(response, "data", None)
+        data = data or []
+        return [[float(v) for v in (item["embedding"] if isinstance(item, dict) else getattr(item, "embedding", []))] for item in data]
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
@@ -108,11 +108,11 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         models = self.client.models.list()
         return [
             Model(
-                id=model.id,
-                owned_by=model.owned_by,
-                context_window=getattr(model, 'context_window', None),
-                type="embedding"
+                id=m["id"],
+                owned_by=m.get("owned_by"),
+                context_window=m.get("context_window"),
+                type="embedding",
             )
-            for model in models
-            if model.id.startswith("text-embedding")
+            for m in models
+            if m.get("id", "").startswith("text-embedding")
         ]

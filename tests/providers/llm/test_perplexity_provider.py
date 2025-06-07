@@ -25,22 +25,20 @@ def perplexity_provider():
 
 @pytest.fixture
 def mock_openai_client():
-    """Fixture for mocking the OpenAI client."""
-    with patch("esperanto.providers.llm.perplexity.OpenAI") as mock_client_class:
-        mock_instance = MagicMock()
-        mock_client_class.return_value = mock_instance
-        yield mock_instance
+    client = MagicMock()
+    client.chat = MagicMock()
+    client.chat.completions = MagicMock()
+    client.chat.completions.create = MagicMock()
+    return client
 
 
 @pytest.fixture
 def mock_async_openai_client():
-    """Fixture for mocking the AsyncOpenAI client."""
-    with patch(
-        "esperanto.providers.llm.perplexity.AsyncOpenAI"
-    ) as mock_async_client_class:
-        mock_instance = AsyncMock()
-        mock_async_client_class.return_value = mock_instance
-        yield mock_instance
+    client = AsyncMock()
+    client.chat = MagicMock()
+    client.chat.completions = MagicMock()
+    client.chat.completions.create = AsyncMock()
+    return client
 
 
 def test_perplexity_provider_initialization(perplexity_provider):

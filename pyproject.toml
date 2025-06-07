@@ -16,6 +16,7 @@ urls.documentation = "https://github.com/lfnovo/esperanto#readme"
 dependencies = [
     "python-dotenv>=1.0.1",
     "requests>=2.31.0",
+    "httpx>=0.28.1",
     "pydantic>=2.0.0",
 ]
 
@@ -26,11 +27,11 @@ transformers = [
     "torch>=2.2.2",
     "tokenizers>=0.15.2",
 ]
-openai = ["openai>=1.55.1"]
+openai = []
 azure = ["openai>=1.55.1"]
-xai = ["openai>=1.55.1"]
-openrouter = ["openai>=1.55.1"]
-deepseek = ["openai>=1.55.1"]
+xai = []
+openrouter = []
+deepseek = []
 anthropic = ["anthropic>=0.39.0"]
 google = [
     "google-genai>=1.8.0",
@@ -54,7 +55,6 @@ langchain = [
 ]
 
 all = [
-    "openai>=1.55.1",
     "anthropic>=0.39.0",
     "google-genai>=1.8.0",
     "vertexai>=1.71.1",
