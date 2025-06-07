@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
-from openai import AsyncOpenAI, OpenAI
+import httpx
 
 from esperanto.common_types import TranscriptionResponse
 from esperanto.providers.stt.base import Model, SpeechToTextModel
@@ -15,7 +15,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
     """OpenAI speech-to-text model implementation."""
 
     def __post_init__(self):
-        """Initialize OpenAI client."""
+        """Initialize HTTP clients."""
         # Call parent's post_init to handle config initialization
         super().__post_init__()
 
@@ -24,15 +24,32 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if not self.api_key:
             raise ValueError("OpenAI API key not found")
 
-        # Initialize clients
-        config = {
-            "api_key": self.api_key,
-        }
-        if self.base_url:
-            config["base_url"] = self.base_url
+        # Set base URL
+        self.base_url = self.base_url or "https://api.openai.com/v1"
 
-        self.client = OpenAI(**config)
-        self.async_client = AsyncOpenAI(**config)
+        # Initialize HTTP clients
+        self.client = httpx.Client(timeout=30.0)
+        self.async_client = httpx.AsyncClient(timeout=30.0)
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers for OpenAI API requests."""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+        }
+        # Organization is optional for STT models
+        if hasattr(self, 'organization') and self.organization:
+            headers["OpenAI-Organization"] = self.organization
+        return headers
+
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Handle HTTP error responses."""
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"OpenAI API error: {error_message}")
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
@@ -47,21 +64,26 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
     def models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
-            models = self.client.models.list()
+            response = self.client.get(
+                f"{self.base_url}/models",
+                headers=self._get_headers()
+            )
+            self._handle_error(response)
+            
+            models_data = response.json()
+            return [
+                Model(
+                    id=model["id"],
+                    owned_by=model.get("owned_by", "openai"),
+                    context_window=None,  # Audio models don't have context windows
+                    type="speech_to_text",
+                )
+                for model in models_data["data"]
+                if model["id"].startswith("whisper")
+            ]
         except Exception:
             # Handle the case when the API key is not valid for model listing
             return []
-
-        return [
-            Model(
-                id=model.id,
-                owned_by=model.owned_by,
-                context_window=None,  # Audio models don't have context windows
-                type="speech_to_text",
-            )
-            for model in models
-            if model.id.startswith("whisper")
-        ]
 
     def _get_api_kwargs(
         self, language: Optional[str] = None, prompt: Optional[str] = None
@@ -89,15 +111,31 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
 
         # Handle file input
         if isinstance(audio_file, str):
+            # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                response = self.client.audio.transcriptions.create(file=f, **kwargs)
+                files = {"file": (audio_file, f, "audio/mpeg")}
+                response = self.client.post(
+                    f"{self.base_url}/audio/transcriptions",
+                    headers=self._get_headers(),
+                    files=files,
+                    data=kwargs
+                )
         else:
-            response = self.client.audio.transcriptions.create(
-                file=audio_file, **kwargs
+            # For BinaryIO, send the file object directly
+            filename = getattr(audio_file, 'name', 'audio.mp3')
+            files = {"file": (filename, audio_file, "audio/mpeg")}
+            response = self.client.post(
+                f"{self.base_url}/audio/transcriptions",
+                headers=self._get_headers(),
+                files=files,
+                data=kwargs
             )
 
+        self._handle_error(response)
+        response_data = response.json()
+
         return TranscriptionResponse(
-            text=response.text,
+            text=response_data["text"],
             language=language,  # OpenAI doesn't return detected language
             model=self.get_model_name(),
             provider=self.provider,
@@ -114,17 +152,31 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
 
         # Handle file input
         if isinstance(audio_file, str):
+            # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                response = await self.async_client.audio.transcriptions.create(
-                    file=f, **kwargs
+                files = {"file": (audio_file, f, "audio/mpeg")}
+                response = await self.async_client.post(
+                    f"{self.base_url}/audio/transcriptions",
+                    headers=self._get_headers(),
+                    files=files,
+                    data=kwargs
                 )
         else:
-            response = await self.async_client.audio.transcriptions.create(
-                file=audio_file, **kwargs
+            # For BinaryIO, send the file object directly
+            filename = getattr(audio_file, 'name', 'audio.mp3')
+            files = {"file": (filename, audio_file, "audio/mpeg")}
+            response = await self.async_client.post(
+                f"{self.base_url}/audio/transcriptions",
+                headers=self._get_headers(),
+                files=files,
+                data=kwargs
             )
 
+        self._handle_error(response)
+        response_data = response.json()
+
         return TranscriptionResponse(
-            text=response.text,
+            text=response_data["text"],
             language=language,  # OpenAI doesn't return detected language
             model=self.get_model_name(),
             provider=self.provider,

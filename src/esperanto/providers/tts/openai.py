@@ -4,7 +4,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Union, Dict, Any, List
 
-from openai import AsyncOpenAI, OpenAI
+import httpx
 
 from .base import TextToSpeechModel, AudioResponse, Voice, Model
 
@@ -43,14 +43,33 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             config=kwargs
         )
         
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
-        self.async_client = AsyncOpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
+        # Set base URL
+        self.base_url = self.base_url or "https://api.openai.com/v1"
+        
+        # Initialize HTTP clients
+        self.client = httpx.Client(timeout=30.0)
+        self.async_client = httpx.AsyncClient(timeout=30.0)
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers for OpenAI API requests."""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        # Organization is optional for TTS models
+        if hasattr(self, 'organization') and self.organization:
+            headers["OpenAI-Organization"] = self.organization
+        return headers
+
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Handle HTTP error responses."""
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"OpenAI API error: {error_message}")
 
     @property
     def available_voices(self) -> Dict[str, Voice]:
@@ -108,16 +127,22 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
     @property
     def models(self) -> List[Model]:
         """List all available models for this provider."""
-        models = self.client.models.list()
+        response = self.client.get(
+            f"{self.base_url}/models",
+            headers=self._get_headers()
+        )
+        self._handle_error(response)
+        
+        models_data = response.json()
         return [
             Model(
-                id=model.id,
-                owned_by=model.owned_by,
+                id=model["id"],
+                owned_by=model.get("owned_by", "openai"),
                 context_window=None,  # Audio models don't have context windows
                 type="text_to_speech"
             )
-            for model in models
-            if model.id.startswith("tts")
+            for model in models_data["data"]
+            if model["id"].startswith("tts")
         ]
 
     def generate_speech(
@@ -142,15 +167,23 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
-            # Generate speech
-            response = self.client.audio.speech.create(
-                model=self.model_name,
-                voice=voice,
-                input=text,
+            # Prepare request payload
+            payload = {
+                "model": self.model_name,
+                "voice": voice,
+                "input": text,
                 **kwargs
-            )
+            }
 
-            # Get audio data
+            # Generate speech
+            response = self.client.post(
+                f"{self.base_url}/audio/speech",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            # Get audio data (binary content)
             audio_data = response.content
             
             # Save to file if specified
@@ -193,15 +226,23 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
-            # Generate speech
-            response = await self.async_client.audio.speech.create(
-                model=self.model_name,
-                voice=voice,
-                input=text,
+            # Prepare request payload
+            payload = {
+                "model": self.model_name,
+                "voice": voice,
+                "input": text,
                 **kwargs
-            )
+            }
 
-            # Get audio data
+            # Generate speech
+            response = await self.async_client.post(
+                f"{self.base_url}/audio/speech",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            # Get audio data (binary content)
             audio_data = response.content
             
             # Save to file if specified
