@@ -1,7 +1,9 @@
 """Google GenAI language model provider."""
 
-import datetime
+import json
 import os
+import time
+import uuid
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,7 +15,7 @@ from typing import (
     Union,
 )
 
-from google import genai
+import httpx
 
 from esperanto.common_types import (
     ChatCompletion,
@@ -28,14 +30,14 @@ from esperanto.common_types import (
 from esperanto.providers.llm.base import LanguageModel
 
 if TYPE_CHECKING:
-    from langchain_core.language_models.chat_models import BaseChatModel
+    pass  # Removed unused import
 
 
 class GoogleLanguageModel(LanguageModel):
     """Google GenAI language model implementation."""
 
     def __post_init__(self):
-        """Initialize Google client."""
+        """Initialize HTTP clients."""
         super().__post_init__()
 
         # Get API key
@@ -47,25 +49,59 @@ class GoogleLanguageModel(LanguageModel):
                 "Google API key not found. Please set GOOGLE_API_KEY environment variable."
             )
 
-        # Initialize model
-        self.model_name = self.model_name or self._get_default_model()
-        self._client = genai.Client(api_key=self.api_key)
+        # Set base URL
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+
+        # Initialize HTTP clients
+        self.client = httpx.Client(timeout=30.0)
+        self.async_client = httpx.AsyncClient(timeout=30.0)
+        
         self._langchain_model = None
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers for Google API requests."""
+        return {
+            "Content-Type": "application/json",
+        }
+
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Handle HTTP error responses."""
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"Google API error: {error_message}")
 
     @property
     def models(self) -> List[Model]:
         """List all available models for this provider."""
-        models_list = list(self._client.models.list())
-        return [
-            Model(
-                id=getattr(model, "name", str(model)).split("/")[-1],
-                owned_by="Google",
-                context_window=getattr(model, "input_token_limit", None),
-                type="language",
+        try:
+            response = self.client.get(
+                f"{self.base_url}/models?key={self.api_key}",
+                headers=self._get_headers()
             )
-            for model in models_list
-            if hasattr(model, "supported_generation_methods") and "generateContent" in model.supported_generation_methods
-        ]
+            self._handle_error(response)
+            
+            models_data = response.json()
+            return [
+                Model(
+                    id=model["name"].split("/")[-1],
+                    owned_by="Google",
+                    context_window=model.get("inputTokenLimit"),
+                    type="language",
+                )
+                for model in models_data.get("models", [])
+                if "generateContent" in model.get("supportedGenerationMethods", [])
+            ]
+        except Exception:
+            # Fallback to known models if API call fails
+            return [
+                Model(id="gemini-2.0-flash", owned_by="Google", context_window=1000000, type="language"),
+                Model(id="gemini-1.5-pro", owned_by="Google", context_window=2000000, type="language"),
+                Model(id="gemini-1.5-flash", owned_by="Google", context_window=1000000, type="language"),
+            ]
 
     @property
     def provider(self) -> str:
@@ -78,9 +114,9 @@ class GoogleLanguageModel(LanguageModel):
         Returns:
             str: The default model name.
         """
-        return "gemini-1.5-pro"
+        return "gemini-2.0-flash"
 
-    def to_langchain(self) -> "BaseChatModel":
+    def to_langchain(self):
         """Convert to a LangChain chat model.
 
         Returns:
@@ -113,44 +149,87 @@ class GoogleLanguageModel(LanguageModel):
             )
         return self._langchain_model
 
-    def _format_messages(self, messages: List[Dict[str, str]]):
+    def _format_messages(self, messages: List[Dict[str, str]]) -> tuple:
         """Return (formatted_messages, system_instruction) tuple.
-        - formatted_messages: list of Content with only user/model roles
-        - system_instruction: str or None
+        - formatted_messages: list of message dicts with only user/model roles
+        - system_instruction: dict or None
         """
-        from google.genai import types
         formatted = []
         system_instruction = None
+        
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
+            
             if role == "system":
                 # Only the first system message is used
                 if system_instruction is None:
-                    system_instruction = content
+                    system_instruction = {
+                        "parts": [{"text": content}]
+                    }
             elif role == "user":
-                formatted.append(types.Content(role="user", parts=[types.Part.from_text(text=content)]))
+                formatted.append({
+                    "role": "user",
+                    "parts": [{"text": content}]
+                })
             elif role == "assistant":
-                formatted.append(types.Content(role="model", parts=[types.Part.from_text(text=content)]))
+                formatted.append({
+                    "role": "model", 
+                    "parts": [{"text": content}]
+                })
+        
         return formatted, system_instruction
 
-    def _create_generation_config(self, system_instruction=None) -> Any:
-        """Create generation config for Google, optionally with system_instruction."""
-        from google.genai import types
-        config = types.GenerateContentConfig(
-            temperature=self.temperature,
-            top_p=self.top_p,
-            max_output_tokens=self.max_tokens if self.max_tokens else None,
-        )
-        if system_instruction:
-            config.system_instruction = system_instruction
+    def _create_generation_config(self) -> Dict[str, Any]:
+        """Create generation config for Google API."""
+        config = {
+            "temperature": float(self.temperature),
+            "topP": float(self.top_p),
+        }
+        
+        if self.max_tokens:
+            config["maxOutputTokens"] = int(self.max_tokens)
+            
         if self.structured:
             if not isinstance(self.structured, dict):
                 raise TypeError("structured parameter must be a dictionary")
             structured_type = self.structured.get("type")
             if structured_type in ["json", "json_object"]:
-                config.response_mime_type = "application/json"
+                config["responseMimeType"] = "application/json"
+                
         return config
+
+    def _parse_sse_stream(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
+        """Parse Server-Sent Events stream from Google chat completions."""
+        for chunk in response.iter_text():
+            for line in chunk.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("data: "):
+                    data = line[6:]  # Remove "data: " prefix
+                    if data.strip() == "[DONE]":
+                        break
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+
+    async def _parse_sse_stream_async(self, response: httpx.Response) -> AsyncGenerator[Dict[str, Any], None]:
+        """Parse Server-Sent Events stream from Google chat completions asynchronously."""
+        async for chunk in response.aiter_text():
+            for line in chunk.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("data: "):
+                    data = line[6:]  # Remove "data: " prefix
+                    if data.strip() == "[DONE]":
+                        return
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
 
     def chat_complete(
         self,
@@ -166,69 +245,99 @@ class GoogleLanguageModel(LanguageModel):
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks if streaming
         """
+        should_stream = stream if stream is not None else self.streaming
         formatted_messages, system_instruction = self._format_messages(messages)
-        stream = stream if stream is not None else self.streaming
-        if stream:
-            return self._stream_response(formatted_messages, system_instruction)
-        response = self._client.models.generate_content(
-            model=self.model_name,
-            contents=formatted_messages,
-            config=self._create_generation_config(system_instruction),
+        
+        # Prepare request payload
+        payload = {
+            "contents": formatted_messages,
+            "generationConfig": self._create_generation_config(),
+        }
+        
+        if system_instruction:
+            payload["system_instruction"] = system_instruction
+
+        model_name = self.get_model_name()
+        if should_stream:
+            endpoint = "streamGenerateContent"
+            url = f"{self.base_url}/models/{model_name}:{endpoint}?alt=sse&key={self.api_key}"
+        else:
+            endpoint = "generateContent"
+            url = f"{self.base_url}/models/{model_name}:{endpoint}?key={self.api_key}"
+        
+        # Make HTTP request
+        response = self.client.post(
+            url,
+            headers=self._get_headers(),
+            json=payload
         )
-        candidate = response.candidates[0]
-        text = candidate.content.parts[0].text.strip()
-        finish_reason = (
-            "stop" if getattr(candidate, "finish_reason", None) == "STOP" else getattr(candidate, "finish_reason", None)
-        )
+        self._handle_error(response)
+
+        if should_stream:
+            def generate():
+                for chunk_data in self._parse_sse_stream(response):
+                    chunk = self._normalize_chunk(chunk_data)
+                    if chunk:  # Only yield if chunk is not None
+                        yield chunk
+            return generate()
+        
+        response_data = response.json()
+        return self._normalize_response(response_data)
+
+    def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
+        """Normalize Google response to our format."""
+        candidate = response_data["candidates"][0]
+        content = candidate["content"]
+        text = content["parts"][0]["text"]
+        
+        finish_reason = "stop"
+        if "finishReason" in candidate:
+            finish_reason = candidate["finishReason"].lower()
+            if finish_reason == "stop":
+                finish_reason = "stop"
+        
         return ChatCompletion(
-            id=f"google-{str(hash(str(messages)))}",
+            id=str(uuid.uuid4()),
             choices=[
                 Choice(
                     index=0,
                     message=Message(role="assistant", content=text),
-                    finish_reason=finish_reason or "stop",
+                    finish_reason=finish_reason,
                 )
             ],
-            created=int(datetime.datetime.now().timestamp()),
-            model=self.model_name or self._get_default_model(),
+            created=int(time.time()),
+            model=self.get_model_name(),
             provider=self.provider,
-            usage=Usage(completion_tokens=0, prompt_tokens=0, total_tokens=0),
+            usage=Usage(
+                completion_tokens=response_data.get("usageMetadata", {}).get("candidatesTokenCount", 0),
+                prompt_tokens=response_data.get("usageMetadata", {}).get("promptTokenCount", 0),
+                total_tokens=response_data.get("usageMetadata", {}).get("totalTokenCount", 0),
+            ),
         )
 
-    def _stream_response(
-        self, formatted_messages: list, system_instruction=None
-    ) -> Generator[ChatCompletionChunk, None, None]:
-        """Stream response from Google.
-
-        Args:
-            formatted_messages: List of types.Content messages
-            system_instruction: Optional system instruction string
-
-        Returns:
-            ChatCompletionChunk objects
-        """
-        response_stream = self._client.models.generate_content_stream(
-            model=self.model_name,
-            contents=formatted_messages,
-            config=self._create_generation_config(system_instruction),
+    def _normalize_chunk(self, chunk_data: Dict[str, Any]) -> Optional[ChatCompletionChunk]:
+        """Normalize Google stream chunk to our format."""
+        if "candidates" not in chunk_data or not chunk_data["candidates"]:
+            return None
+            
+        candidate = chunk_data["candidates"][0]
+        if "content" not in candidate or "parts" not in candidate["content"]:
+            return None
+            
+        text = candidate["content"]["parts"][0].get("text", "")
+        
+        return ChatCompletionChunk(
+            id=str(uuid.uuid4()),
+            choices=[
+                StreamChoice(
+                    index=0,
+                    delta=DeltaMessage(role="assistant", content=text),
+                    finish_reason=candidate.get("finishReason", "stop").lower() if "finishReason" in candidate else None,
+                )
+            ],
+            model=self.get_model_name(),
+            created=int(time.time()),
         )
-        for chunk in response_stream:
-            candidate = chunk.candidates[0]
-            text = candidate.content.parts[0].text.strip() if candidate.content.parts else ""
-            if not text:
-                continue
-            yield ChatCompletionChunk(
-                id=f"google-chunk-{str(hash(str(formatted_messages)))}",
-                choices=[
-                    StreamChoice(
-                        index=0,
-                        delta=DeltaMessage(role="assistant", content=text),
-                        finish_reason=None,
-                    )
-                ],
-                model=self.model_name or self._get_default_model(),
-                created=int(datetime.datetime.now().timestamp()),
-            )
 
     async def achat_complete(
         self,
@@ -244,54 +353,42 @@ class GoogleLanguageModel(LanguageModel):
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks if streaming
         """
+        should_stream = stream if stream is not None else self.streaming
         formatted_messages, system_instruction = self._format_messages(messages)
-        stream = stream if stream is not None else self.streaming
+        
+        # Prepare request payload
+        payload = {
+            "contents": formatted_messages,
+            "generationConfig": self._create_generation_config(),
+        }
+        
+        if system_instruction:
+            payload["system_instruction"] = system_instruction
 
-        if stream:
-            async def astream_response():
-                async for chunk in await self._client.aio.models.generate_content_stream(
-                    model=self.model_name,
-                    contents=formatted_messages,
-                    config=self._create_generation_config(system_instruction),
-                ):
-                    candidate = chunk.candidates[0]
-                    text = candidate.content.parts[0].text.strip() if candidate.content.parts else ""
-                    if not text:
-                        continue
-                    yield ChatCompletionChunk(
-                        id=f"google-chunk-{str(hash(str(formatted_messages)))}",
-                        choices=[
-                            StreamChoice(
-                                index=0,
-                                delta=DeltaMessage(
-                                    role="assistant", content=text
-                                ),
-                                finish_reason=None,
-                            )
-                        ],
-                        model=self.model_name,
-                        created=int(datetime.datetime.now().timestamp()),
-                    )
-            return astream_response()
-        response = await self._client.aio.models.generate_content(
-            model=self.model_name,
-            contents=formatted_messages,
-            config=self._create_generation_config(system_instruction),
+        model_name = self.get_model_name()
+        if should_stream:
+            endpoint = "streamGenerateContent"
+            url = f"{self.base_url}/models/{model_name}:{endpoint}?alt=sse&key={self.api_key}"
+        else:
+            endpoint = "generateContent"
+            url = f"{self.base_url}/models/{model_name}:{endpoint}?key={self.api_key}"
+        
+        # Make async HTTP request
+        response = await self.async_client.post(
+            url,
+            headers=self._get_headers(),
+            json=payload
         )
-        candidate = response.candidates[0]
-        text = candidate.content.parts[0].text.strip()
-        finish_reason = (
-            "stop" if getattr(candidate, "finish_reason", None) == "STOP" else getattr(candidate, "finish_reason", None)
-        )
-        return ChatCompletion(
-            id="google-" + str(hash(str(messages))),
-            choices=[
-                Choice(
-                    index=0,
-                    message=Message(role="assistant", content=text),
-                    finish_reason=finish_reason,
-                )
-            ],
-            model=self.model_name or self._get_default_model(),
-            provider=self.provider,
-        )
+        self._handle_error(response)
+
+        if should_stream:
+            async def generate():
+                async for chunk_data in self._parse_sse_stream_async(response):
+                    chunk = self._normalize_chunk(chunk_data)
+                    if chunk:  # Only yield if chunk is not None
+                        yield chunk
+
+            return generate()
+        
+        response_data = response.json()
+        return self._normalize_response(response_data)
