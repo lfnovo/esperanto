@@ -13,7 +13,9 @@ class Voice(BaseModel):
     name: str = Field(description="Display name of the voice")
     id: str = Field(description="Unique identifier for the voice")
     gender: str = Field(description="Gender of the voice (e.g., 'FEMALE', 'MALE')")
-    language_code: str = Field(description="Language code (e.g., 'en-US')")
+    language_code: Optional[str] = Field(
+        default=None, description="Language code (e.g., 'en-US')"
+    )
     description: Optional[str] = Field(
         default=None, description="Description of the voice"
     )
