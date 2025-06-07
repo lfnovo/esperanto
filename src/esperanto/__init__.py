@@ -70,6 +70,11 @@ try:
 except ImportError:
     DeepSeekLanguageModel = None
 
+try:
+    from esperanto.providers.llm.groq import GroqLanguageModel
+except ImportError:
+    GroqLanguageModel = None
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
@@ -82,7 +87,9 @@ __provider_classes = {
     "OllamaEmbeddingModel": OllamaEmbeddingModel,
     "OllamaLanguageModel": OllamaLanguageModel,
     "AzureLanguageModel": AzureLanguageModel,
-    "MistralLanguageModel": MistralLanguageModel
+    "MistralLanguageModel": MistralLanguageModel,
+    "DeepSeekLanguageModel": DeepSeekLanguageModel,
+    "GroqLanguageModel": GroqLanguageModel
 }
 
 # Get list of available provider classes (excluding None values)
