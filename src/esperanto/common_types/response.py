@@ -25,15 +25,6 @@ class Usage(BaseModel):
     )
     total_tokens: int = Field(description="Total number of tokens used", ge=0)
 
-    @model_validator(mode="after")
-    def validate_total_tokens(self) -> "Usage":
-        """Validate that total_tokens equals prompt_tokens + completion_tokens."""
-        if self.total_tokens != self.prompt_tokens + self.completion_tokens:
-            raise ValueError(
-                f"total_tokens ({self.total_tokens}) must equal prompt_tokens + completion_tokens ({self.prompt_tokens + self.completion_tokens})"
-            )
-        return self
-
     model_config = ConfigDict(frozen=True)
 
 
