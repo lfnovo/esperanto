@@ -44,6 +44,7 @@ class AIFactory:
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
             "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
+            "elevenlabs": "esperanto.providers.stt.elevenlabs:ElevenLabsSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
