@@ -75,6 +75,21 @@ try:
 except ImportError:
     GroqLanguageModel = None
 
+try:
+    from esperanto.providers.embedding.vertex import VertexEmbeddingModel
+except ImportError:
+    VertexEmbeddingModel = None
+
+try:
+    from esperanto.providers.llm.vertex import VertexLanguageModel
+except ImportError:
+    VertexLanguageModel = None
+
+try:
+    from esperanto.providers.tts.vertex import VertexTextToSpeechModel
+except ImportError:
+    VertexTextToSpeechModel = None
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
@@ -89,7 +104,10 @@ __provider_classes = {
     "AzureLanguageModel": AzureLanguageModel,
     "MistralLanguageModel": MistralLanguageModel,
     "DeepSeekLanguageModel": DeepSeekLanguageModel,
-    "GroqLanguageModel": GroqLanguageModel
+    "GroqLanguageModel": GroqLanguageModel,
+    "VertexLanguageModel": VertexLanguageModel,
+    "VertexEmbeddingModel": VertexEmbeddingModel,
+    "VertexTextToSpeechModel": VertexTextToSpeechModel
 }
 
 # Get list of available provider classes (excluding None values)

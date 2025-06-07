@@ -50,6 +50,7 @@ class AIFactory:
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
             "elevenlabs": "esperanto.providers.tts.elevenlabs:ElevenLabsTextToSpeechModel",
             "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
+            "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
         },
     }
 
