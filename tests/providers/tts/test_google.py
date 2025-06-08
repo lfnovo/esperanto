@@ -1,55 +1,22 @@
 """Tests for the Google TTS provider."""
 import base64
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
 
 from esperanto.providers.tts.google import GoogleTextToSpeechModel
 
 
-@pytest.fixture
-def mock_google_client(mocker):
-    """Mock the Google Cloud TTS client."""
-    mock = mocker.patch("google.cloud.texttospeech.TextToSpeechClient", autospec=True)
-    return mock
-
-
-@pytest.fixture
-def mock_async_google_client(mocker):
-    """Mock the Google Cloud TTS async client."""
-    mock = mocker.patch("google.cloud.texttospeech.TextToSpeechAsyncClient", autospec=True)
-    return mock
-
-
-@pytest.fixture
-def tts_model(mock_google_client, mock_async_google_client):
-    """Create a TTS model instance with mocked clients."""
-    mock_credentials = MagicMock()
-    mock_credentials.before_request = MagicMock()
-
-    model = GoogleTextToSpeechModel(
-        model_name="en-US-Standard-A",
-        api_key=None,
-        base_url=None,
-        config={"credentials": mock_credentials}
-    )
-
-    # Mock the clients to avoid actual API calls
-    model.client = mock_google_client.return_value
-    model.async_client = mock_async_google_client.return_value
-
-    return model
-
-
-def test_init(tts_model):
+def test_init():
     """Test model initialization."""
-    assert tts_model.model_name == "en-US-Standard-A"
-    assert tts_model.provider == "google"
+    model = GoogleTextToSpeechModel(api_key="test-key")
+    assert model.provider == "google"
 
 
 def test_generate_speech():
     """Test synchronous speech generation with httpx mocking."""
     from unittest.mock import Mock
+
     from esperanto.providers.tts.google import GoogleTextToSpeechModel
     
     # Create fresh model instance
@@ -97,7 +64,8 @@ def test_generate_speech():
 @pytest.mark.asyncio
 async def test_agenerate_speech():
     """Test asynchronous speech generation with httpx mocking."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import AsyncMock, Mock
+
     from esperanto.providers.tts.google import GoogleTextToSpeechModel
     
     # Create fresh model instance
