@@ -26,22 +26,12 @@ def test_client_properties(groq_model):
     assert groq_model.client is not None
     assert groq_model.async_client is not None
 
-    # Verify clients have expected chat attribute
-    assert hasattr(groq_model.client, "chat")
-    assert hasattr(groq_model.async_client, "chat")
-
-    # Verify chat attribute has expected completions method
-    assert hasattr(groq_model.client.chat, "completions")
-    assert hasattr(groq_model.async_client.chat, "completions")
-
-    # Verify completions has create method
-    assert hasattr(groq_model.client.chat.completions, "create")
-    assert hasattr(groq_model.async_client.chat.completions, "create")
-
-    # Verify async client's create method is an AsyncMock
-    from unittest.mock import AsyncMock
-
-    assert isinstance(groq_model.async_client.chat.completions.create, AsyncMock)
+    # Verify clients have expected HTTP methods (httpx)
+    assert hasattr(groq_model.client, "post")
+    assert hasattr(groq_model.async_client, "post")
+    
+    # Verify API key is set
+    assert groq_model.api_key == "test-key"
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
@@ -73,13 +63,21 @@ def test_chat_complete(groq_model):
     response = groq_model.chat_complete(messages)
 
     # Verify the client was called with correct parameters
-    groq_model.client.chat.completions.create.assert_called_once()
-    call_kwargs = groq_model.client.chat.completions.create.call_args[1]
-
-    assert call_kwargs["messages"] == messages
-    assert call_kwargs["model"] == "mixtral-8x7b-32768"
-    assert call_kwargs["temperature"] == 1.0
-    assert not call_kwargs["stream"]
+    groq_model.client.post.assert_called_once()
+    call_args = groq_model.client.post.call_args
+    
+    # Check URL
+    assert call_args[0][0] == "https://api.groq.com/openai/v1/chat/completions"
+    
+    # Check request payload
+    json_payload = call_args[1]["json"]
+    assert json_payload["messages"] == messages
+    assert json_payload["model"] == "mixtral-8x7b-32768"
+    assert json_payload["temperature"] == 1.0
+    assert not json_payload["stream"]
+    
+    # Check response
+    assert response.choices[0].message.content == "Test response"
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
@@ -92,13 +90,21 @@ async def test_achat_complete(groq_model):
     response = await groq_model.achat_complete(messages)
 
     # Verify the async client was called with correct parameters
-    groq_model.async_client.chat.completions.create.assert_called_once()
-    call_kwargs = groq_model.async_client.chat.completions.create.call_args[1]
-
-    assert call_kwargs["messages"] == messages
-    assert call_kwargs["model"] == "mixtral-8x7b-32768"
-    assert call_kwargs["temperature"] == 1.0
-    assert not call_kwargs["stream"]
+    groq_model.async_client.post.assert_called_once()
+    call_args = groq_model.async_client.post.call_args
+    
+    # Check URL
+    assert call_args[0][0] == "https://api.groq.com/openai/v1/chat/completions"
+    
+    # Check request payload
+    json_payload = call_args[1]["json"]
+    assert json_payload["messages"] == messages
+    assert json_payload["model"] == "mixtral-8x7b-32768"
+    assert json_payload["temperature"] == 1.0
+    assert not json_payload["stream"]
+    
+    # Check response
+    assert response.choices[0].message.content == "Test response"
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")

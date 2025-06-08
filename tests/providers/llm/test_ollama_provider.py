@@ -84,70 +84,157 @@ def test_ollama_initialization_with_env_var():
         assert model.base_url == "http://env:11434"
 
 
-def test_ollama_chat_complete(ollama_model, mock_ollama_response):
-    """Test chat completion."""
-    with patch.object(ollama_model.client, "chat") as mock_chat:
-        mock_chat.return_value = mock_ollama_response
-        messages = [{"role": "user", "content": "Hello"}]
-        completion = ollama_model.chat_complete(messages)
+def test_ollama_chat_complete():
+    """Test chat completion with httpx mocking."""
+    from unittest.mock import Mock
+    from esperanto.providers.llm.ollama import OllamaLanguageModel
+    
+    # Create fresh model instance
+    model = OllamaLanguageModel(model_name="gemma2")
+    
+    messages = [{"role": "user", "content": "Hello"}]
 
-        assert isinstance(completion, ChatCompletion)
-        assert completion.content == "Test response"
-        assert completion.model == "gemma2"
-        assert completion.provider == "ollama"
+    # Mock Ollama API response data
+    mock_response_data = {
+        "model": "gemma2",
+        "created_at": "2024-01-01T00:00:00Z",
+        "message": {
+            "role": "assistant",
+            "content": "Test response"
+        },
+        "done": True,
+        "total_duration": 1000000000,
+        "load_duration": 500000000,
+        "prompt_eval_count": 10,
+        "prompt_eval_duration": 100000000,
+        "eval_count": 5,
+        "eval_duration": 200000000
+    }
+    
+    # Mock HTTP response
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_response_data
+    
+    # Mock the client
+    mock_client = Mock()
+    mock_client.post.return_value = mock_response
+    model.client = mock_client
+
+    completion = model.chat_complete(messages)
+
+    assert completion.choices[0].message.content == "Test response"
+    assert completion.model == "gemma2"
+    assert completion.provider == "ollama"
 
 
-def test_ollama_chat_complete_streaming(ollama_model, mock_ollama_stream_response):
-    """Test streaming chat completion."""
-    with patch.object(ollama_model.client, "chat") as mock_chat:
-        mock_chat.return_value = iter(mock_ollama_stream_response)
+def test_ollama_chat_complete_streaming():
+    """Test streaming chat completion with httpx mocking."""
+    from unittest.mock import Mock
+    from esperanto.providers.llm.ollama import OllamaLanguageModel
+    
+    # Create fresh model instance
+    model = OllamaLanguageModel(model_name="gemma2")
+    
+    messages = [{"role": "user", "content": "Hello"}]
 
-        messages = [{"role": "user", "content": "Hello"}]
-        stream = ollama_model.chat_complete(messages, stream=True)
+    # Mock Ollama streaming response - multiple JSONL responses
+    stream_data = [
+        '{"model":"gemma2","created_at":"2024-01-01T00:00:00Z","message":{"role":"assistant","content":"Test"},"done":false}\n',
+        '{"model":"gemma2","created_at":"2024-01-01T00:00:00Z","message":{"role":"assistant","content":" response"},"done":false}\n',
+        '{"model":"gemma2","created_at":"2024-01-01T00:00:00Z","message":{"role":"assistant","content":""},"done":true}\n'
+    ]
+    
+    # Mock HTTP response for streaming
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.iter_lines.return_value = stream_data
+    
+    # Mock the client
+    mock_client = Mock()
+    mock_client.post.return_value = mock_response
+    model.client = mock_client
 
-        chunks = list(stream)
-        assert len(chunks) > 0
-        assert all(isinstance(chunk, ChatCompletionChunk) for chunk in chunks)
-        assert chunks[0].choices[0].delta.content == "Test"
+    stream = model.chat_complete(messages, stream=True)
+    chunks = list(stream)
+    
+    assert len(chunks) > 0
+    assert chunks[0].choices[0].delta.content == "Test"
 
 
 @pytest.mark.asyncio
-async def test_ollama_achat_complete(ollama_model, mock_ollama_response):
-    """Test async chat completion."""
-    with patch.object(ollama_model.async_client, "chat") as mock_chat:
-        mock_chat.return_value = mock_ollama_response
-        messages = [{"role": "user", "content": "Hello"}]
-        completion = await ollama_model.achat_complete(messages)
+async def test_ollama_achat_complete():
+    """Test async chat completion with httpx mocking."""
+    from unittest.mock import Mock, AsyncMock
+    from esperanto.providers.llm.ollama import OllamaLanguageModel
+    
+    # Create fresh model instance
+    model = OllamaLanguageModel(model_name="gemma2")
+    
+    messages = [{"role": "user", "content": "Hello"}]
 
-        assert isinstance(completion, ChatCompletion)
-        assert completion.content == "Test response"
-        assert completion.model == "gemma2"
-        assert completion.provider == "ollama"
+    # Mock Ollama API response data
+    mock_response_data = {
+        "model": "gemma2",
+        "created_at": "2024-01-01T00:00:00Z",
+        "message": {
+            "role": "assistant",
+            "content": "Test response"
+        },
+        "done": True
+    }
+    
+    # Mock HTTP response
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_response_data
+    
+    # Mock the async client
+    mock_async_client = AsyncMock()
+    mock_async_client.post.return_value = mock_response
+    model.async_client = mock_async_client
+
+    completion = await model.achat_complete(messages)
+
+    assert completion.choices[0].message.content == "Test response"
+    assert completion.model == "gemma2"
+    assert completion.provider == "ollama"
 
 
 @pytest.mark.asyncio
-async def test_ollama_achat_complete_streaming(
-    ollama_model, mock_ollama_stream_response
-):
-    """Test async streaming chat completion."""
+async def test_ollama_achat_complete_streaming():
+    """Test async streaming chat completion with httpx mocking."""
+    from unittest.mock import Mock, AsyncMock
+    from esperanto.providers.llm.ollama import OllamaLanguageModel
+    
+    # Create fresh model instance
+    model = OllamaLanguageModel(model_name="gemma2")
+    
+    messages = [{"role": "user", "content": "Hello"}]
 
-    async def mock_async_generator():
-        for chunk in mock_ollama_stream_response:
-            yield chunk
+    # Mock Ollama streaming response - multiple JSONL responses
+    async def mock_aiter_lines():
+        yield '{"model":"gemma2","created_at":"2024-01-01T00:00:00Z","message":{"role":"assistant","content":"Test"},"done":false}\n'
+        yield '{"model":"gemma2","created_at":"2024-01-01T00:00:00Z","message":{"role":"assistant","content":" response"},"done":false}\n'
+        yield '{"model":"gemma2","created_at":"2024-01-01T00:00:00Z","message":{"role":"assistant","content":""},"done":true}\n'
+    
+    # Mock HTTP response for streaming
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.aiter_lines = mock_aiter_lines
+    
+    # Mock the async client
+    mock_async_client = AsyncMock()
+    mock_async_client.post.return_value = mock_response
+    model.async_client = mock_async_client
 
-    with patch.object(ollama_model.async_client, "chat") as mock_chat:
-        mock_chat.return_value = mock_async_generator()
+    stream = await model.achat_complete(messages, stream=True)
+    chunks = []
+    async for chunk in stream:
+        chunks.append(chunk)
 
-        messages = [{"role": "user", "content": "Hello"}]
-        stream = await ollama_model.achat_complete(messages, stream=True)
-
-        chunks = []
-        async for chunk in stream:
-            chunks.append(chunk)
-
-        assert len(chunks) > 0
-        assert all(isinstance(chunk, ChatCompletionChunk) for chunk in chunks)
-        assert chunks[0].choices[0].delta.content == "Test"
+    assert len(chunks) > 0
+    assert chunks[0].choices[0].delta.content == "Test"
 
 
 def test_ollama_to_langchain(ollama_model):
@@ -159,17 +246,49 @@ def test_ollama_to_langchain(ollama_model):
     assert langchain_model.model == "gemma2"
 
 
-def test_ollama_chat_complete_with_system_message(ollama_model, mock_ollama_response):
-    """Test chat completion with system message."""
-    with patch.object(ollama_model.client, "chat") as mock_chat:
-        mock_chat.return_value = mock_ollama_response
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": "Hello"},
-        ]
-        completion = ollama_model.chat_complete(messages)
-        assert isinstance(completion, ChatCompletion)
-        assert completion.content == "Test response"
+def test_ollama_chat_complete_with_system_message():
+    """Test chat completion with system message using httpx mocking."""
+    from unittest.mock import Mock
+    from esperanto.providers.llm.ollama import OllamaLanguageModel
+    
+    # Create fresh model instance
+    model = OllamaLanguageModel(model_name="gemma2")
+    
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "Hello"},
+    ]
+
+    # Mock Ollama API response data
+    mock_response_data = {
+        "model": "gemma2",
+        "created_at": "2024-01-01T00:00:00Z",
+        "message": {
+            "role": "assistant",
+            "content": "Test response"
+        },
+        "done": True,
+        "context": [],
+        "total_duration": 100000000,
+        "load_duration": 10000000,
+        "prompt_eval_duration": 50000000,
+        "eval_duration": 40000000,
+        "eval_count": 10,
+    }
+    
+    # Mock HTTP response
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_response_data
+    
+    # Mock the client
+    mock_client = Mock()
+    mock_client.post.return_value = mock_response
+    model.client = mock_client
+
+    completion = model.chat_complete(messages)
+    assert isinstance(completion, ChatCompletion)
+    assert completion.choices[0].message.content == "Test response"
 
 
 def test_ollama_chat_complete_with_invalid_messages():

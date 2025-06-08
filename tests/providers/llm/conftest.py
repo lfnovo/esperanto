@@ -36,64 +36,72 @@ def mock_openai_response():
 
 @pytest.fixture
 def openai_model():
-    with (
-        patch("openai.OpenAI") as mock_openai,
-        patch("openai.AsyncOpenAI") as mock_async_openai,
-    ):
-
-        # Create mock response
+    """Create OpenAILanguageModel with mocked HTTP client."""
+    model = OpenAILanguageModel(api_key="test-key")
+    
+    # Mock the HTTP clients
+    mock_client = MagicMock()
+    mock_async_client = AsyncMock()
+    
+    # Create mock HTTP response data
+    mock_response_data = {
+        "id": "chatcmpl-123",
+        "created": 1677858242,
+        "model": "gpt-4",
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "content": "Test response",
+                    "role": "assistant"
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 20,
+            "total_tokens": 30
+        }
+    }
+    
+    def mock_post_side_effect(url, **kwargs):
         mock_response = MagicMock()
-        mock_response.id = "chatcmpl-123"
-        mock_response.created = 1677858242
-        mock_response.model = "gpt-4"
-        mock_response.object = "chat.completion"
-
-        mock_message = MagicMock()
-        mock_message.content = "Test response"
-        mock_message.role = "assistant"
-        mock_message.function_call = None
-        mock_message.tool_calls = None
-
-        mock_choice = MagicMock()
-        mock_choice.index = 0
-        mock_choice.message = mock_message
-        mock_choice.finish_reason = "stop"
-        mock_choice.logprobs = None
-
-        mock_response.choices = [mock_choice]
-
-        mock_usage = MagicMock()
-        mock_usage.completion_tokens = 10
-        mock_usage.prompt_tokens = 20
-        mock_usage.total_tokens = 30
-        mock_response.usage = mock_usage
-
-        # Mock the sync client
-        mock_chat = MagicMock()
-        mock_chat.completions = MagicMock()
-        mock_chat.completions.create = MagicMock(return_value=mock_response)
-
-        mock_sync_instance = MagicMock()
-        mock_sync_instance.chat = mock_chat
-        mock_openai.return_value = mock_sync_instance
-
-        # Mock the async client
-        mock_async_chat = MagicMock()
-        mock_async_chat.completions = MagicMock()
-        mock_async_chat.completions.create = AsyncMock(return_value=mock_response)
-
-        mock_async_instance = MagicMock()
-        mock_async_instance.chat = mock_async_chat
-        mock_async_openai.return_value = mock_async_instance
-
-        # Create the model with a test API key
-        model = OpenAILanguageModel(api_key="test-key")
-
-        # Replace the actual clients with our mocked ones
-        model.client = mock_sync_instance
-        model.async_client = mock_async_instance
-
-        yield model
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+        # Add streaming capability
+        mock_response.iter_text = MagicMock(return_value=iter([
+            'data: {"choices":[{"delta":{"content":"Test"},"index":0}]}\n',
+            'data: [DONE]\n'
+        ]))
+        return mock_response
+    
+    async def mock_async_post_side_effect(url, **kwargs):
+        mock_response = MagicMock()  # Use regular Mock, not AsyncMock
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+        # Add async streaming capability
+        async def async_iter():
+            yield 'data: {"choices":[{"delta":{"content":"Test"},"index":0}]}\n'
+            yield 'data: [DONE]\n'
+        mock_response.aiter_text = MagicMock(return_value=async_iter())
+        return mock_response
+    
+    def mock_get_side_effect(url, **kwargs):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "gpt-4", "owned_by": "openai"}]}
+        return mock_response
+    
+    mock_client.post.side_effect = mock_post_side_effect
+    mock_client.get.side_effect = mock_get_side_effect
+    mock_async_client.post.side_effect = mock_async_post_side_effect
+    
+    model.client = mock_client
+    model.async_client = mock_async_client
+    
+    yield model
 
 
 @pytest.fixture
@@ -180,58 +188,52 @@ def mock_groq_response():
 
 @pytest.fixture
 def groq_model():
-    with patch("groq.Groq") as mock_groq, patch("groq.AsyncGroq") as mock_async_groq:
-
-        # Create mock response
+    """Create GroqLanguageModel with mocked HTTP client."""
+    model = GroqLanguageModel(api_key="test-key")
+    
+    # Mock the HTTP clients
+    mock_client = MagicMock()
+    mock_async_client = AsyncMock()
+    
+    # Create mock HTTP response data
+    mock_response_data = {
+        "id": "chatcmpl-123",
+        "created": 1677858242,
+        "model": "mixtral-8x7b-32768",
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "content": "Test response",
+                    "role": "assistant"
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 8,
+            "total_tokens": 18
+        }
+    }
+    
+    def mock_post_side_effect(url, **kwargs):
         mock_response = MagicMock()
-        mock_response.id = "chatcmpl-123"
-        mock_response.created = 1677858242
-        mock_response.model = "mixtral-8x7b-32768"
-        mock_response.object = "chat.completion"
-
-        mock_message = MagicMock()
-        mock_message.content = "Test response"
-        mock_message.role = "assistant"
-        mock_message.function_call = None
-        mock_message.tool_calls = None
-
-        mock_choice = MagicMock()
-        mock_choice.index = 0
-        mock_choice.message = mock_message
-        mock_choice.finish_reason = "stop"
-        mock_choice.logprobs = None
-
-        mock_response.choices = [mock_choice]
-
-        mock_usage = MagicMock()
-        mock_usage.completion_tokens = 10
-        mock_usage.prompt_tokens = 8
-        mock_usage.total_tokens = 18
-        mock_response.usage = mock_usage
-
-        # Mock the sync client
-        mock_chat = MagicMock()
-        mock_chat.completions = MagicMock()
-        mock_chat.completions.create = MagicMock(return_value=mock_response)
-
-        mock_sync_instance = MagicMock()
-        mock_sync_instance.chat = mock_chat
-        mock_groq.return_value = mock_sync_instance
-
-        # Mock the async client
-        mock_async_chat = MagicMock()
-        mock_async_chat.completions = MagicMock()
-        mock_async_chat.completions.create = AsyncMock(return_value=mock_response)
-
-        mock_async_instance = MagicMock()
-        mock_async_instance.chat = mock_async_chat
-        mock_async_groq.return_value = mock_async_instance
-
-        # Create the model with a test API key
-        model = GroqLanguageModel(api_key="test-key")
-
-        # Replace the actual clients with our mocked ones
-        model.client = mock_sync_instance
-        model.async_client = mock_async_instance
-
-        yield model
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+        return mock_response
+    
+    async def mock_async_post_side_effect(url, **kwargs):
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = MagicMock(return_value=mock_response_data)
+        return mock_response
+    
+    mock_client.post.side_effect = mock_post_side_effect
+    mock_async_client.post.side_effect = mock_async_post_side_effect
+    
+    model.client = mock_client
+    model.async_client = mock_async_client
+    
+    yield model

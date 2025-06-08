@@ -1,37 +1,68 @@
 import os
+import json
 from unittest.mock import AsyncMock, Mock, patch
 import pytest
+import httpx
 from esperanto.providers.embedding.mistral import MistralEmbeddingModel
 
 @pytest.fixture
-def mock_mistral_embedding_client():
-    client = Mock()
-    async_client = AsyncMock()
-    # Mock embeddings.create to return [] if input is empty, else [[0.1, 0.2, 0.3]]
-    def create_side_effect(model, inputs, **kwargs):
-        if not inputs:
-            return Mock(data=[])
-        embedding_data = Mock()
-        embedding_data.embedding = [0.1, 0.2, 0.3]
-        return Mock(data=[embedding_data])
-    async def create_async_side_effect(model, inputs, **kwargs):
-        if not inputs:
-            return Mock(data=[])
-        embedding_data = Mock()
-        embedding_data.embedding = [0.1, 0.2, 0.3]
-        return Mock(data=[embedding_data])
-    client.embeddings.create.side_effect = create_side_effect
-    async_client.embeddings.create_async.side_effect = create_async_side_effect
-    return client, async_client
+def mock_httpx_response():
+    """Mock httpx response for Mistral API."""
+    def create_response(texts):
+        if not texts:
+            return {
+                "data": [],
+                "object": "list",
+                "usage": {"prompt_tokens": 0, "total_tokens": 0}
+            }
+        return {
+            "data": [
+                {
+                    "object": "embedding",
+                    "index": i,
+                    "embedding": [0.1, 0.2, 0.3]
+                } for i, _ in enumerate(texts)
+            ],
+            "object": "list",
+            "usage": {"prompt_tokens": 5, "total_tokens": 5}
+        }
+    return create_response
 
 @pytest.fixture
-def mistral_embedding_model(monkeypatch, mock_mistral_embedding_client):
-    client, async_client = mock_mistral_embedding_client
-    with patch("esperanto.providers.embedding.mistral.Mistral", return_value=client):
-        model = MistralEmbeddingModel(api_key="test-key", model_name="mistral-embed")
-        model.client = client
-        model.async_client = async_client
-        return model
+def mistral_embedding_model(mock_httpx_response):
+    """Create MistralEmbeddingModel with mocked HTTP client."""
+    model = MistralEmbeddingModel(api_key="test-key", model_name="mistral-embed")
+    
+    # Mock the HTTP clients
+    mock_client = Mock()
+    mock_async_client = AsyncMock()
+    
+    def mock_post(url, **kwargs):
+        json_data = kwargs.get('json', {})
+        texts = json_data.get('input', [])
+        response_data = mock_httpx_response(texts)
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = response_data
+        return mock_response
+    
+    async def mock_async_post(url, **kwargs):
+        json_data = kwargs.get('json', {})
+        texts = json_data.get('input', [])
+        response_data = mock_httpx_response(texts)
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = response_data
+        return mock_response
+    
+    mock_client.post = mock_post
+    mock_async_client.post = mock_async_post
+    
+    model.client = mock_client
+    model.async_client = mock_async_client
+    return model
 
 def test_provider_name(mistral_embedding_model):
     assert mistral_embedding_model.provider == "mistral"
@@ -55,13 +86,10 @@ def test_embed(mistral_embedding_model):
     result = mistral_embedding_model.embed(texts)
     assert result == [[0.1, 0.2, 0.3]]
 
-def test_aembed(mistral_embedding_model):
-    import asyncio
+async def test_aembed(mistral_embedding_model):
     texts = ["Hello world"]
-    async def run():
-        result = await mistral_embedding_model.aembed(texts)
-        assert result == [[0.1, 0.2, 0.3]]
-    asyncio.run(run())
+    result = await mistral_embedding_model.aembed(texts)
+    assert result == [[0.1, 0.2, 0.3]]
 
 def test_embed_empty(mistral_embedding_model):
     texts = []
