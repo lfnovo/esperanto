@@ -49,11 +49,15 @@ class AzureLanguageModel(LanguageModel):
         )
         # self.model_name is the Azure deployment name, set by base class constructor
 
-        # For Azure, we need complete configuration to initialize clients
-        # If any required parameter is missing, skip client initialization
-        # This allows the provider to be instantiated just for models listing
-        if not all([self.api_key, self.azure_endpoint, self.api_version, self.model_name]):
-            return
+        # Validate required parameters and provide specific error messages
+        if not self.api_key:
+            raise ValueError("Azure OpenAI API key not found")
+        if not self.azure_endpoint:
+            raise ValueError("Azure OpenAI endpoint not found")
+        if not self.api_version:
+            raise ValueError("Azure OpenAI API version not found")
+        if not self.model_name:
+            raise ValueError("Azure OpenAI deployment name (model_name) not found")
 
         self.client = AzureOpenAI(
             api_key=self.api_key,

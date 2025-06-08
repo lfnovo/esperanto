@@ -401,5 +401,6 @@ class AnthropicLanguageModel(LanguageModel):
             model=model_name,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            top_p=self.top_p,
             api_key=self.api_key,
         )
