@@ -1,93 +1,30 @@
 [project]
 name = "esperanto"
-version = "1.5.0"
-description = "A unified interface for various AI model providers"
+version = "2.0.0"
+description = "A light-weight, production-ready, unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
 ]
-readme = "README.pypi.md"
+readme = "README.md"
 requires-python = ">=3.9,<3.14"
 license = { text = "MIT" }
-keywords = ["ai", "llm", "text-to-speech", "speech-to-text", "openai", "anthropic", "google", "elevenlabs"]
+keywords = ["ai", "llm", "text-to-speech", "speech-to-text", "openai", "anthropic", "deepseek", "google", "openrouter", "groq", "x.ai", "gemini", "mistral", "transformers",  "elevenlabs"]
 urls.repository = "https://github.com/lfnovo/esperanto"
 urls.homepage = "https://github.com/lfnovo/esperanto"
 urls.documentation = "https://github.com/lfnovo/esperanto#readme"
 
 dependencies = [
-    "python-dotenv>=1.0.1",
-    "requests>=2.31.0",
     "pydantic>=2.0.0",
+    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]
-voyage = ["voyageai>=0.1.4"]
 transformers = [
     "transformers>=4.40.0",
     "torch>=2.2.2",
     "tokenizers>=0.15.2",
 ]
-openai = ["openai>=1.55.1"]
-azure = ["openai>=1.55.1"]
-xai = ["openai>=1.55.1"]
-openrouter = ["openai>=1.55.1"]
-deepseek = ["openai>=1.55.1"]
-anthropic = ["anthropic>=0.39.0"]
-google = [
-    "google-genai>=1.8.0",
-    "google-cloud-texttospeech>=2.14.0",
-]
-vertex = ["vertexai>=1.71.1", "google-genai>=1.8.0"]
-groq = ["groq>=0.12.0"]
-ollama = ["ollama>=0.4.1"]
-elevenlabs = ["elevenlabs>=0.3.0"]
-mistral = ["mistralai>=1.8.0"]
-langchain = [
-    "langchain>=0.3.8,<0.4.0",
-    "langchain-core>=0.3.29,<0.4.0",
-    "langchain-openai>=0.2.9",
-    "langchain-anthropic>=0.3.0",
-    "langchain-google-genai>=2.1.2",
-    "langchain-ollama>=0.2.0",
-    "langchain-groq>=0.2.1",
-    "langchain_mistralai>=0.2.1",
-    "langchain_deepseek>=0.1.3"
-]
 
-all = [
-    "openai>=1.55.1",
-    "anthropic>=0.39.0",
-    "google-genai>=1.8.0",
-    "vertexai>=1.71.1",
-    "ollama>=0.4.1",
-    "groq>=0.12.0",
-    "elevenlabs>=0.3.0",
-    "google-cloud-texttospeech>=2.14.0",
-    "transformers>=4.40.0",
-    "torch>=2.2.2",
-    "tokenizers>=0.15.2",
-    "voyageai>=0.1.4",  # For Voyage AI
-    "mistralai>=1.8.0",  # For Mistral AI
-    # Azure is covered by openai in 'all'
-]
-
-all_with_langchain = [
-    "esperanto[all]",
-    "esperanto[langchain]"
-]
-
-dev = [
-    "ipykernel>=6.29.5",
-    "ruff>=0.5.5",
-    "mypy>=1.11.1",
-    "types-requests>=2.32.0.20241016",
-    "ipywidgets>=8.1.5",
-    "pytest>=8.3.3",
-    "pytest-mock>=3.12.0",
-    "pytest-asyncio>=0.23.5",
-    "pytest-cov>=6.0.0",
-    "build",
-    "twine",
-]
 
 [build-system]
 requires = ["hatchling", "pip"]
@@ -127,4 +64,18 @@ dev = [
     "pytest-asyncio>=0.25.3",
     "pytest-cov>=6.0.0",
     "responses>=0.25.6",
+    "python-dotenv>=1.0.1",
+    "types-requests>=2.32.0.20241016",
+    "build",
+    "twine",
+    "langchain>=0.3.8,<0.4.0",
+    "langchain-core>=0.3.29,<0.4.0",
+    "langchain-openai>=0.2.9",
+    "langchain-anthropic>=0.3.0",
+    "langchain-google-genai>=2.1.2",
+    "langchain-ollama>=0.2.0",
+    "langchain-groq>=0.2.1",
+    "langchain_mistralai>=0.2.1",
+    "langchain_deepseek>=0.1.3",
+    "langchain-google-vertexai>=2.0.24",
 ]
