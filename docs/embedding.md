@@ -1,162 +1,206 @@
-# Embedding Providers
+# Embedding Models
 
-Esperanto supports multiple embedding providers for converting text into vector representations.
+Embedding models convert text into high-dimensional vector representations that capture semantic meaning. These vectors can be used for tasks like semantic search, similarity comparison, clustering, and recommendation systems. Esperanto provides a unified interface for working with various embedding providers.
 
 ## Supported Providers
 
-- OpenAI (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
-- Google Vertex AI (textembedding-gecko)
-- Google GenAI
-- Ollama (Local deployment)
-- Transformers (Local deployment with Hugging Face models)
-- Voyage AI (voyage-large-2, voyage-code-2)
-- Mistral (mistral-embed, etc.) [NEW]
+- **OpenAI** (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
+- **Google** (Gemini embedding models)
+- **Vertex AI** (textembedding-gecko)
+- **Ollama** (Local deployment with various models)
+- **Transformers** (Local Hugging Face models)
+- **Voyage** (voyage-3, voyage-code-2)
+- **Mistral** (mistral-embed)
 
-## Usage Examples
+## Available Methods
 
-### Using AI Factory
+All embedding model providers implement the following methods:
 
+- **`embed(texts)`**: Generate embeddings for text(s) - accepts single string or list of strings
+- **`aembed(texts)`**: Async version of embed
+- **`embed_query(text)`**: Generate embedding for a single query (alias for embed with single text)
+- **`aembed_query(text)`**: Async version of embed_query
+
+### Parameters:
+- `texts`: Single string or list of strings to embed
+- Returns: `EmbeddingResponse` object with embeddings and metadata
+
+## Common Interface
+
+All embedding models return standardized response objects:
+
+### EmbeddingResponse
+```python
+response = model.embed(["Hello, world!", "Another text"])
+# Access attributes:
+response.data[0].embedding      # Vector for first text (list of floats)
+response.data[0].index          # Index of the text (0)
+response.data[1].embedding      # Vector for second text
+response.model                  # Model used
+response.provider               # Provider name
+response.usage.total_tokens     # Token usage information
+```
+
+## Examples
+
+### Basic Embedding
 ```python
 from esperanto.factory import AIFactory
 
-# Create an embedding instance
+# Create an embedding model
 model = AIFactory.create_embedding("openai", "text-embedding-3-small")
 
-# Synchronous usage
-texts = ["Hello, world!", "Another text"]
-embeddings = model.embed(texts)
+# Single text embedding
+response = model.embed("Hello, world!")
+vector = response.data[0].embedding  # List of floats
 
-# Asynchronous usage
-async def get_embeddings():
-    texts = ["Hello, world!", "Another text"]
-    embeddings = await model.aembed(texts)
+# Multiple texts
+texts = ["Hello, world!", "How are you?", "Machine learning is fascinating"]
+response = model.embed(texts)
+
+for i, embedding_data in enumerate(response.data):
+    print(f"Text {i}: {texts[i]}")
+    print(f"Vector dimension: {len(embedding_data.embedding)}")
+    print(f"First 5 values: {embedding_data.embedding[:5]}")
 ```
 
-### Basic Usage
+### Async Embedding
 ```python
-from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
-
-model = OpenAIEmbeddingModel(
-    api_key="your-api-key",
-    model_name="text-embedding-3-small"  # optional
-)
-
-# Get embeddings for a single text
-embedding = model.embed("Hello, world!")
-
-# Get embeddings for multiple texts
-embeddings = model.embed_many(["Hello, world!", "How are you?"])
+async def embed_async():
+    model = AIFactory.create_embedding("google", "text-embedding-004")
+    
+    texts = ["Document 1 content", "Document 2 content"]
+    response = await model.aembed(texts)
+    
+    for data in response.data:
+        print(f"Embedding dimension: {len(data.embedding)}")
 ```
 
-### Local Deployment with Ollama
+### Semantic Search Example
 ```python
-from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
-
-model = OllamaEmbeddingModel(
-    model_name="mxbai-embed-large",  # or any other supported model
-    base_url="http://localhost:11434"  # default Ollama server
-)
-
-embedding = model.embed("Hello, world!")
-```
-
-### Local Deployment with Transformers
-```python
+import numpy as np
 from esperanto.factory import AIFactory
 
-# Basic usage with defaults
-model = AIFactory.create_embedding(
-    provider="transformers",
-    model_name="bert-base-uncased",  # or any other Hugging Face model
-)
+model = AIFactory.create_embedding("openai", "text-embedding-3-small")
 
-# Advanced configuration
-model = AIFactory.create_embedding(
-    provider="transformers",
-    model_name="bert-base-uncased",  # or any other Hugging Face model
-    config={
-        "device": "auto",  # 'auto', 'cpu', 'cuda', or 'mps'
-        "pooling_strategy": "mean",  # 'mean', 'max', or 'cls'
-        "quantize": "8bit",  # optional: '4bit' or '8bit'
-        "tokenizer_config": {  # optional tokenizer configuration
-            "max_length": 512,  # maximum sequence length (default for BERT)
-            "padding": True,
-            "truncation": True
-        }
-    }
-)
+# Documents to search
+documents = [
+    "Python is a programming language",
+    "Machine learning uses algorithms to learn patterns",
+    "The weather is sunny today",
+    "Neural networks are inspired by biological neurons"
+]
 
-# Example with a multilingual model
-model = AIFactory.create_embedding(
-    provider="transformers",
-    model_name="neuralmind/bert-base-portuguese-cased",  # Portuguese BERT
-    config={
-        "tokenizer_config": {
-            "max_length": 256,  # shorter for memory efficiency
-            "padding": True,
-            "truncation": True
-        }
-    }
-)
+# Create embeddings for documents
+doc_response = model.embed(documents)
+doc_embeddings = [data.embedding for data in doc_response.data]
 
-embeddings = model.embed(["Hello, world!"])
+# Query
+query = "What is artificial intelligence?"
+query_response = model.embed(query)
+query_embedding = query_response.data[0].embedding
 
-# Pooling Strategies:
-# - "mean": Average of all token embeddings (default, good for semantic similarity)
-# - "max": Maximum value across token embeddings (good for key feature extraction)
-# - "cls": Use the [CLS] token embedding (good for sentence classification)
+# Calculate similarity (cosine similarity)
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+# Find most similar document
+similarities = [cosine_similarity(query_embedding, doc_emb) for doc_emb in doc_embeddings]
+most_similar_idx = np.argmax(similarities)
+
+print(f"Most similar document: {documents[most_similar_idx]}")
+print(f"Similarity score: {similarities[most_similar_idx]:.3f}")
 ```
 
-### Google Vertex AI
+### Batch Processing
 ```python
-from esperanto.providers.embedding.vertex import VertexEmbeddingModel
-
-model = VertexEmbeddingModel(
-    project_id="your-project-id",
-    location="us-central1"  # or your preferred region
-)
-
-embedding = model.embed("Hello, world!")
+async def process_large_dataset():
+    model = AIFactory.create_embedding("voyage", "voyage-3")
+    
+    # Process in batches to handle rate limits
+    texts = ["text " + str(i) for i in range(1000)]
+    batch_size = 100
+    all_embeddings = []
+    
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        response = await model.aembed(batch)
+        batch_embeddings = [data.embedding for data in response.data]
+        all_embeddings.extend(batch_embeddings)
+    
+    print(f"Generated {len(all_embeddings)} embeddings")
 ```
 
-## Provider-Specific Configuration
+## Provider-Specific Information
 
-Each provider may have specific configuration options. Here are some examples:
+### Transformers Provider
 
-### OpenAI
-```python
-model = OpenAIEmbeddingModel(
-    api_key="your-api-key", # or use ENV
-    model_name="text-embedding-3-small",
-    organization=None  # Optional, for org-specific API
-)
+The Transformers provider requires the transformers extra to be installed:
+
+```bash
+pip install "esperanto[transformers]"
 ```
 
-### Google GenAI
-```python
-from esperanto.providers.embedding.google import GoogleEmbeddingModel
+This installs:
+- `transformers`
+- `torch` 
+- `tokenizers`
 
-model = GoogleEmbeddingModel(
-    api_key="your-api-key" # or use ENV
-)
-```
-
-### Voyage AI
+**Advanced Configuration:**
 ```python
 from esperanto.factory import AIFactory
 
 # Basic usage
 model = AIFactory.create_embedding(
-    provider="voyage",
-    model_name="voyage-3",  # or voyage-code-2 for code embeddings
-    api_key="your-api-key"  # or set VOYAGE_API_KEY env var
+    provider="transformers",
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
-# Get embeddings
-texts = ["Hello, world!", "Another text"]
-embeddings = model.embed(texts)
+# Advanced configuration
+model = AIFactory.create_embedding(
+    provider="transformers",
+    model_name="sentence-transformers/all-mpnet-base-v2",
+    device="auto",  # 'auto', 'cpu', 'cuda', or 'mps'
+    pooling_strategy="mean",  # 'mean', 'max', or 'cls'
+    quantize="8bit",  # optional: '4bit' or '8bit' for memory efficiency
+    tokenizer_config={
+        "max_length": 512,
+        "padding": True,
+        "truncation": True
+    }
+)
 
-# Async usage
-async def get_embeddings():
-    embeddings = await model.aembed(texts)
+# Example with multilingual model
+multilingual_model = AIFactory.create_embedding(
+    provider="transformers",
+    model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    tokenizer_config={
+        "max_length": 256,  # Shorter for memory efficiency
+        "padding": True,
+        "truncation": True
+    }
+)
+
+# Pooling strategies:
+# - "mean": Average of all token embeddings (default, good for semantic similarity)
+# - "max": Maximum value across token embeddings (good for key feature extraction)  
+# - "cls": Use the [CLS] token embedding (good for sentence classification)
+```
+
+**GPU and Quantization:**
+```python
+# Use GPU if available
+model = AIFactory.create_embedding(
+    provider="transformers",
+    model_name="sentence-transformers/all-mpnet-base-v2",
+    device="cuda"  # or "mps" for Apple Silicon
+)
+
+# Use quantization for large models
+model = AIFactory.create_embedding(
+    provider="transformers", 
+    model_name="BAAI/bge-large-en-v1.5",
+    quantize="8bit",  # Reduces memory usage
+    device="cuda"
+)
 ```
