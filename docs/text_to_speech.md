@@ -198,10 +198,10 @@ Each provider offers different voice models and selection methods. It's importan
 - Offers multilingual capabilities with voice consistency
 
 **Google Cloud Voices:**
-- Format: `{language-code}-{voice-type}-{identifier}`
-- Examples: `en-US-Neural2-A`, `es-ES-Standard-B`, `fr-FR-Wavenet-C`
-- Neural2 voices offer the highest quality
-- Supports 40+ languages and variants
+- 30 unique predefined voices with distinct personalities (e.g., achernar, charon, kore, puck)
+- Each voice has specific characteristics: gender, tone, and personality traits
+- Examples: `achernar` (UpbeatAchernar, Female), `charon` (UpbeatCharon, Male), `kore` (InformativeKore, Female)
+- **Unique Feature**: Multi-speaker conversations with different voices per speaker
 
 **Voice Discovery:**
 ```python
@@ -220,3 +220,91 @@ except AttributeError:
 - **Neural/HD models**: Higher quality, more natural sounding, higher cost
 - **Multilingual models**: Consistent voice across languages
 - **Specialized models**: Optimized for specific use cases (news, conversation, etc.)
+
+### Google Multi-Speaker Conversations
+
+Google's TTS provider offers a unique multi-speaker feature that allows you to create conversations with different voices for each speaker. This is perfect for creating dialogues, interviews, or multi-character audio content.
+
+**Additional Methods for Google Provider:**
+- **`generate_multi_speaker_speech(text, speaker_configs, output_file=None)`**: Generate conversation with multiple speakers
+- **`agenerate_multi_speaker_speech(text, speaker_configs, output_file=None)`**: Async version of multi-speaker generation
+
+**Multi-Speaker Example:**
+```python
+from esperanto.factory import AIFactory
+
+# Create Google TTS model
+model = AIFactory.create_text_to_speech("google", "gemini-2.5-flash-preview-tts")
+
+# Define conversation with speaker names
+conversation_text = """
+Joe: Hi there! How are you doing today?
+Jane: I'm doing great, thanks for asking! How about you?
+Joe: I'm wonderful. Did you see the latest AI developments?
+Jane: Yes! The multi-speaker TTS technology is really impressive.
+"""
+
+# Configure speakers with different voices
+speaker_configs = [
+    {"speaker": "Joe", "voice": "charon"},      # Male, upbeat voice
+    {"speaker": "Jane", "voice": "kore"}       # Female, informative voice
+]
+
+# Generate multi-speaker audio
+response = model.generate_multi_speaker_speech(
+    text=conversation_text,
+    speaker_configs=speaker_configs,
+    output_file="conversation.wav"
+)
+
+print(f"Generated {len(response.audio_data)} bytes of multi-speaker audio")
+print(f"Speakers: {[config['speaker'] for config in speaker_configs]}")
+```
+
+**Async Multi-Speaker Example:**
+```python
+async def create_dialogue():
+    model = AIFactory.create_text_to_speech("google", "gemini-2.5-flash-preview-tts")
+    
+    # Define a more complex conversation
+    interview_text = """
+    Interviewer: Welcome to our tech podcast. Today we're discussing AI.
+    Expert: Thank you for having me. AI is transforming every industry.
+    Interviewer: What's the most exciting development you've seen recently?
+    Expert: Multi-modal AI that can understand and generate text, images, and audio.
+    Interviewer: That sounds fascinating. How will this impact developers?
+    Expert: It will enable more natural human-computer interactions.
+    """
+    
+    # Use different voice personalities
+    speaker_configs = [
+        {"speaker": "Interviewer", "voice": "puck"},      # Bright, engaging male voice
+        {"speaker": "Expert", "voice": "sulafat"}         # Knowledgeable female voice
+    ]
+    
+    response = await model.agenerate_multi_speaker_speech(
+        text=interview_text,
+        speaker_configs=speaker_configs,
+        output_file="ai_interview.wav"
+    )
+    
+    print(f"Interview audio generated: {response.content_type}")
+    return response
+
+# Run the async function
+# response = await create_dialogue()
+```
+
+**Multi-Speaker Tips:**
+- **Speaker Names**: Use consistent speaker names throughout your text
+- **Voice Selection**: Choose voices with different characteristics for better distinction
+- **Text Format**: Prefix each line with "SpeakerName:" for clear speaker identification
+- **Voice Combinations**: Mix male/female voices or different personality types for variety
+- **Content Length**: Works well for both short dialogues and longer conversations
+
+**Available Voice Personalities for Multi-Speaker:**
+- **Engaging/Upbeat**: `achernar` (F), `charon` (M), `leda` (F)
+- **Clear/Professional**: `algenib` (M), `umbriel` (M), `gacrux` (F)
+- **Informative/Knowledgeable**: `kore` (F), `sulafat` (F), `laomedeia` (F)
+- **Bright/Energetic**: `enceladus` (M), `puck` (M)
+- **Smooth/Gentle**: `despina` (F), `erinome` (F), `sadachbia` (M)
