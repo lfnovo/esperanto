@@ -1,5 +1,7 @@
+
+*.wav
 *.mp3
-prds/
+
 # Python
 __pycache__/
 *.py[cod]
