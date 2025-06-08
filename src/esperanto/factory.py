@@ -31,6 +31,7 @@ class AIFactory:
             "azure": "esperanto.providers.llm.azure:AzureLanguageModel",
             "mistral": "esperanto.providers.llm.mistral:MistralLanguageModel",
             "deepseek": "esperanto.providers.llm.deepseek:DeepSeekLanguageModel",
+            "vertex": "esperanto.providers.llm.vertex:VertexLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",

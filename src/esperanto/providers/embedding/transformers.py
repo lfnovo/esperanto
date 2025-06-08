@@ -215,9 +215,9 @@ class TransformersEmbeddingModel(EmbeddingModel):
                 type="embedding",
             ),
             Model(
-                id="sentence-transformers/all-mpnet-base-v2",
+                id="intfloat/multilingual-e5-large-instruct",
                 owned_by="Hugging Face",
-                context_window=384,
+                context_window=1024,
                 type="embedding",
             ),
             Model(
