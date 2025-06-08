@@ -248,15 +248,33 @@ async def test_json_structured_output_async():
 
 def test_to_langchain():
     """Test LangChain conversion."""
+    from unittest.mock import Mock, patch
     from esperanto.providers.llm.google import GoogleLanguageModel
     
-    # Create fresh model instance
-    model = GoogleLanguageModel(api_key="test-key")
+    # Mock the LangChain classes to avoid credential issues
+    mock_chat_google = Mock()
+    mock_chat_google.model = "gemini-2.0-flash"  # Match what the provider actually uses
+    mock_chat_google.temperature = 1.0
+    mock_chat_google.top_p = 0.9
     
-    langchain_model = model.to_langchain()
+    with patch('langchain_google_genai.ChatGoogleGenerativeAI') as mock_chat_class:
+        mock_chat_class.return_value = mock_chat_google
+        
+        # Create fresh model instance
+        model = GoogleLanguageModel(api_key="test-key")
+        
+        langchain_model = model.to_langchain()
 
-    # Test model configuration
-    assert langchain_model.model == "models/gemini-2.0-flash"
+        # Test model configuration  
+        assert langchain_model.model == "gemini-2.0-flash"
+        
+        # Verify ChatGoogleGenerativeAI was called with correct parameters
+        mock_chat_class.assert_called_once_with(
+            model="gemini-2.0-flash",
+            temperature=model.temperature,
+            max_tokens=model.max_tokens,
+            top_p=model.top_p,
+        )
     assert langchain_model.temperature == 1.0
     assert langchain_model.top_p == 0.9
     # Skip API key check since it's masked

@@ -246,11 +246,13 @@ def vertex_embedding_model(mock_vertex_client):
         mock_subprocess.return_value.stdout = "mock_access_token"
         mock_subprocess.return_value.returncode = 0
         
-        model = VertexEmbeddingModel(
-            vertex_project="test-project", model_name="textembedding-gecko"
-        )
-        model.client, model.async_client = mock_vertex_client
-        return model
+        # Mock the token method to prevent subprocess calls during testing
+        with patch.object(VertexEmbeddingModel, '_get_access_token', return_value="mock_access_token"):
+            model = VertexEmbeddingModel(
+                vertex_project="test-project", model_name="textembedding-gecko"
+            )
+            model.client, model.async_client = mock_vertex_client
+            return model
 
 
 # Test base embedding model configuration

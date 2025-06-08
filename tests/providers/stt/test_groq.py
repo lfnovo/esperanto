@@ -21,8 +21,13 @@ def audio_file(tmp_path):
 
 def test_factory_creates_groq_stt():
     """Test that AIFactory creates Groq STT model."""
-    model = AIFactory.create_stt("groq")
-    assert isinstance(model, GroqSpeechToTextModel)
+    from unittest.mock import patch
+    import os
+    
+    # Mock the environment variable to provide an API key
+    with patch.dict(os.environ, {'GROQ_API_KEY': 'test-key'}):
+        model = AIFactory.create_speech_to_text("groq")
+        assert isinstance(model, GroqSpeechToTextModel)
 
 
 def test_groq_transcribe(audio_file):
