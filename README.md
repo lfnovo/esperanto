@@ -8,6 +8,25 @@
 
 Esperanto is a powerful Python library that provides a unified interface for interacting with various Large Language Model (LLM) providers. It simplifies the process of working with different AI models (LLMs, Embedders, Transcribers, and TTS) APIs by offering a consistent interface while maintaining provider-specific optimizations.
 
+## Why Esperanto? 🚀
+
+**🪶 Ultra-Lightweight Architecture**
+- **Direct HTTP Communication**: All providers communicate directly via HTTP APIs using `httpx` - no bulky vendor SDKs required
+- **Minimal Dependencies**: Unlike LangChain and similar frameworks, Esperanto has a tiny footprint with zero overhead layers
+- **Production-Ready Performance**: Direct API calls mean faster response times and lower memory usage
+
+**🔄 True Provider Flexibility**
+- **Standardized Responses**: Switch between any provider (OpenAI ↔ Anthropic ↔ Google ↔ etc.) without changing a single line of code
+- **Consistent Interface**: Same methods, same response objects, same patterns across all 15+ providers
+- **Future-Proof**: Add new providers or change existing ones without refactoring your application
+
+**⚡ Perfect for Production**
+- **Prototyping to Production**: Start experimenting and deploy the same code to production
+- **No Vendor Lock-in**: Test different providers, optimize costs, and maintain flexibility
+- **Enterprise-Ready**: Direct HTTP calls, standardized error handling, and comprehensive async support
+
+Whether you're building a quick prototype or a production application serving millions of requests, Esperanto gives you the performance of direct API calls with the convenience of a unified interface.
+
 ## Features ✨
 
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
@@ -19,13 +38,14 @@ Esperanto is a powerful Python library that provides a unified interface for int
   - Perplexity (Sonar models)
   - Groq (Mixtral, Llama, Whisper)
   - Google GenAI (Gemini LLM, Text To Speech, Embedding)
-  - Vertex AI (Google Cloud)
+  - Vertex AI (Google Cloud, LLM, Embedding, TTS)
   - Ollama (Local deployment)
   - Transformers (Local Hugging Face models)
-  - ElevenLabs (Text-to-Speech)
-  - Azure OpenAI (via `openai` SDK)
+  - ElevenLabs (Text-to-Speech, Speech-to-Text)
+  - Azure OpenAI
   - Mistral (Mistral Large, Small, Embed, etc.)
-  - DeepSeek (deepseek-chat) [NEW]
+  - DeepSeek (deepseek-chat)
+  - Voyage (Embeddings)
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
@@ -35,10 +55,10 @@ Esperanto is a powerful Python library that provides a unified interface for int
 - **LangChain Integration**: Easy conversion to LangChain chat models
 
 For detailed information about our providers, check out:
-- [LLM Providers Documentation](docs/llm.md)
-- [Embedding Providers Documentation](docs/embedding.md)
-- [Speech-to-Text Providers Documentation](docs/speech_to_text.md)
-- [Text-to-Speech Providers Documentation](docs/text_to_speech.md)
+- [LLM Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/llm.md)
+- [Embedding Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/embedding.md)
+- [Speech-to-Text Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/speech_to_text.md)
+- [Text-to-Speech Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/text_to_speech.md)
 
 ## Installation 🚀
 
@@ -48,56 +68,38 @@ Install Esperanto using pip:
 pip install esperanto
 ```
 
-For specific providers, install with their extras:
+### Optional Dependencies
+
+**Transformers Provider**
+
+If you plan to use the transformers provider, install with the transformers extra:
 
 ```bash
-# For OpenAI support
-pip install "esperanto[openai]"
-
-# For Anthropic support
-pip install "esperanto[anthropic]"
-
-# For Google (GenAI) support
-pip install "esperanto[google]"
-
-# For Vertex AI support
-pip install "esperanto[vertex]"
-
-# For Groq support
-pip install "esperanto[groq]"
-
-# For Ollama support
-pip install "esperanto[ollama]"
-
-# For Transformers support
 pip install "esperanto[transformers]"
+```
 
-# For ElevenLabs support
-pip install "esperanto[elevenlabs]"
+This installs:
+- `transformers`
+- `torch`
+- `tokenizers`
 
-# For Perplexity support
-pip install "esperanto[perplexity]"
+**LangChain Integration**
 
-# For Google TTS support
-pip install "esperanto[googletts]"
+If you plan to use any of the `.to_langchain()` methods, you need to install the correct LangChain SDKs manually:
 
-# For Azure OpenAI support
-pip install "esperanto[azure]"
+```bash
+# Core LangChain dependencies (required)
+pip install "langchain>=0.3.8,<0.4.0" "langchain-core>=0.3.29,<0.4.0"
 
-# For Mistral support
-pip install "esperanto[mistral]"
-
-# For DeepSeek support
-pip install "esperanto[deepseek]"
-
-# For LangChain integration
-pip install "esperanto[langchain]"
-
-# For all providers without LangChain
-pip install "esperanto[all]"
-
-# For all providers including LangChain
-pip install "esperanto[all_with_langchain]"
+# Provider-specific LangChain packages (install only what you need)
+pip install "langchain-openai>=0.2.9"
+pip install "langchain-anthropic>=0.3.0"
+pip install "langchain-google-genai>=2.1.2"
+pip install "langchain-ollama>=0.2.0"
+pip install "langchain-groq>=0.2.1"
+pip install "langchain_mistralai>=0.2.1"
+pip install "langchain_deepseek>=0.1.3"
+pip install "langchain-google-vertexai>=2.0.24"
 ```
 
 ## Provider Support Matrix
@@ -108,14 +110,17 @@ pip install "esperanto[all_with_langchain]"
 | Anthropic    | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Groq         | ✅          | ❌               | ✅             | ❌             | ✅        |
 | Google (GenAI) | ✅          | ✅               | ❌             | ✅             | ✅        |
-| Vertex AI    | ✅          | ✅               | ❌             | ❌             | ❌        |
+| Vertex AI    | ✅          | ✅               | ❌             | ✅             | ❌        |
 | Ollama       | ✅          | ✅               | ❌             | ❌             | ❌        |
 | Perplexity   | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
-| ElevenLabs   | ❌          | ❌               | ❌             | ✅             | ❌        |
+| ElevenLabs   | ❌          | ❌               | ✅             | ✅             | ❌        |
 | Azure OpenAI | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Mistral      | ✅          | ✅               | ❌             | ❌             | ✅        |
-| DeepSeek     | ✅          | ❌               | ❌             | ❌             | ✅        |  <!-- New -->
+| DeepSeek     | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Voyage       | ❌          | ✅               | ❌             | ❌             | ❌        |
+| xAI          | ✅          | ❌               | ❌             | ❌             | ✅        |
+| OpenRouter   | ✅          | ❌               | ❌             | ❌             | ✅        |
 
 ## Quick Start 🏃‍♂️
 
@@ -133,10 +138,10 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral'],
+#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
 #     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral'],
-#     'speech_to_text': ['openai', 'groq'],
-#     'text_to_speech': ['openai', 'elevenlabs', 'google']
+#     'speech_to_text': ['openai', 'groq', 'elevenlabs'],
+#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex']
 # }
 
 # Create model instances
@@ -342,17 +347,17 @@ chain = ConversationChain(llm=langchain_model)
 
 ## Documentation 📚
 
-You can find the documentation for Esperanto in the [docs](docs) directory.
+You can find the documentation for Esperanto in the [docs](https://github.com/lfnovo/esperanto/tree/main/docs) directory.
 
-There is also a cool beginner's tutorial in the [tutorial](docs/tutorial/index.md) directory.
+There is also a cool beginner's tutorial in the [tutorial](https://github.com/lfnovo/esperanto/blob/main/docs/tutorial/index.md) directory.
 
 ## Contributing 🤝
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to get started.
+We welcome contributions! Please see our [Contributing Guidelines](https://github.com/lfnovo/esperanto/blob/main/CONTRIBUTING.md) for details on how to get started.
 
 ## License 📄
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/lfnovo/esperanto/blob/main/LICENSE) file for details.
 
 ## Development 🛠️
 

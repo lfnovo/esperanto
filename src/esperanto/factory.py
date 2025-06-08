@@ -31,6 +31,7 @@ class AIFactory:
             "azure": "esperanto.providers.llm.azure:AzureLanguageModel",
             "mistral": "esperanto.providers.llm.mistral:MistralLanguageModel",
             "deepseek": "esperanto.providers.llm.deepseek:DeepSeekLanguageModel",
+            "vertex": "esperanto.providers.llm.vertex:VertexLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
@@ -44,11 +45,13 @@ class AIFactory:
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
             "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
+            "elevenlabs": "esperanto.providers.stt.elevenlabs:ElevenLabsSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
             "elevenlabs": "esperanto.providers.tts.elevenlabs:ElevenLabsTextToSpeechModel",
             "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
+            "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
         },
     }
 

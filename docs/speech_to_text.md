@@ -1,108 +1,122 @@
-# Speech-to-Text Providers
+# Speech-to-Text Models
 
-Esperanto supports multiple speech-to-text providers for transcribing audio into text.
+Speech-to-text models convert audio recordings into written text through automatic speech recognition (ASR). These models can transcribe speech from various audio formats and languages, making them useful for creating transcripts, voice assistants, accessibility tools, and content analysis.
 
 ## Supported Providers
 
-- OpenAI (Whisper)
-- Groq (Whisper)
+- **OpenAI** (Whisper models)
+- **Groq** (Whisper models with faster inference)
+- **ElevenLabs** (Multilingual speech recognition)
 
-## Usage Examples
+## Available Methods
 
-### Using AI Factory
+All speech-to-text model providers implement the following methods:
 
+- **`transcribe(audio_file, language=None, prompt=None)`**: Transcribe audio file to text
+- **`atranscribe(audio_file, language=None, prompt=None)`**: Async version of transcribe
+
+### Parameters:
+- `audio_file`: Audio file path (string) or file object to transcribe
+- `language`: Optional language code to improve accuracy (e.g., "en", "es", "fr")
+- `prompt`: Optional text to guide the transcription context
+
+## Common Interface
+
+All speech-to-text models return standardized response objects:
+
+### TranscriptionResponse
+```python
+response = model.transcribe("audio.mp3")
+# Access attributes:
+response.text           # The transcribed text
+response.language       # Detected or specified language
+response.model          # Model used for transcription
+response.provider       # Provider name
+```
+
+## Examples
+
+### Basic Transcription
 ```python
 from esperanto.factory import AIFactory
 
-# Create a speech-to-text instance
+# Create a speech-to-text model
 model = AIFactory.create_speech_to_text("openai", "whisper-1")
 
-# Synchronous usage
-with open("audio.mp3", "rb") as f:
-    transcription = model.transcribe(f)
-
-# Asynchronous usage
-async def get_transcription():
-    with open("audio.mp3", "rb") as f:
-        transcription = await model.atranscribe(f)
-```
-
-### Basic Usage with OpenAI
-```python
-from esperanto.providers.stt.openai import OpenAISpeechToTextModel
-
-model = OpenAISpeechToTextModel(
-    api_key="your-api-key",  # or use ENV: OPENAI_API_KEY
-    model_name="whisper-1"  # optional
-)
-
-# Transcribe from a file path
-transcription = model.transcribe("audio.mp3")
-
-# Transcribe from a file object
-with open("audio.mp3", "rb") as f:
-    transcription = model.transcribe(f)
-
-# Transcribe with language and prompt
-transcription = model.transcribe(
-    "audio.mp3",
-    language="en",  # optional, specify the audio language
-    prompt="This is a podcast about AI"  # optional, guide the transcription
-)
-```
-
-### Using Groq
-```python
-from esperanto.providers.stt.groq import GroqSpeechToTextModel
-
-model = GroqSpeechToTextModel(
-    api_key="your-api-key",  # or use ENV: GROQ_API_KEY
-    model_name="whisper-1"  # optional
-)
-
-# Basic transcription
-transcription = model.transcribe("audio.mp3")
-
-# Async transcription
-async def transcribe_async():
-    transcription = await model.atranscribe("audio.mp3")
-```
-
-## Provider-Specific Configuration
-
-Each provider may have specific configuration options. Here are some examples:
-
-### OpenAI
-```python
-model = OpenAISpeechToTextModel(
-    api_key="your-api-key",  # or use ENV: OPENAI_API_KEY
-    model_name="whisper-1",
-    base_url=None  # Optional, for custom API endpoint
-)
-```
-
-### Groq
-```python
-model = GroqSpeechToTextModel(
-    api_key="your-api-key",  # or use ENV: GROQ_API_KEY
-    model_name="whisper-1",
-    base_url=None  # Optional, for custom API endpoint
-)
-```
-
-## Response Format
-
-All providers return a standardized `TranscriptionResponse` object with the following attributes:
-
-- `text`: The transcribed text
-- `language`: The detected or specified language (if supported by the provider)
-- `model`: The model used for transcription
-- `provider`: The provider name
-
-Example:
-```python
+# Transcribe from file path
 response = model.transcribe("audio.mp3")
-print(response.text)  # The transcribed text
-print(response.language)  # The language (if available)
-print(response.model)  # The model used
-print(response.provider)  # The provider name
+print(response.text)
+
+# Transcribe from file object
+with open("audio.mp3", "rb") as f:
+    response = model.transcribe(f)
+    print(response.text)
+```
+
+### Async Transcription
+```python
+async def transcribe_async():
+    model = AIFactory.create_speech_to_text("groq", "whisper-large-v3")
+    
+    response = await model.atranscribe("meeting.wav")
+    print(f"Transcription: {response.text}")
+    print(f"Language: {response.language}")
+```
+
+### Transcription with Context
+```python
+model = AIFactory.create_speech_to_text("openai", "whisper-1")
+
+# Provide language and context for better accuracy
+response = model.transcribe(
+    "podcast.mp3",
+    language="en",  # Specify language
+    prompt="This is a technical podcast about machine learning and AI"  # Context
+)
+print(response.text)
+```
+
+### Batch Processing
+```python
+import os
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_speech_to_text("groq", "whisper-large-v3")
+
+# Process multiple audio files
+audio_files = ["file1.mp3", "file2.wav", "file3.m4a"]
+transcriptions = []
+
+for file_path in audio_files:
+    if os.path.exists(file_path):
+        response = model.transcribe(file_path)
+        transcriptions.append({
+            "file": file_path,
+            "text": response.text,
+            "language": response.language
+        })
+        print(f"Transcribed {file_path}: {len(response.text)} characters")
+
+# Save all transcriptions
+for transcript in transcriptions:
+    output_file = transcript["file"].replace(".mp3", ".txt").replace(".wav", ".txt").replace(".m4a", ".txt")
+    with open(output_file, "w") as f:
+        f.write(transcript["text"])
+```
+
+### Real-time Processing
+```python
+async def process_audio_stream():
+    model = AIFactory.create_speech_to_text("elevenlabs", "speech-to-text-1")
+    
+    # Process audio files as they become available
+    audio_queue = ["chunk1.wav", "chunk2.wav", "chunk3.wav"]
+    
+    for audio_chunk in audio_queue:
+        response = await model.atranscribe(audio_chunk)
+        print(f"Chunk transcription: {response.text}")
+        
+        # Process the transcription immediately
+        if "urgent" in response.text.lower():
+            print("🚨 Urgent content detected!")
+```

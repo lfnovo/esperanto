@@ -1,111 +1,133 @@
 """Tests for the Google TTS provider."""
+import base64
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
 
 from esperanto.providers.tts.google import GoogleTextToSpeechModel
 
 
-@pytest.fixture
-def mock_google_client(mocker):
-    """Mock the Google Cloud TTS client."""
-    mock = mocker.patch("google.cloud.texttospeech.TextToSpeechClient", autospec=True)
-    return mock
-
-
-@pytest.fixture
-def mock_async_google_client(mocker):
-    """Mock the Google Cloud TTS async client."""
-    mock = mocker.patch("google.cloud.texttospeech.TextToSpeechAsyncClient", autospec=True)
-    return mock
-
-
-@pytest.fixture
-def tts_model(mock_google_client, mock_async_google_client):
-    """Create a TTS model instance with mocked clients."""
-    mock_credentials = MagicMock()
-    mock_credentials.before_request = MagicMock()
-
-    model = GoogleTextToSpeechModel(
-        model_name="en-US-Standard-A",
-        api_key=None,
-        base_url=None,
-        config={"credentials": mock_credentials}
-    )
-
-    # Mock the clients to avoid actual API calls
-    model.client = mock_google_client.return_value
-    model.async_client = mock_async_google_client.return_value
-
-    return model
-
-
-def test_init(tts_model):
+def test_init():
     """Test model initialization."""
-    assert tts_model.model_name == "en-US-Standard-A"
-    assert tts_model.PROVIDER == "google"
+    model = GoogleTextToSpeechModel(api_key="test-key")
+    assert model.provider == "google"
 
 
-def test_generate_speech(tts_model, mock_google_client):
-    """Test synchronous speech generation."""
-    # Mock response
-    mock_response = MagicMock()
-    mock_response.audio_content = b"test audio data"
-    mock_google_client.return_value.synthesize_speech.return_value = mock_response
+def test_generate_speech():
+    """Test synchronous speech generation with httpx mocking."""
+    from unittest.mock import Mock
 
-    # Test generation
-    response = tts_model.generate_speech(
+    from esperanto.providers.tts.google import GoogleTextToSpeechModel
+    
+    # Create fresh model instance
+    model = GoogleTextToSpeechModel(api_key="test-key")
+    
+    # Mock Google API response data
+    mock_response_data = {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {
+                            "inlineData": {
+                                "data": base64.b64encode(b"test audio data").decode()
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+    
+    # Mock HTTP response
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_response_data
+    
+    # Mock the client
+    mock_client = Mock()
+    mock_client.post.return_value = mock_response
+    model.client = mock_client
+
+    response = model.generate_speech(
         text="Hello world",
         voice="en-US-Standard-A"
     )
 
-    assert response.audio_data == b"test audio data"
-    assert response.content_type == "audio/mp3"
-    assert response.model == "en-US-Standard-A"
+    assert b"test audio data" in response.audio_data  # Original data is embedded in WAV format
+    assert response.content_type == "audio/wav"
+    assert response.model == "gemini-2.5-flash-preview-tts"
     assert response.voice == "en-US-Standard-A"
     assert response.provider == "google"
 
 
 @pytest.mark.asyncio
-async def test_agenerate_speech(tts_model, mock_async_google_client):
-    """Test asynchronous speech generation."""
-    # Mock response
-    mock_response = MagicMock()
-    mock_response.audio_content = b"test audio data"
-    mock_async_google_client.return_value.synthesize_speech = AsyncMock(
-        return_value=mock_response
-    )
+async def test_agenerate_speech():
+    """Test asynchronous speech generation with httpx mocking."""
+    from unittest.mock import AsyncMock, Mock
 
-    # Test generation
-    response = await tts_model.agenerate_speech(
+    from esperanto.providers.tts.google import GoogleTextToSpeechModel
+    
+    # Create fresh model instance
+    model = GoogleTextToSpeechModel(api_key="test-key")
+    
+    # Mock Google API response data
+    mock_response_data = {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {
+                            "inlineData": {
+                                "data": base64.b64encode(b"test audio data").decode()
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+    
+    # Mock HTTP response
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_response_data
+    
+    # Mock the async client
+    mock_async_client = AsyncMock()
+    mock_async_client.post.return_value = mock_response
+    model.async_client = mock_async_client
+
+    response = await model.agenerate_speech(
         text="Hello world",
         voice="en-US-Standard-A"
     )
 
-    assert response.audio_data == b"test audio data"
-    assert response.content_type == "audio/mp3"
-    assert response.model == "en-US-Standard-A"
+    assert b"test audio data" in response.audio_data  # Original data is embedded in WAV format
+    assert response.content_type == "audio/wav"
+    assert response.model == "gemini-2.5-flash-preview-tts"
     assert response.voice == "en-US-Standard-A"
     assert response.provider == "google"
 
 
-def test_available_voices(tts_model, mock_google_client):
-    """Test getting available voices."""
-    # Mock response
-    mock_voice = MagicMock()
-    mock_voice.name = "en-US-Standard-A"
-    mock_voice.language_codes = ["en-US"]
-    mock_voice.ssml_gender = "FEMALE"
-    mock_voice.natural_sample_rate_hertz = 24000
+def test_available_voices():
+    """Test getting available voices (predefined list)."""
+    from esperanto.providers.tts.google import GoogleTextToSpeechModel
+    
+    # Create fresh model instance
+    model = GoogleTextToSpeechModel(api_key="test-key")
 
-    mock_response = MagicMock()
-    mock_response.voices = [mock_voice]
-    mock_google_client.return_value.list_voices.return_value = mock_response
-
-    # Test getting voices
-    voices = tts_model.available_voices
-    assert len(voices) == 1
-    assert voices["en-US-Standard-A"].name == "en-US-Standard-A"
-    assert voices["en-US-Standard-A"].id == "en-US-Standard-A"
-    assert voices["en-US-Standard-A"].gender == "FEMALE"
-    assert voices["en-US-Standard-A"].language_code == "en-US"
+    # Test getting voices (Google TTS uses predefined voices)
+    voices = model.available_voices
+    assert len(voices) == 30  # Google has 30 predefined voices
+    
+    # Test a few specific voices to ensure structure is correct
+    assert "achernar" in voices
+    assert voices["achernar"].name == "UpbeatAchernar"
+    assert voices["achernar"].id == "achernar"
+    assert voices["achernar"].gender == "FEMALE"
+    
+    assert "charon" in voices
+    assert voices["charon"].name == "UpbeatCharon"
+    assert voices["charon"].id == "charon"
+    assert voices["charon"].gender == "MALE"

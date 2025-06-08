@@ -1,5 +1,6 @@
 """OpenAI language model provider."""
 
+import json
 import os
 from typing import (
     TYPE_CHECKING,
@@ -12,9 +13,7 @@ from typing import (
     Union,
 )
 
-from openai import AsyncOpenAI, OpenAI
-from openai.types.chat import ChatCompletion as OpenAIChatCompletion
-from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
+import httpx
 
 from esperanto.common_types import (
     ChatCompletion,
@@ -36,7 +35,7 @@ class OpenAILanguageModel(LanguageModel):
     """OpenAI language model implementation."""
 
     def __post_init__(self):
-        """Initialize OpenAI client."""
+        """Initialize HTTP clients."""
         # Call parent's post_init to handle config initialization
         super().__post_init__()
 
@@ -45,93 +44,135 @@ class OpenAILanguageModel(LanguageModel):
         if not self.api_key:
             raise ValueError("OpenAI API key not found")
 
-        # Initialize clients
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            organization=self.organization,
-        )
-        self.async_client = AsyncOpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            organization=self.organization,
-        )
+        # Set base URL
+        self.base_url = self.base_url or "https://api.openai.com/v1"
+
+        # Initialize HTTP clients
+        self.client = httpx.Client(timeout=30.0)
+        self.async_client = httpx.AsyncClient(timeout=30.0)
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers for OpenAI API requests."""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        if hasattr(self, 'organization') and self.organization:
+            headers["OpenAI-Organization"] = self.organization
+        return headers
+
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Handle HTTP error responses."""
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"OpenAI API error: {error_message}")
 
     @property
     def models(self) -> List[Model]:
         """List all available models for this provider."""
-        models = self.client.models.list()
+        response = self.client.get(
+            f"{self.base_url}/models",
+            headers=self._get_headers()
+        )
+        self._handle_error(response)
+        
+        models_data = response.json()
         return [
             Model(
-                id=model.id,
-                owned_by=model.owned_by,
-                context_window=getattr(model, "context_window", None),
+                id=model["id"],
+                owned_by=model.get("owned_by", "openai"),
+                context_window=model.get("context_window", None),
                 type="language",
             )
-            for model in models
-            if model.id.startswith(
+            for model in models_data["data"]
+            if model["id"].startswith(
                 ("gpt-")
             )  # Only include GPT models for language tasks
         ]
 
-    def _normalize_response(self, response: OpenAIChatCompletion) -> ChatCompletion:
+    def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
         """Normalize OpenAI response to our format."""
         return ChatCompletion(
-            id=response.id,
+            id=response_data["id"],
             choices=[
                 Choice(
-                    index=choice.index,
+                    index=choice["index"],
                     message=Message(
-                        content=choice.message.content or "",
-                        role=choice.message.role,
+                        content=choice["message"]["content"] or "",
+                        role=choice["message"]["role"],
                     ),
-                    finish_reason=choice.finish_reason,
+                    finish_reason=choice["finish_reason"],
                 )
-                for choice in response.choices
+                for choice in response_data["choices"]
             ],
-            created=response.created,
-            model=response.model,
+            created=response_data["created"],
+            model=response_data["model"],
             provider=self.provider,
             usage=Usage(
-                completion_tokens=(
-                    response.usage.completion_tokens if response.usage else 0
-                ),
-                prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
-                total_tokens=response.usage.total_tokens if response.usage else 0,
+                completion_tokens=response_data.get("usage", {}).get("completion_tokens", 0),
+                prompt_tokens=response_data.get("usage", {}).get("prompt_tokens", 0),
+                total_tokens=response_data.get("usage", {}).get("total_tokens", 0),
             ),
         )
 
-    def _normalize_chunk(self, chunk: OpenAIChatCompletionChunk) -> ChatCompletionChunk:
+    def _normalize_chunk(self, chunk_data: Dict[str, Any]) -> ChatCompletionChunk:
         """Normalize OpenAI stream chunk to our format."""
         return ChatCompletionChunk(
-            id=chunk.id,
+            id=chunk_data["id"],
             choices=[
                 StreamChoice(
-                    index=choice.index,
+                    index=choice["index"],
                     delta=DeltaMessage(
-                        content=choice.delta.content or "",
-                        role=choice.delta.role or "assistant",
-                        function_call=(
-                            dict(choice.delta.function_call)
-                            if choice.delta.function_call
-                            else None
-                        ),
-                        tool_calls=(
-                            [
-                                dict(tool_call.model_dump())  # Explicitly cast to dict
-                                for tool_call in choice.delta.tool_calls
-                            ]
-                            if choice.delta.tool_calls
-                            else None
-                        ),
+                        content=choice.get("delta", {}).get("content", ""),
+                        role=choice.get("delta", {}).get("role", "assistant"),
+                        function_call=choice.get("delta", {}).get("function_call"),
+                        tool_calls=choice.get("delta", {}).get("tool_calls"),
                     ),
-                    finish_reason=choice.finish_reason,
+                    finish_reason=choice.get("finish_reason"),
                 )
-                for choice in chunk.choices
+                for choice in chunk_data["choices"]
             ],
-            created=chunk.created,
-            model=chunk.model,
+            created=chunk_data["created"],
+            model=chunk_data.get("model", ""),
         )
+
+    def _parse_sse_stream(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
+        """Parse Server-Sent Events stream from OpenAI chat completions."""
+        # For streaming responses, we need to iterate over the text content
+        for chunk in response.iter_text():
+            for line in chunk.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("data: "):
+                    data = line[6:]  # Remove "data: " prefix
+                    if data.strip() == "[DONE]":
+                        break
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+
+    async def _parse_sse_stream_async(self, response: httpx.Response) -> AsyncGenerator[Dict[str, Any], None]:
+        """Parse Server-Sent Events stream from OpenAI chat completions asynchronously."""
+        # For async streaming responses, we need to iterate over the text content
+        async for chunk in response.aiter_text():
+            for line in chunk.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("data: "):
+                    data = line[6:]  # Remove "data: " prefix
+                    if data.strip() == "[DONE]":
+                        return
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
 
     def _transform_messages_for_o1(
         self, messages: List[Dict[str, str]]
@@ -205,23 +246,35 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3")
+        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
+        
         # Transform messages for o1 models
         if is_reasoning_model:
             messages = self._transform_messages_for_o1(
                 [{**msg} for msg in messages]
             )  # Deep copy each message dict
 
-        response = self.client.chat.completions.create(
-            messages=messages,
-            model=model_name,
-            stream=should_stream,
+        # Prepare request payload
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "stream": should_stream,
             **self._get_api_kwargs(exclude_stream=True),
+        }
+
+        # Make HTTP request
+        response = self.client.post(
+            f"{self.base_url}/chat/completions",
+            headers=self._get_headers(),
+            json=payload
         )
+        self._handle_error(response)
 
         if should_stream:
-            return (self._normalize_chunk(chunk) for chunk in response)
-        return self._normalize_response(response)
+            return (self._normalize_chunk(chunk_data) for chunk_data in self._parse_sse_stream(response))
+        
+        response_data = response.json()
+        return self._normalize_response(response_data)
 
     async def achat_complete(
         self, messages: List[Dict[str, str]], stream: Optional[bool] = None
@@ -237,28 +290,39 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3")
+        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
+        
         # Transform messages for o1 models
         if is_reasoning_model:
             messages = self._transform_messages_for_o1(
                 [{**msg} for msg in messages]
             )  # Deep copy each message dict
 
-        response = await self.async_client.chat.completions.create(
-            messages=messages,
-            model=model_name,
-            stream=should_stream,
+        # Prepare request payload
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "stream": should_stream,
             **self._get_api_kwargs(exclude_stream=True),
+        }
+
+        # Make async HTTP request
+        response = await self.async_client.post(
+            f"{self.base_url}/chat/completions",
+            headers=self._get_headers(),
+            json=payload
         )
+        self._handle_error(response)
 
         if should_stream:
-
             async def generate():
-                async for chunk in response:
-                    yield self._normalize_chunk(chunk)
+                async for chunk_data in self._parse_sse_stream_async(response):
+                    yield self._normalize_chunk(chunk_data)
 
             return generate()
-        return self._normalize_response(response)
+        
+        response_data = response.json()
+        return self._normalize_response(response_data)
 
     def _get_default_model(self) -> str:
         """Get the default model name."""

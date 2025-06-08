@@ -15,12 +15,11 @@ def test_client_properties():
     model = DeepSeekLanguageModel(api_key="test-key")
     assert model.client is not None
     assert model.async_client is not None
-    assert hasattr(model.client, "chat")
-    assert hasattr(model.async_client, "chat")
-    assert hasattr(model.client.chat, "completions")
-    assert hasattr(model.async_client.chat, "completions")
-    assert hasattr(model.client.chat.completions, "create")
-    assert hasattr(model.async_client.chat.completions, "create")
+    # Check HTTP client properties
+    assert hasattr(model.client, "post")
+    assert hasattr(model.async_client, "post")
+    assert hasattr(model.client, "get")
+    assert hasattr(model.async_client, "get")
 
 
 def test_initialization_with_api_key():

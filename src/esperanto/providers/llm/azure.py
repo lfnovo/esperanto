@@ -49,22 +49,15 @@ class AzureLanguageModel(LanguageModel):
         )
         # self.model_name is the Azure deployment name, set by base class constructor
 
+        # Validate required parameters and provide specific error messages
         if not self.api_key:
-            raise ValueError(
-                "Azure OpenAI API key not found. Set AZURE_OPENAI_API_KEY env var or pass 'api_key'."
-            )
+            raise ValueError("Azure OpenAI API key not found")
         if not self.azure_endpoint:
-            raise ValueError(
-                "Azure OpenAI endpoint not found. Set AZURE_OPENAI_ENDPOINT env var or pass 'azure_endpoint' in config."
-            )
+            raise ValueError("Azure OpenAI endpoint not found")
         if not self.api_version:
-            raise ValueError(
-                "Azure OpenAI API version not found. Set OPENAI_API_VERSION env var or pass 'api_version' in config."
-            )
+            raise ValueError("Azure OpenAI API version not found")
         if not self.model_name:
-            raise ValueError(
-                "Azure OpenAI deployment name (model_name) not found. Please provide it."
-            )
+            raise ValueError("Azure OpenAI deployment name (model_name) not found")
 
         self.client = AzureOpenAI(
             api_key=self.api_key,
@@ -82,11 +75,11 @@ class AzureLanguageModel(LanguageModel):
         """List available models for this provider.
 
         Note: For Azure, this typically means the configured deployment.
-        Listing all available deployments dynamically is not straightforward.
-        This returns an empty list as a placeholder.
+        Azure OpenAI doesn't provide a models listing API like regular OpenAI.
+        Returns an empty list since Azure uses deployments rather than model discovery.
         """
-        # Returning a representation of the current model/deployment might be an option:
-        # return [Model(id=self.model_name, owned_by="azure", type="language")]
+        # Azure doesn't have a models API endpoint - it uses deployments
+        # Return empty list since model discovery isn't available
         return []
 
     def _normalize_response(self, response: OpenAIChatCompletion) -> ChatCompletion:
@@ -319,10 +312,9 @@ class AzureLanguageModel(LanguageModel):
     def _get_default_model(self) -> str:
         """Get the default model name (deployment name for Azure).
 
-        For Azure, model_name (deployment name) is required at initialization.
-        This method returns the configured model_name.
+        For Azure, model_name (deployment name) is required for actual usage.
+        Returns the configured model_name or a placeholder for models listing.
         """
         if not self.model_name:
-            # This case should ideally be caught by __post_init__ validation
-            raise ValueError("Azure deployment name (model_name) is not set.")
+            return "azure-deployment"  # Placeholder when no deployment is configured
         return self.model_name

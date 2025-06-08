@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import httpx
 from dotenv import load_dotenv
-from elevenlabs.client import AsyncElevenLabs, ElevenLabs
 
 from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
@@ -54,7 +54,7 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
         super().__init__(
             model_name=model_name or self.DEFAULT_MODEL,
             api_key=api_key,
-            base_url=base_url,
+            base_url=base_url or "https://api.elevenlabs.io",
             config=kwargs
         )
         
@@ -63,36 +63,48 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
             **(kwargs.get("voice_settings", {}) or {})
         }
         
-        # Initialize client with API key
-        self.client = ElevenLabs(
-            api_key=api_key,
-        )
-        self.async_client = AsyncElevenLabs(
-            api_key=api_key,
-        )
+        # Initialize HTTP clients
+        self.client = httpx.Client(timeout=30.0)
+        self.async_client = httpx.AsyncClient(timeout=30.0)
         
         # Cache available voices
         self._available_voices = None
 
-    def _get_sync_client(self):
-        return self.client
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers for ElevenLabs API requests."""
+        return {
+            "xi-api-key": self.api_key,
+            "Content-Type": "application/json",
+        }
 
-    async def _get_async_client(self):
-        return self.async_client
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Handle HTTP error responses."""
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("detail", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"ElevenLabs API error: {error_message}")
 
     def generate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None) -> AudioResponse:
         """Generate speech synchronously."""
-        client = self._get_sync_client()
+        # Prepare request payload
+        payload = {
+            "text": text,
+            "model_id": self.model_name,
+            "voice_settings": self.voice_settings
+        }
 
-        # Convert text to speech using voice_id as a path parameter
-        response = client.text_to_speech.convert(
-            voice_id=voice,  # voice_id is a path parameter
-            text=text,
-            model_id=self.model_name
+        # Make HTTP request
+        response = self.client.post(
+            f"{self.base_url}/v1/text-to-speech/{voice}?output_format=mp3_44100_128",
+            headers=self._get_headers(),
+            json=payload
         )
+        self._handle_error(response)
 
-        # Collect all bytes from the iterator
-        audio_bytes = b''.join(response)
+        audio_bytes = response.content
 
         response_audio = AudioResponse(
             audio_data=audio_bytes,
@@ -111,19 +123,22 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
 
     async def agenerate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None) -> AudioResponse:
         """Generate speech asynchronously."""
-        client = await self._get_async_client()
+        # Prepare request payload
+        payload = {
+            "text": text,
+            "model_id": self.model_name,
+            "voice_settings": self.voice_settings
+        }
 
-        # Convert text to speech using voice_id as a path parameter
-        response = client.text_to_speech.convert(
-            voice_id=voice,  # voice_id is a path parameter
-            text=text,
-            model_id=self.model_name
+        # Make async HTTP request
+        response = await self.async_client.post(
+            f"{self.base_url}/v1/text-to-speech/{voice}?output_format=mp3_44100_128",
+            headers=self._get_headers(),
+            json=payload
         )
+        self._handle_error(response)
 
-        # Collect all bytes from the async iterator
-        audio_bytes = b''
-        async for chunk in response:
-            audio_bytes += chunk
+        audio_bytes = response.content
 
         response_audio = AudioResponse(
             audio_data=audio_bytes,
@@ -143,18 +158,22 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
     @property
     def available_voices(self) -> Dict[str, Voice]:
         """Get available voices."""
-        client = self._get_sync_client()
-        response = client.voices.get_all()
+        response = self.client.get(
+            f"{self.base_url}/v1/voices",
+            headers=self._get_headers()
+        )
+        self._handle_error(response)
         
+        response_data = response.json()
         voices = {}
-        for voice_data in response.voices:
-            voices[voice_data.voice_id] = Voice(
-                name=voice_data.name,
-                id=voice_data.voice_id,
-                gender=voice_data.labels.get("gender", "unknown").upper(),
-                language_code=voice_data.labels.get("language", "en"),
-                description=voice_data.description,
-                preview_url=voice_data.preview_url
+        for voice_data in response_data["voices"]:
+            voices[voice_data["voice_id"]] = Voice(
+                name=voice_data["name"],
+                id=voice_data["voice_id"],
+                gender=voice_data.get("labels", {}).get("gender", "unknown").upper(),
+                language_code=voice_data.get("labels", {}).get("language", "en"),
+                description=voice_data.get("description", ""),
+                preview_url=voice_data.get("preview_url", "")
             )
         return voices
 

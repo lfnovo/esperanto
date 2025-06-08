@@ -1,9 +1,10 @@
 """Ollama embedding model provider."""
 
+import json
 import os
 from typing import Any, Dict, List
 
-from ollama import AsyncClient, Client
+import httpx
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
 
@@ -21,9 +22,25 @@ class OllamaEmbeddingModel(EmbeddingModel):
             or "http://localhost:11434"
         )
 
-        # Initialize clients
-        self.client = Client(host=self.base_url)
-        self.async_client = AsyncClient(host=self.base_url)
+        # Initialize HTTP clients
+        self.client = httpx.Client(timeout=30.0)
+        self.async_client = httpx.AsyncClient(timeout=30.0)
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers for Ollama API requests."""
+        return {
+            "Content-Type": "application/json",
+        }
+
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Handle HTTP error responses."""
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"Ollama API error: {error_message}")
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
@@ -50,7 +67,6 @@ class OllamaEmbeddingModel(EmbeddingModel):
         if not texts:
             raise ValueError("Texts cannot be empty")
 
-        api_kwargs = {**self._get_api_kwargs(), **kwargs}
         results = []
 
         for text in texts:
@@ -60,12 +76,27 @@ class OllamaEmbeddingModel(EmbeddingModel):
                 raise ValueError("Text cannot be empty")
 
             text = text.replace("\n", " ")
+            
+            # Prepare request payload
+            payload = {
+                "model": self.get_model_name(),
+                "prompt": text,
+                **self._get_api_kwargs(),
+                **kwargs
+            }
+
             try:
-                response = self.client.embeddings(
-                    model=self.get_model_name(), prompt=text, **api_kwargs
+                # Make HTTP request
+                response = self.client.post(
+                    f"{self.base_url}/api/embeddings",
+                    headers=self._get_headers(),
+                    json=payload
                 )
+                self._handle_error(response)
+                
+                response_data = response.json()
                 # Convert embeddings to regular floats
-                results.append([float(value) for value in response.embedding])
+                results.append([float(value) for value in response_data["embedding"]])
             except Exception as e:
                 raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
 
@@ -87,7 +118,6 @@ class OllamaEmbeddingModel(EmbeddingModel):
         if not texts:
             raise ValueError("Texts cannot be empty")
 
-        api_kwargs = {**self._get_api_kwargs(), **kwargs}
         results = []
 
         for text in texts:
@@ -97,12 +127,27 @@ class OllamaEmbeddingModel(EmbeddingModel):
                 raise ValueError("Text cannot be empty")
 
             text = text.replace("\n", " ")
+            
+            # Prepare request payload
+            payload = {
+                "model": self.get_model_name(),
+                "prompt": text,
+                **self._get_api_kwargs(),
+                **kwargs
+            }
+
             try:
-                response = await self.async_client.embeddings(
-                    model=self.get_model_name(), prompt=text, **api_kwargs
+                # Make async HTTP request
+                response = await self.async_client.post(
+                    f"{self.base_url}/api/embeddings",
+                    headers=self._get_headers(),
+                    json=payload
                 )
+                self._handle_error(response)
+                
+                response_data = response.json()
                 # Convert embeddings to regular floats
-                results.append([float(value) for value in response.embedding])
+                results.append([float(value) for value in response_data["embedding"]])
             except Exception as e:
                 raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
 
@@ -121,15 +166,21 @@ class OllamaEmbeddingModel(EmbeddingModel):
     def models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
-            models = self.client.list()
+            response = self.client.get(
+                f"{self.base_url}/api/tags",
+                headers=self._get_headers()
+            )
+            self._handle_error(response)
+            
+            models_data = response.json()
             return [
                 Model(
-                    id=model['name'],
+                    id=model["name"],
                     owned_by="Ollama",
                     context_window=32768,  # Default context window for Ollama
                     type="embedding"
                 )
-                for model in models
+                for model in models_data.get("models", [])
             ]
         except Exception:
             return []

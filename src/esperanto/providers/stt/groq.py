@@ -2,41 +2,32 @@
 
 import os
 from dataclasses import dataclass
-from typing import Any, BinaryIO, Dict, List, Optional, Union
+from typing import List
 
-from groq import AsyncGroq, Groq
-
-from esperanto.common_types import TranscriptionResponse
-from esperanto.providers.stt.base import Model, SpeechToTextModel
+from esperanto.providers.stt.base import Model
+from esperanto.providers.stt.openai import OpenAISpeechToTextModel
 
 
 @dataclass
-class GroqSpeechToTextModel(SpeechToTextModel):
-    """Groq speech-to-text model implementation."""
+class GroqSpeechToTextModel(OpenAISpeechToTextModel):
+    """Groq speech-to-text model implementation using OpenAI-compatible API."""
 
     def __post_init__(self):
-        """Initialize Groq client."""
-        # Call parent's post_init to handle config initialization
-        super().__post_init__()
-
-        # Get API key
+        """Initialize HTTP clients with Groq configuration."""
+        # Set Groq-specific API key and base URL before calling parent
         self.api_key = self.api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("Groq API key not found")
-
-        # Initialize clients
-        config = {
-            "api_key": self.api_key,
-        }
-        if self.base_url:
-            config["base_url"] = self.base_url
-
-        self.client = Groq(**config)
-        self.async_client = AsyncGroq(**config)
+        
+        # Set Groq's OpenAI-compatible base URL
+        self.base_url = self.base_url or "https://api.groq.com/openai/v1"
+        
+        # Call parent's post_init which will initialize HTTP clients
+        super().__post_init__()
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "whisper-1"  # Update with actual Groq model name when available
+        return "whisper-large-v3"
 
     @property
     def provider(self) -> str:
@@ -47,84 +38,23 @@ class GroqSpeechToTextModel(SpeechToTextModel):
     def models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
-            models = self.client.models.list()
+            response = self.client.get(
+                f"{self.base_url}/models",
+                headers=self._get_headers()
+            )
+            self._handle_error(response)
+            
+            models_data = response.json()
             return [
                 Model(
-                    id=model_id,  # The model ID is the first item in the tuple
-                    owned_by="Groq",  # Groq owns all models in their API
+                    id=model["id"],
+                    owned_by="Groq",
                     context_window=None,  # Audio models don't have context windows
                     type="speech_to_text",
                 )
-                for model_id, *_ in models  # Unpack the tuple, we only need the ID
-                if model_id.startswith("whisper")  # Groq uses OpenAI's Whisper models
+                for model in models_data["data"]
+                if model["id"].startswith("whisper")
             ]
         except Exception:
             # Return empty list if we can't fetch models
             return []
-
-    def _get_api_kwargs(
-        self, language: Optional[str] = None, prompt: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Get kwargs for API calls."""
-        kwargs = {
-            "model": self.get_model_name(),
-        }
-
-        if language:
-            kwargs["language"] = language
-        if prompt:
-            kwargs["prompt"] = prompt
-
-        return kwargs
-
-    def transcribe(
-        self,
-        audio_file: Union[str, BinaryIO],
-        language: Optional[str] = None,
-        prompt: Optional[str] = None,
-    ) -> TranscriptionResponse:
-        """Transcribe audio to text using Groq's model."""
-        kwargs = self._get_api_kwargs(language, prompt)
-
-        # Handle file input
-        if isinstance(audio_file, str):
-            with open(audio_file, "rb") as f:
-                response = self.client.audio.transcriptions.create(file=f, **kwargs)
-        else:
-            response = self.client.audio.transcriptions.create(
-                file=audio_file, **kwargs
-            )
-
-        return TranscriptionResponse(
-            text=response.text,
-            language=language,
-            model=self.get_model_name(),
-            provider=self.provider,
-        )
-
-    async def atranscribe(
-        self,
-        audio_file: Union[str, BinaryIO],
-        language: Optional[str] = None,
-        prompt: Optional[str] = None,
-    ) -> TranscriptionResponse:
-        """Async transcribe audio to text using Groq's model."""
-        kwargs = self._get_api_kwargs(language, prompt)
-
-        # Handle file input
-        if isinstance(audio_file, str):
-            with open(audio_file, "rb") as f:
-                response = await self.async_client.audio.transcriptions.create(
-                    file=f, **kwargs
-                )
-        else:
-            response = await self.async_client.audio.transcriptions.create(
-                file=audio_file, **kwargs
-            )
-
-        return TranscriptionResponse(
-            text=response.text,
-            language=language,
-            model=self.get_model_name(),
-            provider=self.provider,
-        )

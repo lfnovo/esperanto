@@ -33,23 +33,9 @@ class XAILanguageModel(OpenAILanguageModel):
                 "XAI API key not found. Set the XAI_API_KEY environment variable."
             )
 
-        # Call parent's post_init to set up normalized response handling
+        # Call parent's post_init to set up HTTP clients
         super().__post_init__()
 
-        if self.structured:
-            logger.warning("Structured output not supported for X.AI.")
-
-        # Initialize OpenAI clients with XAI configuration
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            organization=self.organization,
-        )
-        self.async_client = AsyncOpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            organization=self.organization,
-        )
 
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
@@ -66,16 +52,22 @@ class XAILanguageModel(OpenAILanguageModel):
     @property
     def models(self) -> List[Model]:
         """List all available models for this provider."""
-        models = self.client.models.list()
+        response = self.client.get(
+            f"{self.base_url}/models",
+            headers=self._get_headers()
+        )
+        self._handle_error(response)
+        
+        models_data = response.json()
         return [
             Model(
-                id=model.id,
+                id=model["id"],
                 owned_by="X.AI",
-                context_window=getattr(model, "context_window", None),
+                context_window=model.get("context_window", None),
                 type="language",
             )
-            for model in models
-            if model.id.startswith("grok")  # Only include Grok models
+            for model in models_data["data"]
+            if model["id"].startswith("grok")  # Only include Grok models
         ]
 
     def _get_default_model(self) -> str:

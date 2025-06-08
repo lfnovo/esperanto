@@ -1,51 +1,67 @@
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from esperanto.providers.llm.mistral import MistralLanguageModel
+from esperanto.common_types import ChatCompletion, Choice, Message, Usage
 
 @pytest.fixture
-def mock_mistral_client():
-    class FakeMessage:
-        def __init__(self, content, role):
-            self.content = content
-            self.role = role
-    class FakeChoice:
-        def __init__(self):
-            self.index = 0
-            self.message = FakeMessage("Hello!", "assistant")
-            self.finish_reason = "stop"
-    class FakeUsage:
-        def __init__(self):
-            self.prompt_tokens = 2
-            self.completion_tokens = 3
-            self.total_tokens = 5
-    class FakeResponse:
-        def __init__(self):
-            self.choices = [FakeChoice()]
-            self.created = 123
-            self.model = "mistral-large-latest"
-            self.id = "cmpl-123"
-            self.provider = "mistral"
-            self.usage = FakeUsage()
-    fake_response = FakeResponse()
-    client = Mock()
-    client.chat_completions.create.return_value = fake_response
-    class Chat:
-        def complete(self, *args, **kwargs):
-            return fake_response
-        async def complete_async(self, *args, **kwargs):
-            return fake_response
-    client.chat = Chat()
-    return client
+def mock_httpx_response():
+    """Mock httpx response for Mistral API."""
+    def create_response():
+        return {
+            "id": "cmpl-123",
+            "object": "chat.completion",
+            "created": 123,
+            "model": "mistral-large-latest",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "Hello!"
+                    },
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 2,
+                "completion_tokens": 3,
+                "total_tokens": 5
+            }
+        }
+    return create_response
 
 @pytest.fixture
-def mistral_model(monkeypatch, mock_mistral_client):
-    client = mock_mistral_client
-    with patch("esperanto.providers.llm.mistral.Mistral", return_value=client):
-        model = MistralLanguageModel(api_key="test-key", model_name="mistral-large-latest")
-        model.client = client
-        model.async_client = client
-        return model
+def mistral_model(mock_httpx_response):
+    """Create MistralLanguageModel with mocked HTTP client."""
+    model = MistralLanguageModel(api_key="test-key", model_name="mistral-large-latest")
+    
+    # Mock the HTTP clients
+    mock_client = Mock()
+    mock_async_client = AsyncMock()
+    
+    def mock_post(url, **kwargs):
+        response_data = mock_httpx_response()
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = response_data
+        return mock_response
+    
+    async def mock_async_post(url, **kwargs):
+        response_data = mock_httpx_response()
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = response_data
+        return mock_response
+    
+    mock_client.post = mock_post
+    mock_async_client.post = mock_async_post
+    
+    model.client = mock_client
+    model.async_client = mock_async_client
+    return model
 
 def test_provider_name(mistral_model):
     assert mistral_model.provider == "mistral"
@@ -70,18 +86,15 @@ def test_chat_complete(mistral_model):
         {"role": "user", "content": "Hello!"},
     ]
     response = mistral_model.chat_complete(messages)
-    assert response.choices[0].message["content"] == "Hello!"
+    assert response.choices[0].message.content == "Hello!"
 
-def test_achat_complete(mistral_model):
-    import asyncio
+async def test_achat_complete(mistral_model):
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"},
     ]
-    async def run():
-        response = await mistral_model.achat_complete(messages)
-        assert response.choices[0].message["content"] == "Hello!"
-    asyncio.run(run())
+    response = await mistral_model.achat_complete(messages)
+    assert response.choices[0].message.content == "Hello!"
 
 def test_to_langchain(mistral_model):
     # Only run if langchain_mistralai is installed

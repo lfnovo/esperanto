@@ -42,28 +42,24 @@ def mock_openai_response():
 
 @pytest.fixture
 def mock_anthropic_response():
-    class TextBlock:
-        def __init__(self, text):
-            self.text = text
-            self.type = 'text'
-
-    class Usage:
-        def __init__(self, input_tokens, output_tokens):
-            self.input_tokens = input_tokens
-            self.output_tokens = output_tokens
-
-    class Message:
-        def __init__(self):
-            self.id = "msg_123"
-            self.content = [TextBlock("Test response")]
-            self.model = "claude-3-opus-20240229"
-            self.role = "assistant"
-            self.stop_reason = "end_turn"
-            self.stop_sequence = None
-            self.type = "message"
-            self.usage = Usage(input_tokens=57, output_tokens=40)
-
-    return Message()
+    return {
+        "id": "msg_123",
+        "content": [
+            {
+                "text": "Test response",
+                "type": "text"
+            }
+        ],
+        "model": "claude-3-opus-20240229",
+        "role": "assistant",
+        "stop_reason": "end_turn",
+        "stop_sequence": None,
+        "type": "message",
+        "usage": {
+            "input_tokens": 57,
+            "output_tokens": 40
+        }
+    }
 
 @pytest.fixture
 def mock_groq_response():
@@ -94,37 +90,52 @@ def mock_groq_response():
 
     return Response()
 
-@pytest.fixture
-def mock_openai_client(mock_openai_response):
-    client = Mock()
-    async_client = AsyncMock()
-    
-    # Mock synchronous completion
-    mock_completion = Mock()
-    mock_completion.configure_mock(**mock_openai_response.__dict__)
-    client.chat.completions.create.return_value = mock_completion
-    
-    # Mock async completion
-    mock_async_completion = AsyncMock()
-    mock_async_completion.configure_mock(**mock_openai_response.__dict__)
-    async_client.chat.completions.create.return_value = mock_async_completion
-    
-    return client, async_client
 
 @pytest.fixture
 def mock_anthropic_client(mock_anthropic_response):
+    """Mock httpx clients for Anthropic API."""
     client = Mock()
     async_client = AsyncMock()
     
-    # Mock synchronous completion
-    mock_completion = Mock()
-    mock_completion.configure_mock(**mock_anthropic_response.__dict__)
-    client.messages.create.return_value = mock_completion
+    # Mock HTTP response objects
+    def make_response(status_code, data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = data
+        return response
     
-    # Mock async completion
-    mock_async_completion = AsyncMock()
-    mock_async_completion.configure_mock(**mock_anthropic_response.__dict__)
-    async_client.messages.create.return_value = mock_async_completion
+    def make_async_response(status_code, data):
+        response = AsyncMock()
+        response.status_code = status_code
+        response.json = Mock(return_value=data)
+        return response
+    
+    # Configure responses
+    def mock_post_side_effect(url, **kwargs):
+        if url.endswith("/messages"):
+            return make_response(200, mock_anthropic_response)
+        elif url.endswith("/models"):
+            return make_response(200, {"data": [{"id": "claude-3-opus-20240229", "max_tokens": 200000}]})
+        return make_response(404, {"error": "Not found"})
+    
+    def mock_get_side_effect(url, **kwargs):
+        if url.endswith("/models"):
+            return make_response(200, {"data": [{"id": "claude-3-opus-20240229", "max_tokens": 200000}]})
+        return make_response(404, {"error": "Not found"})
+    
+    async def mock_async_post_side_effect(url, **kwargs):
+        if url.endswith("/messages"):
+            return make_async_response(200, mock_anthropic_response)
+        elif url.endswith("/models"):
+            return make_async_response(200, {"data": [{"id": "claude-3-opus-20240229", "max_tokens": 200000}]})
+        return make_async_response(404, {"error": "Not found"})
+    
+    # Mock synchronous HTTP client
+    client.post.side_effect = mock_post_side_effect
+    client.get.side_effect = mock_get_side_effect
+    
+    # Mock async HTTP client
+    async_client.post.side_effect = mock_async_post_side_effect
     
     return client, async_client
 
@@ -138,13 +149,76 @@ def mock_groq_client(mock_groq_response):
     return mock_client
 
 @pytest.fixture
-def openai_model(mock_openai_client):
+def openai_model():
+    """Create OpenAILanguageModel with mocked HTTP client."""
     model = OpenAILanguageModel(
         api_key="test-key",
         model_name="gpt-3.5-turbo",
         temperature=0.7
     )
-    model.client, model.async_client = mock_openai_client
+    
+    # Mock the HTTP clients
+    mock_client = Mock()
+    mock_async_client = AsyncMock()
+    
+    # Create mock HTTP response data
+    mock_response_data = {
+        "id": "chatcmpl-123",
+        "created": 1677858242,
+        "model": "gpt-3.5-turbo-0613",
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "content": "Test response",
+                    "role": "assistant"
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 8,
+            "total_tokens": 18
+        }
+    }
+    
+    def mock_post_side_effect(url, **kwargs):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+        # Add streaming capability
+        mock_response.iter_text = Mock(return_value=iter([
+            'data: {"choices":[{"delta":{"content":"Test"},"index":0}]}\n',
+            'data: [DONE]\n'
+        ]))
+        return mock_response
+    
+    async def mock_async_post_side_effect(url, **kwargs):
+        mock_response = Mock()  # Use regular Mock, not AsyncMock
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+        # Add async streaming capability
+        async def async_iter():
+            yield 'data: {"choices":[{"delta":{"content":"Test"},"index":0}]}\n'
+            yield 'data: [DONE]\n'
+        mock_response.aiter_text = Mock(return_value=async_iter())
+        return mock_response
+    
+    def mock_get_side_effect(url, **kwargs):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": [{"id": "gpt-3.5-turbo", "owned_by": "openai"}]}
+        return mock_response
+    
+    mock_client.post.side_effect = mock_post_side_effect
+    mock_client.get.side_effect = mock_get_side_effect
+    mock_async_client.post.side_effect = mock_async_post_side_effect
+    
+    model.client = mock_client
+    model.async_client = mock_async_client
+    
     return model
 
 @pytest.fixture

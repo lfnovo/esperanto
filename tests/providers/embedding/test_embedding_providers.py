@@ -16,27 +16,51 @@ from esperanto.providers.embedding.vertex import VertexEmbeddingModel
 # Mock responses
 @pytest.fixture
 def mock_openai_embedding_response():
-    class EmbeddingData:
-        def __init__(self):
-            self.embedding = [0.1, 0.2, 0.3]
-            self.index = 0
+    """Mock HTTP response for OpenAI embeddings API."""
+    return {
+        "data": [
+            {
+                "embedding": [0.1, 0.2, 0.3],
+                "index": 0,
+                "object": "embedding"
+            }
+        ],
+        "model": "text-embedding-3-small",
+        "object": "list",
+        "usage": {"total_tokens": 4}
+    }
 
-    class Response:
-        def __init__(self):
-            self.data = [EmbeddingData()]
-            self.model = "text-embedding-3-small"
-            self.usage = {"total_tokens": 4}
 
-    return Response()
+@pytest.fixture
+def mock_openai_models_response():
+    """Mock HTTP response for OpenAI models API."""
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": "text-embedding-3-small",
+                "object": "model",
+                "owned_by": "openai"
+            },
+            {
+                "id": "text-embedding-3-large",
+                "object": "model",
+                "owned_by": "openai"
+            },
+            {
+                "id": "gpt-4",
+                "object": "model",
+                "owned_by": "openai"
+            }
+        ]
+    }
 
 
 @pytest.fixture
 def mock_ollama_embedding_response():
-    class EmbeddingsResponse:
-        def __init__(self):
-            self.embedding = [0.1, 0.2, 0.3]
-
-    return EmbeddingsResponse()
+    return {
+        "embedding": [0.1, 0.2, 0.3]
+    }
 
 
 @pytest.fixture
@@ -46,44 +70,155 @@ def mock_google_embedding_response():
 
 @pytest.fixture
 def mock_vertex_embedding_response():
-    class EmbeddingValue:
-        def __init__(self):
-            self.values = [0.1, 0.2, 0.3]
-
-    return [EmbeddingValue()]
+    return {
+        "predictions": [
+            {
+                "embeddings": {
+                    "values": [0.1, 0.2, 0.3]
+                }
+            }
+        ]
+    }
 
 
 # Mock clients
 @pytest.fixture
-def mock_openai_embedding_client(mock_openai_embedding_response):
+def mock_openai_embedding_client(mock_openai_embedding_response, mock_openai_models_response):
+    """Mock httpx clients for OpenAI embeddings."""
     client = Mock()
     async_client = AsyncMock()
 
-    # Mock synchronous embeddings
-    client.embeddings.create.return_value = mock_openai_embedding_response
+    # Mock HTTP response objects
+    def make_response(status_code, data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = data
+        return response
 
-    # Mock async embeddings
-    async_client.embeddings.create.return_value = mock_openai_embedding_response
+    def make_async_response(status_code, data):
+        response = AsyncMock()
+        response.status_code = status_code
+        response.json = Mock(return_value=data)
+        return response
+
+    # Configure responses based on URL
+    def mock_post_side_effect(url, **kwargs):
+        if url.endswith("/embeddings"):
+            return make_response(200, mock_openai_embedding_response)
+        return make_response(404, {"error": "Not found"})
+
+    def mock_get_side_effect(url, **kwargs):
+        if url.endswith("/models"):
+            return make_response(200, mock_openai_models_response)
+        return make_response(404, {"error": "Not found"})
+
+    async def mock_async_post_side_effect(url, **kwargs):
+        if url.endswith("/embeddings"):
+            return make_async_response(200, mock_openai_embedding_response)
+        return make_async_response(404, {"error": "Not found"})
+
+    async def mock_async_get_side_effect(url, **kwargs):
+        if url.endswith("/models"):
+            return make_async_response(200, mock_openai_models_response)
+        return make_async_response(404, {"error": "Not found"})
+
+    # Mock synchronous HTTP client
+    client.post.side_effect = mock_post_side_effect
+    client.get.side_effect = mock_get_side_effect
+
+    # Mock async HTTP client
+    async_client.post.side_effect = mock_async_post_side_effect
+    async_client.get.side_effect = mock_async_get_side_effect
 
     return client, async_client
 
 
 @pytest.fixture
 def mock_ollama_response(mock_ollama_embedding_response):
-    mock_sync = Mock()
-    mock_sync.embeddings.return_value = mock_ollama_embedding_response
+    """Mock httpx clients for Ollama embeddings."""
+    client = Mock()
+    async_client = AsyncMock()
 
-    mock_async = AsyncMock()
-    mock_async.embeddings.return_value = mock_ollama_embedding_response
+    # Mock HTTP response objects
+    def make_response(status_code, data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = data
+        return response
 
-    return mock_sync, mock_async
+    def make_async_response(status_code, data):
+        response = AsyncMock()
+        response.status_code = status_code
+        response.json = Mock(return_value=data)
+        return response
+
+    # Configure responses based on URL
+    def mock_post_side_effect(url, **kwargs):
+        if url.endswith("/api/embeddings"):
+            return make_response(200, mock_ollama_embedding_response)
+        elif url.endswith("/api/tags"):
+            return make_response(200, {"models": [{"name": "mxbai-embed-large"}]})
+        return make_response(404, {"error": "Not found"})
+
+    def mock_get_side_effect(url, **kwargs):
+        if url.endswith("/api/tags"):
+            return make_response(200, {"models": [{"name": "mxbai-embed-large"}]})
+        return make_response(404, {"error": "Not found"})
+
+    async def mock_async_post_side_effect(url, **kwargs):
+        if url.endswith("/api/embeddings"):
+            return make_async_response(200, mock_ollama_embedding_response)
+        elif url.endswith("/api/tags"):
+            return make_async_response(200, {"models": [{"name": "mxbai-embed-large"}]})
+        return make_async_response(404, {"error": "Not found"})
+
+    # Mock synchronous HTTP client
+    client.post.side_effect = mock_post_side_effect
+    client.get.side_effect = mock_get_side_effect
+
+    # Mock async HTTP client
+    async_client.post.side_effect = mock_async_post_side_effect
+
+    return client, async_client
 
 
 @pytest.fixture
-def mock_vertex_model(mock_vertex_embedding_response):
-    mock = Mock()
-    mock.get_embeddings.return_value = mock_vertex_embedding_response
-    return mock
+def mock_vertex_client(mock_vertex_embedding_response):
+    """Mock httpx clients for Vertex AI API."""
+    client = Mock()
+    async_client = AsyncMock()
+    
+    # Mock HTTP response objects
+    def make_response(status_code, data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = data
+        return response
+    
+    def make_async_response(status_code, data):
+        response = AsyncMock()
+        response.status_code = status_code
+        response.json = Mock(return_value=data)
+        return response
+    
+    # Configure responses
+    def mock_post_side_effect(url, **kwargs):
+        if "predict" in url:
+            return make_response(200, mock_vertex_embedding_response)
+        return make_response(404, {"error": "Not found"})
+    
+    async def mock_async_post_side_effect(url, **kwargs):
+        if "predict" in url:
+            return make_async_response(200, mock_vertex_embedding_response)
+        return make_async_response(404, {"error": "Not found"})
+    
+    # Mock synchronous HTTP client
+    client.post.side_effect = mock_post_side_effect
+    
+    # Mock async HTTP client
+    async_client.post.side_effect = mock_async_post_side_effect
+    
+    return client, async_client
 
 
 # Provider fixtures
@@ -101,18 +236,24 @@ def ollama_embedding_model(mock_ollama_response):
     model = OllamaEmbeddingModel(
         base_url="http://localhost:11434", model_name="mxbai-embed-large"
     )
-    model.client = mock_ollama_response[0]
-    model.async_client = mock_ollama_response[1]
+    model.client, model.async_client = mock_ollama_response
     return model
 
 
 @pytest.fixture
-def vertex_embedding_model(mock_vertex_model):
-    model = VertexEmbeddingModel(
-        vertex_project="test-project", model_name="textembedding-gecko"
-    )
-    model._model = mock_vertex_model
-    return model
+def vertex_embedding_model(mock_vertex_client):
+    with patch('subprocess.run') as mock_subprocess:
+        mock_subprocess.return_value.stdout = "mock_access_token"
+        mock_subprocess.return_value.returncode = 0
+        
+        model = VertexEmbeddingModel(
+            vertex_project="test-project", model_name="textembedding-gecko"
+        )
+        model.client, model.async_client = mock_vertex_client
+        
+        # Mock the instance method directly to prevent token calls during tests
+        model._get_access_token = Mock(return_value="mock_access_token")
+        return model
 
 
 # Test base embedding model configuration
@@ -194,11 +335,23 @@ def test_openai_embed(openai_embedding_model):
     texts = ["Hello, world!", "Test text"]
     embeddings = openai_embedding_model.embed(texts)
 
-    openai_embedding_model.client.embeddings.create.assert_called_once()
-    call_kwargs = openai_embedding_model.client.embeddings.create.call_args[1]
-
-    assert call_kwargs["input"] == texts
-    assert call_kwargs["model"] == "text-embedding-3-small"
+    # Verify HTTP POST was called
+    openai_embedding_model.client.post.assert_called_once()
+    call_args = openai_embedding_model.client.post.call_args
+    
+    # Check URL
+    assert call_args[0][0] == "https://api.openai.com/v1/embeddings"
+    
+    # Check request payload
+    json_payload = call_args[1]["json"]
+    assert json_payload["input"] == texts
+    assert json_payload["model"] == "text-embedding-3-small"
+    
+    # Check headers
+    headers = call_args[1]["headers"]
+    assert "Authorization" in headers
+    assert headers["Authorization"] == "Bearer test-key"
+    
     assert embeddings == [[0.1, 0.2, 0.3]]
 
 
@@ -207,12 +360,45 @@ async def test_openai_aembed(openai_embedding_model):
     texts = ["Hello, world!", "Test text"]
     embeddings = await openai_embedding_model.aembed(texts)
 
-    openai_embedding_model.async_client.embeddings.create.assert_called_once()
-    call_kwargs = openai_embedding_model.async_client.embeddings.create.call_args[1]
-
-    assert call_kwargs["input"] == texts
-    assert call_kwargs["model"] == "text-embedding-3-small"
+    # Verify async HTTP POST was called
+    openai_embedding_model.async_client.post.assert_called_once()
+    call_args = openai_embedding_model.async_client.post.call_args
+    
+    # Check URL
+    assert call_args[0][0] == "https://api.openai.com/v1/embeddings"
+    
+    # Check request payload
+    json_payload = call_args[1]["json"]
+    assert json_payload["input"] == texts
+    assert json_payload["model"] == "text-embedding-3-small"
+    
+    # Check headers
+    headers = call_args[1]["headers"]
+    assert "Authorization" in headers
+    assert headers["Authorization"] == "Bearer test-key"
+    
     assert embeddings == [[0.1, 0.2, 0.3]]
+
+
+def test_openai_models(openai_embedding_model):
+    """Test that the models property works with HTTP."""
+    models = openai_embedding_model.models
+    
+    # Verify HTTP GET was called
+    openai_embedding_model.client.get.assert_called_with(
+        "https://api.openai.com/v1/models",
+        headers={
+            "Authorization": "Bearer test-key",
+            "Content-Type": "application/json"
+        }
+    )
+    
+    # Check that only embedding models are returned
+    assert len(models) == 2
+    assert models[0].id == "text-embedding-3-small"
+    assert models[1].id == "text-embedding-3-large"
+    assert models[0].type == "embedding"
+    assert models[1].type == "embedding"
 
 
 # Tests for Ollama Embedding Provider
@@ -266,55 +452,69 @@ def test_ollama_embed_none_text():
 
 def test_ollama_embed(ollama_embedding_model):
     """Test embed method."""
-    with patch.object(ollama_embedding_model.client, "embeddings") as mock_embed:
-        mock_response = Mock()
-        mock_response.embedding = [0.1, 0.2, 0.3]
-        mock_embed.return_value = mock_response
-        texts = ["Hello, world!"]
-        embeddings = ollama_embedding_model.embed(texts)
-        assert len(embeddings) == 1
-        assert embeddings[0] == [0.1, 0.2, 0.3]
-        mock_embed.assert_called_once_with(
-            model="mxbai-embed-large", prompt="Hello, world!"
-        )
+    texts = ["Hello, world!"]
+    embeddings = ollama_embedding_model.embed(texts)
+    assert len(embeddings) == 1
+    assert embeddings[0] == [0.1, 0.2, 0.3]
+    
+    # Verify HTTP POST was called
+    ollama_embedding_model.client.post.assert_called_once()
+    call_args = ollama_embedding_model.client.post.call_args
+    
+    # Check URL
+    assert call_args[0][0] == "http://localhost:11434/api/embeddings"
+    
+    # Check request payload
+    json_payload = call_args[1]["json"]
+    assert json_payload["prompt"] == "Hello, world!"
+    assert json_payload["model"] == "mxbai-embed-large"
 
 
 @pytest.mark.asyncio
 async def test_ollama_aembed(ollama_embedding_model):
     """Test async embed method."""
-    with patch.object(ollama_embedding_model.async_client, "embeddings") as mock_embed:
-        mock_response = Mock()
-        mock_response.embedding = [0.1, 0.2, 0.3]
-        mock_embed.return_value = mock_response
-        texts = ["Hello, world!"]
-        embeddings = await ollama_embedding_model.aembed(texts)
-        assert len(embeddings) == 1
-        assert embeddings[0] == [0.1, 0.2, 0.3]
-        mock_embed.assert_called_once_with(
-            model="mxbai-embed-large", prompt="Hello, world!"
-        )
+    texts = ["Hello, world!"]
+    embeddings = await ollama_embedding_model.aembed(texts)
+    assert len(embeddings) == 1
+    assert embeddings[0] == [0.1, 0.2, 0.3]
+    
+    # Verify async HTTP POST was called
+    ollama_embedding_model.async_client.post.assert_called_once()
+    call_args = ollama_embedding_model.async_client.post.call_args
+    
+    # Check URL
+    assert call_args[0][0] == "http://localhost:11434/api/embeddings"
+    
+    # Check request payload
+    json_payload = call_args[1]["json"]
+    assert json_payload["prompt"] == "Hello, world!"
+    assert json_payload["model"] == "mxbai-embed-large"
 
 
 def test_ollama_embed_multiple_texts(ollama_embedding_model):
     """Test embed method with multiple texts."""
-    with patch.object(ollama_embedding_model.client, "embeddings") as mock_embed:
-        mock_response1 = Mock()
-        mock_response1.embedding = [0.1, 0.2, 0.3]
-        mock_response2 = Mock()
-        mock_response2.embedding = [0.4, 0.5, 0.6]
-        mock_embed.side_effect = [mock_response1, mock_response2]
-        texts = ["Hello, world!", "Another text"]
-        embeddings = ollama_embedding_model.embed(texts)
-        assert len(embeddings) == 2
-        assert embeddings[0] == [0.1, 0.2, 0.3]
-        assert embeddings[1] == [0.4, 0.5, 0.6]
-        assert mock_embed.call_count == 2
-        mock_embed.assert_has_calls(
-            [
-                call(model="mxbai-embed-large", prompt="Hello, world!"),
-                call(model="mxbai-embed-large", prompt="Another text"),
-            ]
-        )
+    # Mock different responses for each call
+    def mock_post_side_effect(url, **kwargs):
+        response = Mock()
+        response.status_code = 200
+        # Return different embeddings based on the prompt
+        prompt = kwargs.get("json", {}).get("prompt", "")
+        if prompt == "Hello, world!":
+            response.json.return_value = {"embedding": [0.1, 0.2, 0.3]}
+        elif prompt == "Another text":
+            response.json.return_value = {"embedding": [0.4, 0.5, 0.6]}
+        else:
+            response.json.return_value = {"embedding": [0.1, 0.2, 0.3]}
+        return response
+    
+    ollama_embedding_model.client.post.side_effect = mock_post_side_effect
+    
+    texts = ["Hello, world!", "Another text"]
+    embeddings = ollama_embedding_model.embed(texts)
+    assert len(embeddings) == 2
+    assert embeddings[0] == [0.1, 0.2, 0.3]
+    assert embeddings[1] == [0.4, 0.5, 0.6]
+    assert ollama_embedding_model.client.post.call_count == 2
 
 
 # Tests for Google Embedding Provider
@@ -342,16 +542,83 @@ def test_google_initialization_without_api_key():
 
 @pytest.fixture
 def google_embedding_model():
-    with patch("google.genai.Client") as mock_client:
-        mock_client_instance = Mock()
-        mock_client.return_value = mock_client_instance
+    """Create GoogleEmbeddingModel with mocked HTTP client."""
+    model = GoogleEmbeddingModel(api_key="test-key", model_name="text-embedding-004")
+    
+    # Mock the HTTP clients
+    mock_client = Mock()
+    mock_async_client = AsyncMock()
+    
+    def mock_post_side_effect(url, **kwargs):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        
+        if "embedContent" in url:
+            mock_response.json.return_value = {
+                "embedding": {
+                    "values": [0.1, 0.2, 0.3]
+                }
+            }
+        elif "models" in url:
+            mock_response.json.return_value = {
+                "models": [
+                    {
+                        "name": "models/text-embedding-004", 
+                        "inputTokenLimit": 2048,
+                        "supportedGenerationMethods": ["embedContent"]
+                    }
+                ]
+            }
+        else:
+            mock_response.json.return_value = {}
+        return mock_response
+    
+    async def mock_async_post_side_effect(url, **kwargs):
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        
+        if "embedContent" in url:
+            mock_response.json = Mock(return_value={
+                "embedding": {
+                    "values": [0.1, 0.2, 0.3]
+                }
+            })
+        elif "models" in url:
+            mock_response.json = Mock(return_value={
+                "models": [
+                    {
+                        "name": "models/text-embedding-004", 
+                        "inputTokenLimit": 2048,
+                        "supportedGenerationMethods": ["embedContent"]
+                    }
+                ]
+            })
+        else:
+            mock_response.json = Mock(return_value={})
+        return mock_response
 
-        # Mock the models object with embed_content method
-        mock_models = Mock()
-        mock_client_instance.models = mock_models
-        mock_models.embed_content.return_value = {"embedding": [0.1, 0.2, 0.3]}
-
-        yield GoogleEmbeddingModel(api_key="test_key")
+    def mock_get_side_effect(url, **kwargs):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "models": [
+                {
+                    "name": "models/text-embedding-004", 
+                    "inputTokenLimit": 2048,
+                    "supportedGenerationMethods": ["embedContent"]
+                }
+            ]
+        }
+        return mock_response
+    
+    mock_client.post.side_effect = mock_post_side_effect
+    mock_client.get.side_effect = mock_get_side_effect
+    mock_async_client.post.side_effect = mock_async_post_side_effect
+    
+    model.client = mock_client
+    model.async_client = mock_async_client
+    
+    yield model
 
 
 def test_google_embed(google_embedding_model):

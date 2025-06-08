@@ -1,224 +1,182 @@
 # Language Models
 
-Esperanto provides a unified interface for working with various language model providers. This document outlines how to use the language model functionality.
+Language models (LLMs) are AI systems that can understand and generate human-like text. Esperanto provides a unified interface for working with various language model providers, allowing you to perform tasks like chat completion, text generation, and structured output generation across different AI models.
 
 ## Supported Providers
 
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
-- Google (Gemini)
-- Groq
-- Ollama
-- OpenRouter
-- XAI
-- Perplexity
-- Azure OpenAI
-- Mistral (Mistral Large, Small, etc.) [NEW]
-- DeepSeek (deepseek-chat) [NEW]
+- **OpenAI** (GPT-4, GPT-3.5, o1)
+- **Anthropic** (Claude 3)
+- **Google** (Gemini 2.0 Flash, Gemini 1.5 Pro)
+- **Groq** (Mixtral, Llama)
+- **Ollama** (Local deployment)
+- **OpenRouter** (Access to multiple models)
+- **xAI** (Grok)
+- **Perplexity** (Sonar models with web search)
+- **Azure OpenAI** (Azure-hosted OpenAI models)
+- **Mistral** (Mistral Large, Small, etc.)
+- **DeepSeek** (deepseek-chat)
 
-## Basic Usage
+## Available Methods
 
+All language model providers implement the following methods:
+
+- **`chat_complete(messages, stream=None)`**: Generate a chat completion for the given messages
+- **`achat_complete(messages, stream=None)`**: Async version of chat completion
+- **`to_langchain()`**: Convert to a LangChain chat model for integration
+
+### Parameters:
+- `messages`: List of message dictionaries with 'role' and 'content' keys
+- `stream`: Boolean to enable streaming responses (optional)
+
+## Common Interface
+
+All language models return standardized response objects:
+
+### ChatCompletion Response
 ```python
-from esperanto import LanguageModel
+response = model.chat_complete(messages)
+# Access attributes:
+response.choices[0].message.content  # The response text
+response.choices[0].message.role     # 'assistant'
+response.model                       # Model used
+response.provider                    # Provider name
+response.usage.total_tokens          # Token usage
+```
 
-# Initialize a model
-model = LanguageModel.create("openai", api_key="your-api-key")
+### Streaming Response
+```python
+for chunk in model.chat_complete(messages, stream=True):
+    chunk.choices[0].delta.content   # Partial response text
+    chunk.model                      # Model used
+    chunk.provider                   # Provider name
+```
 
-# Simple completion
+## Examples
+
+### Basic Chat Completion
+```python
+from esperanto.factory import AIFactory
+
+# Create a language model
+model = AIFactory.create_language("openai", "gpt-4")
+
+# Simple chat
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Hello!"}
+    {"role": "user", "content": "What's the capital of France?"}
 ]
+
 response = model.chat_complete(messages)
-print(response.content)
+print(response.choices[0].message.content)
+```
 
-# Async completion
-response = await model.achat_complete(messages)
-print(response.content)
+### Async Chat Completion
+```python
+async def chat_async():
+    model = AIFactory.create_language("anthropic", "claude-3-sonnet-20240229")
+    
+    messages = [{"role": "user", "content": "Explain quantum computing"}]
+    response = await model.achat_complete(messages)
+    print(response.choices[0].message.content)
+```
 
-# Streaming completion
+### Streaming Responses
+```python
+model = AIFactory.create_language("openai", "gpt-4")
+
+messages = [{"role": "user", "content": "Write a short story"}]
+
+# Sync streaming
 for chunk in model.chat_complete(messages, stream=True):
-    print(chunk.choices[0].delta.content, end="")
+    print(chunk.choices[0].delta.content, end="", flush=True)
+
+# Async streaming
+async for chunk in model.achat_complete(messages, stream=True):
+    print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
-## Configuration
-
-Each provider can be configured with various parameters:
-
+### Structured Output (JSON)
 ```python
-model = LanguageModel.create(
-    "openai",
-    api_key="your-api-key",
-    model_name="gpt-4",  # Specific model to use
-    max_tokens=1000,     # Maximum tokens in completion
-    temperature=0.7,     # Randomness of output
-    streaming=True,      # Enable streaming responses
-    top_p=0.9,          # Nucleus sampling parameter
-    base_url="custom-endpoint",  # Custom API endpoint
-    organization="org-id"        # Organization ID
+model = AIFactory.create_language(
+    "openai", 
+    "gpt-4",
+    structured={"type": "json"}
 )
+
+messages = [{
+    "role": "user", 
+    "content": "List three European capitals as JSON"
+}]
+
+response = model.chat_complete(messages)
+# Response will be in JSON format
 ```
 
-## Accessing Provider Clients
-
-Each language model instance provides access to the underlying provider client through two properties:
-
-- `client`: The synchronous client instance
-- `async_client`: The asynchronous client instance
-
-This allows you to access provider-specific functionality when needed:
-
+### LangChain Integration
 ```python
-# Access the OpenAI client directly
-openai_model = LanguageModel.create("openai", api_key="your-api-key")
-raw_client = openai_model.client  # Get the OpenAI client instance
-async_client = openai_model.async_client  # Get the async OpenAI client instance
+model = AIFactory.create_language("anthropic", "claude-3-sonnet-20240229")
+langchain_model = model.to_langchain()
 
-# Use the raw client for provider-specific operations
-models = raw_client.models.list()
+# Use with LangChain
+from langchain.chains import ConversationChain
+chain = ConversationChain(llm=langchain_model)
 ```
+
+## Provider-Specific Information
 
 ### Azure OpenAI
 
-Esperanto supports Azure OpenAI Service via the official `openai` Python SDK. This allows you to use your Azure-hosted OpenAI models with the familiar Esperanto interface.
+Azure OpenAI Service allows you to use OpenAI models hosted on Microsoft Azure infrastructure.
 
-**Key Considerations:**
+**Key Requirements:**
+- **Deployment Name**: The `model_name` parameter corresponds to your Azure OpenAI deployment name
+- **Environment Variables**: 
+  - `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key
+  - `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI resource endpoint
+  - `OPENAI_API_VERSION`: The API version (e.g., "2023-12-01-preview")
 
--   **Deployment Name**: When using Azure OpenAI with Esperanto, the `model_name` parameter you provide corresponds to your **Azure OpenAI deployment name**, not the underlying model ID (e.g., "gpt-35-turbo").
--   **Environment Variables**: The Azure provider requires the following environment variables to be set:
-    -   `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key.
-    -   `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI resource endpoint (e.g., `https://your-resource-name.openai.azure.com/`).
-    -   `OPENAI_API_VERSION`: The API version to use (e.g., `2023-12-01-preview`).
-
-**Initialization:**
-
-*Using AI Factory:*
-
+**Example:**
 ```python
 from esperanto.factory import AIFactory
 
 # Ensure environment variables are set
-azure_model = AIFactory.create_language(
+model = AIFactory.create_language(
     provider="azure",
-    model_name="your-azure-deployment-name", # This is your deployment name
-    # Optional parameters
+    model_name="your-deployment-name",  # Your Azure deployment name
     temperature=0.7,
-    max_tokens=1000,
-    structured={"type": "json"} # Azure OpenAI supports JSON mode
+    structured={"type": "json"}  # Azure supports JSON mode
 )
 
-messages = [{"role": "user", "content": "Translate 'hello' to Esperanto."}]
-response = azure_model.chat_complete(messages)
+messages = [{"role": "user", "content": "Translate 'hello' to Spanish."}]
+response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
-
-*Direct Initialization:*
-
-```python
-from esperanto.providers.llm.azure import AzureLanguageModel
-
-# Ensure environment variables are set or pass parameters directly
-azure_model = AzureLanguageModel(
-    model_name="your-azure-deployment-name", # This is your deployment name
-    # api_key="your_azure_key", # Can be set via env or directly
-    # config={
-    #     "azure_endpoint": "https://your-resource.openai.azure.com/",
-    #     "api_version": "2023-12-01-preview"
-    # }, 
-    temperature=0.7,
-    structured={"type": "json"}
-)
-
-messages = [{"role": "user", "content": "What is the capital of Portugal?"}]
-response = azure_model.chat_complete(messages)
-print(response.choices[0].message.content)
-```
-
-Azure OpenAI also supports streaming and asynchronous operations just like other LLM providers in Esperanto.
 
 ### Perplexity
 
-Perplexity uses an OpenAI-compatible API but includes additional parameters for controlling search behavior. You can pass these parameters via the `config` dictionary when using the `AIFactory`.
+Perplexity provides AI models with web search capabilities for up-to-date information.
 
+**Special Parameters:**
+- `search_domain_filter`: Limit search to specific domains
+- `return_images`: Include images in search results
+- `return_related_questions`: Return related questions
+- `search_recency_filter`: Filter by time ("day", "week", "month", "year")
+- `web_search_options`: Control search context size
+
+**Example:**
 ```python
 from esperanto.factory import AIFactory
 
-# Ensure PERPLEXITY_API_KEY environment variable is set
-
-# ...
-
-### DeepSeek
-
-DeepSeek provides a powerful chat model via an OpenAI-compatible API endpoint. It supports JSON mode and can be used with the same interface as OpenAI providers.
-
-**Default model:** `deepseek-chat`
-
-**Environment variable:** `DEEPSEEK_API_KEY`
-
-**Base URL:** `https://api.deepseek.com`
-
-**JSON mode:** Supported (set `structured={"type": "json"}`)
-
-**Example usage:**
-
-```python
-from esperanto.factory import AIFactory
-
-# Ensure DEEPSEEK_API_KEY environment variable is set
-model = AIFactory.create_language(
-    provider="deepseek",
-    model_name="deepseek-chat",  # Default model
-    structured={"type": "json"}, # Enable JSON mode
-    temperature=0.7
-)
-
-messages = [{"role": "user", "content": "Give me a JSON with a random number and a greeting."}]
-response = model.chat_complete(messages)
-print(response.choices[0].message.content)
-```
-
----
-
+# Set PERPLEXITY_API_KEY environment variable
 model = AIFactory.create_language(
     provider="perplexity",
-    model_name="llama-3-sonar-large-32k-online", # Recommended default
-    config={
-        "temperature": 0.7,         # Optional
-        "max_tokens": 850,         # Optional
-        "streaming": False,        # Optional
-        "top_p": 0.9,             # Optional
-        "structured": {"type": "json"}, # Optional, for JSON output
-
-        # Perplexity-specific parameters
-        "search_domain_filter": ["example.com", "-excluded.com"], # Optional, limit search domains
-        "return_images": False,             # Optional, include images in search results
-        "return_related_questions": True,  # Optional, return related questions
-        "search_recency_filter": "week",    # Optional, filter search by time ('day', 'week', 'month', 'year')
-        "web_search_options": {"search_context_size": "high"} # Optional, control search context ('low', 'medium', 'high')
-    }
+    model_name="llama-3-sonar-large-32k-online",
+    search_domain_filter=["news.com", "-spam.com"],
+    return_related_questions=True,
+    search_recency_filter="week"
 )
 
-# Now you can use the model instance
-messages = [{"role": "user", "content": "What are the latest AI news?"}]
+messages = [{"role": "user", "content": "What are the latest AI developments?"}]
 response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
-
-## LangChain Integration
-
-All models can be converted to LangChain chat models:
-
-```python
-langchain_model = model.to_langchain()
-```
-
-## Structured Output
-
-Models can be configured to return structured output:
-
-```python
-model = LanguageModel.create(
-    "openai",
-    api_key="your-api-key",
-    structured={"type": "json"}  # Request JSON output
-)
