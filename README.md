@@ -31,19 +31,19 @@ Whether you're building a quick prototype or a production application serving mi
 
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Provider Support**:
-  - OpenAI (GPT-4, GPT-3.5, o1, Whisper, TTS)
-  - Anthropic (Claude 3)
+  - OpenAI (GPT-4o, o1, o3, o4, Whisper, TTS)
+  - Anthropic (Claude models)
   - OpenRouter (Access to multiple models)
   - xAI (Grok)
   - Perplexity (Sonar models)
   - Groq (Mixtral, Llama, Whisper)
   - Google GenAI (Gemini LLM, Text To Speech, Embedding)
   - Vertex AI (Google Cloud, LLM, Embedding, TTS)
-  - Ollama (Local deployment)
+  - Ollama (Local deployment multiple models)
   - Transformers (Local Hugging Face models)
   - ElevenLabs (Text-to-Speech, Speech-to-Text)
-  - Azure OpenAI
-  - Mistral (Mistral Large, Small, Embed, etc.)
+  - Azure OpenAI (Chat, Embedding)
+  - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
   - Voyage (Embeddings)
 - **Embedding Support**: Multiple embedding providers for vector representations
