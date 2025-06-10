@@ -18,7 +18,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
         # Set default base URL if not provided
         self.base_url = (
             kwargs.get("base_url")
-            or os.getenv("OLLAMA_BASE_URL")
+            or os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")
             or "http://localhost:11434"
         )
 
