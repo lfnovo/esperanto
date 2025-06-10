@@ -46,6 +46,8 @@ class AzureLanguageModel(LanguageModel):
         )
         self.api_version = self._config.get("api_version") or os.getenv(
             "OPENAI_API_VERSION"
+        ) or os.getenv(
+            "AZURE_OPENAI_API_VERSION"
         )
         # self.model_name is the Azure deployment name, set by base class constructor
 
