@@ -191,8 +191,7 @@ class OpenAILanguageModel(LanguageModel):
         """
         kwargs = {}
         config = self.get_completion_kwargs()
-        model_name = self.get_model_name()
-        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3")
+        is_reasoning_model = self._is_reasoning_model()
 
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
@@ -232,6 +231,9 @@ class OpenAILanguageModel(LanguageModel):
 
         return kwargs
 
+    def _is_reasoning_model(self) -> bool:
+        return self.get_model_name().startswith("o1") or self.get_model_name().startswith("o3") or self.get_model_name().startswith("o4")
+    
     def chat_complete(
         self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
@@ -246,7 +248,7 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
+        is_reasoning_model = self._is_reasoning_model()
         
         # Transform messages for o1 models
         if is_reasoning_model:
@@ -290,7 +292,7 @@ class OpenAILanguageModel(LanguageModel):
         """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
+        is_reasoning_model = self._is_reasoning_model()
         
         # Transform messages for o1 models
         if is_reasoning_model:
@@ -326,7 +328,7 @@ class OpenAILanguageModel(LanguageModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "gpt-4"
+        return "gpt-4o-mini"
 
     @property
     def provider(self) -> str:
