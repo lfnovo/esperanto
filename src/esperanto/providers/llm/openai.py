@@ -365,9 +365,7 @@ class OpenAILanguageModel(LanguageModel):
             "model_kwargs": model_kwargs,
         }
 
-        is_reasoning_model = self.get_model_name().startswith(
-            "o1"
-        ) or self.get_model_name().startswith("o3")
+        is_reasoning_model = self._is_reasoning_model()
 
         if is_reasoning_model:
             # Replace max_tokens with max_completion_tokens
