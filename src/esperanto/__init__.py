@@ -56,6 +56,11 @@ except ImportError:
     OllamaEmbeddingModel = None
 
 try:
+    from esperanto.providers.embedding.azure import AzureEmbeddingModel
+except ImportError:
+    AzureEmbeddingModel = None
+
+try:
     from esperanto.providers.llm.azure import AzureLanguageModel
 except ImportError:
     AzureLanguageModel = None
@@ -99,6 +104,7 @@ __provider_classes = {
     'XAILanguageModel': XAILanguageModel,
     'OpenAIEmbeddingModel': OpenAIEmbeddingModel,
     'GoogleEmbeddingModel': GoogleEmbeddingModel,
+    "AzureEmbeddingModel": AzureEmbeddingModel,
     "OllamaEmbeddingModel": OllamaEmbeddingModel,
     "OllamaLanguageModel": OllamaLanguageModel,
     "AzureLanguageModel": AzureLanguageModel,

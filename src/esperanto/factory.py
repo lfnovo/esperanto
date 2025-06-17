@@ -41,6 +41,7 @@ class AIFactory:
             "transformers": "esperanto.providers.embedding.transformers:TransformersEmbeddingModel",
             "voyage": "esperanto.providers.embedding.voyage:VoyageEmbeddingModel",
             "mistral": "esperanto.providers.embedding.mistral:MistralEmbeddingModel",
+            "azure": "esperanto.providers.embedding.azure:AzureEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
