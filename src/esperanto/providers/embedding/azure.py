@@ -38,9 +38,6 @@ class AzureEmbeddingModel(EmbeddingModel):
             raise ValueError("Azure OpenAI endpoint not found")
         if not self.api_version:
             raise ValueError("Azure OpenAI API version not found")
-        if not self.model_name:
-            raise ValueError(
-                "Azure OpenAI deployment name (model_name) not found")
 
         self.client = AzureOpenAI(
             api_key=self.api_key,
@@ -61,8 +58,8 @@ class AzureEmbeddingModel(EmbeddingModel):
         s = re.sub(r'\s+([.,])', r'\1', s)
 
         # Remove unwanted characters or repeated punctuation
-        s = s.replace("..", ".").replace(". .", ".")
-        s = s.replace("\n", " ")
+        s = re.sub(r'\.{2,}', '.', s)
+        s = re.sub(r'[\n\r]+', ' ', s)
 
         # Strip again to clean up after replacements
         s = s.strip()

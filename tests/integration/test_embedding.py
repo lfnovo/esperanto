@@ -81,7 +81,7 @@ def azure_model():
 
     return model
 
-
+@pytest.mark.asyncio
 async def test_azure_embedding(azure_model):
     """Test Azure embedding generation."""
     texts = [
