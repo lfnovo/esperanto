@@ -53,27 +53,18 @@ class AzureEmbeddingModel(EmbeddingModel):
             api_version=self.api_version,
         )
 
-    def _get_api_kwargs(self) -> Dict[str, Any]:
-        """Get kwargs for API calls, filtering out provider-specific args."""
-        # Start with a copy of the config
-        kwargs = self._config.copy()
+    # Based on notes from https://learn.microsoft.com/en-us/azure/ai-services/openai/tutorials/embeddings?tabs=python-new%2Ccommand-line&pivots=programming-language-python
+    def _clean_text(self, s: str) -> str:
+        """Normalize and clean text for embedding."""
+        # Normalize spacing
+        s = re.sub(r'\s+', ' ', s)
+        s = re.sub(r'\s+([.,])', r'\1', s)
 
-        # Remove provider-specific kwargs that OpenAI doesn't expect
-        kwargs.pop("model_name", None)
-        kwargs.pop("api_key", None)
-        kwargs.pop("base_url", None)
-        kwargs.pop("organization", None)
+        # Remove unwanted characters or repeated punctuation
+        s = s.replace("..", ".").replace(". .", ".")
+        s = s.replace("\n", " ")
 
-        return kwargs
-
-    # See https://learn.microsoft.com/en-us/azure/ai-services/openai/tutorials/embeddings?tabs=python-new%2Ccommand-line&pivots=programming-language-python
-    def _normalize_text(s, sep_token=" \n "):
-        s = re.sub(r'\s+',  ' ', s).strip()
-        s = re.sub(r". ,", "", s)
-        # remove all instances of multiple spaces
-        s = s.replace("..", ".")
-        s = s.replace(". .", ".")
-        s = s.replace("\n", "")
+        # Strip again to clean up after replacements
         s = s.strip()
 
         return s
@@ -89,18 +80,20 @@ class AzureEmbeddingModel(EmbeddingModel):
             List of embeddings, one for each input text.
         """
 
-        # TODO, normalize? Example provided my MS
-        # Clean texts by replacing newlines with spaces
-        texts = [self._normalize_text(text) for text in texts]
-
-        # TODO, api_kwargs = self._get_api_kwargs()
+        texts = [self._clean_text(text) for text in texts]
 
         # TODO, error if any text tokens > 8192
         # TODO, error if any texts length > 2048
 
+        # Handle known arguments
+        api_kwargs = {}
+        if "dimensions" in kwargs:
+            api_kwargs["dimensions"] = kwargs["dimensions"]
+
         response = self.client.embeddings.create(
             input=texts,
-            model=self.get_model_name()
+            model=self.get_model_name(),
+            **api_kwargs
         )
 
         return [embedding.embedding for embedding in response.data]
@@ -115,18 +108,20 @@ class AzureEmbeddingModel(EmbeddingModel):
         Returns:
             List of embeddings, one for each input text.
         """
-        # TODO, normalize? Example provided my MS
-        # Clean texts by replacing newlines with spaces
-        texts = [text.replace("\n", " ") for text in texts]
-
-        # TODO, api_kwargs = self._get_api_kwargs()
+        texts = [self._clean_text(text) for text in texts]
 
         # TODO, error if any text tokens > 8192
         # TODO, error if any texts length > 2048
 
+        # Handle known arguments
+        api_kwargs = {}
+        if "dimensions" in kwargs:
+            api_kwargs["dimensions"] = kwargs["dimensions"]
+
         response = await self.async_client.embeddings.create(
             input=texts,
-            model=self.get_model_name()
+            model=self.get_model_name(),
+            **api_kwargs
         )
 
         return [embedding.embedding for embedding in response.data]
