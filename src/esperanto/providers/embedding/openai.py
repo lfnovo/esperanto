@@ -72,8 +72,8 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         Returns:
             List of embeddings, one for each input text.
         """
-        # Clean texts by replacing newlines with spaces
-        texts = [text.replace("\n", " ") for text in texts]
+        # Clean texts using enhanced text cleaning
+        texts = [self._clean_text(text) for text in texts]
 
         # Prepare request payload
         payload = {
@@ -104,8 +104,8 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         Returns:
             List of embeddings, one for each input text.
         """
-        # Clean texts by replacing newlines with spaces
-        texts = [text.replace("\n", " ") for text in texts]
+        # Clean texts using enhanced text cleaning
+        texts = [self._clean_text(text) for text in texts]
 
         # Prepare request payload
         payload = {

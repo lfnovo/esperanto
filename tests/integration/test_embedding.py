@@ -1,10 +1,10 @@
 """Integration tests for embedding providers."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from esperanto.factory import AIFactory
+from esperanto.providers.embedding.azure import AzureEmbeddingModel
 from esperanto.providers.embedding.google import GoogleEmbeddingModel
 
 # @pytest.fixture
@@ -59,6 +59,53 @@ from esperanto.providers.embedding.google import GoogleEmbeddingModel
 
 #     # Verify embeddings are different for different texts
 #     assert embeddings[0] != embeddings[1]
+
+
+# Note, if the mock code is commented out, and the API Key and Base URL replaced with actual
+# values then an actual model can be called. I assumed that was the purpose of the tests in
+# this file.
+@pytest.fixture
+def azure_model():
+    """Create a Azure embedding model instance with mocked responses."""
+    model = AzureEmbeddingModel(api_key="AZURE_OPENAI_API_KEY",
+                                base_url="AZURE_OPENAI_ENDPOINT",
+                                api_version="2024-02-01",
+                                model_name="text-embedding-3-large")
+
+    # Mock embed and aembed methods w/ 256-dimensional embedding
+    sample_embedding = [[0.1, 0.2, 0.3, 0.4] * 64,
+                        [0.4, 0.3, 0.2, 0.1] * 64]
+    model.embed = MagicMock(return_value=sample_embedding)
+    model.aembed = AsyncMock(return_value=sample_embedding)
+
+    return model
+
+@pytest.mark.asyncio
+async def test_azure_embedding(azure_model):
+    """Test Azure embedding generation."""
+    texts = [
+        "This is a test sentence.",
+        "Another example for embedding.",
+    ]
+
+    # text-embedding-3-large defaults to 3072-dimensional embedding
+    # text-embedding-3-small defaults to 1536-dimensional embedding
+    # mock returns a 256-dimensional embedding
+    dimensions = 256
+
+    embeddings = azure_model.embed(texts, dimensions=dimensions)
+    aembeddings = await azure_model.aembed(texts, dimensions=dimensions)
+
+    assert embeddings == aembeddings
+
+    # Basic validation
+    assert isinstance(embeddings, list)
+    assert all(isinstance(emb, list) for emb in embeddings)
+    assert all(isinstance(val, float) for emb in embeddings for val in emb)
+
+    # Data check - our mock returns a 256-dim embedding
+    assert all(len(emb) == dimensions for emb in embeddings)
+    assert embeddings[0] != embeddings[1]
 
 
 @pytest.fixture

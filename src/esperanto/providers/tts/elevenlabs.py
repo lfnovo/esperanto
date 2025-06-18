@@ -182,6 +182,174 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
         """List all available models for this provider."""
         return []  # For now, return empty list as requested
 
+    def generate_multi_speaker_speech(
+        self,
+        text: str,
+        speaker_configs: List[Dict[str, str]],
+        output_file: Optional[Union[str, Path]] = None,
+        **kwargs
+    ) -> AudioResponse:
+        """Generate speech with multiple speakers using ElevenLabs text-to-dialogue.
+
+        Args:
+            text: Text containing the conversation with speaker names
+            speaker_configs: List of dicts with 'speaker' and 'voice' keys
+            output_file: Optional path to save the audio file
+            **kwargs: Additional arguments passed to the provider
+
+        Returns:
+            AudioResponse object containing the audio data and metadata
+            
+        Example:
+            speaker_configs = [
+                {"speaker": "Joe", "voice": "JBFqnCBsd6RMkjVDRZzb"},
+                {"speaker": "Jane", "voice": "Aw4FAjKCGjjNkVhN1Xmq"}
+            ]
+        """
+        # Create speaker mapping
+        speaker_to_voice = {config["speaker"]: config["voice"] for config in speaker_configs}
+        
+        # Parse the text to extract dialogue lines
+        dialogue_inputs = []
+        lines = text.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if ':' in line:
+                speaker, dialogue = line.split(':', 1)
+                speaker = speaker.strip()
+                dialogue = dialogue.strip()
+                
+                if speaker in speaker_to_voice:
+                    dialogue_inputs.append({
+                        "text": dialogue,
+                        "voice_id": speaker_to_voice[speaker]
+                    })
+        
+        if not dialogue_inputs:
+            raise ValueError("No valid dialogue found. Text should contain speaker names followed by ':' and their dialogue.")
+        
+        # Prepare request payload
+        payload = {
+            "inputs": dialogue_inputs,
+            "model_id": kwargs.get("model_id", "eleven_v3"),
+            "output_format": kwargs.get("output_format", "mp3_44100_128")
+        }
+        
+        # Add optional settings if provided
+        if "settings" in kwargs:
+            payload["settings"] = kwargs["settings"]
+        if "seed" in kwargs:
+            payload["seed"] = kwargs["seed"]
+        if "pronunciation_dictionary_locators" in kwargs:
+            payload["pronunciation_dictionary_locators"] = kwargs["pronunciation_dictionary_locators"]
+
+        # Make HTTP request
+        response = self.client.post(
+            f"{self.base_url}/v1/text-to-dialogue",
+            headers=self._get_headers(),
+            json=payload
+        )
+        self._handle_error(response)
+
+        audio_bytes = response.content
+
+        response_audio = AudioResponse(
+            audio_data=audio_bytes,
+            content_type="audio/mp3",
+            model=payload["model_id"],
+            voice="multi-speaker",
+            provider="elevenlabs"
+        )
+
+        if output_file:
+            output_path = Path(output_file)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(audio_bytes)
+
+        return response_audio
+
+    async def agenerate_multi_speaker_speech(
+        self,
+        text: str,
+        speaker_configs: List[Dict[str, str]],
+        output_file: Optional[Union[str, Path]] = None,
+        **kwargs
+    ) -> AudioResponse:
+        """Generate speech with multiple speakers asynchronously using ElevenLabs text-to-dialogue.
+
+        Args:
+            text: Text containing the conversation with speaker names
+            speaker_configs: List of dicts with 'speaker' and 'voice' keys
+            output_file: Optional path to save the audio file
+            **kwargs: Additional arguments passed to the provider
+
+        Returns:
+            AudioResponse object containing the audio data and metadata
+        """
+        # Create speaker mapping
+        speaker_to_voice = {config["speaker"]: config["voice"] for config in speaker_configs}
+        
+        # Parse the text to extract dialogue lines
+        dialogue_inputs = []
+        lines = text.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if ':' in line:
+                speaker, dialogue = line.split(':', 1)
+                speaker = speaker.strip()
+                dialogue = dialogue.strip()
+                
+                if speaker in speaker_to_voice:
+                    dialogue_inputs.append({
+                        "text": dialogue,
+                        "voice_id": speaker_to_voice[speaker]
+                    })
+        
+        if not dialogue_inputs:
+            raise ValueError("No valid dialogue found. Text should contain speaker names followed by ':' and their dialogue.")
+        
+        # Prepare request payload
+        payload = {
+            "inputs": dialogue_inputs,
+            "model_id": kwargs.get("model_id", "eleven_v3"),
+            "output_format": kwargs.get("output_format", "mp3_44100_128")
+        }
+        
+        # Add optional settings if provided
+        if "settings" in kwargs:
+            payload["settings"] = kwargs["settings"]
+        if "seed" in kwargs:
+            payload["seed"] = kwargs["seed"]
+        if "pronunciation_dictionary_locators" in kwargs:
+            payload["pronunciation_dictionary_locators"] = kwargs["pronunciation_dictionary_locators"]
+
+        # Make async HTTP request
+        response = await self.async_client.post(
+            f"{self.base_url}/v1/text-to-dialogue",
+            headers=self._get_headers(),
+            json=payload
+        )
+        self._handle_error(response)
+
+        audio_bytes = response.content
+
+        response_audio = AudioResponse(
+            audio_data=audio_bytes,
+            content_type="audio/mp3",
+            model=payload["model_id"],
+            voice="multi-speaker",
+            provider="elevenlabs"
+        )
+
+        if output_file:
+            output_path = Path(output_file)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(audio_bytes)
+
+        return response_audio
+
     def get_supported_tags(self) -> List[str]:
         """Get list of supported SSML tags.
         

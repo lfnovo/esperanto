@@ -106,7 +106,7 @@ class VertexEmbeddingModel(EmbeddingModel):
             List of embeddings, one for each input text.
         """
         # Clean texts by replacing newlines with spaces
-        texts = [text.replace("\n", " ") for text in texts]
+        texts = [self._clean_text(text) for text in texts]
         
         results = []
         model_path = self._get_model_path()
@@ -145,7 +145,7 @@ class VertexEmbeddingModel(EmbeddingModel):
             List of embeddings, one for each input text.
         """
         # Clean texts by replacing newlines with spaces
-        texts = [text.replace("\n", " ") for text in texts]
+        texts = [self._clean_text(text) for text in texts]
         
         results = []
         model_path = self._get_model_path()

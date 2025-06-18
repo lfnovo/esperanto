@@ -80,7 +80,7 @@ class GoogleEmbeddingModel(EmbeddingModel):
         model_name = self._get_model_path()
 
         for text in texts:
-            text = text.replace("\n", " ")
+            text = self._clean_text(text)
             
             # Prepare request payload
             payload = {
@@ -120,7 +120,7 @@ class GoogleEmbeddingModel(EmbeddingModel):
         model_name = self._get_model_path()
 
         for text in texts:
-            text = text.replace("\n", " ")
+            text = self._clean_text(text)
             
             # Prepare request payload
             payload = {

@@ -53,6 +53,9 @@ class MistralEmbeddingModel(EmbeddingModel):
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts."""
+        # Clean texts using enhanced text cleaning
+        texts = [self._clean_text(text) for text in texts]
+        
         # Prepare request payload - Mistral uses 'input' instead of 'inputs'
         payload = {
             "model": self.get_model_name(),
@@ -74,6 +77,9 @@ class MistralEmbeddingModel(EmbeddingModel):
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously."""
+        # Clean texts using enhanced text cleaning
+        texts = [self._clean_text(text) for text in texts]
+        
         # Prepare request payload - Mistral uses 'input' instead of 'inputs'
         payload = {
             "model": self.get_model_name(),
