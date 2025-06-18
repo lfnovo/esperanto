@@ -1,5 +1,6 @@
 """Base embedding model interface."""
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -73,6 +74,33 @@ class EmbeddingModel(ABC):
 
         # If not in config, use default
         return self._get_default_model()
+
+    def _clean_text(self, text: str) -> str:
+        """Clean and normalize text for embedding.
+        
+        Based on Microsoft Azure OpenAI best practices but useful for all providers.
+        Normalizes spacing, removes unwanted characters, and cleans up punctuation.
+        
+        Args:
+            text: The text to clean and normalize.
+            
+        Returns:
+            The cleaned and normalized text.
+        """
+        # Normalize spacing - replace multiple spaces with single space
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Remove spaces before punctuation
+        text = re.sub(r'\s+([.,])', r'\1', text)
+        
+        # Remove repeated punctuation (multiple dots)
+        text = re.sub(r'\.{2,}', '.', text)
+        
+        # Replace newlines and carriage returns with spaces
+        text = re.sub(r'[\n\r]+', ' ', text)
+        
+        # Strip to clean up after replacements
+        return text.strip()
 
     @property
     @abstractmethod

@@ -1,7 +1,6 @@
 """Azure OpenAI embedding model provider."""
 import os
-import re
-from typing import List, Optional
+from typing import List
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 
@@ -11,10 +10,10 @@ from esperanto.providers.embedding.base import EmbeddingModel, Model
 class AzureEmbeddingModel(EmbeddingModel):
     """Azure OpenAI embedding model implementation."""
 
-    def __init__(
-            self,
-            api_version: Optional[str] = None,
-            **kwargs):
+    def __init__(self, **kwargs):
+        # Extract Azure-specific parameters before calling super()
+        api_version = kwargs.pop("api_version", None)
+        
         super().__init__(**kwargs)
 
         self.api_key = kwargs.get("api_key") or os.getenv(
@@ -50,21 +49,6 @@ class AzureEmbeddingModel(EmbeddingModel):
             api_version=self.api_version,
         )
 
-    # Based on notes from https://learn.microsoft.com/en-us/azure/ai-services/openai/tutorials/embeddings?tabs=python-new%2Ccommand-line&pivots=programming-language-python
-    def _clean_text(self, s: str) -> str:
-        """Normalize and clean text for embedding."""
-        # Normalize spacing
-        s = re.sub(r'\s+', ' ', s)
-        s = re.sub(r'\s+([.,])', r'\1', s)
-
-        # Remove unwanted characters or repeated punctuation
-        s = re.sub(r'\.{2,}', '.', s)
-        s = re.sub(r'[\n\r]+', ' ', s)
-
-        # Strip again to clean up after replacements
-        s = s.strip()
-
-        return s
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts.

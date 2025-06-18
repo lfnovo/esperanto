@@ -151,7 +151,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
             batch_texts = texts[i : i + batch_size]
 
             # Clean and tokenize texts
-            cleaned_texts = [text.replace("\n", " ") for text in batch_texts]
+            cleaned_texts = [self._clean_text(text) for text in batch_texts]
 
             # Get tokenizer config from kwargs or use defaults
             tokenizer_config = {

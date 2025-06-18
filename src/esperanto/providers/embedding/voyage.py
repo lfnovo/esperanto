@@ -71,7 +71,7 @@ class VoyageEmbeddingModel(EmbeddingModel):
             List of embeddings, one for each input text.
         """
         # Clean texts by replacing newlines with spaces
-        texts = [text.replace("\n", " ") for text in texts]
+        texts = [self._clean_text(text) for text in texts]
 
         # Prepare request payload
         payload = {
@@ -103,7 +103,7 @@ class VoyageEmbeddingModel(EmbeddingModel):
             List of embeddings, one for each input text.
         """
         # Clean texts by replacing newlines with spaces
-        texts = [text.replace("\n", " ") for text in texts]
+        texts = [self._clean_text(text) for text in texts]
 
         # Prepare request payload
         payload = {

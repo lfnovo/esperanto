@@ -56,7 +56,7 @@ def test_init_with_env():
         "AZURE_OPENAI_ENDPOINT": "https://env-endpoint",
         "AZURE_OPENAI_API_VERSION": "2023-01-01",
     }
-    with patch.dict(os.environ, env_vars):
+    with patch.dict(os.environ, env_vars, clear=True):
         model = AzureEmbeddingModel(model_name="env-deployment")
         assert model.api_key == "test-key"
         assert model.azure_endpoint == "https://env-endpoint"
@@ -74,7 +74,7 @@ def test_init_without_api_key():
 
 def test_init_without_endpoint():
     """Test initialization without Azure endpoint raises error."""
-    with patch.dict(os.environ, {"AZURE_OPENAI_API_KEY": "key"}):
+    with patch.dict(os.environ, {"AZURE_OPENAI_API_KEY": "key"}, clear=True):
         with pytest.raises(ValueError, match="Azure OpenAI endpoint not found"):
             AzureEmbeddingModel(api_version="2023-01-01",
                                 model_name="deployment")
@@ -82,7 +82,7 @@ def test_init_without_endpoint():
 
 def test_init_without_api_version():
     """Test initialization without API version raises error."""
-    with patch.dict(os.environ, {"AZURE_OPENAI_API_KEY": "key", "AZURE_OPENAI_ENDPOINT": "https://endpoint"}):
+    with patch.dict(os.environ, {"AZURE_OPENAI_API_KEY": "key", "AZURE_OPENAI_ENDPOINT": "https://endpoint"}, clear=True):
         with pytest.raises(ValueError, match="Azure OpenAI API version not found"):
             AzureEmbeddingModel(base_url="https://endpoint",
                                 model_name="deployment")

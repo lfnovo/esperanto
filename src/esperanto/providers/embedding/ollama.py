@@ -75,7 +75,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             if not text.strip():
                 raise ValueError("Text cannot be empty")
 
-            text = text.replace("\n", " ")
+            text = self._clean_text(text)
             
             # Prepare request payload
             payload = {
@@ -126,7 +126,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             if not text.strip():
                 raise ValueError("Text cannot be empty")
 
-            text = text.replace("\n", " ")
+            text = self._clean_text(text)
             
             # Prepare request payload
             payload = {
