@@ -4,13 +4,14 @@ Embedding models convert text into high-dimensional vector representations that 
 
 ## Supported Providers
 
-- **OpenAI** (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
+- **Azure OpenAI** (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
 - **Google** (Gemini embedding models)
-- **Vertex AI** (textembedding-gecko)
+- **Mistral** (mistral-embed)
+- **OpenAI** (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
 - **Ollama** (Local deployment with various models)
 - **Transformers** (Local Hugging Face models)
+- **Vertex AI** (textembedding-gecko)
 - **Voyage** (voyage-3, voyage-code-2)
-- **Mistral** (mistral-embed)
 
 ## Available Methods
 
@@ -22,6 +23,7 @@ All embedding model providers implement the following methods:
 - **`aembed_query(text)`**: Async version of embed_query
 
 ### Parameters:
+
 - `texts`: Single string or list of strings to embed
 - Returns: `EmbeddingResponse` object with embeddings and metadata
 
@@ -30,6 +32,7 @@ All embedding model providers implement the following methods:
 All embedding models return standardized response objects:
 
 ### EmbeddingResponse
+
 ```python
 response = model.embed(["Hello, world!", "Another text"])
 # Access attributes:
@@ -44,6 +47,7 @@ response.usage.total_tokens     # Token usage information
 ## Examples
 
 ### Basic Embedding
+
 ```python
 from esperanto.factory import AIFactory
 
@@ -65,18 +69,20 @@ for i, embedding_data in enumerate(response.data):
 ```
 
 ### Async Embedding
+
 ```python
 async def embed_async():
     model = AIFactory.create_embedding("google", "text-embedding-004")
-    
+
     texts = ["Document 1 content", "Document 2 content"]
     response = await model.aembed(texts)
-    
+
     for data in response.data:
         print(f"Embedding dimension: {len(data.embedding)}")
 ```
 
 ### Semantic Search Example
+
 ```python
 import numpy as np
 from esperanto.factory import AIFactory
@@ -113,21 +119,22 @@ print(f"Similarity score: {similarities[most_similar_idx]:.3f}")
 ```
 
 ### Batch Processing
+
 ```python
 async def process_large_dataset():
     model = AIFactory.create_embedding("voyage", "voyage-3")
-    
+
     # Process in batches to handle rate limits
     texts = ["text " + str(i) for i in range(1000)]
     batch_size = 100
     all_embeddings = []
-    
+
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         response = await model.aembed(batch)
         batch_embeddings = [data.embedding for data in response.data]
         all_embeddings.extend(batch_embeddings)
-    
+
     print(f"Generated {len(all_embeddings)} embeddings")
 ```
 
@@ -142,11 +149,13 @@ pip install "esperanto[transformers]"
 ```
 
 This installs:
+
 - `transformers`
-- `torch` 
+- `torch`
 - `tokenizers`
 
 **Advanced Configuration:**
+
 ```python
 from esperanto.factory import AIFactory
 
@@ -183,11 +192,12 @@ multilingual_model = AIFactory.create_embedding(
 
 # Pooling strategies:
 # - "mean": Average of all token embeddings (default, good for semantic similarity)
-# - "max": Maximum value across token embeddings (good for key feature extraction)  
+# - "max": Maximum value across token embeddings (good for key feature extraction)
 # - "cls": Use the [CLS] token embedding (good for sentence classification)
 ```
 
 **GPU and Quantization:**
+
 ```python
 # Use GPU if available
 model = AIFactory.create_embedding(
@@ -198,7 +208,7 @@ model = AIFactory.create_embedding(
 
 # Use quantization for large models
 model = AIFactory.create_embedding(
-    provider="transformers", 
+    provider="transformers",
     model_name="BAAI/bge-large-en-v1.5",
     quantize="8bit",  # Reduces memory usage
     device="cuda"
