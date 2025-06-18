@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
-from langchain_core.language_models.chat_models import BaseChatModel
-
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model
 
 
@@ -149,10 +147,13 @@ class LanguageModel(ABC):
         pass
 
     @abstractmethod
-    def to_langchain(self) -> BaseChatModel:
+    def to_langchain(self) -> Any:
         """Convert to a LangChain chat model.
 
         Returns:
             BaseChatModel: A LangChain chat model instance specific to the provider.
+            
+        Raises:
+            ImportError: If langchain_core is not installed.
         """
         pass
