@@ -1,10 +1,9 @@
 """Integration tests for embedding providers."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from esperanto.factory import AIFactory
 from esperanto.providers.embedding.azure import AzureEmbeddingModel
 from esperanto.providers.embedding.google import GoogleEmbeddingModel
 

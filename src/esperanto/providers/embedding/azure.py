@@ -1,7 +1,7 @@
 """Azure OpenAI embedding model provider."""
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 
