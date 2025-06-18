@@ -100,7 +100,7 @@ async for chunk in model.achat_complete(messages, stream=True):
 model = AIFactory.create_language(
     "openai", 
     "gpt-4",
-    structured={"type": "json"}
+    config={"structured": {"type": "json"}}
 )
 
 messages = [{
@@ -141,10 +141,9 @@ from esperanto.factory import AIFactory
 
 # Ensure environment variables are set
 model = AIFactory.create_language(
-    provider="azure",
-    model_name="your-deployment-name",  # Your Azure deployment name
-    temperature=0.7,
-    structured={"type": "json"}  # Azure supports JSON mode
+    "azure",
+    "your-deployment-name",  # Your Azure deployment name
+    config={"temperature": 0.7, "structured": {"type": "json"}}  # Azure supports JSON mode
 )
 
 messages = [{"role": "user", "content": "Translate 'hello' to Spanish."}]

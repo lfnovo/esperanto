@@ -196,12 +196,19 @@ Each provider offers different voice models and selection methods. It's importan
 - Voice IDs are specific to your account and subscription
 - Supports custom voice cloning and fine-tuning
 - Offers multilingual capabilities with voice consistency
+- **Multi-speaker Feature**: Supports text-to-dialogue for conversations with multiple speakers
 
 **Google Cloud Voices:**
 - 30 unique predefined voices with distinct personalities (e.g., achernar, charon, kore, puck)
 - Each voice has specific characteristics: gender, tone, and personality traits
 - Examples: `achernar` (UpbeatAchernar, Female), `charon` (UpbeatCharon, Male), `kore` (InformativeKore, Female)
-- **Unique Feature**: Multi-speaker conversations with different voices per speaker
+- **Multi-speaker Feature**: Supports conversations with different voices per speaker
+
+**ElevenLabs Voices:**
+- Voice IDs are specific to your account and subscription
+- Supports custom voice cloning and fine-tuning
+- Offers multilingual capabilities with voice consistency
+- **Multi-speaker Feature**: Now supports text-to-dialogue for conversations with multiple speakers
 
 **Voice Discovery:**
 ```python
@@ -221,13 +228,13 @@ except AttributeError:
 - **Multilingual models**: Consistent voice across languages
 - **Specialized models**: Optimized for specific use cases (news, conversation, etc.)
 
-### Google Multi-Speaker Conversations
+### Multi-Speaker Conversations
 
-Google's TTS provider offers a unique multi-speaker feature that allows you to create conversations with different voices for each speaker. This is perfect for creating dialogues, interviews, or multi-character audio content.
+Both Google and ElevenLabs TTS providers offer multi-speaker features that allow you to create conversations with different voices for each speaker. This is perfect for creating dialogues, interviews, or multi-character audio content.
 
-**Additional Methods for Google Provider:**
-- **`generate_multi_speaker_speech(text, speaker_configs, output_file=None)`**: Generate conversation with multiple speakers
-- **`agenerate_multi_speaker_speech(text, speaker_configs, output_file=None)`**: Async version of multi-speaker generation
+**Additional Methods for Google and ElevenLabs Providers:**
+- **`generate_multi_speaker_speech(text, speaker_configs, output_file=None, **kwargs)`**: Generate conversation with multiple speakers
+- **`agenerate_multi_speaker_speech(text, speaker_configs, output_file=None, **kwargs)`**: Async version of multi-speaker generation
 
 **Multi-Speaker Example:**
 ```python
@@ -302,7 +309,49 @@ async def create_dialogue():
 - **Voice Combinations**: Mix male/female voices or different personality types for variety
 - **Content Length**: Works well for both short dialogues and longer conversations
 
-**Available Voice Personalities for Multi-Speaker:**
+### ElevenLabs Multi-Speaker Example
+
+```python
+from esperanto.factory import AIFactory
+
+# Create ElevenLabs TTS model
+model = AIFactory.create_text_to_speech("elevenlabs", "eleven_v3")
+
+# Define conversation with speaker names
+conversation_text = """
+Joe: Hi there! How are you doing today?
+Jane: I'm doing great, thanks for asking! How about you?
+Joe: I'm wonderful. Did you see the latest AI developments?
+Jane: Yes! The text-to-dialogue technology is really impressive.
+"""
+
+# Configure speakers with different voice IDs from your ElevenLabs account
+speaker_configs = [
+    {"speaker": "Joe", "voice": "JBFqnCBsd6RMkjVDRZzb"},    # Replace with your voice ID
+    {"speaker": "Jane", "voice": "Aw4FAjKCGjjNkVhN1Xmq"}   # Replace with your voice ID
+]
+
+# Generate multi-speaker audio
+response = model.generate_multi_speaker_speech(
+    text=conversation_text,
+    speaker_configs=speaker_configs,
+    output_file="elevenlabs_conversation.mp3",
+    model_id="eleven_v3",
+    output_format="mp3_44100_128"
+)
+
+print(f"Generated {len(response.audio_data)} bytes of multi-speaker audio")
+print(f"Speakers: {[config['speaker'] for config in speaker_configs]}")
+```
+
+**ElevenLabs Multi-Speaker Tips:**
+- **Voice IDs**: Use actual voice IDs from your ElevenLabs account
+- **Model Requirements**: Multi-speaker requires Eleven v3 API access
+- **Text Format**: Same as Google - prefix each line with "SpeakerName:"
+- **Custom Parameters**: Supports model_id, seed, output_format, and settings
+- **Content Length**: Works well for both short dialogues and longer conversations
+
+**Available Voice Personalities for Google Multi-Speaker:**
 - **Engaging/Upbeat**: `achernar` (F), `charon` (M), `leda` (F)
 - **Clear/Professional**: `algenib` (M), `umbriel` (M), `gacrux` (F)
 - **Informative/Knowledgeable**: `kore` (F), `sulafat` (F), `laomedeia` (F)

@@ -208,7 +208,7 @@ print(providers)
 model = AIFactory.create_language(
     "openai", 
     "gpt-3.5-turbo",
-    structured={"type": "json"}
+    config={"structured": {"type": "json"}}
 )  # Language model
 embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")  # Embedding model
 transcriber = AIFactory.create_speech_to_text("openai", "whisper-1")  # Speech-to-text model
@@ -271,7 +271,7 @@ from esperanto.factory import AIFactory
 model = AIFactory.create_language(
     "openai", 
     "gpt-3.5-turbo",
-    structured={"type": "json"}
+    config={"structured": {"type": "json"}}
 )
 messages = [{"role": "user", "content": "Hello!"}]
 
@@ -281,6 +281,7 @@ print(response.choices[0].message.content)  # The actual response text
 print(response.choices[0].message.role)     # 'assistant'
 print(response.model)                       # The model used
 print(response.usage.total_tokens)          # Token usage information
+print(response.content)          # Shortcut for response.choices[0].message.content
 
 # For streaming responses
 for chunk in model.chat_complete(messages):
