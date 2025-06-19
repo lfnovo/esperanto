@@ -140,6 +140,69 @@ async def process_large_dataset():
 
 ## Provider-Specific Information
 
+### Azure OpenAI Provider
+
+The Azure OpenAI provider supports Azure's embedding models through your Azure OpenAI deployment.
+
+**Configuration:**
+
+```python
+from esperanto.factory import AIFactory
+
+# Using environment variables
+model = AIFactory.create_embedding(
+    provider="azure",
+    model_name="your-deployment-name"  # Your Azure deployment name
+)
+
+# Or with explicit configuration
+model = AIFactory.create_embedding(
+    provider="azure",
+    model_name="your-deployment-name",
+    api_key="your-azure-api-key",
+    base_url="https://your-resource.openai.azure.com",
+    api_version="2024-12-01-preview"
+)
+```
+
+**Environment Variables:**
+
+Set these environment variables for automatic configuration:
+
+```bash
+AZURE_OPENAI_API_KEY=your-azure-api-key
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+```
+
+**Supported Models:**
+
+- text-embedding-3-small
+- text-embedding-3-large
+- text-embedding-ada-002
+
+**Features:**
+
+- Enhanced text preprocessing (based on Microsoft recommendations)
+- Custom dimension support
+- Async support
+- Automatic text cleaning and normalization
+
+**Example:**
+
+```python
+from esperanto.factory import AIFactory
+
+# Create Azure embedding model
+model = AIFactory.create_embedding("azure", "text-embedding-3-small")
+
+# Generate embeddings with custom dimensions
+texts = ["Hello, world!", "How are you?"]
+embeddings = model.embed(texts, dimensions=1024)
+
+# The Azure provider automatically cleans and normalizes text for optimal results
+```
+
 ### Transformers Provider
 
 The Transformers provider requires the transformers extra to be installed:

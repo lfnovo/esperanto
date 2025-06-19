@@ -115,7 +115,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Perplexity   | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ✅             | ✅             | ❌        |
-| Azure OpenAI | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Azure OpenAI | ✅          | ✅               | ❌             | ❌             | ✅        |
 | Mistral      | ✅          | ✅               | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ❌             | ❌             | ❌        |
@@ -199,7 +199,7 @@ print(providers)
 # Output:
 # {
 #     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
-#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex']
 # }
