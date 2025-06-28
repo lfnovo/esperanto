@@ -634,6 +634,55 @@ async def test_google_aembed(google_embedding_model):
     assert embeddings == [[0.1, 0.2, 0.3]]
 
 
+def test_google_embed_with_task_type():
+    """Test Google embeddings with task type configuration."""
+    from esperanto.common_types.task_type import EmbeddingTaskType
+    
+    with patch('httpx.Client.post') as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {"embedding": {"values": [0.1, 0.2, 0.3]}}
+        
+        model = GoogleEmbeddingModel(
+            api_key="test-key",
+            model_name="text-embedding-004",
+            config={"task_type": EmbeddingTaskType.RETRIEVAL_QUERY}
+        )
+        
+        embeddings = model.embed(["Hello, world!"])
+        assert embeddings == [[0.1, 0.2, 0.3]]
+        
+        # Verify task_type was included in API call
+        call_args = mock_post.call_args
+        payload = call_args[1]["json"]
+        assert payload["task_type"] == "RETRIEVAL_QUERY"
+
+
+@pytest.mark.asyncio
+async def test_google_aembed_with_task_type():
+    """Test Google async embeddings with task type configuration."""
+    from esperanto.common_types.task_type import EmbeddingTaskType
+    
+    with patch('httpx.AsyncClient.post') as mock_post:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"embedding": {"values": [0.1, 0.2, 0.3]}}
+        mock_post.return_value = mock_response
+        
+        model = GoogleEmbeddingModel(
+            api_key="test-key", 
+            model_name="text-embedding-004",
+            config={"task_type": EmbeddingTaskType.CLASSIFICATION}
+        )
+        
+        embeddings = await model.aembed(["Hello, world!"])
+        assert embeddings == [[0.1, 0.2, 0.3]]
+        
+        # Verify task_type was included in async API call
+        call_args = mock_post.call_args
+        payload = call_args[1]["json"]
+        assert payload["task_type"] == "CLASSIFICATION"
+
+
 # Tests for Vertex Embedding Provider
 def test_vertex_provider_name(vertex_embedding_model):
     assert vertex_embedding_model.provider == "vertex"

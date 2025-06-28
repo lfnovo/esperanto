@@ -1,15 +1,29 @@
 """Google GenAI embedding model provider."""
 
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 
+from esperanto.common_types.task_type import EmbeddingTaskType
 from esperanto.providers.embedding.base import EmbeddingModel, Model
 
 
 class GoogleEmbeddingModel(EmbeddingModel):
-    """Google GenAI embedding model implementation."""
+    """Google GenAI embedding model implementation with native task optimization support."""
+
+    # Task type mapping from universal enum to Gemini API values
+    GEMINI_TASK_MAPPING = {
+        EmbeddingTaskType.RETRIEVAL_QUERY: "RETRIEVAL_QUERY",
+        EmbeddingTaskType.RETRIEVAL_DOCUMENT: "RETRIEVAL_DOCUMENT",
+        EmbeddingTaskType.CLASSIFICATION: "CLASSIFICATION",
+        EmbeddingTaskType.CLUSTERING: "CLUSTERING",
+        EmbeddingTaskType.SIMILARITY: "SEMANTIC_SIMILARITY",
+        EmbeddingTaskType.CODE_RETRIEVAL: "CODE_RETRIEVAL_QUERY",
+        EmbeddingTaskType.QUESTION_ANSWERING: "QUESTION_ANSWERING",
+        EmbeddingTaskType.FACT_VERIFICATION: "FACT_VERIFICATION",
+        EmbeddingTaskType.DEFAULT: None
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -66,6 +80,16 @@ class GoogleEmbeddingModel(EmbeddingModel):
             model_name if model_name.startswith("models/") else f"models/{model_name}"
         )
 
+    def _get_task_type_param(self) -> Optional[str]:
+        """Convert universal task type to Gemini API parameter.
+        
+        Returns:
+            Gemini-specific task type string or None if no mapping exists.
+        """
+        if not self.task_type:
+            return None
+        return self.GEMINI_TASK_MAPPING.get(self.task_type)
+
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts.
 
@@ -79,8 +103,17 @@ class GoogleEmbeddingModel(EmbeddingModel):
         results = []
         model_name = self._get_model_path()
 
+        # Get native task type parameter if available
+        gemini_task_type = self._get_task_type_param()
+
         for text in texts:
             text = self._clean_text(text)
+            
+            # Apply task optimization via native API or fallback to base emulation
+            if gemini_task_type is None and self.task_type != EmbeddingTaskType.DEFAULT:
+                # Fallback to base class emulation if no native mapping
+                optimized_texts = self._apply_task_optimization([text])
+                text = optimized_texts[0] if optimized_texts else text
             
             # Prepare request payload
             payload = {
@@ -91,6 +124,10 @@ class GoogleEmbeddingModel(EmbeddingModel):
                     }]
                 }
             }
+            
+            # Add native task type if available
+            if gemini_task_type:
+                payload["task_type"] = gemini_task_type
 
             # Make HTTP request
             response = self.client.post(
@@ -119,8 +156,17 @@ class GoogleEmbeddingModel(EmbeddingModel):
         results = []
         model_name = self._get_model_path()
 
+        # Get native task type parameter if available
+        gemini_task_type = self._get_task_type_param()
+
         for text in texts:
             text = self._clean_text(text)
+            
+            # Apply task optimization via native API or fallback to base emulation
+            if gemini_task_type is None and self.task_type != EmbeddingTaskType.DEFAULT:
+                # Fallback to base class emulation if no native mapping
+                optimized_texts = self._apply_task_optimization([text])
+                text = optimized_texts[0] if optimized_texts else text
             
             # Prepare request payload
             payload = {
@@ -131,6 +177,10 @@ class GoogleEmbeddingModel(EmbeddingModel):
                     }]
                 }
             }
+            
+            # Add native task type if available
+            if gemini_task_type:
+                payload["task_type"] = gemini_task_type
 
             # Make async HTTP request
             response = await self.async_client.post(

@@ -37,7 +37,7 @@ Whether you're building a quick prototype or a production application serving mi
   - xAI (Grok)
   - Perplexity (Sonar models)
   - Groq (Mixtral, Llama, Whisper)
-  - Google GenAI (Gemini LLM, Text To Speech, Embedding)
+  - Google GenAI (Gemini LLM, Text To Speech, Embedding with native task optimization)
   - Vertex AI (Google Cloud, LLM, Embedding, TTS)
   - Ollama (Local deployment multiple models)
   - Transformers (Local Hugging Face models)
@@ -341,10 +341,13 @@ embeddings = model.embed([query])
 - `CLASSIFICATION` - Text classification tasks
 - `CLUSTERING` - Document clustering
 - `CODE_RETRIEVAL` - Code search optimization
+- `QUESTION_ANSWERING` - Optimize for Q&A tasks
+- `FACT_VERIFICATION` - Optimize for fact checking
 
 **Provider Support:**
 - **Jina**: Native API support for all features
-- **Google/OpenAI**: Task optimization via intelligent text prefixes
+- **Google**: Native task type translation to Gemini API
+- **OpenAI**: Task optimization via intelligent text prefixes
 - **Transformers**: Local emulation with task-specific processing
 - **Others**: Graceful degradation with consistent interface
 

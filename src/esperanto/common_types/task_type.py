@@ -22,5 +22,9 @@ class EmbeddingTaskType(Enum):
     # Code tasks
     CODE_RETRIEVAL = "code.retrieval"            # Code search optimization
     
+    # Question answering and fact verification
+    QUESTION_ANSWERING = "question_answering"    # Optimized for Q&A tasks
+    FACT_VERIFICATION = "fact_verification"      # Optimized for fact checking
+    
     # Default/Generic
     DEFAULT = "default"                          # No specific optimization
