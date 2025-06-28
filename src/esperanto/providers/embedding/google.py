@@ -112,7 +112,8 @@ class GoogleEmbeddingModel(EmbeddingModel):
             # Apply task optimization via native API or fallback to base emulation
             if gemini_task_type is None and self.task_type != EmbeddingTaskType.DEFAULT:
                 # Fallback to base class emulation if no native mapping
-                text = self._apply_task_optimization(text)
+                optimized_texts = self._apply_task_optimization([text])
+                text = optimized_texts[0] if optimized_texts else text
             
             # Prepare request payload
             payload = {
@@ -164,7 +165,8 @@ class GoogleEmbeddingModel(EmbeddingModel):
             # Apply task optimization via native API or fallback to base emulation
             if gemini_task_type is None and self.task_type != EmbeddingTaskType.DEFAULT:
                 # Fallback to base class emulation if no native mapping
-                text = self._apply_task_optimization(text)
+                optimized_texts = self._apply_task_optimization([text])
+                text = optimized_texts[0] if optimized_texts else text
             
             # Prepare request payload
             payload = {

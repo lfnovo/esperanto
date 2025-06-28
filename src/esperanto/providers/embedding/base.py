@@ -140,7 +140,9 @@ class EmbeddingModel(ABC):
             EmbeddingTaskType.SIMILARITY: "similarity: ",
             EmbeddingTaskType.CLASSIFICATION: "classify: ",
             EmbeddingTaskType.CLUSTERING: "cluster: ",
-            EmbeddingTaskType.CODE_RETRIEVAL: "code: "
+            EmbeddingTaskType.CODE_RETRIEVAL: "code: ",
+            EmbeddingTaskType.QUESTION_ANSWERING: "question: ",
+            EmbeddingTaskType.FACT_VERIFICATION: "verify: "
         }
         
         prefix = prefix_map.get(self.task_type, "")
