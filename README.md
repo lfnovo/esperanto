@@ -46,6 +46,7 @@ Whether you're building a quick prototype or a production application serving mi
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
   - Voyage (Embeddings)
+  - Jina (Advanced embedding models with task optimization)
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
@@ -119,6 +120,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Mistral      | ✅          | ✅               | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ❌             | ❌             | ❌        |
+| Jina         | ❌          | ✅               | ❌             | ❌             | ❌        |
 | xAI          | ✅          | ❌               | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌             | ❌             | ✅        |
 
@@ -199,7 +201,7 @@ print(providers)
 # Output:
 # {
 #     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
-#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure'],
+#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex']
 # }
@@ -307,6 +309,44 @@ print(response.data[0].index)         # Index of the text (0)
 print(response.model)                 # The model used
 print(response.usage.total_tokens)    # Token usage information
 ```
+
+### Task-Aware Embeddings 🎯
+
+Esperanto supports advanced task-aware embeddings that optimize vector representations for specific use cases. This works across **all embedding providers** through a universal interface:
+
+```python
+from esperanto.factory import AIFactory
+from esperanto.common_types.task_type import EmbeddingTaskType
+
+# Task-optimized embeddings work with ANY provider
+model = AIFactory.create_embedding(
+    provider="jina",  # Also works with: "openai", "google", "transformers", etc.
+    model_name="jina-embeddings-v3",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_QUERY,  # Optimize for search queries
+        "late_chunking": True,                           # Better long-context handling
+        "output_dimensions": 512                         # Control vector size
+    }
+)
+
+# Generate optimized embeddings
+query = "What is machine learning?"
+embeddings = model.embed([query])
+```
+
+**Universal Task Types:**
+- `RETRIEVAL_QUERY` - Optimize for search queries
+- `RETRIEVAL_DOCUMENT` - Optimize for document storage  
+- `SIMILARITY` - General text similarity
+- `CLASSIFICATION` - Text classification tasks
+- `CLUSTERING` - Document clustering
+- `CODE_RETRIEVAL` - Code search optimization
+
+**Provider Support:**
+- **Jina**: Native API support for all features
+- **Google/OpenAI**: Task optimization via intelligent text prefixes
+- **Transformers**: Local emulation with task-specific processing
+- **Others**: Graceful degradation with consistent interface
 
 The standardized response objects ensure consistency across different providers, making it easy to:
 - Switch between providers without changing your application code

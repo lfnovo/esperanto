@@ -6,6 +6,7 @@ Embedding models convert text into high-dimensional vector representations that 
 
 - **Azure OpenAI** (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
 - **Google** (Gemini embedding models)
+- **Jina** (jina-embeddings-v4, jina-embeddings-v3, with advanced task optimization)
 - **Mistral** (mistral-embed)
 - **OpenAI** (text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
 - **Ollama** (Local deployment with various models)
@@ -138,7 +139,268 @@ async def process_large_dataset():
     print(f"Generated {len(all_embeddings)} embeddings")
 ```
 
+## Task-Aware Embeddings
+
+Esperanto supports advanced task-aware embeddings that optimize vector representations for specific use cases. This feature works across **all embedding providers** through a universal interface.
+
+### Universal Task Types
+
+- **`RETRIEVAL_QUERY`** - Optimize embeddings for search queries
+- **`RETRIEVAL_DOCUMENT`** - Optimize embeddings for document storage
+- **`SIMILARITY`** - General text similarity tasks
+- **`CLASSIFICATION`** - Text classification tasks  
+- **`CLUSTERING`** - Document clustering tasks
+- **`CODE_RETRIEVAL`** - Code search optimization
+- **`DEFAULT`** - No specific optimization
+
+### Basic Task-Aware Usage
+
+```python
+from esperanto.factory import AIFactory
+from esperanto.common_types.task_type import EmbeddingTaskType
+
+# Create task-optimized model
+model = AIFactory.create_embedding(
+    provider="jina",
+    model_name="jina-embeddings-v3",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_QUERY,
+        "output_dimensions": 512
+    }
+)
+
+# Generate task-optimized embeddings
+query = "What is machine learning?"
+embeddings = model.embed([query])
+```
+
+### Advanced Features
+
+```python
+# Advanced configuration with all features
+advanced_model = AIFactory.create_embedding(
+    provider="jina",
+    model_name="jina-embeddings-v3",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_DOCUMENT,
+        "late_chunking": True,           # Better long-context handling
+        "output_dimensions": 1024,       # Control embedding size
+        "truncate_at_max_length": True   # Handle long texts gracefully
+    }
+)
+
+# Works with long documents
+long_document = """
+Large amounts of text that benefit from late chunking...
+The model will handle context preservation automatically.
+"""
+
+embeddings = advanced_model.embed([long_document])
+```
+
+### Universal Interface Across Providers
+
+The same configuration works with **any** embedding provider:
+
+```python
+# These all work with identical configuration!
+providers_config = {
+    "task_type": EmbeddingTaskType.CLASSIFICATION,
+    "output_dimensions": 512
+}
+
+# Jina - Native API support
+jina_model = AIFactory.create_embedding("jina", "jina-embeddings-v3", config=providers_config)
+
+# OpenAI - Task prefixes emulation  
+openai_model = AIFactory.create_embedding("openai", "text-embedding-3-small", config=providers_config)
+
+# Google - Task translation
+google_model = AIFactory.create_embedding("google", "text-embedding-004", config=providers_config)
+
+# Transformers - Local emulation
+local_model = AIFactory.create_embedding("transformers", "all-MiniLM-L6-v2", config=providers_config)
+
+# All generate optimized embeddings for classification!
+texts = ["This is a positive review", "This is a negative review"]
+for model in [jina_model, openai_model, google_model, local_model]:
+    embeddings = model.embed(texts)
+    print(f"Generated {len(embeddings)} classification-optimized embeddings")
+```
+
+### RAG-Optimized Example
+
+```python
+from esperanto.factory import AIFactory
+from esperanto.common_types.task_type import EmbeddingTaskType
+
+# Create specialized models for RAG pipeline
+query_model = AIFactory.create_embedding(
+    provider="jina",
+    model_name="jina-embeddings-v3", 
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_QUERY,
+        "output_dimensions": 512
+    }
+)
+
+document_model = AIFactory.create_embedding(
+    provider="jina",
+    model_name="jina-embeddings-v3",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_DOCUMENT,
+        "late_chunking": True,  # Better for long documents
+        "output_dimensions": 512
+    }
+)
+
+# Index documents with document-optimized embeddings
+documents = [
+    "Machine learning is a subset of artificial intelligence...",
+    "Deep learning uses neural networks with multiple layers...",
+    "Natural language processing deals with text understanding..."
+]
+
+doc_embeddings = document_model.embed(documents)
+
+# Search with query-optimized embeddings
+user_query = "What is deep learning?"
+query_embedding = query_model.embed([user_query])[0]
+
+# Calculate similarities for retrieval
+import numpy as np
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+similarities = [cosine_similarity(query_embedding, doc_emb) for doc_emb in doc_embeddings]
+best_match_idx = np.argmax(similarities)
+
+print(f"Best match: {documents[best_match_idx]}")
+print(f"Similarity: {similarities[best_match_idx]:.3f}")
+```
+
+### Provider-Specific Behavior
+
+Different providers handle task-aware features differently:
+
+| Provider | Task Types | Late Chunking | Output Dimensions | Implementation |
+|----------|------------|---------------|-------------------|----------------|
+| **Jina** | ✅ Native API | ✅ Native API | ✅ Native API | Full native support |
+| **Google** | ✅ Translated | ❌ Emulated locally | ✅ Native API | API translation + emulation |
+| **OpenAI** | ✅ Prefixes | ❌ Emulated locally | ✅ Native API | Prefix emulation + API |
+| **Transformers** | ✅ Prefixes | ✅ Local algorithm | ❌ Model-dependent | Full local emulation |
+| **Others** | ✅ Prefixes | ❌ Graceful skip | ❌ Graceful skip | Prefix emulation only |
+
+### String Task Types
+
+For convenience, you can also use strings instead of enums:
+
+```python
+# These are equivalent
+model1 = AIFactory.create_embedding("jina", "jina-embeddings-v3", 
+    config={"task_type": EmbeddingTaskType.RETRIEVAL_QUERY})
+
+model2 = AIFactory.create_embedding("jina", "jina-embeddings-v3",
+    config={"task_type": "retrieval.query"})  # String automatically converted
+```
+
 ## Provider-Specific Information
+
+### Jina Provider
+
+The Jina provider offers the most advanced embedding capabilities with full native support for task-aware features.
+
+**Configuration:**
+
+```python
+from esperanto.factory import AIFactory
+from esperanto.common_types.task_type import EmbeddingTaskType
+
+# Basic usage
+model = AIFactory.create_embedding(
+    provider="jina",
+    model_name="jina-embeddings-v3"  # or "jina-embeddings-v4"
+)
+
+# Advanced configuration with all features
+model = AIFactory.create_embedding(
+    provider="jina",
+    model_name="jina-embeddings-v4",
+    api_key="your-jina-api-key",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_QUERY,
+        "late_chunking": True,
+        "output_dimensions": 1024,
+        "truncate_at_max_length": True
+    }
+)
+```
+
+**Environment Variables:**
+
+Set this environment variable for automatic configuration:
+
+```bash
+JINA_API_KEY=your-jina-api-key
+```
+
+**Supported Models:**
+
+- **jina-embeddings-v4** - Latest multimodal model (text + images)
+- **jina-embeddings-v3** - High-performance multilingual model
+- **jina-embeddings-v2-base-en** - English-optimized base model
+- **jina-embeddings-v2-small-en** - Lightweight English model
+- **jina-embeddings-v2-base-multilingual** - Multilingual base model
+- **jina-clip-v1** - Multimodal text/image model
+- **jina-clip-v2** - Latest multimodal model
+
+**Native Features:**
+
+- ✅ **Task Optimization** - Native API support for all task types
+- ✅ **Late Chunking** - Advanced context preservation for long texts
+- ✅ **Output Dimensions** - Configurable embedding dimensions
+- ✅ **Multilingual** - Superior performance across 100+ languages
+- ✅ **8K Context** - Long context window support
+
+**Task Type Mapping:**
+
+```python
+# Universal → Jina API mapping
+EmbeddingTaskType.RETRIEVAL_QUERY → "retrieval.query"
+EmbeddingTaskType.RETRIEVAL_DOCUMENT → "retrieval.passage"
+EmbeddingTaskType.SIMILARITY → "text-matching"
+EmbeddingTaskType.CLASSIFICATION → "classification"
+EmbeddingTaskType.CLUSTERING → "separation"
+EmbeddingTaskType.CODE_RETRIEVAL → "code.query"
+```
+
+**Example:**
+
+```python
+from esperanto.factory import AIFactory
+from esperanto.common_types.task_type import EmbeddingTaskType
+
+# Create Jina model with advanced features
+model = AIFactory.create_embedding(
+    provider="jina",
+    model_name="jina-embeddings-v4",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_DOCUMENT,
+        "late_chunking": True,
+        "output_dimensions": 512
+    }
+)
+
+# Generate optimized embeddings
+documents = [
+    "Long document that benefits from late chunking context preservation...",
+    "Another document with important semantic content..."
+]
+embeddings = model.embed(documents)
+
+print(f"Generated {len(embeddings)} embeddings with {len(embeddings[0])} dimensions")
+```
 
 ### Azure OpenAI Provider
 
