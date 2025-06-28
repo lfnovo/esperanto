@@ -151,6 +151,8 @@ Esperanto supports advanced task-aware embeddings that optimize vector represent
 - **`CLASSIFICATION`** - Text classification tasks  
 - **`CLUSTERING`** - Document clustering tasks
 - **`CODE_RETRIEVAL`** - Code search optimization
+- **`QUESTION_ANSWERING`** - Optimize for question answering tasks
+- **`FACT_VERIFICATION`** - Optimize for fact checking and verification
 - **`DEFAULT`** - No specific optimization
 
 ### Basic Task-Aware Usage
@@ -287,7 +289,7 @@ Different providers handle task-aware features differently:
 | Provider | Task Types | Late Chunking | Output Dimensions | Implementation |
 |----------|------------|---------------|-------------------|----------------|
 | **Jina** | ✅ Native API | ✅ Native API | ✅ Native API | Full native support |
-| **Google** | ✅ Translated | ❌ Emulated locally | ✅ Native API | API translation + emulation |
+| **Google** | ✅ Native API | ❌ Emulated locally | ❌ Not supported | Native task translation |
 | **OpenAI** | ✅ Prefixes | ❌ Emulated locally | ✅ Native API | Prefix emulation + API |
 | **Transformers** | ✅ Prefixes | ✅ Local algorithm | ❌ Model-dependent | Full local emulation |
 | **Others** | ✅ Prefixes | ❌ Graceful skip | ❌ Graceful skip | Prefix emulation only |
@@ -400,6 +402,133 @@ documents = [
 embeddings = model.embed(documents)
 
 print(f"Generated {len(embeddings)} embeddings with {len(embeddings[0])} dimensions")
+```
+
+### Google Provider
+
+The Google provider supports Google's Gemini embedding models with native task type optimization, unlocking advanced capabilities for specific use cases.
+
+**Configuration:**
+
+```python
+from esperanto.factory import AIFactory
+from esperanto.common_types.task_type import EmbeddingTaskType
+
+# Basic usage
+model = AIFactory.create_embedding(
+    provider="google",
+    model_name="text-embedding-004"  # or "embedding-001"
+)
+
+# Advanced configuration with task optimization
+model = AIFactory.create_embedding(
+    provider="google",
+    model_name="text-embedding-004",
+    api_key="your-google-api-key",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_QUERY
+    }
+)
+```
+
+**Environment Variables:**
+
+Set these environment variables for automatic configuration:
+
+```bash
+GOOGLE_API_KEY=your-google-api-key
+# or alternatively
+GEMINI_API_KEY=your-google-api-key
+```
+
+**Supported Models:**
+
+- **text-embedding-004** - Latest high-performance embedding model
+- **embedding-001** - General-purpose embedding model
+- **gemini-embedding-exp-03-07** - Experimental model with enhanced capabilities
+
+**Native Task Type Support:**
+
+Google provider now features **native task type translation**, converting universal task types to Gemini-specific optimizations:
+
+```python
+# Universal → Gemini API mapping
+EmbeddingTaskType.RETRIEVAL_QUERY → "RETRIEVAL_QUERY"
+EmbeddingTaskType.RETRIEVAL_DOCUMENT → "RETRIEVAL_DOCUMENT"
+EmbeddingTaskType.SIMILARITY → "SEMANTIC_SIMILARITY"
+EmbeddingTaskType.CLASSIFICATION → "CLASSIFICATION"
+EmbeddingTaskType.CLUSTERING → "CLUSTERING"
+EmbeddingTaskType.CODE_RETRIEVAL → "CODE_RETRIEVAL_QUERY"
+EmbeddingTaskType.QUESTION_ANSWERING → "QUESTION_ANSWERING"
+EmbeddingTaskType.FACT_VERIFICATION → "FACT_VERIFICATION"
+```
+
+**Features:**
+
+- ✅ **Native Task Optimization** - Direct API support for 8 task types
+- ✅ **Universal Interface** - Same config pattern as other providers
+- ✅ **Automatic Fallback** - Graceful degradation to prefix emulation
+- ✅ **Async Support** - Full async/await compatibility
+- ❌ **Output Dimensions** - Not supported by Gemini API
+- ❌ **Late Chunking** - Uses local emulation when enabled
+
+**Task-Optimized Example:**
+
+```python
+from esperanto.factory import AIFactory
+from esperanto.common_types.task_type import EmbeddingTaskType
+
+# Create task-optimized Google model
+model = AIFactory.create_embedding(
+    provider="google",
+    model_name="text-embedding-004",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_DOCUMENT
+    }
+)
+
+# Generate embeddings with native Gemini task optimization
+documents = [
+    "Machine learning is a subset of artificial intelligence that focuses on algorithms.",
+    "Deep learning uses neural networks with multiple layers to model complex patterns.",
+    "Natural language processing enables computers to understand and generate human language."
+]
+
+embeddings = model.embed(documents)
+print(f"Generated {len(embeddings)} task-optimized embeddings")
+
+# For search queries, use RETRIEVAL_QUERY optimization
+query_model = AIFactory.create_embedding(
+    provider="google",
+    model_name="text-embedding-004",
+    config={
+        "task_type": EmbeddingTaskType.RETRIEVAL_QUERY
+    }
+)
+
+user_query = "What is deep learning?"
+query_embedding = query_model.embed([user_query])
+```
+
+**Multi-Task RAG Example:**
+
+```python
+# Specialized models for different parts of RAG pipeline
+fact_model = AIFactory.create_embedding(
+    provider="google",
+    model_name="text-embedding-004",
+    config={"task_type": EmbeddingTaskType.FACT_VERIFICATION}
+)
+
+qa_model = AIFactory.create_embedding(
+    provider="google", 
+    model_name="text-embedding-004",
+    config={"task_type": EmbeddingTaskType.QUESTION_ANSWERING}
+)
+
+# Use appropriate model for each stage
+fact_embeddings = fact_model.embed(["The Earth is round.", "Water boils at 100°C."])
+qa_embeddings = qa_model.embed(["What is the shape of Earth?", "At what temperature does water boil?"])
 ```
 
 ### Azure OpenAI Provider
