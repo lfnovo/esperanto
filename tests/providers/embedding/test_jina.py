@@ -147,7 +147,7 @@ class TestJinaEmbeddingModel:
         }
         
         with patch.object(model.client, "post", return_value=mock_response):
-            with pytest.raises(Exception, match="Jina API error \\(invalid_request\\): Invalid input"):
+            with pytest.raises(RuntimeError, match="Jina API error \\(invalid_request\\): Invalid input"):
                 model.embed(["test"])
 
     def test_embed_timeout(self):
@@ -155,7 +155,7 @@ class TestJinaEmbeddingModel:
         model = JinaEmbeddingModel(api_key="test-key")
         
         with patch.object(model.client, "post", side_effect=httpx.TimeoutException("Timeout")):
-            with pytest.raises(Exception, match="Request to Jina API timed out"):
+            with pytest.raises(RuntimeError, match="Request to Jina API timed out"):
                 model.embed(["test"])
 
     def test_embed_network_error(self):
@@ -163,7 +163,7 @@ class TestJinaEmbeddingModel:
         model = JinaEmbeddingModel(api_key="test-key")
         
         with patch.object(model.client, "post", side_effect=httpx.RequestError("Network error")):
-            with pytest.raises(Exception, match="Network error calling Jina API"):
+            with pytest.raises(RuntimeError, match="Network error calling Jina API"):
                 model.embed(["test"])
 
     @pytest.mark.asyncio
@@ -180,7 +180,7 @@ class TestJinaEmbeddingModel:
             ]
         }
         
-        with patch.object(model.aclient, "post", return_value=mock_response):
+        with patch.object(model.async_client, "post", return_value=mock_response):
             embeddings = await model.aembed(["test"])
             
         assert len(embeddings) == 1

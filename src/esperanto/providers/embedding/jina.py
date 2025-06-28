@@ -43,8 +43,30 @@ class JinaEmbeddingModel(EmbeddingModel):
                 "variable or pass it as 'api_key' parameter."
             )
         self.base_url = kwargs.get("base_url", "https://api.jina.ai/v1/embeddings")
-        self.client = httpx.Client(timeout=30.0)
-        self.aclient = httpx.AsyncClient(timeout=30.0)
+        
+        # Get timeout from config or use default
+        timeout = self._config.get("timeout", 30.0) if hasattr(self, "_config") else 30.0
+        
+        self.client = httpx.Client(timeout=timeout)
+        self.async_client = httpx.AsyncClient(timeout=timeout)
+    
+    def __del__(self):
+        """Clean up HTTP clients on object destruction."""
+        try:
+            if hasattr(self, 'client'):
+                self.client.close()
+        except Exception:
+            pass  # Ignore cleanup errors
+        
+        try:
+            if hasattr(self, 'async_client'):
+                # Note: aclose() is async, but __del__ is sync
+                # In practice, this handles most cleanup cases
+                if hasattr(self.async_client, '_state') and not self.async_client.is_closed:
+                    # Best effort cleanup - clients auto-cleanup on GC anyway
+                    pass
+        except Exception:
+            pass  # Ignore cleanup errors
         
     def _apply_task_optimization(self, texts: List[str]) -> List[str]:
         """Jina handles task optimization natively via API."""
@@ -114,15 +136,15 @@ class JinaEmbeddingModel(EmbeddingModel):
             response: HTTP response object.
             
         Raises:
-            Exception: With details from the error response.
+            RuntimeError: With details from the error response.
         """
         try:
             error_data = response.json()
             error_message = error_data.get("error", {}).get("message", "Unknown error")
             error_type = error_data.get("error", {}).get("type", "Unknown")
-            raise Exception(f"Jina API error ({error_type}): {error_message}")
+            raise RuntimeError(f"Jina API error ({error_type}): {error_message}")
         except (KeyError, ValueError):
-            raise Exception(f"Jina API error: {response.status_code} - {response.text}")
+            raise RuntimeError(f"Jina API error: {response.status_code} - {response.text}")
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts.
@@ -156,14 +178,15 @@ class JinaEmbeddingModel(EmbeddingModel):
             for item in response_data.get("data", []):
                 embedding = item.get("embedding")
                 if embedding:
-                    embeddings.append(embedding)
+                    # Ensure all values are floats for consistency
+                    embeddings.append([float(value) for value in embedding])
                     
             return embeddings
             
         except httpx.TimeoutException:
-            raise Exception("Request to Jina API timed out")
+            raise RuntimeError("Request to Jina API timed out")
         except httpx.RequestError as e:
-            raise Exception(f"Network error calling Jina API: {str(e)}")
+            raise RuntimeError(f"Network error calling Jina API: {str(e)}")
         finally:
             pass  # Client is reused, don't close
 
@@ -183,7 +206,7 @@ class JinaEmbeddingModel(EmbeddingModel):
         payload = self._build_request_payload(texts)
         
         try:
-            response = await self.aclient.post(
+            response = await self.async_client.post(
                 self.base_url,
                 json=payload,
                 headers=self._get_headers()
@@ -199,14 +222,15 @@ class JinaEmbeddingModel(EmbeddingModel):
             for item in response_data.get("data", []):
                 embedding = item.get("embedding")
                 if embedding:
-                    embeddings.append(embedding)
+                    # Ensure all values are floats for consistency
+                    embeddings.append([float(value) for value in embedding])
                     
             return embeddings
             
         except httpx.TimeoutException:
-            raise Exception("Request to Jina API timed out")
+            raise RuntimeError("Request to Jina API timed out")
         except httpx.RequestError as e:
-            raise Exception(f"Network error calling Jina API: {str(e)}")
+            raise RuntimeError(f"Network error calling Jina API: {str(e)}")
 
     @property
     def provider(self) -> str:
