@@ -12,6 +12,7 @@ from .response import (
     Usage,
 )
 from .stt import TranscriptionResponse
+from .task_type import EmbeddingTaskType
 from .tts import AudioResponse
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "TranscriptionResponse",
     "AudioResponse",
     "Model",
+    "EmbeddingTaskType",
 ]
