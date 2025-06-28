@@ -108,3 +108,6 @@ google-credentials.json
 podcast.mp3
 
 ai_docs/
+
+.claude/sessions
+.claude/plans
