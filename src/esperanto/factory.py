@@ -143,7 +143,18 @@ class AIFactory:
             A unique string key for the cache
         """
         # Convert config dict to a sorted, stable string representation
-        config_str = json.dumps(config or {}, sort_keys=True) if config else "{}"
+        # Handle enum values that can't be JSON serialized
+        if config:
+            serializable_config = {}
+            for key, value in config.items():
+                if hasattr(value, 'value'):  # Handle enum values
+                    serializable_config[key] = value.value
+                else:
+                    serializable_config[key] = value
+            config_str = json.dumps(serializable_config, sort_keys=True)
+        else:
+            config_str = "{}"
+        
         model_str = model_name or "default"
         return f"{service_type}:{provider}:{model_str}:{config_str}"
     
