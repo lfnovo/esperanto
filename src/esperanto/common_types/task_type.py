@@ -1,5 +1,6 @@
 """Task type enum for embedding models."""
 
+import json
 from enum import Enum
 
 

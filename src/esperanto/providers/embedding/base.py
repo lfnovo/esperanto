@@ -47,8 +47,13 @@ class EmbeddingModel(ABC):
             try:
                 self.task_type = EmbeddingTaskType(self.task_type)
             except ValueError:
-                # Invalid task type, use default behavior
-                self.task_type = None
+                # Try with underscore to dot conversion for backward compatibility
+                try:
+                    normalized_task = self.task_type.replace("_", ".")
+                    self.task_type = EmbeddingTaskType(normalized_task)
+                except ValueError:
+                    # Invalid task type, use default behavior
+                    self.task_type = None
 
     @abstractmethod
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
