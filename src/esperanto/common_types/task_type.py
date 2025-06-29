@@ -29,3 +29,11 @@ class EmbeddingTaskType(Enum):
     
     # Default/Generic
     DEFAULT = "default"                          # No specific optimization
+    
+    def __str__(self) -> str:
+        """Return string representation of the task type."""
+        return self.value
+    
+    def __repr__(self) -> str:
+        """Return detailed representation of the task type."""
+        return f"EmbeddingTaskType.{self.name}"

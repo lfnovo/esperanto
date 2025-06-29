@@ -14,6 +14,9 @@ from .base import EmbeddingModel
 class JinaEmbeddingModel(EmbeddingModel):
     """Jina AI embeddings with native support for all advanced features."""
     
+    # Jina supports all advanced features natively
+    SUPPORTED_FEATURES = ["task_type", "late_chunking", "output_dimensions", "truncate_at_max_length"]
+    
     # Task type mapping from universal enum to Jina API values
     TASK_MAPPING = {
         EmbeddingTaskType.RETRIEVAL_QUERY: "retrieval.query",

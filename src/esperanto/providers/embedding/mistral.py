@@ -42,14 +42,8 @@ class MistralEmbeddingModel(EmbeddingModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Mistral API error: {error_message}")
 
-    def _get_api_kwargs(self) -> Dict[str, Any]:
-        """Get kwargs for API calls, filtering out provider-specific args."""
-        kwargs = self._config.copy()
-        kwargs.pop("model_name", None)
-        kwargs.pop("api_key", None)
-        kwargs.pop("base_url", None)
-        kwargs.pop("organization", None)
-        return kwargs
+    # Mistral doesn't support any advanced features, so we can use the base implementation
+    # which will automatically filter them out
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts."""

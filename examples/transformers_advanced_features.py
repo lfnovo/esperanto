@@ -96,7 +96,7 @@ def main():
         provider="transformers",
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         config={
-            "device": "cpu",
+            "device": "mps",
             "task_type": EmbeddingTaskType.CLASSIFICATION,
             "late_chunking": True,
             "output_dimensions": 256,
@@ -122,15 +122,15 @@ def main():
     print()
     
     # Example 5: Qwen3-Embedding-4B with Large Context
-    print("5️⃣  Qwen3-Embedding-4B with Large Context (Advanced Model)")
+    print("5️⃣  Qwen3-Embedding with Large Context (Advanced Model)")
     print("=" * 50)
     
     try:
         qwen_model = AIFactory.create_embedding(
             provider="transformers",
-            model_name="Qwen/Qwen3-Embedding-4B",
+            model_name="Qwen/Qwen3-Embedding-0.6B",
             config={
-                "device": "cpu",
+                "device": "mps",
                 "task_type": EmbeddingTaskType.RETRIEVAL_DOCUMENT,
                 "late_chunking": True,
                 "output_dimensions": 1024,  # Leverage Qwen3's high dimensionality
