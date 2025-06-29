@@ -100,6 +100,9 @@ class TransformersEmbeddingModel(EmbeddingModel):
         
         # Initialize advanced features if available
         self._initialize_advanced_features()
+        
+        # Track if resources are cleaned up
+        self._is_cleaned_up = False
 
     def _initialize_model(self, quantize: Optional[str] = None):
         """Initialize the model and tokenizer with optional quantization."""
@@ -132,6 +135,56 @@ class TransformersEmbeddingModel(EmbeddingModel):
             self.model.to(self.device)
 
         self.model.eval()
+        
+    def cleanup(self):
+        """Explicitly clean up model resources."""
+        if self._is_cleaned_up:
+            return
+            
+        try:
+            # Move model to CPU and clear CUDA cache if using GPU
+            if hasattr(self, 'model') and self.model is not None:
+                if self.device in ['cuda', 'mps']:
+                    self.model.cpu()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                del self.model
+                self.model = None
+                
+            # Clean up tokenizer
+            if hasattr(self, 'tokenizer'):
+                del self.tokenizer
+                self.tokenizer = None
+                
+            # Clean up chunker if exists
+            if hasattr(self, '_chunker') and self._chunker is not None:
+                if hasattr(self._chunker, 'to'):
+                    self._chunker.cpu()
+                del self._chunker
+                self._chunker = None
+                
+            # Clean up PCA model
+            if hasattr(self, '_pca_model') and self._pca_model is not None:
+                del self._pca_model
+                self._pca_model = None
+                
+            self._is_cleaned_up = True
+            logger.debug("Model resources cleaned up successfully")
+            
+        except Exception as e:
+            logger.warning(f"Error during model cleanup: {e}")
+            
+    def __del__(self):
+        """Clean up resources on object destruction."""
+        self.cleanup()
+        
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit with cleanup."""
+        self.cleanup()
 
     def _configure_model_specific_settings(self):
         """Configure model-specific settings like chunk size limits."""

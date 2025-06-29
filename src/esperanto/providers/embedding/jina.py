@@ -53,23 +53,46 @@ class JinaEmbeddingModel(EmbeddingModel):
         self.client = httpx.Client(timeout=timeout)
         self.async_client = httpx.AsyncClient(timeout=timeout)
     
-    def __del__(self):
-        """Clean up HTTP clients on object destruction."""
+    def close(self):
+        """Explicitly close HTTP clients."""
         try:
-            if hasattr(self, 'client'):
+            if hasattr(self, 'client') and not self.client.is_closed:
                 self.client.close()
         except Exception:
             pass  # Ignore cleanup errors
-        
+            
+    async def aclose(self):
+        """Asynchronously close HTTP clients."""
         try:
-            if hasattr(self, 'async_client'):
-                # Note: aclose() is async, but __del__ is sync
-                # In practice, this handles most cleanup cases
-                if hasattr(self.async_client, '_state') and not self.async_client.is_closed:
-                    # Best effort cleanup - clients auto-cleanup on GC anyway
-                    pass
+            if hasattr(self, 'async_client') and not self.async_client.is_closed:
+                await self.async_client.aclose()
         except Exception:
             pass  # Ignore cleanup errors
+            
+    def __del__(self):
+        """Clean up HTTP clients on object destruction."""
+        # Only handle sync client cleanup in destructor
+        try:
+            if hasattr(self, 'client') and not self.client.is_closed:
+                self.client.close()
+        except Exception:
+            pass  # Ignore cleanup errors
+            
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit with cleanup."""
+        self.close()
+        
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with cleanup."""
+        await self.aclose()
         
     def _apply_task_optimization(self, texts: List[str]) -> List[str]:
         """Jina handles task optimization natively via API."""
