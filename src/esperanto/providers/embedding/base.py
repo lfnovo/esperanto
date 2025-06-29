@@ -211,6 +211,76 @@ class EmbeddingModel(ABC):
         """
         # Silent logging - providers can override if they want to log
         pass
+    
+    def _serialize_config_for_api(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Serialize config values for API calls.
+        
+        Converts enum values to their string representations for JSON serialization.
+        
+        Args:
+            config: Configuration dictionary that may contain enum values.
+            
+        Returns:
+            Serialized configuration dictionary.
+        """
+        serialized = {}
+        for key, value in config.items():
+            if isinstance(value, EmbeddingTaskType):
+                # Convert enum to string value
+                serialized[key] = value.value
+            else:
+                serialized[key] = value
+        return serialized
+    
+    def _filter_unsupported_params(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter out parameters not supported by this provider.
+        
+        Args:
+            kwargs: Configuration dictionary with all parameters.
+            
+        Returns:
+            Filtered dictionary with only supported parameters.
+        """
+        # Define known advanced features
+        advanced_features = ["task_type", "late_chunking", "output_dimensions", "truncate_at_max_length"]
+        
+        # If provider doesn't explicitly support advanced features, remove them
+        supported_features = getattr(self.__class__, 'SUPPORTED_FEATURES', [])
+        if not supported_features:
+            for feature in advanced_features:
+                kwargs.pop(feature, None)
+        else:
+            # Remove features not in the supported list
+            for feature in advanced_features:
+                if feature not in supported_features:
+                    kwargs.pop(feature, None)
+        
+        return kwargs
+    
+    def _get_api_kwargs(self) -> Dict[str, Any]:
+        """Get kwargs for API calls, filtering out provider-specific args.
+        
+        This is a base implementation that providers can override or use directly.
+        
+        Returns:
+            Filtered and serialized kwargs ready for API calls.
+        """
+        # Start with a copy of the config
+        kwargs = self._config.copy()
+        
+        # Remove common provider-specific kwargs
+        kwargs.pop("model_name", None)
+        kwargs.pop("api_key", None)
+        kwargs.pop("base_url", None)
+        kwargs.pop("organization", None)
+        
+        # Filter out unsupported advanced features
+        kwargs = self._filter_unsupported_params(kwargs)
+        
+        # Serialize enums to string values
+        kwargs = self._serialize_config_for_api(kwargs)
+        
+        return kwargs
 
     @property
     @abstractmethod

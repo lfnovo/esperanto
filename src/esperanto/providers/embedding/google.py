@@ -11,6 +11,9 @@ from esperanto.providers.embedding.base import EmbeddingModel, Model
 
 class GoogleEmbeddingModel(EmbeddingModel):
     """Google GenAI embedding model implementation with native task optimization support."""
+    
+    # Google supports native task types
+    SUPPORTED_FEATURES = ["task_type"]
 
     # Task type mapping from universal enum to Gemini API values
     GEMINI_TASK_MAPPING = {
@@ -71,6 +74,10 @@ class GoogleEmbeddingModel(EmbeddingModel):
         # Remove provider-specific kwargs that Google doesn't expect
         kwargs.pop("model_name", None)
         kwargs.pop("api_key", None)
+        
+        # Serialize enums to string values for JSON serialization
+        kwargs = self._serialize_config_for_api(kwargs)
+        
         return kwargs
 
     def _get_model_path(self) -> str:

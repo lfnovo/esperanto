@@ -49,18 +49,8 @@ class OpenAIEmbeddingModel(EmbeddingModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"OpenAI API error: {error_message}")
 
-    def _get_api_kwargs(self) -> Dict[str, Any]:
-        """Get kwargs for API calls, filtering out provider-specific args."""
-        # Start with a copy of the config
-        kwargs = self._config.copy()
-        
-        # Remove provider-specific kwargs that OpenAI doesn't expect
-        kwargs.pop("model_name", None)
-        kwargs.pop("api_key", None)
-        kwargs.pop("base_url", None)
-        kwargs.pop("organization", None)
-        
-        return kwargs
+    # OpenAI doesn't support advanced features, so we can use the base implementation
+    # which will automatically filter them out
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts.
