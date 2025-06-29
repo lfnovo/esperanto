@@ -66,8 +66,10 @@ class AzureEmbeddingModel(EmbeddingModel):
         # TODO, error if any text tokens > 8192
         # TODO, error if any texts length > 2048
 
-        # Handle known arguments
-        api_kwargs = {}
+        # Get base API kwargs (filtered for unsupported features)
+        api_kwargs = self._get_api_kwargs()
+        
+        # Add any runtime kwargs like dimensions
         if "dimensions" in kwargs:
             api_kwargs["dimensions"] = kwargs["dimensions"]
 
@@ -94,8 +96,10 @@ class AzureEmbeddingModel(EmbeddingModel):
         # TODO, error if any text tokens > 8192
         # TODO, error if any texts length > 2048
 
-        # Handle known arguments
-        api_kwargs = {}
+        # Get base API kwargs (filtered for unsupported features)
+        api_kwargs = self._get_api_kwargs()
+        
+        # Add any runtime kwargs like dimensions
         if "dimensions" in kwargs:
             api_kwargs["dimensions"] = kwargs["dimensions"]
 

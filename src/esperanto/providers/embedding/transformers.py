@@ -43,6 +43,9 @@ class TransformersEmbeddingModel(EmbeddingModel):
     through local emulation techniques, providing privacy-first alternatives to cloud-based
     advanced embedding features.
     """
+    
+    # Declare supported features - Transformers implements all advanced features locally
+    SUPPORTED_FEATURES = ["task_type", "late_chunking", "output_dimensions", "truncate_at_max_length"]
 
     def __init__(
         self,

@@ -44,12 +44,8 @@ class OllamaEmbeddingModel(EmbeddingModel):
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
-        # Start with a copy of the config
-        kwargs = self._config.copy()
-        # Remove provider-specific kwargs that Ollama doesn't expect
-        kwargs.pop("model_name", None)
-        kwargs.pop("base_url", None)
-        return kwargs
+        # Use base class implementation which handles filtering of unsupported features
+        return super()._get_api_kwargs()
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts.
