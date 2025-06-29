@@ -440,9 +440,11 @@ class TestCrossProviderConsistency:
         """Test that all providers return consistent data types."""
         # Mock providers to avoid actual model loading/API calls
         with patch('httpx.Client'), patch('httpx.AsyncClient'):
+            # Create providers with direct instantiation to avoid factory validation
+            from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
             providers = [
-                AIFactory.create_embedding("openai", "text-embedding-3-small", config={"api_key": "test"}),
-                JinaEmbeddingModel(api_key="test")
+                OpenAIEmbeddingModel(api_key="test-key"),
+                JinaEmbeddingModel(api_key="test-key")
             ]
         
         # Add transformers if available
