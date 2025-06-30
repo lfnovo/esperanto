@@ -73,6 +73,9 @@ class TransformersRerankerModel(RerankerModel):
                 "Transformers library not installed. Install with: pip install esperanto[transformers]"
             )
         
+        # Set tokenizers parallelism to avoid fork warnings (especially in Jupyter)
+        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+        
         # Set cache directory if provided
         if self.cache_dir:
             os.environ["TRANSFORMERS_CACHE"] = self.cache_dir
@@ -329,7 +332,7 @@ class TransformersRerankerModel(RerankerModel):
             logging.warning(f"Mixedbread v2 reranker error: {str(e)}")
             return [0.0] * len(documents)
 
-    def _format_instruction(self, instruction: str, query: str, doc: str) -> str:
+    def _format_instruction(self, instruction: Optional[str], query: str, doc: str) -> str:
         """Format the instruction for Qwen reranker."""
         if instruction is None:
             instruction = 'Given a web search query, retrieve relevant passages that answer the query'
@@ -337,30 +340,24 @@ class TransformersRerankerModel(RerankerModel):
 
     def _process_inputs(self, pairs: List[str]) -> Dict[str, torch.Tensor]:
         """Process input pairs for Qwen reranker."""
-        # Calculate effective max length for content
-        content_max_length = self.max_length - len(self.prefix_tokens) - len(self.suffix_tokens)
+        # Build full text strings with prefix and suffix for direct tokenization
+        # This avoids the warning about using encode() followed by pad()
+        prefix_text = self.tokenizer.decode(self.prefix_tokens, skip_special_tokens=False)
+        suffix_text = self.tokenizer.decode(self.suffix_tokens, skip_special_tokens=False)
         
-        # Tokenize all pairs
+        full_texts = [prefix_text + pair + suffix_text for pair in pairs]
+        
+        # Use the faster __call__ method as recommended by the warning
         inputs = self.tokenizer(
-            pairs, 
-            padding=False,
-            truncation='longest_first',
-            return_attention_mask=False,
-            max_length=content_max_length
+            full_texts,
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors="pt",
+            return_attention_mask=True
         )
         
-        # Add prefix and suffix tokens to each sequence
-        for i, input_ids in enumerate(inputs['input_ids']):
-            inputs['input_ids'][i] = self.prefix_tokens + input_ids + self.suffix_tokens
-        
-        # Pad sequences and move to device
-        inputs = self.tokenizer.pad(
-            inputs, 
-            padding=True, 
-            return_tensors="pt", 
-            max_length=self.max_length
-        )
-        
+        # Move to device
         for key in inputs:
             inputs[key] = inputs[key].to(self.device)
         
@@ -477,6 +474,9 @@ class TransformersRerankerModel(RerankerModel):
                 callbacks: Optional[Callbacks] = None
             ) -> List[Document]:
                 """Compress documents using universal transformers reranker."""
+                # Note: callbacks parameter is part of LangChain interface but not used in local processing
+                _ = callbacks  # Acknowledge parameter to avoid warnings
+                
                 # Extract text content from documents
                 texts = [doc.page_content for doc in documents]
                 
