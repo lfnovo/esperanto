@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -36,6 +37,14 @@ except ImportError:
     CrossEncoder = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
+# Optional mxbai-rerank import
+try:
+    from mxbai_rerank import MxbaiRerankV2
+    MXBAI_AVAILABLE = True
+except ImportError:
+    MxbaiRerankV2 = None
+    MXBAI_AVAILABLE = False
+
 
 @dataclass
 class TransformersRerankerModel(RerankerModel):
@@ -50,6 +59,7 @@ class TransformersRerankerModel(RerankerModel):
     
     device: Optional[str] = None
     cache_dir: Optional[str] = None
+    trust_remote_code: bool = False
 
     # Model strategy patterns for auto-detection
     MODEL_STRATEGY_PATTERNS = {
@@ -80,11 +90,35 @@ class TransformersRerankerModel(RerankerModel):
         if self.cache_dir:
             os.environ["TRANSFORMERS_CACHE"] = self.cache_dir
         
+        # Validate model name for security
+        self._validate_model_name()
+        
         # Auto-detect device
         self.device = self._detect_device()
         
         # Initialize model based on detected strategy
         self._load_model()
+
+    def _validate_model_name(self):
+        """Validate model name to prevent path traversal and other security issues."""
+        model_name = self.get_model_name()
+        
+        # Check for path traversal attempts
+        if ".." in model_name or "/" in model_name.replace("/", "", 1).replace("/", "", 1):
+            # Allow at most one '/' for org/model format (e.g., "microsoft/model")
+            parts = model_name.split("/")
+            if len(parts) > 2:
+                raise ValueError(f"Invalid model name format: {model_name}")
+        
+        # Check for invalid characters
+        if not re.match(r"^[a-zA-Z0-9._/-]+$", model_name):
+            raise ValueError(f"Model name contains invalid characters: {model_name}")
+        
+        # Check for suspicious patterns
+        suspicious_patterns = ["\\", "..", "~", "$", "%", "@", "&", "|", ";", "`"]
+        for pattern in suspicious_patterns:
+            if pattern in model_name:
+                raise ValueError(f"Model name contains suspicious pattern '{pattern}': {model_name}")
 
     def _detect_device(self) -> str:
         """Auto-detect the best available device."""
@@ -169,7 +203,7 @@ class TransformersRerankerModel(RerankerModel):
             self.model = AutoModelForSequenceClassification.from_pretrained(
                 model_name,
                 torch_dtype="auto",
-                trust_remote_code=True,
+                trust_remote_code=self.trust_remote_code,
                 cache_dir=self.cache_dir
             )
             self.tokenizer = AutoTokenizer.from_pretrained(
@@ -231,14 +265,14 @@ class TransformersRerankerModel(RerankerModel):
 
     def _load_mixedbread_v2_model(self):
         """Load Mixedbread v2 models with optional dependency."""
-        try:
-            from mxbai_rerank import MxbaiRerankV2
-            self.model = MxbaiRerankV2(self.get_model_name())
-        except ImportError:
+        if not MXBAI_AVAILABLE:
             raise ImportError(
                 "mxbai-rerank library required for Mixedbread v2 models. "
                 "Install with: pip install mxbai-rerank"
             )
+        
+        try:
+            self.model = MxbaiRerankV2(self.get_model_name())
         except Exception as e:
             raise RuntimeError(f"Failed to load Mixedbread v2 model {self.get_model_name()}: {str(e)}")
 
@@ -320,10 +354,15 @@ class TransformersRerankerModel(RerankerModel):
             scores = [0.0] * len(documents)
             for i, result in enumerate(results):
                 # mxbai returns RankResult objects with attributes, not dicts
-                original_index = getattr(result, 'corpus_id', i)
+                original_index = getattr(result, 'corpus_id', None)
                 score = getattr(result, 'score', 0.0)
-                if original_index < len(scores):
+                
+                if original_index is not None and 0 <= original_index < len(scores):
                     scores[original_index] = score
+                else:
+                    # Handle missing or invalid corpus_id
+                    import logging
+                    logging.warning(f"Invalid or missing corpus_id for result {i}: {original_index}")
             
             return scores
             

@@ -306,9 +306,10 @@ class TestTransformersRerankerMixedbreadV2Strategy:
     """Test mixedbread v2 strategy."""
 
     @patch('esperanto.providers.reranker.transformers.TRANSFORMERS_AVAILABLE', True)
+    @patch('esperanto.providers.reranker.transformers.MXBAI_AVAILABLE', True)
     def test_mixedbread_v2_initialization(self):
         """Test initialization for mixedbread v2 strategy."""
-        with patch('mxbai_rerank.MxbaiRerankV2') as mock_mxbai:
+        with patch('esperanto.providers.reranker.transformers.MxbaiRerankV2') as mock_mxbai:
             mock_model = Mock()
             mock_mxbai.return_value = mock_model
             
@@ -328,9 +329,10 @@ class TestTransformersRerankerMixedbreadV2Strategy:
                 TransformersRerankerModel(model_name="mixedbread-ai/mxbai-rerank-base-v2")
 
     @patch('esperanto.providers.reranker.transformers.TRANSFORMERS_AVAILABLE', True)
+    @patch('esperanto.providers.reranker.transformers.MXBAI_AVAILABLE', True)
     def test_mixedbread_v2_rerank_functionality(self):
         """Test reranking functionality for mixedbread v2 strategy."""
-        with patch('mxbai_rerank.MxbaiRerankV2') as mock_mxbai:
+        with patch('esperanto.providers.reranker.transformers.MxbaiRerankV2') as mock_mxbai:
             # Mock RankResult objects with attributes
             mock_result_1 = Mock()
             mock_result_1.corpus_id = 0
@@ -529,3 +531,58 @@ class TestTransformersRerankerInputValidation:
                 # Test invalid top_k
                 with pytest.raises(ValueError, match="top_k must be positive"):
                     reranker.rerank("query", ["doc1"], top_k=0)
+
+    @patch('esperanto.providers.reranker.transformers.TRANSFORMERS_AVAILABLE', True)
+    def test_model_name_validation(self):
+        """Test model name validation for security."""
+        with patch('esperanto.providers.reranker.transformers.torch'), \
+             patch('esperanto.providers.reranker.transformers.AutoTokenizer'), \
+             patch('esperanto.providers.reranker.transformers.AutoModelForCausalLM'):
+            
+            # Test path traversal attempt
+            with pytest.raises(ValueError, match="Invalid model name format"):
+                TransformersRerankerModel(model_name="../malicious/model")
+            
+            # Test invalid characters
+            with pytest.raises(ValueError, match="Model name contains invalid characters"):
+                TransformersRerankerModel(model_name="model@name")
+            
+            # Test suspicious patterns (semicolon gets caught as invalid character first)
+            with pytest.raises(ValueError, match="Model name contains invalid characters"):
+                TransformersRerankerModel(model_name="model;rm -rf /")
+
+    @patch('esperanto.providers.reranker.transformers.TRANSFORMERS_AVAILABLE', True) 
+    def test_trust_remote_code_parameter(self):
+        """Test trust_remote_code parameter handling."""
+        with patch('esperanto.providers.reranker.transformers.AutoModelForSequenceClassification') as mock_model_class, \
+             patch('esperanto.providers.reranker.transformers.AutoTokenizer'):
+            
+            mock_model = Mock()
+            mock_tokenizer = Mock() 
+            mock_model_class.from_pretrained.return_value = mock_model
+            
+            # Test default (False)
+            reranker = TransformersRerankerModel(model_name="jinaai/jina-reranker-v2-base-multilingual")
+            
+            # Verify trust_remote_code=False was used
+            mock_model_class.from_pretrained.assert_called_with(
+                "jinaai/jina-reranker-v2-base-multilingual",
+                torch_dtype="auto",
+                trust_remote_code=False,
+                cache_dir=None
+            )
+            
+            # Test explicit True
+            mock_model_class.reset_mock()
+            reranker_trust = TransformersRerankerModel(
+                model_name="jinaai/jina-reranker-v2-base-multilingual",
+                trust_remote_code=True
+            )
+            
+            # Verify trust_remote_code=True was used
+            mock_model_class.from_pretrained.assert_called_with(
+                "jinaai/jina-reranker-v2-base-multilingual", 
+                torch_dtype="auto",
+                trust_remote_code=True,
+                cache_dir=None
+            )
