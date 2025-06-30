@@ -598,7 +598,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "accelerate", marker = "extra == 'transformers'" },
+    { name = "accelerate", marker = "extra == 'transformers'", specifier = ">=1.8.1" },
     { name = "einops", marker = "extra == 'transformers'", specifier = ">=0.8.1" },
     { name = "httpx", specifier = ">=0.25.0" },
     { name = "numpy", marker = "extra == 'transformers'", specifier = ">=1.21.0" },
