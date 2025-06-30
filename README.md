@@ -45,9 +45,10 @@ Whether you're building a quick prototype or a production application serving mi
   - Azure OpenAI (Chat, Embedding)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
-  - Voyage (Embeddings)
-  - Jina (Advanced embedding models with task optimization)
+  - Voyage (Embeddings, Reranking)
+  - Jina (Advanced embedding models with task optimization, Reranking)
 - **Embedding Support**: Multiple embedding providers for vector representations
+- **Reranking Support**: Universal reranking interface for improving search relevance
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
 - **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
@@ -58,6 +59,7 @@ Whether you're building a quick prototype or a production application serving mi
 For detailed information about our providers, check out:
 - [LLM Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/llm.md)
 - [Embedding Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/embedding.md)
+- [Reranking Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/rerank.md)
 - [Speech-to-Text Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/speech_to_text.md)
 - [Text-to-Speech Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/text_to_speech.md)
 
@@ -105,24 +107,24 @@ pip install "langchain-google-vertexai>=2.0.24"
 
 ## Provider Support Matrix
 
-| Provider     | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | JSON Mode |
-|--------------|-------------|------------------|----------------|----------------|-----------|
-| OpenAI       | ✅          | ✅               | ✅             | ✅             | ✅        |
-| Anthropic    | ✅          | ❌               | ❌             | ❌             | ✅        |
-| Groq         | ✅          | ❌               | ✅             | ❌             | ✅        |
-| Google (GenAI) | ✅          | ✅               | ❌             | ✅             | ✅        |
-| Vertex AI    | ✅          | ✅               | ❌             | ✅             | ❌        |
-| Ollama       | ✅          | ✅               | ❌             | ❌             | ❌        |
-| Perplexity   | ✅          | ❌               | ❌             | ❌             | ✅        |
-| Transformers | ❌          | ✅               | ❌             | ❌             | ❌        |
-| ElevenLabs   | ❌          | ❌               | ✅             | ✅             | ❌        |
-| Azure OpenAI | ✅          | ✅               | ❌             | ❌             | ✅        |
-| Mistral      | ✅          | ✅               | ❌             | ❌             | ✅        |
-| DeepSeek     | ✅          | ❌               | ❌             | ❌             | ✅        |
-| Voyage       | ❌          | ✅               | ❌             | ❌             | ❌        |
-| Jina         | ❌          | ✅               | ❌             | ❌             | ❌        |
-| xAI          | ✅          | ❌               | ❌             | ❌             | ✅        |
-| OpenRouter   | ✅          | ❌               | ❌             | ❌             | ✅        |
+| Provider     | LLM Support | Embedding Support | Reranking Support | Speech-to-Text | Text-to-Speech | JSON Mode |
+|--------------|-------------|------------------|-------------------|----------------|----------------|-----------|
+| OpenAI       | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
+| Anthropic    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| Groq         | ✅          | ❌               | ❌                | ✅             | ❌             | ✅        |
+| Google (GenAI) | ✅          | ✅               | ❌                | ❌             | ✅             | ✅        |
+| Vertex AI    | ✅          | ✅               | ❌                | ❌             | ✅             | ❌        |
+| Ollama       | ✅          | ✅               | ❌                | ❌             | ❌             | ❌        |
+| Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| Transformers | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
+| ElevenLabs   | ❌          | ❌               | ❌                | ✅             | ✅             | ❌        |
+| Azure OpenAI | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
+| Mistral      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
+| DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
+| Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
+| xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 
 ## Quick Start 🏃‍♂️
 
@@ -202,6 +204,7 @@ print(providers)
 # {
 #     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
 #     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
+#     'reranker': ['jina', 'voyage', 'transformers'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs'],
 #     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex']
 # }
@@ -213,6 +216,7 @@ model = AIFactory.create_language(
     config={"structured": {"type": "json"}}
 )  # Language model
 embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")  # Embedding model
+reranker = AIFactory.create_reranker("jina", "jina-reranker-v2-base-multilingual")  # Reranker model
 transcriber = AIFactory.create_speech_to_text("openai", "whisper-1")  # Speech-to-text model
 speaker = AIFactory.create_text_to_speech("openai", "tts-1")  # Text-to-speech model
 
@@ -308,6 +312,27 @@ print(response.data[0].embedding)     # Vector for first text
 print(response.data[0].index)         # Index of the text (0)
 print(response.model)                 # The model used
 print(response.usage.total_tokens)    # Token usage information
+```
+
+### Reranking Responses
+
+```python
+from esperanto.factory import AIFactory
+
+reranker = AIFactory.create_reranker("jina", "jina-reranker-v2-base-multilingual")
+query = "What is machine learning?"
+documents = [
+    "Machine learning is a subset of artificial intelligence.",
+    "The weather is nice today.",
+    "Python is a programming language used in ML."
+]
+
+# All reranking responses follow this structure
+response = reranker.rerank(query, documents, top_k=2)
+print(response.results[0].document)          # Highest ranked document
+print(response.results[0].relevance_score)   # Normalized 0-1 relevance score
+print(response.results[0].index)             # Original document index
+print(response.model)                        # The model used
 ```
 
 ### Task-Aware Embeddings 🎯
