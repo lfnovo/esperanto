@@ -66,7 +66,7 @@ class JinaRerankerModel(RerankerModel):
             "model": self.get_model_name(),
             "query": query,
             "documents": documents,
-            "top_n": top_k,
+            "top_k": top_k,  # Use consistent top_k parameter naming
             "return_documents": True  # Always return documents for consistent interface
         }
         
@@ -110,14 +110,27 @@ class JinaRerankerModel(RerankerModel):
             index = result.get("index", i)
             document = result.get("document")
             
-            # Handle Jina's document format - it may be a dict with 'text' field
-            if isinstance(document, dict) and "text" in document:
-                document = document["text"]
+            # Handle Jina's document format with robust validation
+            if isinstance(document, dict):
+                # Try common text fields in order of preference
+                if "text" in document:
+                    document = document["text"]
+                elif "content" in document:
+                    document = document["content"]
+                elif "body" in document:
+                    document = document["body"]
+                else:
+                    # If dict doesn't have expected text fields, stringify it
+                    document = str(document)
             elif document is None and index < len(documents):
                 # Use original document if not returned in response
                 document = documents[index]
             elif document is None:
                 document = ""
+            
+            # Ensure document is a string
+            if not isinstance(document, str):
+                document = str(document)
             
             results.append(RerankResult(
                 index=index,

@@ -211,7 +211,9 @@ class TransformersRerankerModel(RerankerModel):
             return scores
             
         except Exception as e:
-            # Return zero scores on error rather than failing
+            # Log the error for debugging and return zero scores rather than failing
+            import logging
+            logging.warning(f"Transformers reranker error: {str(e)}")
             return [0.0] * len(documents)
 
     def rerank(

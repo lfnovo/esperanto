@@ -122,7 +122,7 @@ class TestJinaReranker:
         assert payload["query"] == query
         assert payload["documents"] == documents
         assert payload["model"] == "jina-reranker-v2-base-multilingual"
-        assert payload["top_n"] == top_k  # Jina uses "top_n" not "top_k"
+        assert payload["top_k"] == top_k  # Now using consistent "top_k" parameter
 
     def test_custom_config_in_payload(self):
         """Test custom config is included in request payload."""
@@ -185,6 +185,35 @@ class TestJinaReranker:
         result = reranker._parse_response(response_data, ["Machine learning is AI"])
         
         assert result.results[0].document == "Machine learning is AI"
+
+    def test_response_processing_with_various_document_formats(self):
+        """Test response processing with different document formats."""
+        reranker = JinaRerankerModel(
+            model_name="jina-reranker-v2-base-multilingual",
+            api_key="test-key",
+            config={}
+        )
+        
+        # Mock response data with various document formats
+        response_data = {
+            "model": "jina-reranker-v2-base-multilingual",
+            "results": [
+                {"index": 0, "document": {"text": "Text field document"}, "relevance_score": 0.95},
+                {"index": 1, "document": {"content": "Content field document"}, "relevance_score": 0.85},
+                {"index": 2, "document": {"body": "Body field document"}, "relevance_score": 0.75},
+                {"index": 3, "document": {"unknown": "field"}, "relevance_score": 0.65},
+                {"index": 4, "document": None, "relevance_score": 0.55}
+            ]
+        }
+        
+        original_docs = ["doc1", "doc2", "doc3", "doc4", "doc5"]
+        result = reranker._parse_response(response_data, original_docs)
+        
+        assert result.results[0].document == "Text field document"
+        assert result.results[1].document == "Content field document"
+        assert result.results[2].document == "Body field document"
+        assert result.results[3].document == "{'unknown': 'field'}"  # Stringified dict
+        assert result.results[4].document == "doc5"  # Fallback to original
 
     def test_get_model_name(self):
         """Test model name retrieval."""
