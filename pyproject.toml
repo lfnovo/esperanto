@@ -26,6 +26,8 @@ transformers = [
     "sentence-transformers>=2.2.0",
     "scikit-learn>=1.3.0",
     "numpy>=1.21.0",
+    "einops>=0.8.1",
+    "accelerate>=1.8.1"
 ]
 
 

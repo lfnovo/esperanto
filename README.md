@@ -40,7 +40,7 @@ Whether you're building a quick prototype or a production application serving mi
   - Google GenAI (Gemini LLM, Text To Speech, Embedding with native task optimization)
   - Vertex AI (Google Cloud, LLM, Embedding, TTS)
   - Ollama (Local deployment multiple models)
-  - Transformers (Local Hugging Face models)
+  - Transformers (Universal local models - Qwen, CrossEncoder, BAAI, Jina, Mixedbread)
   - ElevenLabs (Text-to-Speech, Speech-to-Text)
   - Azure OpenAI (Chat, Embedding)
   - Mistral (Mistral Large, Small, Embedding, etc.)
@@ -82,9 +82,12 @@ pip install "esperanto[transformers]"
 ```
 
 This installs:
-- `transformers`
-- `torch`
-- `tokenizers`
+- `transformers` - Core Hugging Face library
+- `torch` - PyTorch framework
+- `tokenizers` - Fast tokenization
+- `sentence-transformers` - CrossEncoder support
+- `scikit-learn` - Advanced embedding features
+- `numpy` - Numerical computations
 
 **LangChain Integration**
 
@@ -216,7 +219,7 @@ model = AIFactory.create_language(
     config={"structured": {"type": "json"}}
 )  # Language model
 embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")  # Embedding model
-reranker = AIFactory.create_reranker("jina", "jina-reranker-v2-base-multilingual")  # Reranker model
+reranker = AIFactory.create_reranker("transformers", "cross-encoder/ms-marco-MiniLM-L-6-v2")  # Universal reranker model
 transcriber = AIFactory.create_speech_to_text("openai", "whisper-1")  # Speech-to-text model
 speaker = AIFactory.create_text_to_speech("openai", "tts-1")  # Text-to-speech model
 
@@ -319,7 +322,7 @@ print(response.usage.total_tokens)    # Token usage information
 ```python
 from esperanto.factory import AIFactory
 
-reranker = AIFactory.create_reranker("jina", "jina-reranker-v2-base-multilingual")
+reranker = AIFactory.create_reranker("transformers", "BAAI/bge-reranker-base")
 query = "What is machine learning?"
 documents = [
     "Machine learning is a subset of artificial intelligence.",
