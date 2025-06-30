@@ -41,7 +41,7 @@ def qwen_model():
     """Create a Qwen3 model instance for testing large context handling."""
     return AIFactory.create_embedding(
         provider="transformers",
-        model_name="Qwen/Qwen3-Embedding-4B",
+        model_name="Qwen/Qwen3-Embedding-0.6B",
         config={
             "device": "cpu",
             "task_type": EmbeddingTaskType.RETRIEVAL_DOCUMENT,
