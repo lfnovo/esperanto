@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.reranker.base import RerankerModel
 from esperanto.providers.stt.base import SpeechToTextModel
 from esperanto.providers.tts.base import TextToSpeechModel
 
@@ -54,6 +55,11 @@ class AIFactory:
             "elevenlabs": "esperanto.providers.tts.elevenlabs:ElevenLabsTextToSpeechModel",
             "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
             "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
+        },
+        "reranker": {
+            "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
+            "voyage": "esperanto.providers.reranker.voyage:VoyageRerankerModel",
+            "transformers": "esperanto.providers.reranker.transformers:TransformersRerankerModel",
         },
     }
 
@@ -213,6 +219,34 @@ class AIFactory:
             
         # Create a new instance
         provider_class = cls._import_provider_class("embedding", provider)
+        instance = provider_class(model_name=model_name, config=config or {})
+        
+        # Cache the instance
+        cls._model_cache[cache_key] = instance
+        return instance
+
+    @classmethod
+    def create_reranker(
+        cls, provider: str, model_name: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+    ) -> RerankerModel:
+        """Create a reranker model instance.
+
+        Args:
+            provider: Provider name
+            model_name: Optional name of the model to use
+            config: Optional configuration for the model
+
+        Returns:
+            Reranker model instance
+        """
+        cache_key = cls._generate_cache_key("reranker", provider, model_name, config)
+        
+        # Check if we have a cached instance
+        if cache_key in cls._model_cache:
+            return cls._model_cache[cache_key]
+            
+        # Create a new instance
+        provider_class = cls._import_provider_class("reranker", provider)
         instance = provider_class(model_name=model_name, config=config or {})
         
         # Cache the instance

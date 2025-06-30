@@ -15,9 +15,9 @@ class Model(BaseModel):
         description="Maximum number of tokens the model can process in a single request",
         ge=0,  # context window must be non-negative
     )
-    type: Literal["language", "embedding", "text_to_speech", "speech_to_text"] = Field(
+    type: Literal["language", "embedding", "text_to_speech", "speech_to_text", "reranker"] = Field(
         default="language",
-        description="The type of model (language model, embedding model, etc.)",
+        description="The type of model (language model, embedding model, reranker, etc.)",
     )
 
     model_config = ConfigDict(frozen=True)  # Make models immutable
