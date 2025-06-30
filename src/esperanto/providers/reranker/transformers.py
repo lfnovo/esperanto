@@ -1,4 +1,4 @@
-"""Transformers reranker provider implementation."""
+"""Universal transformers reranker provider with 4-strategy architecture."""
 
 import asyncio
 import os
@@ -13,25 +13,59 @@ from .base import RerankerModel
 # Optional transformers import with helpful error message
 try:
     import torch
-    from transformers import AutoTokenizer, AutoModelForCausalLM
+    from transformers import (
+        AutoConfig,
+        AutoModelForCausalLM,
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+    )
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
     torch = None
     AutoTokenizer = None
     AutoModelForCausalLM = None
+    AutoModelForSequenceClassification = None
+    AutoConfig = None
+
+# Optional sentence_transformers import (part of transformers dependency)
+try:
+    from sentence_transformers import CrossEncoder
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    CrossEncoder = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 
 @dataclass
 class TransformersRerankerModel(RerankerModel):
-    """Local transformers-based reranker using Qwen3-Reranker-4B."""
+    """Universal transformers-based reranker supporting multiple architectures.
+    
+    Supports 4 strategies:
+    1. sentence_transformers - CrossEncoder models (cross-encoder/*, BAAI/bge-reranker-*, mixedbread v1)
+    2. sequence_classification - AutoModelForSequenceClassification (jinaai/jina-reranker-*)
+    3. causal_lm - AutoModelForCausalLM (Qwen/*-Reranker-*)
+    4. mixedbread_v2 - mxbai-rerank library (mixedbread-ai/mxbai-rerank-*-v2)
+    """
     
     device: Optional[str] = None
-    max_length: int = 512
     cache_dir: Optional[str] = None
 
+    # Model strategy patterns for auto-detection
+    MODEL_STRATEGY_PATTERNS = {
+        "cross-encoder/": "sentence_transformers",
+        "BAAI/bge-reranker-": "sentence_transformers", 
+        "mixedbread-ai/mxbai-rerank-base-v1": "sentence_transformers",
+        "mixedbread-ai/mxbai-rerank-large-v1": "sentence_transformers", 
+        "mixedbread-ai/mxbai-rerank-xsmall-v1": "sentence_transformers",
+        "mixedbread-ai/mxbai-rerank-base-v2": "mixedbread_v2",
+        "mixedbread-ai/mxbai-rerank-large-v2": "mixedbread_v2",
+        "jinaai/jina-reranker-": "sequence_classification",
+        "Qwen/": "causal_lm"
+    }
+
     def __post_init__(self):
-        """Initialize Transformers reranker after dataclass initialization."""
+        """Initialize universal transformers reranker after dataclass initialization."""
         super().__post_init__()
         
         if not TRANSFORMERS_AVAILABLE:
@@ -39,7 +73,6 @@ class TransformersRerankerModel(RerankerModel):
                 "Transformers library not installed. Install with: pip install esperanto[transformers]"
             )
         
-        # No API key required for local models
         # Set cache directory if provided
         if self.cache_dir:
             os.environ["TRANSFORMERS_CACHE"] = self.cache_dir
@@ -47,10 +80,7 @@ class TransformersRerankerModel(RerankerModel):
         # Auto-detect device
         self.device = self._detect_device()
         
-        # Get config values
-        self.max_length = self._config.get("max_length", self.max_length)
-        
-        # Initialize model and tokenizer
+        # Initialize model based on detected strategy
         self._load_model()
 
     def _detect_device(self) -> str:
@@ -65,8 +95,93 @@ class TransformersRerankerModel(RerankerModel):
         else:
             return "cpu"
 
+    def _get_model_strategy(self, model_name: str) -> str:
+        """Automatically detect the correct strategy for the model."""
+        # Check exact patterns first
+        for pattern, strategy in self.MODEL_STRATEGY_PATTERNS.items():
+            if model_name.startswith(pattern):
+                return strategy
+        
+        # Fallback: inspect model config
+        return self._detect_strategy_from_config(model_name)
+
+    def _detect_strategy_from_config(self, model_name: str) -> str:
+        """Detect strategy by inspecting model configuration."""
+        try:
+            config = AutoConfig.from_pretrained(model_name)
+            
+            # Map architectures to strategies
+            if hasattr(config, 'architectures') and config.architectures:
+                arch_str = str(config.architectures).lower()
+                if "sequenceclassification" in arch_str:
+                    return "sequence_classification"
+                elif "causallm" in arch_str:
+                    return "causal_lm"
+                    
+        except Exception:
+            pass
+        
+        # If all detection fails
+        supported_patterns = list(self.MODEL_STRATEGY_PATTERNS.keys())
+        raise ValueError(
+            f"Could not detect reranker strategy for model '{model_name}'. "
+            f"Supported model patterns: {supported_patterns}"
+        )
+
     def _load_model(self):
-        """Load the reranker model and tokenizer."""
+        """Load the appropriate model based on detected strategy."""
+        model_name = self.get_model_name()
+        strategy = self._get_model_strategy(model_name)
+        
+        if strategy == "sentence_transformers":
+            self._load_sentence_transformers_model()
+        elif strategy == "sequence_classification":
+            self._load_sequence_classification_model()
+        elif strategy == "causal_lm":
+            self._load_causal_lm_model()
+        elif strategy == "mixedbread_v2":
+            self._load_mixedbread_v2_model()
+        else:
+            raise ValueError(f"Unknown reranker strategy: {strategy}")
+        
+        self.strategy = strategy
+
+    def _load_sentence_transformers_model(self):
+        """Load sentence_transformers CrossEncoder model."""
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "sentence-transformers library not available. Install with: pip install esperanto[transformers]"
+            )
+        
+        try:
+            self.model = CrossEncoder(self.get_model_name())
+        except Exception as e:
+            raise RuntimeError(f"Failed to load CrossEncoder model {self.get_model_name()}: {str(e)}")
+
+    def _load_sequence_classification_model(self):
+        """Load AutoModelForSequenceClassification model."""
+        try:
+            model_name = self.get_model_name()
+            
+            self.model = AutoModelForSequenceClassification.from_pretrained(
+                model_name,
+                torch_dtype="auto",
+                trust_remote_code=True,
+                cache_dir=self.cache_dir
+            )
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_name,
+                cache_dir=self.cache_dir
+            )
+            
+            self.model.to(self.device)
+            self.model.eval()
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to load sequence classification model {self.get_model_name()}: {str(e)}")
+
+    def _load_causal_lm_model(self):
+        """Load AutoModelForCausalLM model (Qwen style)."""
         try:
             model_name = self.get_model_name()
             
@@ -77,7 +192,7 @@ class TransformersRerankerModel(RerankerModel):
                 padding_side='left'
             )
             
-            # Load model as causal LM (not sequence classification)
+            # Load model as causal LM
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 cache_dir=self.cache_dir,
@@ -88,11 +203,11 @@ class TransformersRerankerModel(RerankerModel):
             self.model.to(self.device)
             self.model.eval()
             
-            # Initialize Qwen-specific tokens and prompts
+            # Setup Qwen-specific configuration
             self._setup_qwen_reranker()
             
         except Exception as e:
-            raise RuntimeError(f"Failed to load model {self.get_model_name()}: {str(e)}")
+            raise RuntimeError(f"Failed to load causal LM model {self.get_model_name()}: {str(e)}")
 
     def _setup_qwen_reranker(self):
         """Setup Qwen-specific reranker configuration."""
@@ -109,7 +224,110 @@ class TransformersRerankerModel(RerankerModel):
         self.suffix_tokens = self.tokenizer.encode(self.suffix, add_special_tokens=False)
         
         # Set max length for the model
-        self.qwen_max_length = 8192
+        self.max_length = 8192
+
+    def _load_mixedbread_v2_model(self):
+        """Load Mixedbread v2 models with optional dependency."""
+        try:
+            from mxbai_rerank import MxbaiRerankV2
+            self.model = MxbaiRerankV2(self.get_model_name())
+        except ImportError:
+            raise ImportError(
+                "mxbai-rerank library required for Mixedbread v2 models. "
+                "Install with: pip install mxbai-rerank"
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to load Mixedbread v2 model {self.get_model_name()}: {str(e)}")
+
+    def _score_all_pairs(self, query: str, documents: List[str]) -> List[float]:
+        """Universal scoring method that dispatches to appropriate strategy."""
+        if self.strategy == "sentence_transformers":
+            return self._rerank_sentence_transformers(query, documents)
+        elif self.strategy == "sequence_classification":
+            return self._rerank_sequence_classification(query, documents)
+        elif self.strategy == "causal_lm":
+            return self._rerank_causal_lm(query, documents)
+        elif self.strategy == "mixedbread_v2":
+            return self._rerank_mixedbread_v2(query, documents)
+        else:
+            raise ValueError(f"Unknown reranker strategy: {self.strategy}")
+
+    def _rerank_sentence_transformers(self, query: str, documents: List[str]) -> List[float]:
+        """Rerank using sentence_transformers CrossEncoder."""
+        try:
+            # Use CrossEncoder.rank method
+            ranks = self.model.rank(query, documents)
+            
+            # Reorder scores to match original document order
+            ordered_scores = [0.0] * len(documents)
+            for rank in ranks:
+                ordered_scores[rank['corpus_id']] = rank['score']
+            
+            return ordered_scores
+            
+        except Exception as e:
+            import logging
+            logging.warning(f"CrossEncoder reranker error: {str(e)}")
+            return [0.0] * len(documents)
+
+    def _rerank_sequence_classification(self, query: str, documents: List[str]) -> List[float]:
+        """Rerank using AutoModelForSequenceClassification."""
+        try:
+            # Format query-document pairs 
+            sentence_pairs = [[query, doc] for doc in documents]
+            
+            # Compute scores using model's compute_score method
+            scores = self.model.compute_score(sentence_pairs, max_length=1024)
+            
+            return scores.tolist() if hasattr(scores, 'tolist') else list(scores)
+            
+        except Exception as e:
+            import logging
+            logging.warning(f"Sequence classification reranker error: {str(e)}")
+            return [0.0] * len(documents)
+
+    def _rerank_causal_lm(self, query: str, documents: List[str]) -> List[float]:
+        """Rerank using AutoModelForCausalLM (Qwen style)."""
+        try:
+            # Format all query-document pairs using Qwen instruction format
+            instruction = 'Given a web search query, retrieve relevant passages that answer the query'
+            pairs = [
+                self._format_instruction(instruction, query, doc) 
+                for doc in documents
+            ]
+            
+            # Process inputs and compute scores
+            inputs = self._process_inputs(pairs)
+            scores = self._compute_logits(inputs)
+            
+            return scores
+            
+        except Exception as e:
+            import logging
+            logging.warning(f"Causal LM reranker error: {str(e)}")
+            return [0.0] * len(documents)
+
+    def _rerank_mixedbread_v2(self, query: str, documents: List[str]) -> List[float]:
+        """Rerank using mxbai-rerank library."""
+        try:
+            # Use mxbai library rank method
+            results = self.model.rank(query, documents, return_documents=True, top_k=len(documents))
+            
+            # Extract scores and reorder to match original document order
+            scores = [0.0] * len(documents)
+            for i, result in enumerate(results):
+                # mxbai returns RankResult objects with attributes, not dicts
+                original_index = getattr(result, 'corpus_id', i)
+                score = getattr(result, 'score', 0.0)
+                if original_index < len(scores):
+                    scores[original_index] = score
+            
+            return scores
+            
+        except Exception as e:
+            import logging
+            logging.warning(f"Mixedbread v2 reranker error: {str(e)}")
+            return [0.0] * len(documents)
 
     def _format_instruction(self, instruction: str, query: str, doc: str) -> str:
         """Format the instruction for Qwen reranker."""
@@ -120,62 +338,37 @@ class TransformersRerankerModel(RerankerModel):
     def _process_inputs(self, pairs: List[str]) -> Dict[str, torch.Tensor]:
         """Process input pairs for Qwen reranker."""
         # Calculate effective max length for content
-        content_max_length = self.qwen_max_length - len(self.prefix_tokens) - len(self.suffix_tokens)
+        content_max_length = self.max_length - len(self.prefix_tokens) - len(self.suffix_tokens)
         
-        # Tokenize all pairs at once with proper padding and max_length
+        # Tokenize all pairs
         inputs = self.tokenizer(
             pairs, 
-            padding='max_length',
+            padding=False,
             truncation='longest_first',
-            max_length=content_max_length,
-            return_tensors="pt",
-            return_attention_mask=True
+            return_attention_mask=False,
+            max_length=content_max_length
         )
         
         # Add prefix and suffix tokens to each sequence
-        batch_size = inputs['input_ids'].shape[0]
-        new_input_ids = []
-        new_attention_mask = []
+        for i, input_ids in enumerate(inputs['input_ids']):
+            inputs['input_ids'][i] = self.prefix_tokens + input_ids + self.suffix_tokens
         
-        for i in range(batch_size):
-            # Get the tokenized content (remove padding for processing)
-            content_tokens = inputs['input_ids'][i]
-            attention_mask = inputs['attention_mask'][i]
-            
-            # Find the actual content length (non-padded part)
-            content_length = attention_mask.sum().item()
-            actual_content = content_tokens[:content_length].tolist()
-            
-            # Create full sequence with prefix and suffix
-            full_sequence = self.prefix_tokens + actual_content + self.suffix_tokens
-            
-            # Pad or truncate to max_length
-            if len(full_sequence) > self.qwen_max_length:
-                full_sequence = full_sequence[:self.qwen_max_length]
-            else:
-                # Pad with tokenizer's pad_token_id
-                pad_length = self.qwen_max_length - len(full_sequence)
-                full_sequence.extend([self.tokenizer.pad_token_id] * pad_length)
-            
-            # Create attention mask
-            actual_length = len(self.prefix_tokens) + len(actual_content) + len(self.suffix_tokens)
-            actual_length = min(actual_length, self.qwen_max_length)
-            mask = [1] * actual_length + [0] * (self.qwen_max_length - actual_length)
-            
-            new_input_ids.append(full_sequence)
-            new_attention_mask.append(mask)
+        # Pad sequences and move to device
+        inputs = self.tokenizer.pad(
+            inputs, 
+            padding=True, 
+            return_tensors="pt", 
+            max_length=self.max_length
+        )
         
-        # Convert to tensors and move to device
-        final_inputs = {
-            'input_ids': torch.tensor(new_input_ids, dtype=torch.long).to(self.device),
-            'attention_mask': torch.tensor(new_attention_mask, dtype=torch.long).to(self.device)
-        }
+        for key in inputs:
+            inputs[key] = inputs[key].to(self.device)
         
-        return final_inputs
+        return inputs
 
     @torch.no_grad()
     def _compute_logits(self, inputs: Dict[str, torch.Tensor]) -> List[float]:
-        """Compute logits and extract relevance scores."""
+        """Compute logits and extract relevance scores for Qwen."""
         batch_scores = self.model(**inputs).logits[:, -1, :]
         true_vector = batch_scores[:, self.token_true_id]
         false_vector = batch_scores[:, self.token_false_id]
@@ -184,38 +377,6 @@ class TransformersRerankerModel(RerankerModel):
         scores = batch_scores[:, 1].exp().tolist()
         return scores
 
-    def _score_all_pairs(self, query: str, documents: List[str]) -> List[float]:
-        """Score all query-document pairs using Qwen reranker format.
-        
-        Args:
-            query: The search query.
-            documents: List of documents to score.
-            
-        Returns:
-            List of relevance scores.
-        """
-        try:
-            # Format all query-document pairs using Qwen instruction format
-            instruction = 'Given a web search query, retrieve relevant passages that answer the query'
-            pairs = [
-                self._format_instruction(instruction, query, doc) 
-                for doc in documents
-            ]
-            
-            # Process inputs
-            inputs = self._process_inputs(pairs)
-            
-            # Compute scores
-            scores = self._compute_logits(inputs)
-            
-            return scores
-            
-        except Exception as e:
-            # Log the error for debugging and return zero scores rather than failing
-            import logging
-            logging.warning(f"Transformers reranker error: {str(e)}")
-            return [0.0] * len(documents)
-
     def rerank(
         self, 
         query: str, 
@@ -223,7 +384,7 @@ class TransformersRerankerModel(RerankerModel):
         top_k: Optional[int] = None, 
         **kwargs
     ) -> RerankResponse:
-        """Rerank documents using local Transformers model.
+        """Rerank documents using universal transformers model.
         
         Args:
             query: The search query to rank documents against.
@@ -237,7 +398,7 @@ class TransformersRerankerModel(RerankerModel):
         # Validate inputs
         query, documents, top_k = self._validate_inputs(query, documents, top_k)
         
-        # Score all query-document pairs
+        # Score all query-document pairs using appropriate strategy
         raw_scores = self._score_all_pairs(query, documents)
         
         # Normalize scores using base class method
@@ -272,10 +433,7 @@ class TransformersRerankerModel(RerankerModel):
         top_k: Optional[int] = None, 
         **kwargs
     ) -> RerankResponse:
-        """Async rerank documents using local Transformers model.
-        
-        This is implemented as a wrapper around the sync method using 
-        a thread pool executor for CPU-bound operations.
+        """Async rerank documents using universal transformers model.
         
         Args:
             query: The search query to rank documents against.
@@ -308,7 +466,7 @@ class TransformersRerankerModel(RerankerModel):
                 "LangChain not installed. Install with: pip install langchain"
             )
         
-        class LangChainTransformersReranker:
+        class LangChainUniversalReranker:
             def __init__(self, transformers_reranker):
                 self.transformers_reranker = transformers_reranker
             
@@ -318,11 +476,11 @@ class TransformersRerankerModel(RerankerModel):
                 query: str, 
                 callbacks: Optional[Callbacks] = None
             ) -> List[Document]:
-                """Compress documents using Transformers reranker."""
+                """Compress documents using universal transformers reranker."""
                 # Extract text content from documents
                 texts = [doc.page_content for doc in documents]
                 
-                # Rerank using Transformers
+                # Rerank using transformers
                 rerank_response = self.transformers_reranker.rerank(query, texts)
                 
                 # Convert back to LangChain documents
@@ -341,10 +499,10 @@ class TransformersRerankerModel(RerankerModel):
                 
                 return reranked_docs
         
-        return LangChainTransformersReranker(self)
+        return LangChainUniversalReranker(self)
 
     def _get_default_model(self) -> str:
-        """Get default Transformers model."""
+        """Get default transformers model."""
         return "Qwen/Qwen3-Reranker-4B"
 
     @property
@@ -352,14 +510,85 @@ class TransformersRerankerModel(RerankerModel):
         """Provider name."""
         return "transformers"
 
-    @property
+    @property 
     def models(self) -> List[Model]:
-        """Available Transformers reranker models."""
+        """Available universal transformers reranker models."""
         return [
+            # Qwen models (causal_lm strategy)
             Model(
                 id="Qwen/Qwen3-Reranker-4B",
                 owned_by="Qwen",
                 context_window=8192,
+                type="reranker"
+            ),
+            Model(
+                id="Qwen/Qwen3-Reranker-0.6B",
+                owned_by="Qwen",
+                context_window=8192,
+                type="reranker"
+            ),
+            # CrossEncoder models (sentence_transformers strategy)
+            Model(
+                id="cross-encoder/ms-marco-MiniLM-L-6-v2",
+                owned_by="microsoft",
+                context_window=512,
+                type="reranker"
+            ),
+            Model(
+                id="cross-encoder/ms-marco-electra-base",
+                owned_by="microsoft",
+                context_window=512,
+                type="reranker"
+            ),
+            Model(
+                id="BAAI/bge-reranker-base",
+                owned_by="BAAI",
+                context_window=512,
+                type="reranker"
+            ),
+            Model(
+                id="BAAI/bge-reranker-large",
+                owned_by="BAAI",
+                context_window=512,
+                type="reranker"
+            ),
+            # Mixedbread v1 models (sentence_transformers strategy)
+            Model(
+                id="mixedbread-ai/mxbai-rerank-xsmall-v1",
+                owned_by="mixedbread-ai",
+                context_window=512,
+                type="reranker"
+            ),
+            Model(
+                id="mixedbread-ai/mxbai-rerank-base-v1",
+                owned_by="mixedbread-ai",
+                context_window=512,
+                type="reranker"
+            ),
+            Model(
+                id="mixedbread-ai/mxbai-rerank-large-v1",
+                owned_by="mixedbread-ai",
+                context_window=512,
+                type="reranker"
+            ),
+            # Jina models (sequence_classification strategy)
+            Model(
+                id="jinaai/jina-reranker-v2-base-multilingual",
+                owned_by="jinaai",
+                context_window=1024,
+                type="reranker"
+            ),
+            # Mixedbread v2 models (mixedbread_v2 strategy)
+            Model(
+                id="mixedbread-ai/mxbai-rerank-base-v2",
+                owned_by="mixedbread-ai",
+                context_window=512,
+                type="reranker"
+            ),
+            Model(
+                id="mixedbread-ai/mxbai-rerank-large-v2",
+                owned_by="mixedbread-ai",
+                context_window=512,
                 type="reranker"
             ),
         ]
