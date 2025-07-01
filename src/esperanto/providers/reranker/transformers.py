@@ -5,11 +5,14 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from esperanto.common_types import Model
 from esperanto.common_types.reranker import RerankResponse, RerankResult
 from .base import RerankerModel
+
+if TYPE_CHECKING:
+    import torch
 
 # Optional transformers import with helpful error message
 try:
@@ -44,6 +47,14 @@ try:
 except ImportError:
     MxbaiRerankV2 = None
     MXBAI_AVAILABLE = False
+
+
+# Define a no-op decorator when torch is not available
+def no_grad_decorator(func):
+    """Decorator that applies torch.no_grad() when available, otherwise returns function as-is."""
+    if torch is not None and hasattr(torch, 'no_grad'):
+        return torch.no_grad()(func)
+    return func
 
 
 @dataclass
@@ -377,7 +388,7 @@ class TransformersRerankerModel(RerankerModel):
             instruction = 'Given a web search query, retrieve relevant passages that answer the query'
         return f"<Instruct>: {instruction}\n<Query>: {query}\n<Document>: {doc}"
 
-    def _process_inputs(self, pairs: List[str]) -> Dict[str, torch.Tensor]:
+    def _process_inputs(self, pairs: List[str]) -> Dict[str, "torch.Tensor"]:
         """Process input pairs for Qwen reranker."""
         # Build full text strings with prefix and suffix for direct tokenization
         # This avoids the warning about using encode() followed by pad()
@@ -402,8 +413,8 @@ class TransformersRerankerModel(RerankerModel):
         
         return inputs
 
-    @torch.no_grad()
-    def _compute_logits(self, inputs: Dict[str, torch.Tensor]) -> List[float]:
+    @no_grad_decorator
+    def _compute_logits(self, inputs: Dict[str, "torch.Tensor"]) -> List[float]:
         """Compute logits and extract relevance scores for Qwen."""
         batch_scores = self.model(**inputs).logits[:, -1, :]
         true_vector = batch_scores[:, self.token_true_id]
