@@ -1,11 +1,12 @@
 """Test cases for Jina reranker provider."""
 
-import pytest
-from unittest.mock import Mock, patch
 import os
+from unittest.mock import Mock, patch
 
-from esperanto.providers.reranker.jina import JinaRerankerModel
+import pytest
+
 from esperanto.common_types.reranker import RerankResponse, RerankResult
+from esperanto.providers.reranker.jina import JinaRerankerModel
 
 
 class TestJinaReranker:
@@ -122,7 +123,7 @@ class TestJinaReranker:
         assert payload["query"] == query
         assert payload["documents"] == documents
         assert payload["model"] == "jina-reranker-v2-base-multilingual"
-        assert payload["top_k"] == top_k  # Now using consistent "top_k" parameter
+        assert payload["top_n"] == top_k  # Now using consistent "top_k" parameter
 
     def test_custom_config_in_payload(self):
         """Test custom config is included in request payload."""
