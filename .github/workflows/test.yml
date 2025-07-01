@@ -38,7 +38,7 @@ jobs:
     - name: Create venv and install dependencies
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
       run: |
-        uv sync --all-extras
+        uv sync --all-extras && uv pip install mxbai-rerank
     
     - name: Run tests
       run: uv run pytest -v tests/providers
