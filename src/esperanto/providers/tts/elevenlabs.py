@@ -1,15 +1,12 @@
 """ElevenLabs Text-to-Speech provider implementation."""
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import httpx
-from dotenv import load_dotenv
 
 from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
-# Load environment variables
-load_dotenv()
 
 class ElevenLabsTextToSpeechModel(TextToSpeechModel):
     """ElevenLabs Text-to-Speech provider implementation.
