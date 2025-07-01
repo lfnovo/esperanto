@@ -9,6 +9,7 @@ import httpx
 from esperanto.common_types import Model
 from esperanto.common_types.reranker import RerankResponse, RerankResult
 from esperanto.common_types.response import Usage
+
 from .base import RerankerModel
 
 
@@ -66,7 +67,7 @@ class JinaRerankerModel(RerankerModel):
             "model": self.get_model_name(),
             "query": query,
             "documents": documents,
-            "top_k": top_k,  # Use consistent top_k parameter naming
+            "top_n": top_k,  # Jina uses top_n instead of top_k
             "return_documents": True  # Always return documents for consistent interface
         }
         
@@ -81,6 +82,8 @@ class JinaRerankerModel(RerankerModel):
         Raises:
             RuntimeError: With details from the error response.
         """
+        # Debug logging
+        
         try:
             error_data = response.json()
             error_message = error_data.get("error", {}).get("message", "Unknown error")
