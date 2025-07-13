@@ -413,7 +413,7 @@ class VertexLanguageModel(LanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_google_vertexai. "
-                "Install with: uv add esperanto[vertex,langchain] or pip install esperanto[vertex,langchain]"
+                "Install with: uv add langchain_google_vertexai or pip install langchain_google_vertexai"
             ) from e
 
         # Ensure model name is set

@@ -387,7 +387,7 @@ class AnthropicLanguageModel(LanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_anthropic. "
-                "Install with: uv add esperanto[anthropic,langchain] or pip install esperanto[anthropic,langchain]"
+                "Install with: uv add langchain_anthropic or pip install langchain_anthropic"
             ) from e
 
 

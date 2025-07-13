@@ -3,13 +3,13 @@
 import json
 import os
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncGenerator,
     Dict,
     Generator,
     List,
     Optional,
-    TYPE_CHECKING,
     Union,
 )
 
@@ -289,7 +289,7 @@ class MistralLanguageModel(LanguageModel):
         except ImportError:
             raise ImportError(
                 "langchain_mistralai package not found. "
-                "Install with: uv add esperanto[mistral,langchain] or pip install esperanto[mistral,langchain]"
+                "Install with: uv add langchain_mistralai or pip install langchain_mistralai"
             )
 
         lc_kwargs = {

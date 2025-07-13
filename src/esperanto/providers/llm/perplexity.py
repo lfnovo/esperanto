@@ -330,7 +330,7 @@ class PerplexityLanguageModel(LanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_openai. "
-                "Install with: uv add esperanto[perplexity,langchain] or pip install esperanto[perplexity,langchain]"
+                "Install with: uv add langchain_openai or pip install langchain_openai"
             ) from e
 
         model_kwargs: Dict[str, Any] = {}

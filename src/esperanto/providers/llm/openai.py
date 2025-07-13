@@ -346,7 +346,7 @@ class OpenAILanguageModel(LanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_openai. "
-                "Install with: uv add esperanto[openai,langchain] or pip install esperanto[openai,langchain]"
+                "Install with: uv add langchain_openai or pip install langchain_openai"
             ) from e
 
         model_kwargs = {}

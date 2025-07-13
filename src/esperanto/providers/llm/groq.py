@@ -297,7 +297,7 @@ class GroqLanguageModel(LanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_groq. "
-                "Install with: uv add esperanto[groq,langchain] or pip install esperanto[groq,langchain]"
+                "Install with: uv add langchain_groq or pip install langchain_groq"
             ) from e
 
         # SecretStr import removed, rely on ChatGroq internal handling

@@ -212,7 +212,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_openai. "
-                "Install with: uv add esperanto[openrouter,langchain] or pip install esperanto[openrouter,langchain]"
+                "Install with: uv add langchain_openai or pip install langchain_openai"
             ) from e
 
         model_kwargs = {}

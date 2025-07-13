@@ -97,16 +97,13 @@ class AIFactory:
         except ImportError as e:
             # Extract the missing package from the ImportError
             missing_package = str(e).split("'")[1] if "'" in str(e) else None
-            provider_package = module_name.split(".")[
-                3
-            ]  # e.g., openai, anthropic, etc.
 
             error_msg = f"Provider '{provider}' requires additional dependencies."
             if missing_package:
                 error_msg += f" Missing package: {missing_package}."
             error_msg += (
-                f"\nInstall with: uv add esperanto[{provider_package}] "
-                f"or pip install esperanto[{provider_package}]"
+                f"\nInstall with: uv add {missing_package} "
+                f"or pip install {missing_package}"
             )
             raise ImportError(error_msg) from e
 

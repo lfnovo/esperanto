@@ -131,8 +131,8 @@ class GoogleLanguageModel(LanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_google_genai. "
-                "Install with: uv add esperanto[google,langchain] or pip install esperanto[google,langchain]"
-            ) from e
+                "Install with: uv add langchain_google_genai or pip install langchain_google_genai"
+            ) from e    
 
         if not self._langchain_model:
             # Ensure model name is a string

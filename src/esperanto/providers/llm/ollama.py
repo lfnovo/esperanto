@@ -276,7 +276,7 @@ class OllamaLanguageModel(LanguageModel):
         except ImportError as e:
             raise ImportError(
                 "Langchain integration requires langchain_ollama. "
-                "Install with: uv add esperanto[ollama,langchain] or pip install esperanto[ollama,langchain]"
+                "Install with: uv add langchain_ollama or pip install langchain_ollama"
             ) from e
 
         # Ensure model name is set

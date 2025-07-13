@@ -257,7 +257,7 @@ class AzureLanguageModel(LanguageModel):
         except ImportError:
             raise ImportError(
                 "LangChain or langchain-openai not installed. "
-                "Please install with `pip install esperanto[langchain]` or `pip install langchain-openai`"
+                "Please install with `pip install langchain_openai`"
             )
 
         lc_kwargs: Dict[str, Any] = {
