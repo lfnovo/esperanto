@@ -5,6 +5,7 @@ Language models (LLMs) are AI systems that can understand and generate human-lik
 ## Supported Providers
 
 - **OpenAI** (GPT-4, GPT-3.5, o1)
+- **OpenAI-Compatible** (LM Studio, Ollama, vLLM, custom endpoints)
 - **Anthropic** (Claude 3)
 - **Google** (Gemini 2.0 Flash, Gemini 1.5 Pro)
 - **Groq** (Mixtral, Llama)
@@ -123,6 +124,87 @@ chain = ConversationChain(llm=langchain_model)
 ```
 
 ## Provider-Specific Information
+
+### OpenAI-Compatible Endpoints
+
+OpenAI-compatible endpoints allow you to use any server that implements the OpenAI chat completions API with Esperanto's unified interface.
+
+**Supported Endpoints:**
+- **LM Studio**: Local model serving with GUI
+- **Ollama**: Local model deployment (`ollama serve`)
+- **vLLM**: High-performance inference server
+- **Custom Deployments**: Any server implementing OpenAI chat completions API
+
+**Configuration Options:**
+
+1. **Using Factory Config:**
+```python
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_language(
+    "openai-compatible",
+    "your-model-name",  # Use any model name supported by your endpoint
+    config={
+        "base_url": "http://localhost:1234/v1",  # Your endpoint URL (required)
+        "api_key": "your-api-key",               # Your API key (optional)
+        "temperature": 0.7,                      # Optional parameters
+        "max_tokens": 1000,
+        "streaming": True
+    }
+)
+```
+
+2. **Using Environment Variables:**
+```bash
+export OPENAI_COMPATIBLE_BASE_URL="http://localhost:1234/v1"
+export OPENAI_COMPATIBLE_API_KEY="your-api-key"  # Optional for endpoints that don't require auth
+```
+
+```python
+model = AIFactory.create_language("openai-compatible", "your-model-name")
+```
+
+**Example Usage:**
+```python
+from esperanto.factory import AIFactory
+
+# Connect to LM Studio running locally
+model = AIFactory.create_language(
+    "openai-compatible",
+    "lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF",
+    config={
+        "base_url": "http://localhost:1234/v1",
+        "api_key": "lm-studio"
+    }
+)
+
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Explain quantum computing in simple terms."}
+]
+
+# Regular completion
+response = model.chat_complete(messages)
+print(response.choices[0].message.content)
+
+# Streaming completion
+for chunk in model.chat_complete(messages, stream=True):
+    print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+**Features:**
+- ✅ **Streaming**: Real-time response streaming
+- ✅ **Pass-through Model Names**: Use any model name your endpoint supports
+- ✅ **Graceful Degradation**: Automatically handles varying feature support
+- ✅ **Error Handling**: Clear error messages for troubleshooting
+- ✅ **Model Discovery**: Automatic discovery of available models via `/models` endpoint
+- ⚠️ **JSON Mode**: Support depends on endpoint implementation
+
+**Common Endpoint URLs:**
+- LM Studio: `http://localhost:1234/v1`
+- Ollama: `http://localhost:11434/v1`
+- vLLM: `http://localhost:8000/v1`
+- Custom: `https://your-endpoint.com/v1`
 
 ### Azure OpenAI
 

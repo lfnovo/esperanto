@@ -31,6 +31,11 @@ except ImportError:
     OpenAILanguageModel = None
 
 try:
+    from esperanto.providers.llm.openai_compatible import OpenAICompatibleLanguageModel
+except ImportError:
+    OpenAICompatibleLanguageModel = None
+
+try:
     from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 except ImportError:
     OpenRouterLanguageModel = None
@@ -100,6 +105,7 @@ __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
     'GoogleLanguageModel': GoogleLanguageModel,
     'OpenAILanguageModel': OpenAILanguageModel,
+    'OpenAICompatibleLanguageModel': OpenAICompatibleLanguageModel,
     'OpenRouterLanguageModel': OpenRouterLanguageModel,
     'XAILanguageModel': XAILanguageModel,
     'OpenAIEmbeddingModel': OpenAIEmbeddingModel,

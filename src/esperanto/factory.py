@@ -22,6 +22,7 @@ class AIFactory:
     _provider_modules = {
         "language": {
             "openai": "esperanto.providers.llm.openai:OpenAILanguageModel",
+            "openai-compatible": "esperanto.providers.llm.openai_compatible:OpenAICompatibleLanguageModel",
             "anthropic": "esperanto.providers.llm.anthropic:AnthropicLanguageModel",
             "google": "esperanto.providers.llm.google:GoogleLanguageModel",
             "groq": "esperanto.providers.llm.groq:GroqLanguageModel",
