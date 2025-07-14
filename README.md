@@ -32,6 +32,7 @@ Whether you're building a quick prototype or a production application serving mi
 - **Unified Interface**: Work with multiple LLM providers using a consistent API
 - **Provider Support**:
   - OpenAI (GPT-4o, o1, o3, o4, Whisper, TTS)
+  - OpenAI-Compatible (LM Studio, Ollama, vLLM, custom endpoints)
   - Anthropic (Claude models)
   - OpenRouter (Access to multiple models)
   - xAI (Grok)
@@ -113,6 +114,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Provider     | LLM Support | Embedding Support | Reranking Support | Speech-to-Text | Text-to-Speech | JSON Mode |
 |--------------|-------------|------------------|-------------------|----------------|----------------|-----------|
 | OpenAI       | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
+| OpenAI-Compatible | ✅          | ❌               | ❌                | ❌             | ❌             | ⚠️*       |
 | Anthropic    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Groq         | ✅          | ❌               | ❌                | ✅             | ❌             | ✅        |
 | Google (GenAI) | ✅          | ✅               | ❌                | ❌             | ✅             | ✅        |
@@ -128,6 +130,8 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+
+*⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
 
 ## Quick Start 🏃‍♂️
 
@@ -205,7 +209,7 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
+#     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
 #     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs'],
@@ -403,6 +407,51 @@ model = OpenAILanguageModel(
     organization=None      # Optional, for org-specific API
 )
 ```
+
+### OpenAI-Compatible Endpoints
+
+Use any OpenAI-compatible endpoint (LM Studio, Ollama, vLLM, custom deployments) with the same interface:
+
+```python
+from esperanto.factory import AIFactory
+
+# Using factory config
+model = AIFactory.create_language(
+    "openai-compatible",
+    "your-model-name",  # Use any model name supported by your endpoint
+    config={
+        "base_url": "http://localhost:1234/v1",  # Your endpoint URL
+        "api_key": "your-api-key"                # Your API key
+    }
+)
+
+# Or set environment variables
+# OPENAI_COMPATIBLE_BASE_URL=http://localhost:1234/v1
+# OPENAI_COMPATIBLE_API_KEY=your-api-key
+model = AIFactory.create_language("openai-compatible", "your-model-name")
+
+# Works with any OpenAI-compatible endpoint
+messages = [{"role": "user", "content": "Hello!"}]
+response = model.chat_complete(messages)
+print(response.content)
+
+# Streaming support
+for chunk in model.chat_complete(messages, stream=True):
+    print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+**Common Use Cases:**
+- **LM Studio**: Local model serving with GUI
+- **Ollama**: `ollama serve` with OpenAI compatibility
+- **vLLM**: High-performance inference server
+- **Custom Deployments**: Any server implementing OpenAI chat completions API
+
+**Features:**
+- ✅ **Streaming**: Real-time response streaming
+- ✅ **Pass-through Model Names**: Use any model name your endpoint supports
+- ✅ **Graceful Degradation**: Automatically handles varying feature support
+- ✅ **Error Handling**: Clear error messages for troubleshooting
+- ⚠️ **JSON Mode**: Depends on endpoint implementation
 
 ### Perplexity
 
