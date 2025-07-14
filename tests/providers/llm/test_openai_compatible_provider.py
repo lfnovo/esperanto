@@ -70,13 +70,13 @@ class TestOpenAICompatibleLanguageModel:
                 OpenAICompatibleLanguageModel(api_key="test-key")
 
     def test_initialization_without_api_key(self):
-        """Test that initialization fails without API key."""
+        """Test that initialization succeeds without API key using default value."""
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="OpenAI-compatible API key is required"):
-                OpenAICompatibleLanguageModel(base_url="http://localhost:1234")
+            model = OpenAICompatibleLanguageModel(base_url="http://localhost:1234")
+            assert model.api_key == "not-required"
 
     def test_initialization_without_both_required_params(self):
-        """Test that initialization fails without both required parameters."""
+        """Test that initialization fails without base URL (only base URL is required)."""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="OpenAI-compatible base URL is required"):
                 OpenAICompatibleLanguageModel()

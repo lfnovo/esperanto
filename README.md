@@ -420,14 +420,14 @@ model = AIFactory.create_language(
     "openai-compatible",
     "your-model-name",  # Use any model name supported by your endpoint
     config={
-        "base_url": "http://localhost:1234/v1",  # Your endpoint URL
-        "api_key": "your-api-key"                # Your API key
+        "base_url": "http://localhost:1234/v1",  # Your endpoint URL (required)
+        "api_key": "your-api-key"                # Your API key (optional)
     }
 )
 
 # Or set environment variables
 # OPENAI_COMPATIBLE_BASE_URL=http://localhost:1234/v1
-# OPENAI_COMPATIBLE_API_KEY=your-api-key
+# OPENAI_COMPATIBLE_API_KEY=your-api-key  # Optional for endpoints that don't require auth
 model = AIFactory.create_language("openai-compatible", "your-model-name")
 
 # Works with any OpenAI-compatible endpoint

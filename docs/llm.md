@@ -145,8 +145,8 @@ model = AIFactory.create_language(
     "openai-compatible",
     "your-model-name",  # Use any model name supported by your endpoint
     config={
-        "base_url": "http://localhost:1234/v1",  # Your endpoint URL
-        "api_key": "your-api-key",               # Your API key
+        "base_url": "http://localhost:1234/v1",  # Your endpoint URL (required)
+        "api_key": "your-api-key",               # Your API key (optional)
         "temperature": 0.7,                      # Optional parameters
         "max_tokens": 1000,
         "streaming": True
@@ -157,7 +157,7 @@ model = AIFactory.create_language(
 2. **Using Environment Variables:**
 ```bash
 export OPENAI_COMPATIBLE_BASE_URL="http://localhost:1234/v1"
-export OPENAI_COMPATIBLE_API_KEY="your-api-key"
+export OPENAI_COMPATIBLE_API_KEY="your-api-key"  # Optional for endpoints that don't require auth
 ```
 
 ```python

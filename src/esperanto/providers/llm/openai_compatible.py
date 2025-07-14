@@ -47,11 +47,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 "OpenAI-compatible base URL is required. "
                 "Set OPENAI_COMPATIBLE_BASE_URL environment variable or provide base_url in config."
             )
+        # Use a default API key if none is provided (some endpoints don't require authentication)
         if not self.api_key:
-            raise ValueError(
-                "OpenAI-compatible API key is required. "
-                "Set OPENAI_COMPATIBLE_API_KEY environment variable or provide api_key in config."
-            )
+            self.api_key = "not-required"
 
         # Ensure base_url doesn't end with trailing slash for consistency
         if self.base_url.endswith("/"):
