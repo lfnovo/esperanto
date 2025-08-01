@@ -112,3 +112,4 @@ ai_docs/
 .claude
 
 *.local.md
+claude-logs/
