@@ -137,66 +137,6 @@ pip install "langchain-google-vertexai>=2.0.24"
 
 You can use Esperanto in two ways: directly with provider-specific classes or through the AI Factory.
 
-## AIFactory - Smart Model Management 🏭
-
-The `AIFactory` is Esperanto's intelligent model management system that provides significant performance benefits through its **singleton cache architecture**.
-
-### 🚀 **Singleton Cache Benefits**
-
-AIFactory automatically caches model instances based on their configuration. This means:
-- **No duplicate model creation** - same provider + model + config = same instance returned
-- **Faster subsequent calls** - cached instances are returned immediately
-- **Memory efficient** - prevents memory bloat from multiple identical models
-- **Connection reuse** - HTTP clients and configurations are preserved
-
-### 💡 **How It Works**
-
-```python
-from esperanto.factory import AIFactory
-
-# First call - creates new model instance
-model1 = AIFactory.create_language("openai", "gpt-4", temperature=0.7)
-
-# Second call with same config - returns cached instance (instant!)
-model2 = AIFactory.create_language("openai", "gpt-4", temperature=0.7)
-
-# They're the exact same object
-assert model1 is model2  # True!
-
-# Different config - creates new instance
-model3 = AIFactory.create_language("openai", "gpt-4", temperature=0.9)
-assert model1 is not model3  # True - different config
-```
-
-### 🎯 **Perfect for Production**
-
-This caching is especially powerful in production scenarios:
-
-```python
-# In a web application
-def handle_chat_request(messages):
-    # This model is cached - no recreation overhead!
-    model = AIFactory.create_language("anthropic", "claude-3-sonnet-20240229")
-    return model.chat_complete(messages)
-
-def handle_embedding_request(texts):
-    # This embedding model is also cached
-    embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")
-    return embedder.embed(texts)
-
-# Multiple calls to these functions reuse the same model instances
-# = Better performance + Lower memory usage
-```
-
-### 🔍 **Cache Key Strategy**
-
-The cache key includes:
-- **Provider name** (e.g., "openai", "anthropic")
-- **Model name** (e.g., "gpt-4", "claude-3-sonnet")
-- **All configuration parameters** (temperature, max_tokens, etc.)
-
-Only models with **identical configurations** share the same cache entry.
-
 ### Using AI Factory
 
 The AI Factory provides a convenient way to create model instances and discover available providers:

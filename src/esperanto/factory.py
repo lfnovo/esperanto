@@ -1,7 +1,6 @@
 """Factory module for creating AI service instances."""
 
 import importlib
-import json
 import warnings
 from typing import Any, Dict, List, Optional, Type
 
@@ -14,9 +13,6 @@ from esperanto.providers.tts.base import TextToSpeechModel
 
 class AIFactory:
     """Factory class for creating AI service instances."""
-
-    # Cache for model instances
-    _model_cache: Dict[str, Any] = {}
 
     # Provider module mappings
     _provider_modules = {
@@ -129,43 +125,8 @@ class AIFactory:
         model_name: Optional[str] = None,
         **kwargs,
     ):
-        # This is a helper method and doesn't need caching as the public methods handle caching
         provider_class = cls._import_provider_class(service_type, provider)
         return provider_class(model_name=model_name, **kwargs)
-
-    @classmethod
-    def _generate_cache_key(cls, service_type: str, provider: str, model_name: Optional[str], config: Optional[Dict[str, Any]] = None) -> str:
-        """Generate a unique cache key for a model configuration.
-
-        Args:
-            service_type: Type of service (language, embedding, speech_to_text, text_to_speech)
-            provider: Provider name
-            model_name: Name of the model
-            config: Configuration for the model
-
-        Returns:
-            A unique string key for the cache
-        """
-        # Convert config dict to a sorted, stable string representation
-        # Handle enum values that can't be JSON serialized
-        if config:
-            serializable_config = {}
-            for key, value in config.items():
-                if hasattr(value, 'value'):  # Handle enum values
-                    serializable_config[key] = value.value
-                else:
-                    serializable_config[key] = value
-            config_str = json.dumps(serializable_config, sort_keys=True)
-        else:
-            config_str = "{}"
-        
-        model_str = model_name or "default"
-        return f"{service_type}:{provider}:{model_str}:{config_str}"
-    
-    @classmethod
-    def clear_cache(cls) -> None:
-        """Clear the model instance cache."""
-        cls._model_cache.clear()
     
     @classmethod
     def create_language(
@@ -181,19 +142,8 @@ class AIFactory:
         Returns:
             Language model instance
         """
-        cache_key = cls._generate_cache_key("language", provider, model_name, config)
-        
-        # Check if we have a cached instance
-        if cache_key in cls._model_cache:
-            return cls._model_cache[cache_key]
-            
-        # Create a new instance
         provider_class = cls._import_provider_class("language", provider)
-        instance = provider_class(model_name=model_name, config=config or {})
-        
-        # Cache the instance
-        cls._model_cache[cache_key] = instance
-        return instance
+        return provider_class(model_name=model_name, config=config or {})
 
     @classmethod
     def create_embedding(
@@ -209,19 +159,8 @@ class AIFactory:
         Returns:
             Embedding model instance
         """
-        cache_key = cls._generate_cache_key("embedding", provider, model_name, config)
-        
-        # Check if we have a cached instance
-        if cache_key in cls._model_cache:
-            return cls._model_cache[cache_key]
-            
-        # Create a new instance
         provider_class = cls._import_provider_class("embedding", provider)
-        instance = provider_class(model_name=model_name, config=config or {})
-        
-        # Cache the instance
-        cls._model_cache[cache_key] = instance
-        return instance
+        return provider_class(model_name=model_name, config=config or {})
 
     @classmethod
     def create_reranker(
@@ -237,19 +176,8 @@ class AIFactory:
         Returns:
             Reranker model instance
         """
-        cache_key = cls._generate_cache_key("reranker", provider, model_name, config)
-        
-        # Check if we have a cached instance
-        if cache_key in cls._model_cache:
-            return cls._model_cache[cache_key]
-            
-        # Create a new instance
         provider_class = cls._import_provider_class("reranker", provider)
-        instance = provider_class(model_name=model_name, config=config or {})
-        
-        # Cache the instance
-        cls._model_cache[cache_key] = instance
-        return instance
+        return provider_class(model_name=model_name, config=config or {})
 
     @classmethod
     def create_speech_to_text(
@@ -268,21 +196,10 @@ class AIFactory:
         Returns:
             Speech-to-text model instance
         """
-        cache_key = cls._generate_cache_key("speech_to_text", provider, model_name, config)
-        
-        # Check if we have a cached instance
-        if cache_key in cls._model_cache:
-            return cls._model_cache[cache_key]
-            
-        # Create a new instance
         config = config or {}
-        instance = cls._create_instance(
+        return cls._create_instance(
             "speech_to_text", provider, model_name=model_name, **config
         )
-        
-        # Cache the instance
-        cls._model_cache[cache_key] = instance
-        return instance
 
     @classmethod
     def create_text_to_speech(
@@ -309,28 +226,10 @@ class AIFactory:
             ValueError: If provider is not supported
             ImportError: If provider module is not installed
         """
-        # Create a config dict from kwargs for cache key generation
-        config = {**kwargs}
-        if api_key:
-            config["api_key"] = api_key
-        if base_url:
-            config["base_url"] = base_url
-            
-        cache_key = cls._generate_cache_key("text_to_speech", provider, model_name, config)
-        
-        # Check if we have a cached instance
-        if cache_key in cls._model_cache:
-            return cls._model_cache[cache_key]
-            
-        # Create a new instance
         provider_class = cls._import_provider_class("text_to_speech", provider)
-        instance = provider_class(
+        return provider_class(
             model_name=model_name, api_key=api_key, base_url=base_url, **kwargs
         )
-        
-        # Cache the instance
-        cls._model_cache[cache_key] = instance
-        return instance
 
     @classmethod
     def create_stt(
