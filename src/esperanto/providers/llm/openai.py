@@ -232,7 +232,7 @@ class OpenAILanguageModel(LanguageModel):
         return kwargs
 
     def _is_reasoning_model(self) -> bool:
-        return self.get_model_name().startswith("o1") or self.get_model_name().startswith("o3") or self.get_model_name().startswith("o4")
+        return self.get_model_name().startswith("o1") or self.get_model_name().startswith("o3") or self.get_model_name().startswith("o4") or self.get_model_name().startswith("gpt-5")
     
     def chat_complete(
         self, messages: List[Dict[str, str]], stream: Optional[bool] = None
