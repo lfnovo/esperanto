@@ -10,5 +10,6 @@ __all__ = ["TextToSpeechModel"]
 __all__ += [
     "OpenAITextToSpeechModel",
     "ElevenLabsTextToSpeechModel",
-    "GoogleTextToSpeechModel"
+    "GoogleTextToSpeechModel",
+    "ShabdabhavTextToSpeechModel"
 ]

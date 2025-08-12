@@ -52,6 +52,7 @@ class AIFactory:
             "elevenlabs": "esperanto.providers.tts.elevenlabs:ElevenLabsTextToSpeechModel",
             "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
             "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
+            "shabdabhav": "esperanto.providers.tts.shabdabhav:ShabdabhavTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
