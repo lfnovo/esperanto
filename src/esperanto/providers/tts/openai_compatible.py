@@ -120,14 +120,22 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
 
             voices_data = response.json()
             voices_rep = {}
-            for voice_id in voices_data.get("voices", []):
-                if (".onnx" in voice_id):  # Condition for piper-tts modesl
-                    voices_rep[f"{voice_id}"] = Voice(
-                        name=f"{voice_id.split('/')[2]}",
-                        id=f"{voice_id.split('/')[2]}",
-                        gender="NEUTRAL",
-                        language_code=f"{voice_id.split('/')[1]}",
-                        description=f"{voice_id.split('/')[3]}"
+            for voice_dict in voices_data.get("voices", []):
+                # if (".onnx" in voice_id):  # Condition for piper-tts modesl
+                #     voices_rep[f"{voice_id}"] = Voice(
+                #         name=f"{voice_id.split('/')[2]}",
+                #         id=f"{voice_id.split('/')[2]}",
+                #         gender="NEUTRAL",
+                #         language_code=f"{voice_id.split('/')[1]}",
+                #         description=f"{voice_id.split('/')[3]}"
+                #     )
+                if ('id' in voice_dict) and (voice_dict['id'] != ''):
+                    voices_rep[f"{voice_dict['id']}"] = Voice(
+                        name=voice_dict.get('name', ''),
+                        id=voice_dict.get('id', ''),
+                        gender=voice_dict.get('gender', ''),
+                        language_code=voice_dict.get('language_code', ''),
+                        description=voice_dict.get('description', '')
                     )
             return voices_rep
         
