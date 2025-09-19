@@ -114,7 +114,6 @@ class AzureLanguageModel(LanguageModel):
     def _normalize_azure_chunk_to_chat_completion_chunk(
         self,
         chunk: OpenAIChatCompletionChunk,
-        finish_reason_str: Optional[str] = None,
     ) -> ChatCompletionChunk:
         """Normalize an Azure streaming chunk to a ChatCompletionChunk."""
         choices_list = []
@@ -140,25 +139,43 @@ class AzureLanguageModel(LanguageModel):
 
         return ChatCompletionChunk(
             id=chunk.id,
-            model=chunk.model or self.model_name,
+            model=chunk.model or self.model_name or "",
             created=chunk.created,
-            provider=self.provider,
-            choices=choices_list,
-            is_stream=True,
-            raw_response=chunk
+            choices=choices_list
         )
+
+    def _is_reasoning_model(self) -> bool:
+        """Check if the current model is a reasoning model (o1, o3, o4, gpt-5 series)."""
+        model_name = self.model_name.lower()
+        return (model_name.startswith("o1") or
+                model_name.startswith("o3") or
+                model_name.startswith("o4") or
+                model_name.startswith("gpt-5"))
 
     def _get_api_kwargs(
         self, override_kwargs: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Get kwargs for Azure API calls, using current instance attributes and overrides."""
+        is_reasoning_model = self._is_reasoning_model()
+
         effective_kwargs = {
             "model": self.model_name,
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "stream": self.streaming,
         }
+
+        # Handle token parameters
+        if is_reasoning_model:
+            # Skip max_tokens if it's the default value (850) for reasoning models
+            if self.max_tokens != 850:
+                effective_kwargs["max_completion_tokens"] = self.max_tokens
+        else:
+            effective_kwargs["max_tokens"] = self.max_tokens
+
+        # Handle temperature and top_p - reasoning models don't support these
+        if not is_reasoning_model:
+            effective_kwargs["temperature"] = self.temperature
+            effective_kwargs["top_p"] = self.top_p
+
+        effective_kwargs["stream"] = self.streaming
 
         if self.structured is not None:
             is_json_mode = False
@@ -181,7 +198,7 @@ class AzureLanguageModel(LanguageModel):
                 raise TypeError(
                     f"Invalid type for structured_output: {type(self.structured)}. Expected dict or str 'json'."
                 )
-            
+
             if is_json_mode:
                 effective_kwargs["response_format"] = {"type": "json_object"}
 
@@ -250,62 +267,63 @@ class AzureLanguageModel(LanguageModel):
 
     def to_langchain(
         self, **kwargs: Any
-    ) -> "BaseChatModel":  
-        """Convert to a LangChain chat model."""
+    ) -> "AzureChatOpenAI":
+        """Convert to a LangChain chat model.
+
+        Raises:
+            ImportError: If langchain_openai is not installed.
+        """
         try:
             from langchain_openai import AzureChatOpenAI
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "LangChain or langchain-openai not installed. "
                 "Please install with `pip install langchain_openai`"
-            )
+            ) from e
 
-        lc_kwargs: Dict[str, Any] = {
-            "azure_deployment": self.model_name,
-            "api_version": self.api_version,
-            "azure_endpoint": self.azure_endpoint,
-            "api_key": SecretStr(self.api_key) if self.api_key else None,
-            "temperature": self.temperature,  
-            "max_tokens": self.max_tokens,  
-        }
-
-        if self.top_p is not None:  
-            lc_kwargs["top_p"] = self.top_p
-        
-        if self.structured is not None: 
-            is_json_mode = False
+        model_kwargs = {}
+        if self.structured is not None:
+            # Handle different structured formats like the old implementation
             if isinstance(self.structured, dict):
                 struct_type = self.structured.get("type")
                 if struct_type == "json_object" or struct_type == "json":
-                    is_json_mode = True
-                else:
-                    raise TypeError(
-                        f"Invalid 'type' in structured_output dictionary: {struct_type}. Expected 'json' or 'json_object'."
-                    )
-            elif isinstance(self.structured, str):
-                if self.structured == "json":
-                    is_json_mode = True
-                else:
-                    raise TypeError(
-                        f"Invalid string for structured_output: '{self.structured}'. Expected 'json'."
-                    )
-            else:
-                raise TypeError(
-                    f"Invalid type for structured_output: {type(self.structured)}. Expected dict or str 'json'."
-                )
+                    model_kwargs["response_format"] = {"type": "json_object"}
+            elif self.structured == "json":
+                model_kwargs["response_format"] = {"type": "json_object"}
 
-            if is_json_mode:
-                lc_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
+        is_reasoning_model = self._is_reasoning_model()
 
-        lc_kwargs.update(kwargs)  
+        langchain_kwargs = {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "streaming": self.streaming,
+            "api_key": SecretStr(self.api_key) if self.api_key else None,
+            "azure_deployment": self.model_name,
+            "api_version": self.api_version,
+            "azure_endpoint": self.azure_endpoint,
+            "model_kwargs": model_kwargs,
+        }
 
-        final_lc_kwargs = {k: v for k, v in lc_kwargs.items() if v is not None or k == "api_key"}
+        if is_reasoning_model:
+            # For reasoning models, put max_completion_tokens in model_kwargs to avoid warnings
+            # Only add if not the default value (850)
+            if self.max_tokens != 850:
+                model_kwargs["max_completion_tokens"] = self.max_tokens
+            langchain_kwargs["temperature"] = 1
+            langchain_kwargs["top_p"] = None
+        else:
+            # For non-reasoning models, use max_tokens as a direct parameter
+            langchain_kwargs["max_tokens"] = self.max_tokens
+
+        langchain_kwargs.update(kwargs)
+
+        final_lc_kwargs = {k: v for k, v in langchain_kwargs.items() if v is not None or k == "api_key"}
 
         # Remove model_kwargs if it's empty and not explicitly passed in kwargs
         if not final_lc_kwargs.get("model_kwargs") and "model_kwargs" not in kwargs:
             final_lc_kwargs.pop("model_kwargs", None)
 
-        return AzureChatOpenAI(**final_lc_kwargs)
+        return AzureChatOpenAI(**self._clean_config(final_lc_kwargs))
 
     @property
     def provider(self) -> str:
