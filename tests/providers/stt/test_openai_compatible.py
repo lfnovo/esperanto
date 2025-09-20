@@ -320,7 +320,7 @@ def test_error_handling():
     model.client = client
 
     audio_data = BytesIO(b"fake audio data")
-    with pytest.raises(RuntimeError, match="OpenAI-compatible endpoint error"):
+    with pytest.raises(RuntimeError, match="OpenAI-compatible STT endpoint error"):
         model.transcribe(audio_data)
 
 

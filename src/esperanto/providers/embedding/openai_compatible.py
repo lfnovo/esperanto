@@ -131,7 +131,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
                 # Fall back to HTTP status code
                 error_message = f"HTTP {response.status_code}: {response.text}"
 
-            raise RuntimeError(f"OpenAI-compatible endpoint error: {error_message}")
+            raise RuntimeError(f"OpenAI-compatible embedding endpoint error: {error_message}")
 
     @property
     def models(self) -> List[Model]:
@@ -159,7 +159,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             ]
         except Exception as e:
             # Log the error but don't fail completely
-            logger.debug(f"Could not fetch models from OpenAI-compatible endpoint: {e}")
+            logger.info(f"Models endpoint not supported by OpenAI-compatible embedding endpoint: {e}")
             return []
 
     def _get_default_model(self) -> str:

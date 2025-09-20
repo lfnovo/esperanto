@@ -18,6 +18,10 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
     TTS endpoint, providing graceful fallback for features that may not be supported
     by all endpoints.
 
+    Note: Unlike STT and Embedding providers that inherit from base classes and manually
+    initialize HTTP clients, this TTS provider inherits from OpenAITextToSpeechModel
+    to reuse existing client initialization and voice handling logic.
+
     Example:
         >>> from esperanto import AIFactory
         >>> tts = AIFactory.create_text_to_speech(
@@ -109,7 +113,7 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
                 # Fall back to HTTP status code
                 error_message = f"HTTP {response.status_code}: {response.text}"
 
-            raise RuntimeError(f"OpenAI-compatible endpoint error: {error_message}")
+            raise RuntimeError(f"OpenAI-compatible TTS endpoint error: {error_message}")
 
     @property
     def models(self) -> List[Model]:
@@ -137,7 +141,7 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
             ]
         except Exception as e:
             # Log the error but don't fail completely
-            logger.debug(f"Could not fetch models from OpenAI-compatible endpoint: {e}")
+            logger.info(f"Models endpoint not supported by OpenAI-compatible TTS endpoint: {e}")
             return []
 
     @property

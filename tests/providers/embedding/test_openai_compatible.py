@@ -281,7 +281,7 @@ def test_error_handling():
     client.post.return_value = response
     model.client = client
 
-    with pytest.raises(RuntimeError, match="OpenAI-compatible endpoint error"):
+    with pytest.raises(RuntimeError, match="OpenAI-compatible embedding endpoint error"):
         model.embed(["test"])
 
 

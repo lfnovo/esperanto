@@ -1,6 +1,8 @@
 """OpenAI-compatible Speech-to-Text provider implementation."""
 
 import os
+import mimetypes
+from pathlib import Path
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 import httpx
@@ -17,6 +19,10 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
     This provider extends OpenAI's STT implementation to work with any OpenAI-compatible
     STT endpoint, providing graceful fallback for features that may not be supported
     by all endpoints.
+
+    Note: This provider inherits from the base SpeechToTextModel class and manually
+    initializes HTTP clients, unlike the TTS provider which inherits from OpenAI's
+    implementation to reuse existing functionality.
 
     Example:
         >>> from esperanto import AIFactory
@@ -130,7 +136,7 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
                 # Fall back to HTTP status code
                 error_message = f"HTTP {response.status_code}: {response.text}"
 
-            raise RuntimeError(f"OpenAI-compatible endpoint error: {error_message}")
+            raise RuntimeError(f"OpenAI-compatible STT endpoint error: {error_message}")
 
     @property
     def models(self) -> List[Model]:
@@ -158,7 +164,7 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
             ]
         except Exception as e:
             # Log the error but don't fail completely
-            logger.debug(f"Could not fetch models from OpenAI-compatible endpoint: {e}")
+            logger.info(f"Models endpoint not supported by OpenAI-compatible STT endpoint: {e}")
             return []
 
     def _get_default_model(self) -> str:
@@ -189,6 +195,35 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
 
         return kwargs
 
+    def _get_audio_mime_type(self, filename: str) -> str:
+        """Detect MIME type for audio file.
+
+        Args:
+            filename: Path or name of the audio file
+
+        Returns:
+            MIME type string, defaults to 'audio/mpeg' if detection fails
+        """
+        # Get MIME type from file extension
+        mime_type, _ = mimetypes.guess_type(filename)
+
+        # If detection fails or it's not an audio type, default to audio/mpeg
+        if not mime_type or not mime_type.startswith('audio/'):
+            # Check for common audio extensions
+            ext = Path(filename).suffix.lower()
+            audio_mime_types = {
+                '.mp3': 'audio/mpeg',
+                '.wav': 'audio/wav',
+                '.m4a': 'audio/mp4',
+                '.aac': 'audio/aac',
+                '.ogg': 'audio/ogg',
+                '.flac': 'audio/flac',
+                '.webm': 'audio/webm'
+            }
+            mime_type = audio_mime_types.get(ext, 'audio/mpeg')
+
+        return mime_type
+
     def transcribe(
         self,
         audio_file: Union[str, BinaryIO],
@@ -214,8 +249,9 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
             # Handle file input
             if isinstance(audio_file, str):
                 # For file path, open and send as multipart form data
+                mime_type = self._get_audio_mime_type(audio_file)
                 with open(audio_file, "rb") as f:
-                    files = {"file": (audio_file, f, "audio/mpeg")}
+                    files = {"file": (audio_file, f, mime_type)}
                     response = self.client.post(
                         f"{self.base_url}/audio/transcriptions",
                         headers=self._get_headers(),
@@ -225,7 +261,8 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
             else:
                 # For BinaryIO, send the file object directly
                 filename = getattr(audio_file, 'name', 'audio.mp3')
-                files = {"file": (filename, audio_file, "audio/mpeg")}
+                mime_type = self._get_audio_mime_type(filename)
+                files = {"file": (filename, audio_file, mime_type)}
                 response = self.client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -270,8 +307,9 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
             # Handle file input
             if isinstance(audio_file, str):
                 # For file path, open and send as multipart form data
+                mime_type = self._get_audio_mime_type(audio_file)
                 with open(audio_file, "rb") as f:
-                    files = {"file": (audio_file, f, "audio/mpeg")}
+                    files = {"file": (audio_file, f, mime_type)}
                     response = await self.async_client.post(
                         f"{self.base_url}/audio/transcriptions",
                         headers=self._get_headers(),
@@ -281,7 +319,8 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
             else:
                 # For BinaryIO, send the file object directly
                 filename = getattr(audio_file, 'name', 'audio.mp3')
-                files = {"file": (filename, audio_file, "audio/mpeg")}
+                mime_type = self._get_audio_mime_type(filename)
+                files = {"file": (filename, audio_file, mime_type)}
                 response = await self.async_client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
