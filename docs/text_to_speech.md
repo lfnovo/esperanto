@@ -5,6 +5,7 @@ Text-to-speech (TTS) models convert written text into natural-sounding audio spe
 ## Supported Providers
 
 - **OpenAI** (TTS-1, TTS-1-HD models)
+- **OpenAI-Compatible** (Custom endpoints following OpenAI API format)
 - **ElevenLabs** (Multilingual and specialized voice models)
 - **Google Cloud** (Standard and Neural2 models)
 - **Vertex AI** (Google Cloud text-to-speech models)
@@ -176,6 +177,205 @@ try:
 except ImportError:
     print("IPython not available for audio playback")
 ```
+
+## OpenAI-Compatible Text-to-Speech
+
+The OpenAI-Compatible provider allows you to use any text-to-speech endpoint that follows the OpenAI API format. This includes self-hosted solutions, local models, and custom TTS services.
+
+### Configuration
+
+The provider requires a base URL and optionally an API key:
+
+```python
+from esperanto.factory import AIFactory
+
+# Using configuration object
+model = AIFactory.create_text_to_speech(
+    "openai-compatible",
+    model_name="piper-tts",  # Your model name
+    config={
+        "base_url": "http://localhost:8000",  # Required: Your endpoint URL
+        "api_key": "your-api-key"             # Optional: API key if required
+    }
+)
+
+# Using environment variables
+# Set OPENAI_COMPATIBLE_BASE_URL=http://localhost:8000
+# Set OPENAI_COMPATIBLE_API_KEY=your-api-key (optional)
+model = AIFactory.create_text_to_speech("openai-compatible", "your-model-name")
+```
+
+### Supported Endpoints
+
+The provider works with any OpenAI-compatible TTS endpoint, including:
+
+- **Ready-to-use implementations**:
+  - [Speaches](https://github.com/speaches-ai/speaches/) - OpenAI-compatible server for Piper, Kokoro models, and faster-whisper
+  - [Shabdabhav](https://github.com/Hardik94/shabdabhav) - OpenAI-compatible server for Piper and Parler models
+- **Local deployments**: Custom Piper-TTS, Kokoro, or other TTS models
+- **Self-hosted solutions**: Custom OpenAI-format TTS servers
+- **Development endpoints**: Local testing and development servers
+- **Edge deployments**: On-premise or edge computing TTS services
+
+### API Compatibility
+
+Your endpoint should implement the OpenAI Text-to-Speech API format:
+
+**Required Endpoint**: `POST /audio/speech`
+```json
+{
+  "model": "your-model-name",
+  "input": "Text to convert to speech",
+  "voice": "voice-identifier"
+}
+```
+
+**Optional Endpoints**:
+- `GET /models` - List available models
+- `GET /audio/voices` - List available voices (custom extension)
+
+### Usage Examples
+
+**Basic Usage:**
+```python
+from esperanto.factory import AIFactory
+
+# Create OpenAI-compatible TTS model
+tts = AIFactory.create_text_to_speech(
+    "openai-compatible",
+    model_name="speaches-ai/Kokoro-82M-v1.0-ONNX",
+    config={"base_url": "http://localhost:8000"}
+)
+
+# Generate speech
+response = tts.generate_speech(
+    text="Hello from OpenAI-compatible TTS!",
+    voice="af_heart",  # Use voice supported by your endpoint
+    output_file="output.mp3"
+)
+```
+
+**Async Usage:**
+```python
+async def generate_speech_async():
+    tts = AIFactory.create_text_to_speech(
+        "openai-compatible",
+        "your-model",
+        config={"base_url": "http://localhost:8000"}
+    )
+
+    response = await tts.agenerate_speech(
+        text="Async speech generation example",
+        voice="default"
+    )
+    return response.audio_data
+```
+
+**With Custom Parameters:**
+```python
+# Pass additional parameters supported by your endpoint
+response = tts.generate_speech(
+    text="Custom speech generation",
+    voice="en_US-amy-medium",
+    speed=1.2,           # Custom parameter
+    format="wav",        # Custom parameter
+    quality="high"       # Custom parameter
+)
+```
+
+### Voice Management
+
+```python
+# Get available voices (if endpoint supports /audio/voices)
+voices = tts.available_voices
+for voice_id, voice_info in voices.items():
+    print(f"Voice: {voice_info.name} ({voice_info.language_code})")
+
+# Fallback to default voice if endpoint doesn't support voice listing
+if not voices:
+    print("Using default voice - endpoint doesn't support voice listing")
+```
+
+### Error Handling and Graceful Degradation
+
+The provider implements graceful fallbacks for features that may not be available:
+
+```python
+try:
+    # Attempt to get models list
+    models = tts.models
+    print(f"Available models: {[m.id for m in models]}")
+except Exception:
+    print("Models endpoint not available")
+
+try:
+    # Attempt to get voices list
+    voices = tts.available_voices
+    print(f"Available voices: {list(voices.keys())}")
+except Exception:
+    print("Voices endpoint not available - using default")
+
+# Speech generation with error handling
+try:
+    response = tts.generate_speech(
+        text="Test speech",
+        voice="custom-voice"
+    )
+    print("Speech generated successfully")
+except RuntimeError as e:
+    print(f"Speech generation failed: {e}")
+```
+
+### Common Use Cases
+
+**1. Local Piper-TTS Server:**
+```python
+# Piper-TTS with ONNX models
+tts = AIFactory.create_text_to_speech(
+    "openai-compatible",
+    "piper-tts",
+    config={"base_url": "http://localhost:5000"}
+)
+
+response = tts.generate_speech(
+    text="Hello from Piper TTS",
+    voice="en_US-amy-medium.onnx"
+)
+```
+
+**2. Custom TTS Microservice:**
+```python
+# Custom TTS service with authentication
+tts = AIFactory.create_text_to_speech(
+    "openai-compatible",
+    "custom-model-v1",
+    config={
+        "base_url": "https://tts.yourcompany.com/api/v1",
+        "api_key": "your-service-token"
+    }
+)
+```
+
+**3. Development and Testing:**
+```python
+# Development endpoint with mock responses
+tts = AIFactory.create_text_to_speech(
+    "openai-compatible",
+    "test-model",
+    config={"base_url": "http://localhost:3000"}
+)
+
+# Generate test audio
+response = tts.generate_speech("Test audio", voice="test-voice")
+```
+
+### Configuration Tips
+
+- **Base URL**: Ensure your endpoint URL doesn't end with a trailing slash
+- **API Keys**: Use environment variables for security in production
+- **Voice Names**: Check your endpoint's documentation for supported voice identifiers
+- **Model Names**: Use the exact model name as expected by your endpoint
+- **Timeouts**: The provider uses 30-second timeouts for HTTP requests
 
 ## Provider-Specific Information
 

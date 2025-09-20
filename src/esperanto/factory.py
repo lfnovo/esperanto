@@ -33,6 +33,7 @@ class AIFactory:
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
+            "openai-compatible": "esperanto.providers.embedding.openai_compatible:OpenAICompatibleEmbeddingModel",
             "google": "esperanto.providers.embedding.google:GoogleEmbeddingModel",
             "ollama": "esperanto.providers.embedding.ollama:OllamaEmbeddingModel",
             "vertex": "esperanto.providers.embedding.vertex:VertexEmbeddingModel",
@@ -46,12 +47,14 @@ class AIFactory:
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
             "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
             "elevenlabs": "esperanto.providers.stt.elevenlabs:ElevenLabsSpeechToTextModel",
+            "openai-compatible": "esperanto.providers.stt.openai_compatible:OpenAICompatibleSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
             "elevenlabs": "esperanto.providers.tts.elevenlabs:ElevenLabsTextToSpeechModel",
             "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
             "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
+            "openai-compatible": "esperanto.providers.tts.openai_compatible:OpenAICompatibleTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
