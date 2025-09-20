@@ -9,6 +9,7 @@ Complete technical reference for all embedding providers in Esperanto. Choose th
 | **Getting started** | OpenAI | Reliable, well-documented, great quality |
 | **Best performance** | Jina | Task optimization, advanced features, cutting-edge |
 | **Complete privacy** | Transformers | Local processing, no data leaves your machine |
+| **Local/Custom models** | OpenAI-Compatible | Use any OpenAI-format endpoint (LM Studio, etc.) |
 | **Enterprise compliance** | Azure | Enterprise security, integrated billing |
 | **Cost optimization** | Ollama | Free after setup, good for high volume |
 | **Multilingual content** | Google/Mistral | Excellent multilingual support |
@@ -19,6 +20,7 @@ Complete technical reference for all embedding providers in Esperanto. Choose th
 | Provider | Task Types | Late Chunking | Output Dims | Privacy | Cost | Setup |
 |----------|------------|---------------|-------------|---------|------|-------|
 | **OpenAI** | ✅ Emulated | ✅ Emulated | ✅ Native | ☁️ Cloud | 💰💰 | ⚡ Instant |
+| **OpenAI-Compatible** | ✅ Emulated | ✅ Emulated | ❌ Model | 🏠 Local | 💰 Variable | 🔧 Setup |
 | **Jina** | ✅ Native | ✅ Native | ✅ Native | ☁️ Cloud | 💰💰 | ⚡ Instant |
 | **Google** | ✅ Native | ✅ Emulated | ❌ No | ☁️ Cloud | 💰💰 | ⚡ Instant |
 | **Transformers** | ✅ Emulated | ✅ Enhanced | ❌ Model | 🏠 Local | 💰 Hardware | 🔧 Setup |
@@ -87,6 +89,140 @@ export OPENAI_API_KEY="your-api-key"
 - Processing highly sensitive data
 - Very high volume (cost optimization)
 - Need specialized features like late chunking
+
+---
+
+## 🔧 OpenAI-Compatible Provider
+
+**Best for:** Local deployments, custom endpoints, LM Studio integration, privacy-focused solutions
+
+### Quick Start
+
+```python
+from esperanto.factory import AIFactory
+
+# Basic usage with LM Studio
+model = AIFactory.create_embedding(
+    "openai-compatible",
+    model_name="nomic-embed-text",
+    config={
+        "base_url": "http://localhost:1234/v1",
+        "api_key": "not-required"  # Often not needed for local endpoints
+    }
+)
+
+embeddings = model.embed(["Hello world", "Local embeddings"])
+
+# Advanced configuration with timeout for large batches
+model = AIFactory.create_embedding(
+    "openai-compatible",
+    model_name="custom-embedding-model",
+    config={
+        "base_url": "http://localhost:8080/v1",
+        "timeout": 300,  # 5 minutes for large batches
+        "task_type": "retrieval.query"  # Task optimization via prefixes
+    }
+)
+```
+
+### Supported Endpoints
+
+The provider works with any OpenAI-compatible embedding endpoint, including:
+
+- **Local deployments**:
+  - [LM Studio](https://lmstudio.ai/) - User-friendly local model server
+  - [Ollama](https://ollama.ai/) - (via OpenAI-compatible mode)
+  - [vLLM](https://docs.vllm.ai/) - High-performance serving
+  - [LocalAI](https://localai.io/) - Self-hosted OpenAI alternative
+
+- **Cloud services**:
+  - Custom OpenAI-format APIs
+  - Self-hosted embedding services
+  - Edge computing deployments
+
+### Configuration Options
+
+```python
+# Environment variables (recommended for production)
+# OPENAI_COMPATIBLE_BASE_URL=http://localhost:1234/v1
+# OPENAI_COMPATIBLE_API_KEY=your-key-if-required
+
+# Via config dictionary
+config = {
+    "base_url": "http://localhost:1234/v1",
+    "api_key": "your-key-if-required",  # Optional for many local endpoints
+    "timeout": 120,  # Default: 120 seconds
+    "task_type": "retrieval.document",  # Task optimization
+}
+
+model = AIFactory.create_embedding("openai-compatible", "your-model", config=config)
+```
+
+### Available Models
+
+The models available depend on your endpoint. Common local embedding models:
+
+| Model | Dimensions | Source | Best For |
+|-------|------------|--------|----------|
+| **nomic-embed-text** | 768 | Nomic AI | General purpose, efficient |
+| **all-MiniLM-L6-v2** | 384 | Sentence Transformers | Fast, lightweight |
+| **e5-large-v2** | 1024 | Microsoft | High quality, multilingual |
+| **bge-large-en-v1.5** | 1024 | BAAI | English text, high performance |
+
+### Features
+
+- ✅ **Privacy**: Complete local processing available
+- ✅ **Custom Models**: Use any embedding model you want
+- ✅ **Cost Control**: No per-token pricing with local deployment
+- ✅ **Task Optimization**: Via intelligent text prefixes
+- ✅ **Flexible Timeout**: Configurable for large batches
+- ✅ **Environment Variables**: Easy production configuration
+- ❌ **Native Task Types**: Uses emulation instead
+- ❌ **Output Dimensions**: Depends on model capabilities
+
+### When to Choose OpenAI-Compatible
+
+**✅ Perfect for:**
+- Privacy-sensitive applications
+- Local/on-premise deployments
+- Custom or specialized models
+- Cost optimization with high volume
+- Integration with existing local infrastructure
+- Development and testing environments
+
+**❌ Consider alternatives if:**
+- Want zero-setup cloud solution
+- Need guaranteed enterprise SLA
+- Prefer not to manage infrastructure
+- Want cutting-edge cloud features
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **Connection Error**: Ensure your endpoint is running and accessible
+2. **Model Not Found**: Verify your model name matches what's loaded
+3. **Timeout Error**: Increase timeout for large embedding batches
+4. **Authentication Error**: Check if your endpoint requires an API key
+
+**LM Studio Setup Example:**
+
+1. Download and install [LM Studio](https://lmstudio.ai/)
+2. Load an embedding model (e.g., "nomic-embed-text")
+3. Start the local server (default: `http://localhost:1234`)
+4. Use the provider with `base_url: "http://localhost:1234/v1"`
+
+```python
+# LM Studio example
+model = AIFactory.create_embedding(
+    "openai-compatible",
+    model_name="nomic-embed-text",  # Must match model loaded in LM Studio
+    config={
+        "base_url": "http://localhost:1234/v1",
+        "api_key": "not-required"
+    }
+)
+```
 
 ---
 

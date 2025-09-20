@@ -114,7 +114,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Provider     | LLM Support | Embedding Support | Reranking Support | Speech-to-Text | Text-to-Speech | JSON Mode |
 |--------------|-------------|------------------|-------------------|----------------|----------------|-----------|
 | OpenAI       | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
-| OpenAI-Compatible | ✅          | ❌               | ❌                | ❌             | ❌             | ⚠️*       |
+| OpenAI-Compatible | ✅          | ❌               | ❌                | ❌             | ✅             | ⚠️*       |
 | Anthropic    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Groq         | ✅          | ❌               | ❌                | ✅             | ❌             | ✅        |
 | Google (GenAI) | ✅          | ✅               | ❌                | ❌             | ✅             | ✅        |
@@ -153,7 +153,7 @@ print(providers)
 #     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs'],
-#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex']
+#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible']
 # }
 
 # Create model instances

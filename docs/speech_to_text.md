@@ -7,6 +7,7 @@ Speech-to-text models convert audio recordings into written text through automat
 - **OpenAI** (Whisper models)
 - **Groq** (Whisper models with faster inference)
 - **ElevenLabs** (Multilingual speech recognition)
+- **OpenAI-Compatible** (Any OpenAI-compatible STT endpoint)
 
 ## Available Methods
 
@@ -119,4 +120,183 @@ async def process_audio_stream():
         # Process the transcription immediately
         if "urgent" in response.text.lower():
             print("🚨 Urgent content detected!")
+```
+
+## OpenAI-Compatible Provider
+
+The OpenAI-compatible provider allows you to use any speech-to-text endpoint that follows the OpenAI API format. This includes local deployments, custom servers, and third-party services that implement OpenAI's `/audio/transcriptions` endpoint.
+
+### Configuration
+
+You can configure the provider using direct parameters, configuration dictionary, or environment variables:
+
+```python
+from esperanto.factory import AIFactory
+
+# Using config dictionary
+model = AIFactory.create_speech_to_text(
+    "openai-compatible",
+    model_name="faster-whisper-large-v3",
+    config={
+        "base_url": "http://localhost:8000",
+        "api_key": "your-api-key-if-required",  # Optional
+        "timeout": 600  # 10 minutes for large files (default: 300 seconds)
+    }
+)
+
+# Using environment variables
+# Set OPENAI_COMPATIBLE_BASE_URL=http://localhost:8000
+# Set OPENAI_COMPATIBLE_API_KEY=your-api-key (optional)
+model = AIFactory.create_speech_to_text("openai-compatible", "your-model-name")
+```
+
+### Supported Endpoints
+
+The provider works with any OpenAI-compatible STT endpoint, including:
+
+- **Ready-to-use implementations**:
+  - [Speaches](https://github.com/speaches-ai/speaches/) - OpenAI-compatible server with faster-whisper support
+- **Local deployments**: Custom faster-whisper, OpenAI Whisper, or other STT models
+- **Self-hosted solutions**: Custom OpenAI-format STT servers
+- **Development endpoints**: Local testing and development servers
+- **Edge deployments**: On-premise or edge computing STT services
+
+### API Compatibility
+
+Your endpoint should implement the OpenAI Speech-to-Text API format:
+
+**Required Endpoint**: `POST /audio/transcriptions`
+```
+Content-Type: multipart/form-data
+
+file: <audio_file>
+model: <model_name>
+language: <language_code> (optional)
+prompt: <context_prompt> (optional)
+```
+
+**Optional Endpoints**:
+- `GET /models` - List available models
+
+### Usage Examples
+
+**Basic Usage:**
+```python
+from esperanto.factory import AIFactory
+
+# Create OpenAI-compatible STT model
+stt = AIFactory.create_speech_to_text(
+    "openai-compatible",
+    model_name="faster-whisper-large-v3",
+    config={
+        "base_url": "http://localhost:8000",
+        "timeout": 300  # 5 minutes (default timeout)
+    }
+)
+
+# Transcribe audio
+response = stt.transcribe("meeting.mp3")
+print(response.text)
+```
+
+**With Language and Prompt:**
+```python
+# Improve accuracy with language and context
+response = stt.transcribe(
+    "podcast.wav",
+    language="en",
+    prompt="This is a technical discussion about AI and machine learning"
+)
+print(f"Transcription: {response.text}")
+```
+
+**Async Transcription:**
+```python
+async def transcribe_batch():
+    stt = AIFactory.create_speech_to_text(
+        "openai-compatible",
+        model_name="faster-whisper-large-v3",
+        config={"base_url": "http://localhost:8000"}
+    )
+
+    files = ["audio1.mp3", "audio2.wav", "audio3.m4a"]
+    for audio_file in files:
+        response = await stt.atranscribe(audio_file)
+        print(f"{audio_file}: {response.text[:100]}...")
+```
+
+### Error Handling
+
+The provider includes graceful error handling and fallbacks:
+
+```python
+try:
+    response = stt.transcribe("audio.mp3")
+    print(response.text)
+except RuntimeError as e:
+    print(f"Transcription failed: {e}")
+    # Handle error appropriately
+```
+
+### Environment Variables
+
+- `OPENAI_COMPATIBLE_BASE_URL`: Base URL for your OpenAI-compatible STT endpoint
+- `OPENAI_COMPATIBLE_API_KEY`: API key if your endpoint requires authentication
+
+### Timeout Configuration
+
+Speech-to-text operations can take significant time, especially for large audio files. The provider supports configurable timeouts:
+
+**Default Timeout**: 300 seconds (5 minutes)
+
+**Custom Timeout Examples:**
+```python
+# For large files (10 minutes)
+stt = AIFactory.create_speech_to_text(
+    "openai-compatible",
+    model_name="faster-whisper-large-v3",
+    config={
+        "base_url": "http://localhost:8000",
+        "timeout": 600  # 10 minutes
+    }
+)
+
+# For very large files (30 minutes)
+stt = AIFactory.create_speech_to_text(
+    "openai-compatible",
+    model_name="faster-whisper-large-v3",
+    config={
+        "base_url": "http://localhost:8000",
+        "timeout": 1800  # 30 minutes
+    }
+)
+
+# For quick tests (30 seconds)
+stt = AIFactory.create_speech_to_text(
+    "openai-compatible",
+    model_name="faster-whisper-small",
+    config={
+        "base_url": "http://localhost:8000",
+        "timeout": 30  # 30 seconds
+    }
+)
+```
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **Connection Error**: Ensure your STT endpoint is running and accessible
+2. **Authentication Error**: Verify your API key or remove it if not required
+3. **Model Not Found**: Check that your model name matches what's available on your endpoint
+4. **Audio Format Error**: Ensure your audio file is in a supported format (MP3, WAV, M4A, etc.)
+5. **Timeout Error**: For large audio files, increase the timeout value in your configuration
+
+**Debugging:**
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# This will show detailed request/response information
+stt = AIFactory.create_speech_to_text("openai-compatible", ...)
 ```
