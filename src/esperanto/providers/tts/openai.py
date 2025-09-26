@@ -46,9 +46,8 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
         # Set base URL
         self.base_url = self.base_url or "https://api.openai.com/v1"
         
-        # Initialize HTTP clients
-        self.client = httpx.Client(timeout=30.0)
-        self.async_client = httpx.AsyncClient(timeout=30.0)
+        # Initialize HTTP clients with configurable timeout
+        self._create_http_clients()
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for OpenAI API requests."""

@@ -47,11 +47,8 @@ class JinaEmbeddingModel(EmbeddingModel):
             )
         self.base_url = kwargs.get("base_url", "https://api.jina.ai/v1/embeddings")
         
-        # Get timeout from config or use default
-        timeout = self._config.get("timeout", 30.0) if hasattr(self, "_config") else 30.0
-        
-        self.client = httpx.Client(timeout=timeout)
-        self.async_client = httpx.AsyncClient(timeout=timeout)
+        # Initialize HTTP clients with configurable timeout
+        self._create_http_clients()
     
     def close(self):
         """Explicitly close HTTP clients."""

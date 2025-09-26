@@ -49,9 +49,8 @@ class VertexTextToSpeechModel(TextToSpeechModel):
         # Set base URL for Cloud Text-to-Speech API
         self.base_url = "https://texttospeech.googleapis.com/v1"
 
-        # Initialize HTTP clients
-        self.client = httpx.Client(timeout=30.0)
-        self.async_client = httpx.AsyncClient(timeout=30.0)
+        # Initialize HTTP clients with configurable timeout
+        self._create_http_clients()
 
         # Cache for access token
         self._access_token = None

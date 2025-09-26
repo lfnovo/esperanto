@@ -30,12 +30,8 @@ class VoyageRerankerModel(RerankerModel):
         # API configuration
         self.base_url = self.base_url or "https://api.voyageai.com/v1"
         
-        # Get timeout from config or use default
-        timeout = self._config.get("timeout", 30.0)
-        
-        # HTTP client setup
-        self.client = httpx.Client(timeout=timeout)
-        self.async_client = httpx.AsyncClient(timeout=timeout)
+        # Initialize HTTP clients with configurable timeout
+        self._create_http_clients()
 
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers for Voyage API."""

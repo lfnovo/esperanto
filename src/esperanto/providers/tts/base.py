@@ -19,12 +19,14 @@ class TextToSpeechModel(TimeoutMixin, ABC):
         api_key: API key for the provider. If not provided, will try to get from environment.
         base_url: Optional base URL for the API endpoint.
         config: Additional configuration options.
+        timeout: HTTP timeout in seconds. If not provided, will use default.
     """
 
     model_name: Optional[str] = None
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
+    timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
 
     # Common SSML tags supported across providers
@@ -48,6 +50,10 @@ class TextToSpeechModel(TimeoutMixin, ABC):
         self._config = {
             "model_name": self.model_name,
         }
+
+        # Add timeout to config if provided as direct parameter
+        if self.timeout is not None:
+            self._config["timeout"] = self.timeout
 
         # Update with any provided config
         if hasattr(self, "config") and self.config:

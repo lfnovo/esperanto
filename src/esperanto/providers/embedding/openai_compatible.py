@@ -101,8 +101,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
         )
 
         # Initialize HTTP clients with configurable timeout
-        self.client = httpx.Client(timeout=self.timeout)
-        self.async_client = httpx.AsyncClient(timeout=self.timeout)
+        self._create_http_clients()
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for OpenAI-compatible API requests."""

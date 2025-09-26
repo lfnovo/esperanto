@@ -107,8 +107,7 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
 
         # Initialize HTTP clients with configurable timeout
         # STT operations can take much longer than typical API calls
-        self.client = httpx.Client(timeout=self.timeout)
-        self.async_client = httpx.AsyncClient(timeout=self.timeout)
+        self._create_http_clients()
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for OpenAI-compatible API requests."""
