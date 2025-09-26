@@ -67,9 +67,8 @@ class PerplexityLanguageModel(LanguageModel):
         # Ensure base_url is not None after fetching from env or default
         assert self.base_url is not None, "Base URL could not be determined"
 
-        # Initialize HTTP clients
-        self.client = httpx.Client(timeout=30.0)
-        self.async_client = httpx.AsyncClient(timeout=30.0)
+        # Initialize HTTP clients with configurable timeout
+        self._create_http_clients()
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Perplexity API requests."""

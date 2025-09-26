@@ -418,6 +418,145 @@ model = PerplexityLanguageModel(
 )
 ```
 
+## Timeout Configuration ⏱️
+
+Esperanto provides flexible timeout configuration across all provider types with intelligent defaults and multiple configuration methods.
+
+### Default Timeouts
+
+Different provider types have optimized default timeouts based on typical operation duration:
+
+- **LLM, Embedding, Reranking**: 60 seconds (text processing operations)
+- **Speech-to-Text, Text-to-Speech**: 300 seconds (audio processing operations)
+
+### Configuration Methods
+
+Configure timeouts using three methods with clear priority hierarchy:
+
+#### 1. Config Dictionary (Highest Priority)
+
+```python
+from esperanto.factory import AIFactory
+
+# LLM with custom timeout
+model = AIFactory.create_language(
+    "openai",
+    "gpt-4",
+    config={"timeout": 120.0}  # 2 minutes
+)
+
+# Embedding with custom timeout
+embedder = AIFactory.create_embedding(
+    "openai",
+    "text-embedding-3-small",
+    config={"timeout": 90.0}  # 1.5 minutes
+)
+
+# Speech-to-Text with longer timeout for large files
+transcriber = AIFactory.create_speech_to_text(
+    "openai",
+    config={"timeout": 600.0}  # 10 minutes
+)
+```
+
+#### 2. Direct Parameters (STT/TTS)
+
+```python
+# Text-to-Speech with direct timeout parameter
+speaker = AIFactory.create_text_to_speech(
+    "elevenlabs",
+    timeout=180.0  # 3 minutes
+)
+
+# Speech-to-Text with direct timeout parameter
+transcriber = AIFactory.create_speech_to_text(
+    "openai",
+    timeout=450.0  # 7.5 minutes
+)
+```
+
+#### 3. Environment Variables
+
+Set global defaults for all instances of a provider type:
+
+```bash
+# Set environment variables
+export ESPERANTO_LLM_TIMEOUT=90          # 90 seconds for all LLM providers
+export ESPERANTO_EMBEDDING_TIMEOUT=120   # 2 minutes for all embedding providers
+export ESPERANTO_RERANKER_TIMEOUT=75     # 75 seconds for all reranker providers
+export ESPERANTO_STT_TIMEOUT=600         # 10 minutes for all STT providers
+export ESPERANTO_TTS_TIMEOUT=400         # 6.5 minutes for all TTS providers
+```
+
+```python
+# These will use environment variable defaults
+model = AIFactory.create_language("openai", "gpt-4")  # Uses ESPERANTO_LLM_TIMEOUT
+embedder = AIFactory.create_embedding("voyage", "voyage-2")  # Uses ESPERANTO_EMBEDDING_TIMEOUT
+```
+
+### Priority Order
+
+Configuration resolves in this priority order:
+
+1. **Config parameter** (highest priority)
+2. **Environment variable**
+3. **Provider type default** (lowest priority)
+
+```python
+# Example: Final timeout will be 150 seconds (config overrides env var)
+# Even if ESPERANTO_LLM_TIMEOUT=90 is set
+model = AIFactory.create_language(
+    "openai",
+    "gpt-4",
+    config={"timeout": 150.0}  # This takes precedence
+)
+```
+
+### Validation
+
+All timeout values are validated with clear error messages:
+
+- **Type**: Must be a number (int or float)
+- **Range**: Must be between 1 and 3600 seconds (1 hour maximum)
+
+```python
+# These will raise ValueError with descriptive messages
+AIFactory.create_language("openai", "gpt-4", config={"timeout": "invalid"})  # TypeError
+AIFactory.create_language("openai", "gpt-4", config={"timeout": -1})         # Out of range
+AIFactory.create_language("openai", "gpt-4", config={"timeout": 4000})       # Too large
+```
+
+### Production Use Cases
+
+**Batch Processing**
+```python
+# Long timeout for batch embedding operations
+embedder = AIFactory.create_embedding(
+    "openai",
+    "text-embedding-3-large",
+    config={"timeout": 300.0}  # 5 minutes for large batches
+)
+```
+
+**Real-time Applications**
+```python
+# Shorter timeout for real-time chat
+model = AIFactory.create_language(
+    "openai",
+    "gpt-3.5-turbo",
+    config={"timeout": 30.0}  # 30 seconds for quick responses
+)
+```
+
+**Audio Processing**
+```python
+# Extended timeout for long audio files
+transcriber = AIFactory.create_speech_to_text(
+    "openai",
+    config={"timeout": 900.0}  # 15 minutes for hour-long audio files
+)
+```
+
 ## Streaming Responses 🌊
 
 Enable streaming to receive responses token by token:

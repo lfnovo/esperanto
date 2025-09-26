@@ -5,10 +5,11 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model
+from esperanto.utils.timeout import TimeoutMixin
 
 
 @dataclass
-class LanguageModel(ABC):
+class LanguageModel(TimeoutMixin, ABC):
     """Base class for all language models."""
 
     api_key: Optional[str] = None
@@ -145,6 +146,25 @@ class LanguageModel(ABC):
             str: The default model name.
         """
         pass
+
+    def _get_provider_type(self) -> str:
+        """Return provider type for timeout configuration.
+
+        Returns:
+            str: "language" for LLM providers
+        """
+        return "language"
+
+    def _create_http_clients(self) -> None:
+        """Create HTTP clients with configured timeout.
+
+        Call this method in provider's __post_init__ after setting up
+        API keys and base URLs.
+        """
+        import httpx
+        timeout = self._get_timeout()
+        self.client = httpx.Client(timeout=timeout)
+        self.async_client = httpx.AsyncClient(timeout=timeout)
 
     @abstractmethod
     def to_langchain(self) -> Any:
