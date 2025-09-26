@@ -7,10 +7,11 @@ import httpx
 
 from esperanto.common_types import Model
 from esperanto.common_types.reranker import RerankResponse
+from esperanto.utils.timeout import TimeoutMixin
 
 
 @dataclass
-class RerankerModel(ABC):
+class RerankerModel(TimeoutMixin, ABC):
     """Base class for all reranker providers."""
 
     api_key: Optional[str] = None
@@ -57,6 +58,25 @@ class RerankerModel(ABC):
     def _get_default_model(self) -> str:
         """Get the default model name."""
         pass
+
+    def _get_provider_type(self) -> str:
+        """Return provider type for timeout configuration.
+
+        Returns:
+            str: "reranker" for reranker providers
+        """
+        return "reranker"
+
+    def _create_http_clients(self) -> None:
+        """Create HTTP clients with configured timeout.
+
+        Call this method in provider's __post_init__ after setting up
+        API keys and base URLs.
+        """
+        import httpx
+        timeout = self._get_timeout()
+        self.client = httpx.Client(timeout=timeout)
+        self.async_client = httpx.AsyncClient(timeout=timeout)
 
     @abstractmethod
     def rerank(

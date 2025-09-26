@@ -52,9 +52,8 @@ class GoogleLanguageModel(LanguageModel):
         # Set base URL
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
 
-        # Initialize HTTP clients
-        self.client = httpx.Client(timeout=30.0)
-        self.async_client = httpx.AsyncClient(timeout=30.0)
+        # Initialize HTTP clients with configurable timeout
+        self._create_http_clients()
         
         self._langchain_model = None
 

@@ -7,10 +7,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from esperanto.common_types import Model
 from esperanto.common_types.tts import AudioResponse, Voice
+from esperanto.utils.timeout import TimeoutMixin
 
 
 @dataclass
-class TextToSpeechModel(ABC):
+class TextToSpeechModel(TimeoutMixin, ABC):
     """Base class for text-to-speech models.
 
     Attributes:
@@ -108,6 +109,25 @@ class TextToSpeechModel(ABC):
     def models(self) -> List[Model]:
         """List all available models for this provider."""
         pass
+
+    def _get_provider_type(self) -> str:
+        """Return provider type for timeout configuration.
+
+        Returns:
+            str: "text_to_speech" for TTS providers
+        """
+        return "text_to_speech"
+
+    def _create_http_clients(self) -> None:
+        """Create HTTP clients with configured timeout.
+
+        Call this method in provider's __post_init__ after setting up
+        API keys and base URLs.
+        """
+        import httpx
+        timeout = self._get_timeout()
+        self.client = httpx.Client(timeout=timeout)
+        self.async_client = httpx.AsyncClient(timeout=timeout)
 
     def get_supported_tags(self) -> List[str]:
         """Get list of supported SSML tags for this provider.

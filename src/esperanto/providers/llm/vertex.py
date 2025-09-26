@@ -54,9 +54,8 @@ class VertexLanguageModel(LanguageModel):
         # Set base URL for Vertex AI
         self.base_url = f"https://{self.location}-aiplatform.googleapis.com/v1"
 
-        # Initialize HTTP clients
-        self.client = httpx.Client(timeout=30.0)
-        self.async_client = httpx.AsyncClient(timeout=30.0)
+        # Initialize HTTP clients with configurable timeout
+        self._create_http_clients()
 
         # Cache for access token
         self._access_token = None
