@@ -113,3 +113,6 @@ ai_docs/
 
 *.local.md
 claude-logs/
+
+
+specs/*

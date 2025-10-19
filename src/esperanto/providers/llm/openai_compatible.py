@@ -31,13 +31,15 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         
         # Configuration precedence: Factory config > Environment variables > Default
         self.base_url = (
-            self.base_url or 
-            self._config.get("base_url") or 
+            self.base_url or
+            self._config.get("base_url") or
+            os.getenv("OPENAI_COMPATIBLE_BASE_URL_LLM") or
             os.getenv("OPENAI_COMPATIBLE_BASE_URL")
         )
         self.api_key = (
-            self.api_key or 
-            self._config.get("api_key") or 
+            self.api_key or
+            self._config.get("api_key") or
+            os.getenv("OPENAI_COMPATIBLE_API_KEY_LLM") or
             os.getenv("OPENAI_COMPATIBLE_API_KEY")
         )
 
@@ -45,7 +47,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         if not self.base_url:
             raise ValueError(
                 "OpenAI-compatible base URL is required. "
-                "Set OPENAI_COMPATIBLE_BASE_URL environment variable or provide base_url in config."
+                "Set OPENAI_COMPATIBLE_BASE_URL_LLM or OPENAI_COMPATIBLE_BASE_URL "
+                "environment variable or provide base_url in config."
             )
         # Use a default API key if none is provided (some endpoints don't require authentication)
         if not self.api_key:

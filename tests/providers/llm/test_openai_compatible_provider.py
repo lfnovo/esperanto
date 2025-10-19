@@ -303,7 +303,67 @@ class TestOpenAICompatibleLanguageModel:
             api_key="test-key",
             base_url="http://localhost:1234"
         )
-        
+
         with patch('builtins.__import__', side_effect=ImportError("No module named 'langchain_openai'")):
             with pytest.raises(ImportError, match="Langchain integration requires langchain_openai"):
                 model.to_langchain()
+
+    def test_provider_specific_env_var_precedence(self):
+        """Test that provider-specific env vars take precedence over generic ones."""
+        with patch.dict(os.environ, {
+            "OPENAI_COMPATIBLE_BASE_URL_LLM": "http://llm-specific:1234",
+            "OPENAI_COMPATIBLE_BASE_URL": "http://generic:5678",
+            "OPENAI_COMPATIBLE_API_KEY_LLM": "llm-specific-key",
+            "OPENAI_COMPATIBLE_API_KEY": "generic-key"
+        }):
+            model = OpenAICompatibleLanguageModel()
+            assert model.base_url == "http://llm-specific:1234"
+            assert model.api_key == "llm-specific-key"
+
+    def test_fallback_to_generic_env_var(self):
+        """Test fallback to generic env vars when provider-specific ones are not set."""
+        with patch.dict(os.environ, {
+            "OPENAI_COMPATIBLE_BASE_URL": "http://generic:5678",
+            "OPENAI_COMPATIBLE_API_KEY": "generic-key"
+        }, clear=True):
+            model = OpenAICompatibleLanguageModel()
+            assert model.base_url == "http://generic:5678"
+            assert model.api_key == "generic-key"
+
+    def test_config_overrides_provider_specific_env_vars(self):
+        """Test that config parameters override provider-specific env vars."""
+        with patch.dict(os.environ, {
+            "OPENAI_COMPATIBLE_BASE_URL_LLM": "http://llm-env:1234",
+            "OPENAI_COMPATIBLE_API_KEY_LLM": "llm-env-key"
+        }):
+            config = {
+                "base_url": "http://config:9090",
+                "api_key": "config-key"
+            }
+            model = OpenAICompatibleLanguageModel(config=config)
+            assert model.base_url == "http://config:9090"
+            assert model.api_key == "config-key"
+
+    def test_direct_params_override_all_env_vars(self):
+        """Test that direct parameters override all environment variables."""
+        with patch.dict(os.environ, {
+            "OPENAI_COMPATIBLE_BASE_URL_LLM": "http://llm-env:1234",
+            "OPENAI_COMPATIBLE_BASE_URL": "http://generic-env:5678",
+            "OPENAI_COMPATIBLE_API_KEY_LLM": "llm-env-key",
+            "OPENAI_COMPATIBLE_API_KEY": "generic-env-key"
+        }):
+            model = OpenAICompatibleLanguageModel(
+                base_url="http://direct:3000",
+                api_key="direct-key"
+            )
+            assert model.base_url == "http://direct:3000"
+            assert model.api_key == "direct-key"
+
+    def test_error_message_mentions_both_env_vars(self):
+        """Test that error message mentions both provider-specific and generic env vars."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError) as exc_info:
+                OpenAICompatibleLanguageModel(api_key="test-key")
+            error_message = str(exc_info.value)
+            assert "OPENAI_COMPATIBLE_BASE_URL_LLM" in error_message
+            assert "OPENAI_COMPATIBLE_BASE_URL" in error_message
