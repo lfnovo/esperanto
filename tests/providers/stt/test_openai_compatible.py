@@ -123,8 +123,12 @@ def test_init_with_env_vars(monkeypatch):
     assert model.api_key == "env-key"
 
 
-def test_init_missing_base_url():
+def test_init_missing_base_url(monkeypatch):
     """Test that initialization fails without base URL."""
+    # Clear all environment variables
+    monkeypatch.delenv("OPENAI_COMPATIBLE_BASE_URL_STT", raising=False)
+    monkeypatch.delenv("OPENAI_COMPATIBLE_BASE_URL", raising=False)
+
     with pytest.raises(ValueError, match="OpenAI-compatible base URL is required"):
         OpenAICompatibleSpeechToTextModel(model_name="test-model")
 
@@ -354,3 +358,69 @@ def test_get_api_kwargs(stt_model):
     assert kwargs["model"] == "faster-whisper-large-v3"
     assert kwargs["language"] == "en"
     assert kwargs["prompt"] == "technical discussion"
+
+
+def test_provider_specific_env_var_precedence(monkeypatch):
+    """Test that provider-specific env vars take precedence over generic ones."""
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL_STT", "http://stt-specific:1234")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL", "http://generic:5678")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_API_KEY_STT", "stt-specific-key")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_API_KEY", "generic-key")
+
+    model = OpenAICompatibleSpeechToTextModel(model_name="test-model")
+    assert model.base_url == "http://stt-specific:1234"
+    assert model.api_key == "stt-specific-key"
+
+
+def test_fallback_to_generic_env_var(monkeypatch):
+    """Test fallback to generic env vars when provider-specific ones are not set."""
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL", "http://generic:5678")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_API_KEY", "generic-key")
+
+    model = OpenAICompatibleSpeechToTextModel(model_name="test-model")
+    assert model.base_url == "http://generic:5678"
+    assert model.api_key == "generic-key"
+
+
+def test_config_overrides_provider_specific_env_vars(monkeypatch):
+    """Test that config parameters override provider-specific env vars."""
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL_STT", "http://stt-env:1234")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_API_KEY_STT", "stt-env-key")
+
+    model = OpenAICompatibleSpeechToTextModel(
+        model_name="test-model",
+        base_url="http://config:9090",
+        api_key="config-key"
+    )
+    assert model.base_url == "http://config:9090"
+    assert model.api_key == "config-key"
+
+
+def test_direct_params_override_all_env_vars(monkeypatch):
+    """Test that direct parameters override all environment variables."""
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL_STT", "http://stt-env:1234")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL", "http://generic-env:5678")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_API_KEY_STT", "stt-env-key")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_API_KEY", "generic-env-key")
+
+    model = OpenAICompatibleSpeechToTextModel(
+        model_name="test-model",
+        base_url="http://direct:3000",
+        api_key="direct-key"
+    )
+    assert model.base_url == "http://direct:3000"
+    assert model.api_key == "direct-key"
+
+
+def test_error_message_mentions_both_env_vars(monkeypatch):
+    """Test that error message mentions both provider-specific and generic env vars."""
+    # Clear all environment variables
+    monkeypatch.delenv("OPENAI_COMPATIBLE_BASE_URL_STT", raising=False)
+    monkeypatch.delenv("OPENAI_COMPATIBLE_BASE_URL", raising=False)
+
+    with pytest.raises(ValueError) as exc_info:
+        OpenAICompatibleSpeechToTextModel(model_name="test-model", api_key="test-key")
+
+    error_message = str(exc_info.value)
+    assert "OPENAI_COMPATIBLE_BASE_URL_STT" in error_message
+    assert "OPENAI_COMPATIBLE_BASE_URL" in error_message

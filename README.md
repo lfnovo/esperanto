@@ -366,8 +366,13 @@ model = AIFactory.create_language(
 )
 
 # Or set environment variables
+# Generic (works for all provider types):
 # OPENAI_COMPATIBLE_BASE_URL=http://localhost:1234/v1
 # OPENAI_COMPATIBLE_API_KEY=your-api-key  # Optional for endpoints that don't require auth
+
+# Provider-specific (takes precedence over generic):
+# OPENAI_COMPATIBLE_BASE_URL_LLM=http://localhost:1234/v1
+# OPENAI_COMPATIBLE_API_KEY_LLM=your-api-key
 model = AIFactory.create_language("openai-compatible", "your-model-name")
 
 # Works with any OpenAI-compatible endpoint
@@ -392,6 +397,29 @@ for chunk in model.chat_complete(messages, stream=True):
 - ✅ **Graceful Degradation**: Automatically handles varying feature support
 - ✅ **Error Handling**: Clear error messages for troubleshooting
 - ⚠️ **JSON Mode**: Depends on endpoint implementation
+
+**Environment Variable Configuration:**
+
+OpenAI-compatible providers support both generic and provider-specific environment variables:
+
+- **Generic variables** (work for all provider types):
+  - `OPENAI_COMPATIBLE_BASE_URL` - Base URL for the endpoint
+  - `OPENAI_COMPATIBLE_API_KEY` - API key (if required)
+
+- **Provider-specific variables** (take precedence over generic):
+  - Language Models: `OPENAI_COMPATIBLE_BASE_URL_LLM`, `OPENAI_COMPATIBLE_API_KEY_LLM`
+  - Embeddings: `OPENAI_COMPATIBLE_BASE_URL_EMBEDDING`, `OPENAI_COMPATIBLE_API_KEY_EMBEDDING`
+  - Speech-to-Text: `OPENAI_COMPATIBLE_BASE_URL_STT`, `OPENAI_COMPATIBLE_API_KEY_STT`
+  - Text-to-Speech: `OPENAI_COMPATIBLE_BASE_URL_TTS`, `OPENAI_COMPATIBLE_API_KEY_TTS`
+
+**Configuration Precedence** (highest to lowest):
+1. Direct parameters (`base_url=`, `api_key=`)
+2. Config dictionary (`config={"base_url": ...}`)
+3. Provider-specific environment variables
+4. Generic environment variables
+5. Default values
+
+This allows you to use different OpenAI-compatible endpoints for different AI capabilities without code changes.
 
 ### Perplexity
 

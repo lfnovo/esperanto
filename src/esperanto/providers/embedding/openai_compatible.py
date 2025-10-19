@@ -37,7 +37,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ):
         """Initialize OpenAI-compatible embedding provider.
 
@@ -55,27 +55,32 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
 
         # Configuration precedence: Direct params > config > Environment variables
         self.base_url = (
-            base_url or
-            config.get("base_url") or
-            os.getenv("OPENAI_COMPATIBLE_BASE_URL")
+            base_url
+            or config.get("base_url")
+            or os.getenv("OPENAI_COMPATIBLE_BASE_URL_EMBEDDING")
+            or os.getenv("OPENAI_COMPATIBLE_BASE_URL")
         )
 
         self.api_key = (
-            api_key or
-            config.get("api_key") or
-            os.getenv("OPENAI_COMPATIBLE_API_KEY")
+            api_key
+            or config.get("api_key")
+            or os.getenv("OPENAI_COMPATIBLE_API_KEY_EMBEDDING")
+            or os.getenv("OPENAI_COMPATIBLE_API_KEY")
         )
 
         # Validation
         if not self.base_url:
             raise ValueError(
                 "OpenAI-compatible base URL is required. "
-                "Set OPENAI_COMPATIBLE_BASE_URL environment variable or provide base_url in config."
+                "Set OPENAI_COMPATIBLE_BASE_URL_EMBEDDING or OPENAI_COMPATIBLE_BASE_URL "
+                "environment variable or provide base_url in config."
             )
 
         # Use a default API key if none is provided (some endpoints don't require authentication)
         if not self.api_key:
-            logger.warning("No API key provided for OpenAI-compatible endpoint. Using default 'not-required' value.")
+            logger.warning(
+                "No API key provided for OpenAI-compatible endpoint. Using default 'not-required' value."
+            )
             self.api_key = "not-required"
 
         # Ensure base_url doesn't end with trailing slash for consistency
@@ -86,7 +91,11 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
         self.timeout = config.get("timeout", 120.0)
 
         # Remove base_url, api_key, and timeout from config to avoid duplication
-        clean_config = {k: v for k, v in config.items() if k not in ['base_url', 'api_key', 'timeout']}
+        clean_config = {
+            k: v
+            for k, v in config.items()
+            if k not in ["base_url", "api_key", "timeout"]
+        }
 
         # Initialize attributes for dataclass
         self.model_name = model_name or self._get_default_model()
@@ -97,7 +106,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             model_name=self.model_name,
             api_key=self.api_key,
             base_url=self.base_url,
-            config=self.config
+            config=self.config,
         )
 
         # Initialize HTTP clients with configurable timeout
@@ -121,16 +130,18 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
                 error_data = response.json()
                 # Try multiple error message formats
                 error_message = (
-                    error_data.get("error", {}).get("message") or
-                    error_data.get("detail", {}).get("message") or  # Some APIs use this
-                    error_data.get("message") or  # Direct message field
-                    f"HTTP {response.status_code}"
+                    error_data.get("error", {}).get("message")
+                    or error_data.get("detail", {}).get("message")  # Some APIs use this
+                    or error_data.get("message")  # Direct message field
+                    or f"HTTP {response.status_code}"
                 )
             except Exception:
                 # Fall back to HTTP status code
                 error_message = f"HTTP {response.status_code}: {response.text}"
 
-            raise RuntimeError(f"OpenAI-compatible embedding endpoint error: {error_message}")
+            raise RuntimeError(
+                f"OpenAI-compatible embedding endpoint error: {error_message}"
+            )
 
     @property
     def models(self) -> List[Model]:
@@ -141,8 +152,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
         """
         try:
             response = self.client.get(
-                f"{self.base_url}/models",
-                headers=self._get_headers()
+                f"{self.base_url}/models", headers=self._get_headers()
             )
             self._handle_error(response)
 
@@ -158,7 +168,9 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             ]
         except Exception as e:
             # Log the error but don't fail completely
-            logger.info(f"Models endpoint not supported by OpenAI-compatible embedding endpoint: {e}")
+            logger.info(
+                f"Models endpoint not supported by OpenAI-compatible embedding endpoint: {e}"
+            )
             return []
 
     def _get_default_model(self) -> str:
@@ -195,20 +207,21 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             payload = {
                 "input": texts,
                 "model": self.get_model_name(),
-                **{**self._get_api_kwargs(), **kwargs}
+                **{**self._get_api_kwargs(), **kwargs},
             }
 
             # Generate embeddings
             response = self.client.post(
-                f"{self.base_url}/embeddings",
-                headers=self._get_headers(),
-                json=payload
+                f"{self.base_url}/embeddings", headers=self._get_headers(), json=payload
             )
             self._handle_error(response)
 
             # Parse response
             response_data = response.json()
-            return [[float(value) for value in data["embedding"]] for data in response_data["data"]]
+            return [
+                [float(value) for value in data["embedding"]]
+                for data in response_data["data"]
+            ]
 
         except Exception as e:
             raise RuntimeError(f"Failed to generate embeddings: {str(e)}") from e
@@ -234,20 +247,21 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             payload = {
                 "input": texts,
                 "model": self.get_model_name(),
-                **{**self._get_api_kwargs(), **kwargs}
+                **{**self._get_api_kwargs(), **kwargs},
             }
 
             # Generate embeddings
             response = await self.async_client.post(
-                f"{self.base_url}/embeddings",
-                headers=self._get_headers(),
-                json=payload
+                f"{self.base_url}/embeddings", headers=self._get_headers(), json=payload
             )
             self._handle_error(response)
 
             # Parse response
             response_data = response.json()
-            return [[float(value) for value in data["embedding"]] for data in response_data["data"]]
+            return [
+                [float(value) for value in data["embedding"]]
+                for data in response_data["data"]
+            ]
 
         except Exception as e:
             raise RuntimeError(f"Failed to generate embeddings: {str(e)}") from e

@@ -63,12 +63,14 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
         self.base_url = (
             base_url or
             config.get("base_url") or
+            os.getenv("OPENAI_COMPATIBLE_BASE_URL_STT") or
             os.getenv("OPENAI_COMPATIBLE_BASE_URL")
         )
 
         self.api_key = (
             api_key or
             config.get("api_key") or
+            os.getenv("OPENAI_COMPATIBLE_API_KEY_STT") or
             os.getenv("OPENAI_COMPATIBLE_API_KEY")
         )
 
@@ -76,7 +78,8 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
         if not self.base_url:
             raise ValueError(
                 "OpenAI-compatible base URL is required. "
-                "Set OPENAI_COMPATIBLE_BASE_URL environment variable or provide base_url in config."
+                "Set OPENAI_COMPATIBLE_BASE_URL_STT or OPENAI_COMPATIBLE_BASE_URL "
+                "environment variable or provide base_url in config."
             )
 
         # Use a default API key if none is provided (some endpoints don't require authentication)
