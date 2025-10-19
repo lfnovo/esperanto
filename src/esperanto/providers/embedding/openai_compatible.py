@@ -78,9 +78,6 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
 
         # Use a default API key if none is provided (some endpoints don't require authentication)
         if not self.api_key:
-            logger.warning(
-                "No API key provided for OpenAI-compatible endpoint. Using default 'not-required' value."
-            )
             self.api_key = "not-required"
 
         # Ensure base_url doesn't end with trailing slash for consistency
