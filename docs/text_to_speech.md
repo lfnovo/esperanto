@@ -384,6 +384,43 @@ response = tts.generate_speech("Test audio", voice="test-voice")
 
 ## Provider-Specific Information
 
+### Google (GenAI) Configuration
+
+**Environment Variables:**
+- `GOOGLE_API_KEY` or `GEMINI_API_KEY`: Your Google API key (required)
+- `GEMINI_API_BASE_URL`: Override the API base URL (optional, default: `https://generativelanguage.googleapis.com`)
+
+**Custom Base URL:**
+The `GEMINI_API_BASE_URL` environment variable allows you to override the default Gemini API endpoint. This is useful when:
+- The default endpoint is not accessible in your network
+- You need to use a proxy or alternative routing
+- You're testing with a mock or staging environment
+
+**Configuration:**
+```bash
+# Required
+export GOOGLE_API_KEY="your-google-api-key"
+
+# Optional: Override base URL (useful for network restrictions or proxies)
+export GEMINI_API_BASE_URL="https://generativelanguage.googleapis.com"
+```
+
+**Example:**
+```python
+from esperanto.factory import AIFactory
+
+# Using environment variables
+model = AIFactory.create_text_to_speech("google", "gemini-2.5-flash-preview-tts")
+
+response = model.generate_speech(
+    text="Hello from Google Text-to-Speech!",
+    voice="charon",
+    output_file="greeting.wav"
+)
+```
+
+**Note:** If `GEMINI_API_BASE_URL` is not set, the provider automatically uses the default Google endpoint. This maintains full backward compatibility with existing configurations.
+
 ### Voice Models and Selection
 
 Each provider offers different voice models and selection methods. It's important to understand the available options for each provider:

@@ -358,7 +358,16 @@ model = AIFactory.create_embedding(
 export GOOGLE_API_KEY="your-google-api-key"
 # or
 export GEMINI_API_KEY="your-google-api-key"
+
+# Optional: Override base URL (useful for network restrictions or proxies)
+# export GEMINI_API_BASE_URL="https://generativelanguage.googleapis.com"
 ```
+
+**Custom Base URL:**
+The `GEMINI_API_BASE_URL` environment variable allows you to override the default Gemini API endpoint (`https://generativelanguage.googleapis.com`). This is useful when:
+- The default endpoint is not accessible in your network
+- You need to use a proxy or alternative routing
+- You're testing with a mock or staging environment
 
 ### Available Models
 

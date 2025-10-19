@@ -277,3 +277,47 @@ messages = [{"role": "user", "content": "What are the latest AI developments?"}]
 response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
+
+### Google (Gemini)
+
+Google provides access to Gemini models through the GenAI API.
+
+**Environment Variables:**
+- `GOOGLE_API_KEY` or `GEMINI_API_KEY`: Your Google API key (required)
+- `GEMINI_API_BASE_URL`: Override the API base URL (optional, default: `https://generativelanguage.googleapis.com`)
+
+**Use Case for Custom Base URL:**
+The `GEMINI_API_BASE_URL` environment variable allows you to override the default Gemini API endpoint. This is useful when:
+- The default endpoint is not accessible in your network
+- You need to use a proxy or alternative routing
+- You're testing with a mock or staging environment
+
+**Example:**
+```python
+from esperanto.factory import AIFactory
+
+# Using environment variables
+# export GOOGLE_API_KEY="your-api-key"
+# export GEMINI_API_BASE_URL="https://generativelanguage.googleapis.com"  # Optional
+
+model = AIFactory.create_language(
+    "google",
+    "gemini-2.0-flash",
+    config={"temperature": 0.7, "structured": {"type": "json"}}  # Gemini supports JSON mode
+)
+
+messages = [{"role": "user", "content": "Explain machine learning in simple terms."}]
+response = model.chat_complete(messages)
+print(response.choices[0].message.content)
+```
+
+**Configuration:**
+```bash
+# Required
+export GOOGLE_API_KEY="your-google-api-key"
+
+# Optional: Override base URL (useful for network restrictions or proxies)
+export GEMINI_API_BASE_URL="https://generativelanguage.googleapis.com"
+```
+
+**Note:** If `GEMINI_API_BASE_URL` is not set, the provider automatically uses the default Google endpoint. This maintains full backward compatibility with existing configurations.
