@@ -144,8 +144,13 @@ The provider works with any OpenAI-compatible embedding endpoint, including:
 
 ```python
 # Environment variables (recommended for production)
+# Generic (works for all OpenAI-compatible providers):
 # OPENAI_COMPATIBLE_BASE_URL=http://localhost:1234/v1
 # OPENAI_COMPATIBLE_API_KEY=your-key-if-required
+
+# Provider-specific (takes precedence, new in v2.7.0):
+# OPENAI_COMPATIBLE_BASE_URL_EMBEDDING=http://localhost:8080/v1
+# OPENAI_COMPATIBLE_API_KEY_EMBEDDING=your-key-if-required
 
 # Via config dictionary
 config = {

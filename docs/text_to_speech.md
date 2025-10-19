@@ -200,8 +200,13 @@ model = AIFactory.create_text_to_speech(
 )
 
 # Using environment variables
+# Generic (works for all OpenAI-compatible providers):
 # Set OPENAI_COMPATIBLE_BASE_URL=http://localhost:8000
 # Set OPENAI_COMPATIBLE_API_KEY=your-api-key (optional)
+
+# Provider-specific (takes precedence, new in v2.7.0):
+# Set OPENAI_COMPATIBLE_BASE_URL_TTS=http://localhost:8000
+# Set OPENAI_COMPATIBLE_API_KEY_TTS=your-api-key (optional)
 model = AIFactory.create_text_to_speech("openai-compatible", "your-model-name")
 ```
 

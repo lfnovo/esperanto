@@ -240,8 +240,13 @@ except RuntimeError as e:
 
 ### Environment Variables
 
+**Generic (works for all OpenAI-compatible providers):**
 - `OPENAI_COMPATIBLE_BASE_URL`: Base URL for your OpenAI-compatible STT endpoint
 - `OPENAI_COMPATIBLE_API_KEY`: API key if your endpoint requires authentication
+
+**Provider-specific (takes precedence, new in v2.7.0):**
+- `OPENAI_COMPATIBLE_BASE_URL_STT`: Base URL specifically for STT endpoints
+- `OPENAI_COMPATIBLE_API_KEY_STT`: API key specifically for STT endpoints
 
 ### Timeout Configuration
 

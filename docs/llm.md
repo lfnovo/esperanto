@@ -155,14 +155,30 @@ model = AIFactory.create_language(
 ```
 
 2. **Using Environment Variables:**
+
+OpenAI-compatible providers support both generic and provider-specific environment variables:
+
 ```bash
+# Generic (works for all provider types):
 export OPENAI_COMPATIBLE_BASE_URL="http://localhost:1234/v1"
 export OPENAI_COMPATIBLE_API_KEY="your-api-key"  # Optional for endpoints that don't require auth
+
+# Provider-specific (takes precedence, new in v2.7.0):
+export OPENAI_COMPATIBLE_BASE_URL_LLM="http://localhost:1234/v1"
+export OPENAI_COMPATIBLE_API_KEY_LLM="your-api-key"  # Optional for endpoints that don't require auth
 ```
 
 ```python
 model = AIFactory.create_language("openai-compatible", "your-model-name")
 ```
+
+**Configuration Precedence** (highest to lowest):
+1. Direct parameters in config dictionary (`base_url=`, `api_key=`)
+2. Provider-specific environment variables (`OPENAI_COMPATIBLE_BASE_URL_LLM`, etc.)
+3. Generic environment variables (`OPENAI_COMPATIBLE_BASE_URL`, etc.)
+4. Default values
+
+This allows you to use different OpenAI-compatible endpoints for different AI capabilities (LLM, Embedding, STT, TTS) without code changes.
 
 **Example Usage:**
 ```python

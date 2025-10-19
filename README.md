@@ -114,7 +114,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Provider     | LLM Support | Embedding Support | Reranking Support | Speech-to-Text | Text-to-Speech | JSON Mode |
 |--------------|-------------|------------------|-------------------|----------------|----------------|-----------|
 | OpenAI       | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
-| OpenAI-Compatible | ✅          | ❌               | ❌                | ❌             | ✅             | ⚠️*       |
+| OpenAI-Compatible | ✅          | ✅               | ❌                | ✅             | ✅             | ⚠️*       |
 | Anthropic    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Groq         | ✅          | ❌               | ❌                | ✅             | ❌             | ✅        |
 | Google (GenAI) | ✅          | ✅               | ❌                | ❌             | ✅             | ✅        |
@@ -150,10 +150,10 @@ print(providers)
 # Output:
 # {
 #     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
-#     'embedding': ['openai', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
+#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
-#     'speech_to_text': ['openai', 'groq', 'elevenlabs'],
-#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible']
+#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs'],
+#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex']
 # }
 
 # Create model instances
