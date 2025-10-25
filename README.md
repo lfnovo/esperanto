@@ -63,6 +63,7 @@ For detailed information about our providers, check out:
 - [Reranking Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/rerank.md)
 - [Speech-to-Text Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/speech_to_text.md)
 - [Text-to-Speech Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/text_to_speech.md)
+- **[CHANGELOG](https://github.com/lfnovo/esperanto/blob/main/CHANGELOG.md)** - Version history and migration guides
 
 ## Installation 🚀
 
@@ -180,6 +181,55 @@ embeddings = embedder.embed(texts)
 # Async usage
 embeddings = await embedder.aembed(texts)
 ```
+
+### Model Discovery 🔍
+
+Esperanto provides a convenient way to discover available models from providers without creating instances:
+
+```python
+from esperanto.factory import AIFactory
+
+# Discover available models from OpenAI
+models = AIFactory.get_provider_models("openai", api_key="your-api-key")
+for model in models:
+    print(f"{model.id} - owned by {model.owned_by}")
+
+# Filter by model type (for providers like OpenAI that support multiple types)
+language_models = AIFactory.get_provider_models(
+    "openai",
+    api_key="your-api-key",
+    model_type="language"  # Options: 'language', 'embedding', 'speech_to_text', 'text_to_speech'
+)
+
+# Some providers return hardcoded lists (e.g., Anthropic)
+claude_models = AIFactory.get_provider_models("anthropic")
+for model in claude_models:
+    print(f"{model.id} - Context: {model.context_window} tokens")
+
+# Example output:
+# claude-3-5-sonnet-20241022 - Context: 200000 tokens
+# claude-3-5-haiku-20241022 - Context: 200000 tokens
+# claude-3-opus-20240229 - Context: 200000 tokens
+```
+
+**Benefits of Static Discovery:**
+- ✅ **No instance creation required** - Query models without setting up providers
+- ✅ **Cached results** - Model lists are cached for 1 hour to reduce API calls
+- ✅ **Flexible configuration** - Pass provider-specific config (API keys, base URLs, etc.)
+- ✅ **Type filtering** - Filter models by type for multi-model providers
+
+**Supported Providers:**
+- **OpenAI** - Fetches models via API (supports type filtering)
+- **Anthropic** - Returns hardcoded list of Claude models
+- **Google/Gemini** - Fetches models via API
+- **Groq** - Fetches models via API
+- **Mistral** - Fetches models via API
+- **Ollama** - Fetches locally available models
+- **Jina** - Returns hardcoded list of embedding/reranking models
+- **Voyage** - Returns hardcoded list of embedding/reranking models
+- **And more...**
+
+> **Note**: This is the recommended way to discover models. The `.models` property on provider instances is deprecated and will be removed in version 3.0.
 
 ### Using Provider-Specific Classes
 

@@ -291,8 +291,7 @@ class JinaRerankerModel(RerankerModel):
         """Provider name."""
         return "jina"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """Available Jina reranker models."""
         return [
             Model(

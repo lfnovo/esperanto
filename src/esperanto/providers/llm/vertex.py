@@ -108,8 +108,7 @@ class VertexLanguageModel(LanguageModel):
         model_name = self.get_model_name()
         return f"projects/{self.project_id}/locations/{self.location}/publishers/google/models/{model_name}"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(

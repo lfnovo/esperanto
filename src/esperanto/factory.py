@@ -4,6 +4,7 @@ import importlib
 import warnings
 from typing import Any, Dict, List, Optional, Type
 
+from esperanto.common_types import Model
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.reranker.base import RerankerModel
@@ -48,6 +49,7 @@ class AIFactory:
             "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
             "elevenlabs": "esperanto.providers.stt.elevenlabs:ElevenLabsSpeechToTextModel",
             "openai-compatible": "esperanto.providers.stt.openai_compatible:OpenAICompatibleSpeechToTextModel",
+            "azure": "esperanto.providers.stt.azure:AzureSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
@@ -55,6 +57,7 @@ class AIFactory:
             "google": "esperanto.providers.tts.google:GoogleTextToSpeechModel",
             "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
             "openai-compatible": "esperanto.providers.tts.openai_compatible:OpenAICompatibleTextToSpeechModel",
+            "azure": "esperanto.providers.tts.azure:AzureTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
@@ -119,6 +122,92 @@ class AIFactory:
             model_type: list(providers.keys())
             for model_type, providers in cls._provider_modules.items()
         }
+
+    @classmethod
+    def get_provider_models(
+        cls,
+        provider: str,
+        model_type: Optional[str] = None,
+        **config
+    ) -> List[Model]:
+        """Get available models from a provider without creating an instance.
+
+        This method uses static discovery functions to list models from providers
+        without needing to instantiate provider classes. Results are cached for
+        1 hour by default.
+
+        Args:
+            provider: Provider name (e.g., 'openai', 'anthropic', 'google')
+            model_type: Optional filter for model type. For providers that support
+                       multiple types (like OpenAI), you can filter to:
+                       - 'language' for LLM models
+                       - 'embedding' for embedding models
+                       - 'speech_to_text' for STT models
+                       - 'text_to_speech' for TTS models
+                       - None to get all models
+            **config: Provider-specific configuration:
+                     - api_key: API key for authentication
+                     - base_url: Custom base URL
+                     - project_id: For Vertex AI
+                     - azure_endpoint: For Azure
+                     - etc.
+
+        Returns:
+            List[Model]: List of available models from the provider
+
+        Raises:
+            ValueError: If provider is not supported
+            RuntimeError: If API request fails
+
+        Examples:
+            >>> # Get all OpenAI models
+            >>> models = AIFactory.get_provider_models('openai', api_key='sk-...')
+
+            >>> # Get only OpenAI language models
+            >>> llms = AIFactory.get_provider_models('openai', model_type='language', api_key='sk-...')
+
+            >>> # Get Anthropic models (no API key needed, returns hardcoded list)
+            >>> models = AIFactory.get_provider_models('anthropic')
+
+            >>> # Get Google models
+            >>> models = AIFactory.get_provider_models('google', api_key='...')
+        """
+        # Import here to avoid circular imports
+        from esperanto.model_discovery import PROVIDER_MODELS_REGISTRY
+
+        # Normalize provider name to lowercase
+        provider = provider.lower()
+
+        # Check if provider is supported
+        if provider not in PROVIDER_MODELS_REGISTRY:
+            available = list(PROVIDER_MODELS_REGISTRY.keys())
+            raise ValueError(
+                f"Provider '{provider}' not supported for model discovery. "
+                f"Supported providers: {available}"
+            )
+
+        # Get the discovery function for this provider
+        discovery_func = PROVIDER_MODELS_REGISTRY[provider]
+
+        # For OpenAI, pass model_type as a parameter if provided
+        if provider == "openai" and model_type is not None:
+            config["model_type"] = model_type
+
+        # Call the discovery function with config
+        try:
+            models = discovery_func(**config)
+        except TypeError as e:
+            # If we passed an unexpected parameter, try without it
+            if "unexpected keyword argument" in str(e):
+                # Retry without the problematic parameter
+                models = discovery_func(**{k: v for k, v in config.items() if k != "model_type"})
+            else:
+                raise
+
+        # If model_type filter is specified and provider doesn't support it natively,
+        # we return all models since we can't reliably determine type
+        # (This is a known limitation documented in the spec)
+        return models
 
     @classmethod
     def _create_instance(

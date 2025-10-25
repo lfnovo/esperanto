@@ -260,8 +260,7 @@ class JinaEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "jina"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List available Jina embedding models."""
         return [
             Model(

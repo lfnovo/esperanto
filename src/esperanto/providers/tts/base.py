@@ -1,5 +1,6 @@
 """Base text-to-speech model interface."""
 
+import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -111,9 +112,36 @@ class TextToSpeechModel(TimeoutMixin, ABC):
         pass
 
     @property
-    @abstractmethod
     def models(self) -> List[Model]:
-        """List all available models for this provider."""
+        """List all available models for this provider.
+
+        .. deprecated:: 2.8.0
+            The `.models` property is deprecated and will be removed in version 3.0.
+            Use `AIFactory.get_provider_models(provider_name)` instead for static
+            model discovery without creating provider instances.
+
+        Returns:
+            List[Model]: List of available models
+        """
+        warnings.warn(
+            f"The `.models` property is deprecated and will be removed in version 3.0. "
+            f"Use AIFactory.get_provider_models('{self.provider}') instead for static "
+            f"model discovery without creating provider instances.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return self._get_models()
+
+    @abstractmethod
+    def _get_models(self) -> List[Model]:
+        """Internal method to get available models.
+
+        This method should be implemented by providers. The public `.models` property
+        will emit a deprecation warning and call this method.
+
+        Returns:
+            List[Model]: List of available models
+        """
         pass
 
     def _get_provider_type(self) -> str:

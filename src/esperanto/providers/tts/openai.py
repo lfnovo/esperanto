@@ -124,7 +124,15 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
         return voices
 
     @property
-    def models(self) -> List[Model]:
+    def provider(self) -> str:
+        """Get the provider name."""
+        return self.PROVIDER
+
+    def _get_default_model(self) -> str:
+        """Get the default model name."""
+        return self.DEFAULT_MODEL
+
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         response = self.client.get(
             f"{self.base_url}/models",

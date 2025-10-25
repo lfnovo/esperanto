@@ -157,8 +157,7 @@ class VertexTextToSpeechModel(TextToSpeechModel):
         }
         return voices
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(

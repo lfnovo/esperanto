@@ -67,8 +67,7 @@ class GroqLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Groq API error: {error_message}")
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         response = self.client.get(
             f"{self.base_url}/models",

@@ -49,8 +49,7 @@ class XAILanguageModel(OpenAILanguageModel):
 
         return kwargs
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         response = self.client.get(
             f"{self.base_url}/models",

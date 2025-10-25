@@ -272,8 +272,7 @@ class VoyageRerankerModel(RerankerModel):
         """Provider name."""
         return "voyage"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """Available Voyage reranker models."""
         return [
             Model(

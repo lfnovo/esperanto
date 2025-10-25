@@ -34,8 +34,7 @@ class GroqSpeechToTextModel(OpenAISpeechToTextModel):
         """Get the provider name."""
         return "groq"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
             response = self.client.get(

@@ -560,8 +560,7 @@ class TransformersRerankerModel(RerankerModel):
         """Provider name."""
         return "transformers"
 
-    @property 
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """Available universal transformers reranker models."""
         return [
             # Qwen models (causal_lm strategy)

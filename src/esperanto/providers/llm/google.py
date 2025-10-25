@@ -74,8 +74,7 @@ class GoogleLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Google API error: {error_message}")
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
             response = self.client.get(
