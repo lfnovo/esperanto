@@ -24,7 +24,7 @@ def test_qwen_with_llamacpp_returns_prompt():
     prompt = rendered["prompt"]
 
     assert prompt.startswith("<|im_start|>system")
-    assert prompt.endswith("<out>")
+    assert prompt.endswith("<out>\n")
     assert "</out>" in rendered["stop"]
     assert "<|im_end|>" in rendered["stop"]
 

@@ -54,6 +54,7 @@ class LlamaCppLanguageModel(LanguageModel):
             if value is None:
                 continue
             if key == "max_tokens":
+                kwargs["max_tokens"] = value
                 kwargs["n_predict"] = value
             elif key in {"temperature", "top_p"}:
                 kwargs[key] = value
@@ -66,6 +67,7 @@ class LlamaCppLanguageModel(LanguageModel):
             if key in {"model_name", "streaming", "structured"}:
                 continue
             if key == "max_tokens":
+                kwargs["max_tokens"] = value
                 kwargs["n_predict"] = value
             elif key == "stop":
                 kwargs["stop"] = value

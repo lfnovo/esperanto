@@ -92,7 +92,7 @@ def test_wrap_language_model_uses_prompt_handler_for_local_engines():
 
     call = model.prompt_calls[0]
     assert call["prompt"].startswith("<|im_start|>system")
-    assert call["prompt"].endswith("<out>")
+    assert call["prompt"].endswith("<out>\n")
     assert "</out>" in call["stop"]
     assert "<|im_end|>" in call["stop"]
     assert call["stop_snapshot"] == ["</out>", "<|im_end|>"]
