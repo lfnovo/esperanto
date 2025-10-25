@@ -279,15 +279,11 @@ class VoyageRerankerModel(RerankerModel):
             Model(
                 id="rerank-2",
                 owned_by="voyage",
-                context_window=4000,
-                type="reranker"
-            ),
+                context_window=4000),
             Model(
                 id="rerank-1",
                 owned_by="voyage", 
-                context_window=4000,
-                type="reranker"
-            ),
+                context_window=4000),
         ]
 
     def __del__(self):

@@ -137,7 +137,6 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
                     id=model["id"],
                     owned_by=model.get("owned_by", "custom"),
                     context_window=None,  # Audio models don't have context windows
-                    type="text_to_speech",
                 )
                 for model in models_data.get("data", [])
             ]

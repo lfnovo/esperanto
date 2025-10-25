@@ -165,25 +165,21 @@ class VertexTextToSpeechModel(TextToSpeechModel):
                 id="standard",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
             Model(
                 id="wavenet",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
             Model(
                 id="neural2",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
             Model(
                 id="studio",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
         ]
 

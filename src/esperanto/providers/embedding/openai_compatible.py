@@ -159,7 +159,6 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
                     id=model["id"],
                     owned_by=model.get("owned_by", "custom"),
                     context_window=model.get("context_window", None),
-                    type="embedding",
                 )
                 for model in models_data.get("data", [])
             ]

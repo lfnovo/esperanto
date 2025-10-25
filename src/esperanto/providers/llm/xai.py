@@ -64,7 +64,6 @@ class XAILanguageModel(OpenAILanguageModel):
                 id=model["id"],
                 owned_by="X.AI",
                 context_window=model.get("context_window", None),
-                type="language",
             )
             for model in models_data["data"]
             if model["id"].startswith("grok")  # Only include Grok models

@@ -112,6 +112,5 @@ class MistralEmbeddingModel(EmbeddingModel):
                 id="mistral-embed",
                 owned_by="mistralai",
                 context_window=None, # Typically not specified or relevant for embedding models in this way
-                type="embedding"
             )
         ]

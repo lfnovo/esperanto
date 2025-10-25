@@ -281,8 +281,9 @@ def test_models(stt_model):
     assert len(models) == 2
     assert models[0].id == "faster-whisper-large-v3"
     assert models[1].id == "whisper-1"
-    assert models[0].type == "speech_to_text"
-    assert models[1].type == "speech_to_text"
+    # Model type is None when not explicitly provided by the API
+    assert models[0].type is None
+    assert models[1].type is None
     assert models[0].owned_by == "custom"
     assert models[1].owned_by == "custom"
 

@@ -397,8 +397,9 @@ def test_openai_models(openai_embedding_model):
     assert len(models) == 2
     assert models[0].id == "text-embedding-3-small"
     assert models[1].id == "text-embedding-3-large"
-    assert models[0].type == "embedding"
-    assert models[1].type == "embedding"
+    # Model type is None when not explicitly provided by the API
+    assert models[0].type is None
+    assert models[1].type is None
 
 
 # Tests for Ollama Embedding Provider

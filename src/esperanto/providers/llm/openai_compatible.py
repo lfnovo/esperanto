@@ -207,7 +207,6 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                     id=model["id"],
                     owned_by=model.get("owned_by", "custom"),
                     context_window=model.get("context_window", None),
-                    type="language",
                 )
                 for model in models_data.get("data", [])
             ]

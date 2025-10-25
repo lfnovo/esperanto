@@ -244,4 +244,5 @@ def test_openai_models(mock_httpx_clients):
     # Check that only whisper models are returned
     assert len(models) == 1
     assert models[0].id == "whisper-1"
-    assert models[0].type == "speech_to_text"
+    # Model type is None when not explicitly provided by the API
+    assert models[0].type is None

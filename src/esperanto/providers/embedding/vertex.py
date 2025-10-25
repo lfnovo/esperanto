@@ -185,18 +185,15 @@ class VertexEmbeddingModel(EmbeddingModel):
                 id="text-embedding-005",
                 owned_by="Google",
                 context_window=3072,
-                type="embedding",
             ),
             Model(
                 id="textembedding-gecko",
                 owned_by="Google",
                 context_window=3072,
-                type="embedding",
             ),
             Model(
                 id="textembedding-gecko-multilingual",
                 owned_by="Google",
                 context_window=3072,
-                type="embedding",
             ),
         ]

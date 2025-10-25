@@ -138,9 +138,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             Model(
                 id=model["id"],
                 owned_by=model.get("owned_by", "openai"),
-                context_window=model.get("context_window", None),
-                type="embedding"
-            )
+                context_window=model.get("context_window", None))
             for model in models_data["data"]
-            if model["id"].startswith("text-embedding")
+            if model["id"].startswith("text-embedding")  # Only return embedding models
         ]

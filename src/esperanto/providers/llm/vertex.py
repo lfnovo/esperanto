@@ -116,25 +116,21 @@ class VertexLanguageModel(LanguageModel):
                 id="gemini-2.0-flash",
                 owned_by="Google",
                 context_window=1000000,
-                type="language",
             ),
             Model(
                 id="gemini-1.5-pro",
                 owned_by="Google",
                 context_window=2000000,
-                type="language",
             ),
             Model(
                 id="gemini-1.5-flash",
                 owned_by="Google",
                 context_window=1000000,
-                type="language",
             ),
             Model(
                 id="gemini-pro",
                 owned_by="Google",
                 context_window=30720,
-                type="language",
             ),
         ]
 

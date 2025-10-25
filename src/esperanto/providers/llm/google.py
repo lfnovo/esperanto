@@ -90,17 +90,15 @@ class GoogleLanguageModel(LanguageModel):
                     id=model["name"].split("/")[-1],
                     owned_by="Google",
                     context_window=model.get("inputTokenLimit"),
-                    type="language",
                 )
                 for model in models_data.get("models", [])
-                if "generateContent" in model.get("supportedGenerationMethods", [])
             ]
         except Exception:
             # Fallback to known models if API call fails
             return [
-                Model(id="gemini-2.0-flash", owned_by="Google", context_window=1000000, type="language"),
-                Model(id="gemini-1.5-pro", owned_by="Google", context_window=2000000, type="language"),
-                Model(id="gemini-1.5-flash", owned_by="Google", context_window=1000000, type="language"),
+                Model(id="gemini-2.0-flash", owned_by="Google", context_window=1000000),
+                Model(id="gemini-1.5-pro", owned_by="Google", context_window=2000000),
+                Model(id="gemini-1.5-flash", owned_by="Google", context_window=1000000),
             ]
 
     @property

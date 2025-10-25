@@ -138,7 +138,6 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
                 id=model["id"],
                 owned_by=model.get("owned_by", "openai"),
                 context_window=None,  # Audio models don't have context windows
-                type="text_to_speech"
             )
             for model in models_data["data"]
             if model["id"].startswith("tts")

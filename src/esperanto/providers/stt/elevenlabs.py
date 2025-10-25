@@ -63,13 +63,11 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
                 id="scribe_v1",
                 owned_by="ElevenLabs",
                 context_window=None,  # Audio models don't have context windows
-                type="speech_to_text",
             ),
             Model(
                 id="scribe_v1_experimental",
                 owned_by="ElevenLabs",
                 context_window=None,  # Audio models don't have context windows
-                type="speech_to_text",
             ),
         ]
 

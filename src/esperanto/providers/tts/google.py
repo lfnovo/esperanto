@@ -296,7 +296,6 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                 id="gemini-2.5-flash-preview-tts",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
         ]
 

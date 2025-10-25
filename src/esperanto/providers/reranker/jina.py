@@ -298,15 +298,11 @@ class JinaRerankerModel(RerankerModel):
             Model(
                 id="jina-reranker-v2-base-multilingual",
                 owned_by="jina",
-                context_window=1024,
-                type="reranker"
-            ),
+                context_window=1024),
             Model(
                 id="jina-reranker-v1-base-en",
                 owned_by="jina", 
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
         ]
 
     def __del__(self):

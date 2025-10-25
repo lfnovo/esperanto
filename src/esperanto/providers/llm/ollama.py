@@ -254,7 +254,6 @@ class OllamaLanguageModel(LanguageModel):
                 id=model["name"],
                 owned_by="Ollama",
                 context_window=32768,  # Default context window for most Ollama models
-                type="language",
             )
             for model in models_data.get("models", [])
         ]

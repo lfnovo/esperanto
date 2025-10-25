@@ -82,7 +82,6 @@ class GroqLanguageModel(LanguageModel):
                 id=model["id"],
                 owned_by="Groq",
                 context_window=128000,  # All Groq models currently support 128k context
-                type="language",
             )
             for model in models_data["data"]
         ]

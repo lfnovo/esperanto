@@ -303,7 +303,6 @@ class PerplexityLanguageModel(LanguageModel):
                 id=model_id,
                 owned_by="Perplexity",
                 context_window=None,  # Context window info not readily available
-                type="language",
             )
             for model_id in known_models
         ]

@@ -188,7 +188,6 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
                 id=model["id"],
                 owned_by=model["id"].split("/")[0] if "/" in model["id"] else "OpenRouter",
                 context_window=model.get("context_window", None),
-                type="language",
             )
             for model in models_data["data"]
             if not any(

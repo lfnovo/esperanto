@@ -568,77 +568,53 @@ class TransformersRerankerModel(RerankerModel):
             Model(
                 id="Qwen/Qwen3-Reranker-4B",
                 owned_by="Qwen",
-                context_window=8192,
-                type="reranker"
-            ),
+                context_window=8192),
             Model(
                 id="Qwen/Qwen3-Reranker-0.6B",
                 owned_by="Qwen",
-                context_window=8192,
-                type="reranker"
-            ),
+                context_window=8192),
             # CrossEncoder models (sentence_transformers strategy)
             Model(
                 id="cross-encoder/ms-marco-MiniLM-L-6-v2",
                 owned_by="microsoft",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             Model(
                 id="cross-encoder/ms-marco-electra-base",
                 owned_by="microsoft",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             Model(
                 id="BAAI/bge-reranker-base",
                 owned_by="BAAI",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             Model(
                 id="BAAI/bge-reranker-large",
                 owned_by="BAAI",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             # Mixedbread v1 models (sentence_transformers strategy)
             Model(
                 id="mixedbread-ai/mxbai-rerank-xsmall-v1",
                 owned_by="mixedbread-ai",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             Model(
                 id="mixedbread-ai/mxbai-rerank-base-v1",
                 owned_by="mixedbread-ai",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             Model(
                 id="mixedbread-ai/mxbai-rerank-large-v1",
                 owned_by="mixedbread-ai",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             # Jina models (sequence_classification strategy)
             Model(
                 id="jinaai/jina-reranker-v2-base-multilingual",
                 owned_by="jinaai",
-                context_window=1024,
-                type="reranker"
-            ),
+                context_window=1024),
             # Mixedbread v2 models (mixedbread_v2 strategy)
             Model(
                 id="mixedbread-ai/mxbai-rerank-base-v2",
                 owned_by="mixedbread-ai",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
             Model(
                 id="mixedbread-ai/mxbai-rerank-large-v2",
                 owned_by="mixedbread-ai",
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
         ]
