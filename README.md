@@ -43,7 +43,7 @@ Whether you're building a quick prototype or a production application serving mi
   - Ollama (Local deployment multiple models)
   - Transformers (Universal local models - Qwen, CrossEncoder, BAAI, Jina, Mixedbread)
   - ElevenLabs (Text-to-Speech, Speech-to-Text)
-  - Azure OpenAI (Chat, Embedding)
+  - Azure OpenAI (Chat, Embedding, Whisper, TTS)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
   - Voyage (Embeddings, Reranking)
@@ -124,7 +124,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ❌                | ✅             | ✅             | ❌        |
-| Azure OpenAI | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
+| Azure OpenAI | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 | Mistral      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
@@ -153,8 +153,8 @@ print(providers)
 #     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
-#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs'],
-#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex']
+#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure'],
+#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure']
 # }
 
 # Create model instances

@@ -260,9 +260,8 @@ def vertex_embedding_model(mock_vertex_client):
 class TestEmbeddingModel(EmbeddingModel):
     """Test implementation of EmbeddingModel."""
 
-    @property
-    def models(self):
-        """List all available models for this provider."""
+    def _get_models(self):
+        """Get available models (internal method)."""
         return []
 
     @property

@@ -5,9 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.8.0] - 2025-01-XX
+## [2.8.0] - 2025-10-25
 
 ### Added
+
+- **Azure OpenAI Speech-to-Text Support** - Added Whisper model support via Azure deployments
+  - Direct HTTP implementation using httpx (no SDK dependencies)
+  - Modality-specific environment variables: `AZURE_OPENAI_API_KEY_STT`, `AZURE_OPENAI_ENDPOINT_STT`, `AZURE_OPENAI_API_VERSION_STT`
+  - Fallback to generic Azure environment variables
+  - Full async support with `transcribe()` and `atranscribe()` methods
+  - Example:
+    ```python
+    model = AIFactory.create_speech_to_text("azure", "whisper-deployment")
+    response = model.transcribe("audio.mp3")
+    ```
+
+- **Azure OpenAI Text-to-Speech Support** - Added TTS model support via Azure deployments
+  - Direct HTTP implementation using httpx (no SDK dependencies)
+  - Modality-specific environment variables: `AZURE_OPENAI_API_KEY_TTS`, `AZURE_OPENAI_ENDPOINT_TTS`, `AZURE_OPENAI_API_VERSION_TTS`
+  - Fallback to generic Azure environment variables
+  - Supports all OpenAI voices: alloy, echo, fable, onyx, nova, shimmer
+  - Full async support with `generate_speech()` and `agenerate_speech()` methods
+  - Example:
+    ```python
+    model = AIFactory.create_text_to_speech("azure", "tts-deployment")
+    response = model.generate_speech("Hello!", voice="alloy")
+    ```
 
 - **Static Model Discovery** - New `AIFactory.get_provider_models()` method for discovering available models without creating provider instances
   - Supports all 15 providers with intelligent caching (1-hour TTL)

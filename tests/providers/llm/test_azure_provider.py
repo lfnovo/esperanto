@@ -6,15 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Assuming openai.types.chat objects are used for mocking responses
-from openai.types.chat import ChatCompletion as OpenAIChatCompletion
-from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
-from openai.types.chat.chat_completion import Choice as OpenAIChoice
-from openai.types.chat.chat_completion_chunk import Choice as OpenAIChunkChoice
-from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from openai.types.chat.chat_completion_message import ChatCompletionMessage
-from openai.types.completion_usage import CompletionUsage
-
 from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
@@ -33,56 +24,41 @@ def mock_env_vars(monkeypatch):
 
 @pytest.fixture
 def azure_model(mock_env_vars):
-    """Return an AzureLanguageModel instance with mocked clients."""
-    with patch("openai.AzureOpenAI") as MockAzureOpenAI, \
-         patch("openai.AsyncAzureOpenAI") as MockAsyncAzureOpenAI:
-        
-        # Configure the mock clients
-        mock_client = MockAzureOpenAI.return_value
-        mock_async_client = MockAsyncAzureOpenAI.return_value
+    """Return an AzureLanguageModel instance with mocked httpx clients."""
+    # Mock httpx response for non-streaming
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "id": "chatcmpl-test123",
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": "Hello from Azure!",
+                    "role": "assistant"
+                }
+            }
+        ],
+        "created": 1677652288,
+        "model": "gpt-35-turbo",
+        "usage": {"completion_tokens": 5, "prompt_tokens": 10, "total_tokens": 15}
+    }
 
-        # Mock the .chat.completions.create methods
-        mock_client.chat.completions.create = MagicMock(
-            return_value=OpenAIChatCompletion(
-                id="chatcmpl-test123",
-                choices=[
-                    OpenAIChoice(
-                        finish_reason="stop",
-                        index=0,
-                        message=ChatCompletionMessage(
-                            content="Hello from Azure!", role="assistant"
-                        ),
-                    )
-                ],
-                created=1677652288,
-                model="gpt-35-turbo", # This is the underlying model, not deployment
-                object="chat.completion",
-                usage=CompletionUsage(completion_tokens=5, prompt_tokens=10, total_tokens=15),
-            )
-        )
-        mock_async_client.chat.completions.create = AsyncMock(
-            return_value=OpenAIChatCompletion(
-                id="chatcmpl-testasync123",
-                choices=[
-                    OpenAIChoice(
-                        finish_reason="stop",
-                        index=0,
-                        message=ChatCompletionMessage(
-                            content="Hello from async Azure!", role="assistant"
-                        ),
-                    )
-                ],
-                created=1677652289,
-                model="gpt-35-turbo",
-                object="chat.completion",
-                usage=CompletionUsage(completion_tokens=6, prompt_tokens=11, total_tokens=17),
-            )
-        )
-        
-        model = AzureLanguageModel(model_name="test-deployment") # model_name is deployment name
-        model.client = mock_client
-        model.async_client = mock_async_client
-        return model
+    # Mock the httpx clients
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_response
+    mock_client.stream = MagicMock()  # For streaming tests
+    mock_async_client = MagicMock()
+    mock_async_client.post = AsyncMock(return_value=mock_response)
+    mock_async_client.stream = MagicMock()  # For streaming tests
+
+    # Create model and replace clients before any HTTP calls
+    with patch('httpx.Client', return_value=mock_client), \
+         patch('httpx.AsyncClient', return_value=mock_async_client):
+        model = AzureLanguageModel(model_name="test-deployment")
+
+    return model
 
 # --- Test Cases ---
 
@@ -148,14 +124,19 @@ def test_models_property(azure_model):
 
 def test_chat_complete_non_streaming(azure_model):
     messages = [{"role": "user", "content": "Hello Azure!"}]
-    response = azure_model.chat_complete(messages)
+    # Explicitly pass stream=False to avoid returning a generator
+    response = azure_model.chat_complete(messages, stream=False)
 
-    azure_model.client.chat.completions.create.assert_called_once()
-    call_args = azure_model.client.chat.completions.create.call_args[1]
-    
-    assert call_args["model"] == "test-deployment" # Should be deployment name
-    assert call_args["messages"] == messages
-    assert not call_args.get("stream", False)
+    azure_model.client.post.assert_called_once()
+    call_args = azure_model.client.post.call_args
+
+    # Check URL was built correctly
+    assert "deployments/test-deployment/chat/completions" in call_args[0][0]
+
+    # Check request payload
+    _, kwargs = call_args
+    assert kwargs['json']['messages'] == messages
+    assert kwargs['json']['stream'] == False
 
     assert isinstance(response, ChatCompletion)
     assert response.id == "chatcmpl-test123"
@@ -169,46 +150,51 @@ async def test_achat_complete_non_streaming(azure_model):
     messages = [{"role": "user", "content": "Hello async Azure!"}]
     response = await azure_model.achat_complete(messages)
 
-    azure_model.async_client.chat.completions.create.assert_called_once()
-    call_args = azure_model.async_client.chat.completions.create.call_args[1]
+    azure_model.async_client.post.assert_called_once()
+    call_args = azure_model.async_client.post.call_args
 
-    assert call_args["model"] == "test-deployment"
-    assert call_args["messages"] == messages
-    assert not call_args.get("stream", False)
+    # Check URL was built correctly
+    assert "deployments/test-deployment/chat/completions" in call_args[0][0]
+
+    # Check request payload
+    _, kwargs = call_args
+    assert kwargs['json']['messages'] == messages
+    assert kwargs['json']['stream'] == False
 
     assert isinstance(response, ChatCompletion)
-    assert response.id == "chatcmpl-testasync123"
-    assert response.choices[0].message.content == "Hello from async Azure!"
+    assert response.id == "chatcmpl-test123"
+    assert response.choices[0].message.content == "Hello from Azure!"
     assert response.model == "gpt-35-turbo"
     assert response.provider == "azure"
-    assert response.usage.total_tokens == 17
+    assert response.usage.total_tokens == 15
 
 
 def test_chat_complete_streaming(azure_model):
     messages = [{"role": "user", "content": "Stream Azure hello!"}]
-    
-    # Mock streaming response
-    mock_stream_chunk = OpenAIChatCompletionChunk(
-        id="chatcmpl-stream-test",
-        choices=[
-            OpenAIChunkChoice(
-                delta=ChoiceDelta(content="Hello ", role="assistant"), 
-                index=0, 
-                finish_reason=None
-            )
-        ],
-        created=1677652290,
-        model="gpt-35-turbo",
-        object="chat.completion.chunk",
-    )
-    azure_model.client.chat.completions.create.return_value = [mock_stream_chunk]
+
+    # Mock streaming response using httpx SSE format
+    mock_stream_response = MagicMock()
+    mock_stream_response.status_code = 200
+    mock_stream_response.iter_text.return_value = [
+        'data: {"id":"chatcmpl-stream-test","choices":[{"index":0,"delta":{"content":"Hello ","role":"assistant"},"finish_reason":null}],"created":1677652290,"model":"gpt-35-turbo"}\n\n',
+        'data: [DONE]\n\n'
+    ]
+
+    # Mock the stream context manager
+    mock_stream_context = MagicMock()
+    mock_stream_context.__enter__.return_value = mock_stream_response
+    mock_stream_context.__exit__.return_value = None
+    azure_model.client.stream.return_value = mock_stream_context
 
     response_gen = azure_model.chat_complete(messages, stream=True)
     responses = list(response_gen)
 
-    azure_model.client.chat.completions.create.assert_called_once()
-    call_args = azure_model.client.chat.completions.create.call_args[1]
-    assert call_args["stream"]
+    azure_model.client.stream.assert_called_once()
+    call_args = azure_model.client.stream.call_args
+
+    # Check it was called with POST and correct URL
+    assert call_args[0][0] == "POST"
+    assert "deployments/test-deployment/chat/completions" in call_args[0][1]
 
     assert len(responses) == 1
     chunk = responses[0]
@@ -221,32 +207,31 @@ def test_chat_complete_streaming(azure_model):
 async def test_achat_complete_streaming(azure_model):
     messages = [{"role": "user", "content": "Stream async Azure hello!"}]
 
-    mock_stream_chunk = OpenAIChatCompletionChunk(
-        id="chatcmpl-asyncstream-test",
-        choices=[
-            OpenAIChunkChoice(
-                delta=ChoiceDelta(content="Async Hello ", role="assistant"), 
-                index=0, 
-                finish_reason=None
-            )
-        ],
-        created=1677652291,
-        model="gpt-35-turbo",
-        object="chat.completion.chunk",
-    )
-    
-    # Mock async generator for streaming
-    async def mock_async_gen():
-        yield mock_stream_chunk
+    # Mock async streaming response using httpx SSE format
+    mock_stream_response = MagicMock()
+    mock_stream_response.status_code = 200
 
-    azure_model.async_client.chat.completions.create.return_value = mock_async_gen()
+    async def mock_aiter_text():
+        yield 'data: {"id":"chatcmpl-asyncstream-test","choices":[{"index":0,"delta":{"content":"Async Hello ","role":"assistant"},"finish_reason":null}],"created":1677652291,"model":"gpt-35-turbo"}\n\n'
+        yield 'data: [DONE]\n\n'
+
+    mock_stream_response.aiter_text.return_value = mock_aiter_text()
+
+    # Mock the async stream context manager
+    mock_stream_context = MagicMock()
+    mock_stream_context.__aenter__ = AsyncMock(return_value=mock_stream_response)
+    mock_stream_context.__aexit__ = AsyncMock(return_value=None)
+    azure_model.async_client.stream.return_value = mock_stream_context
 
     response_gen = await azure_model.achat_complete(messages, stream=True)
     responses = [chunk async for chunk in response_gen]
 
-    azure_model.async_client.chat.completions.create.assert_called_once()
-    call_args = azure_model.async_client.chat.completions.create.call_args[1]
-    assert call_args["stream"]
+    azure_model.async_client.stream.assert_called_once()
+    call_args = azure_model.async_client.stream.call_args
+
+    # Check it was called with POST and correct URL
+    assert call_args[0][0] == "POST"
+    assert "deployments/test-deployment/chat/completions" in call_args[0][1]
 
     assert len(responses) == 1
     chunk = responses[0]

@@ -6,6 +6,7 @@ Text-to-speech (TTS) models convert written text into natural-sounding audio spe
 
 - **OpenAI** (TTS-1, TTS-1-HD models)
 - **OpenAI-Compatible** (Custom endpoints following OpenAI API format)
+- **Azure OpenAI** (TTS models via Azure deployments)
 - **ElevenLabs** (Multilingual and specialized voice models)
 - **Google Cloud** (Standard and Neural2 models)
 - **Vertex AI** (Google Cloud text-to-speech models)
@@ -383,6 +384,74 @@ response = tts.generate_speech("Test audio", voice="test-voice")
 - **Timeouts**: The provider uses 30-second timeouts for HTTP requests
 
 ## Provider-Specific Information
+
+### Azure OpenAI Configuration
+
+Azure OpenAI provides access to TTS models through Azure deployments. The provider uses direct HTTP communication via httpx for optimal performance.
+
+**Environment Variables:**
+- `AZURE_OPENAI_API_KEY_TTS` or `AZURE_OPENAI_API_KEY`: Your Azure API key (required)
+- `AZURE_OPENAI_ENDPOINT_TTS` or `AZURE_OPENAI_ENDPOINT`: Your Azure endpoint URL (required)
+- `AZURE_OPENAI_API_VERSION_TTS` or `AZURE_OPENAI_API_VERSION`: API version (required)
+
+**Configuration Priority:**
+The provider uses modality-specific environment variables with fallback to generic ones:
+
+1. Direct parameters (config dictionary or constructor arguments)
+2. Modality-specific variables: `AZURE_OPENAI_*_TTS`
+3. Generic variables: `AZURE_OPENAI_*`
+
+**Configuration:**
+```bash
+# Required environment variables
+export AZURE_OPENAI_API_KEY_TTS="your-azure-api-key"
+export AZURE_OPENAI_ENDPOINT_TTS="https://your-resource.openai.azure.com/"
+export AZURE_OPENAI_API_VERSION_TTS="2024-02-01"
+```
+
+**Example:**
+```python
+from esperanto.factory import AIFactory
+
+# Using environment variables
+model = AIFactory.create_text_to_speech("azure", "tts-1")
+
+# Or using config dictionary
+model = AIFactory.create_text_to_speech(
+    "azure",
+    "tts-1",
+    config={
+        "api_key": "your-azure-api-key",
+        "azure_endpoint": "https://your-resource.openai.azure.com/",
+        "api_version": "2024-02-01"
+    }
+)
+
+response = model.generate_speech(
+    text="Hello from Azure Text-to-Speech!",
+    voice="alloy",
+    output_file="greeting.mp3"
+)
+```
+
+**Available Voices:**
+Azure OpenAI TTS supports the same voices as OpenAI:
+- `alloy`: Balanced, neutral voice
+- `echo`: Male voice with clarity
+- `fable`: British accent, storytelling tone
+- `onyx`: Deep, authoritative male voice
+- `nova`: Young, energetic female voice
+- `shimmer`: Warm, expressive female voice
+
+**Deployment Names:**
+In Azure OpenAI, the `model_name` parameter corresponds to your deployment name, not the underlying model name. Make sure to use the deployment name you configured in your Azure OpenAI resource.
+
+```python
+# Example: If your Azure deployment is named "my-tts-deployment"
+model = AIFactory.create_text_to_speech("azure", "my-tts-deployment")
+```
+
+**Note:** Azure TTS uses the same API structure as OpenAI but requires Azure-specific authentication and endpoint configuration. All features like async generation and custom parameters work the same way as the OpenAI provider.
 
 ### Google (GenAI) Configuration
 
