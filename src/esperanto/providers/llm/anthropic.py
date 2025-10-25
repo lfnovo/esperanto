@@ -73,8 +73,7 @@ class AnthropicLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Anthropic API error: {error_message}")
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
             response = self.client.get(
@@ -89,7 +88,6 @@ class AnthropicLanguageModel(LanguageModel):
                     id=model["id"],
                     owned_by="Anthropic",
                     context_window=model.get("max_tokens", 200000),
-                    type="language",
                 )
                 for model in models_data.get("data", [])
             ]
@@ -100,25 +98,21 @@ class AnthropicLanguageModel(LanguageModel):
                     id="claude-3-7-sonnet-20250219",
                     owned_by="Anthropic",
                     context_window=200000,
-                    type="language",
                 ),
                 Model(
                     id="claude-3-opus-20240229",
                     owned_by="Anthropic",
                     context_window=200000,
-                    type="language",
                 ),
                 Model(
                     id="claude-3-sonnet-20240229",
                     owned_by="Anthropic",
                     context_window=200000,
-                    type="language",
                 ),
                 Model(
                     id="claude-3-haiku-20240307",
                     owned_by="Anthropic",
                     context_window=200000,
-                    type="language",
                 ),
             ]
 

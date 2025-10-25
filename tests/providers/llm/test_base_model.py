@@ -11,9 +11,8 @@ from esperanto.common_types import ChatCompletion, ChatCompletionChunk
 class TestLanguageModel(LanguageModel):
     """Test implementation of LanguageModel."""
 
-    @property
-    def models(self):
-        """List all available models for this provider."""
+    def _get_models(self):
+        """Get available models (internal method)."""
         return []
 
     @property

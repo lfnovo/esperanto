@@ -283,8 +283,7 @@ class PerplexityLanguageModel(LanguageModel):
         response_data = response.json()
         return self._normalize_response(response_data)
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider.
         Note: Perplexity API docs don't specify a models endpoint.
         Hardcoding based on known models from docs.
@@ -303,7 +302,6 @@ class PerplexityLanguageModel(LanguageModel):
                 id=model_id,
                 owned_by="Perplexity",
                 context_window=None,  # Context window info not readily available
-                type="language",
             )
             for model_id in known_models
         ]

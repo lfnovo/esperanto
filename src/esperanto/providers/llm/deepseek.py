@@ -29,7 +29,7 @@ class DeepSeekLanguageModel(OpenAILanguageModel):
     def __post_init__(self):
         # Initialize DeepSeek-specific configuration
         self.base_url = self.base_url or os.getenv(
-            "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
+            "DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"
         )
         self.api_key = self.api_key or os.getenv("DEEPSEEK_API_KEY")
         self.model_name = self.model_name or "deepseek-chat"

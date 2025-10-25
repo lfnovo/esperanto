@@ -639,44 +639,37 @@ class TransformersEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "transformers"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(
                 id="Qwen/Qwen3-Embedding-4B",
                 owned_by="Alibaba Cloud",
                 context_window=8192,
-                type="embedding",
             ),
             Model(
                 id="intfloat/multilingual-e5-large-instruct",
                 owned_by="Microsoft",
                 context_window=1024,
-                type="embedding",
             ),
             Model(
                 id="sentence-transformers/all-MiniLM-L6-v2",
                 owned_by="Sentence Transformers",
                 context_window=256,
-                type="embedding",
             ),
             Model(
                 id="bert-base-uncased",
                 owned_by="Google",
                 context_window=512,
-                type="embedding",
             ),
             Model(
                 id="intfloat/e5-large-v2",
                 owned_by="Microsoft",
                 context_window=512,
-                type="embedding",
             ),
             Model(
                 id="BAAI/bge-large-en-v1.5",
                 owned_by="BAAI",
                 context_window=512,
-                type="embedding",
             ),
         ]

@@ -171,8 +171,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         """Get the provider name."""
         return "openrouter"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         headers = self._get_headers()
         
@@ -188,7 +187,6 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
                 id=model["id"],
                 owned_by=model["id"].split("/")[0] if "/" in model["id"] else "OpenRouter",
                 context_window=model.get("context_window", None),
-                type="language",
             )
             for model in models_data["data"]
             if not any(

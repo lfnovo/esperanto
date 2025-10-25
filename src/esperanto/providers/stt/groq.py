@@ -34,8 +34,7 @@ class GroqSpeechToTextModel(OpenAISpeechToTextModel):
         """Get the provider name."""
         return "groq"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
             response = self.client.get(
@@ -50,7 +49,6 @@ class GroqSpeechToTextModel(OpenAISpeechToTextModel):
                     id=model["id"],
                     owned_by="Groq",
                     context_window=None,  # Audio models don't have context windows
-                    type="speech_to_text",
                 )
                 for model in models_data["data"]
                 if model["id"].startswith("whisper")

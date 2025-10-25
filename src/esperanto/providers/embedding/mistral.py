@@ -101,8 +101,7 @@ class MistralEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "mistral"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List available Mistral embedding models.
         Note: Mistral's API does not provide a dynamic model listing endpoint for embeddings specifically.
         """
@@ -112,6 +111,5 @@ class MistralEmbeddingModel(EmbeddingModel):
                 id="mistral-embed",
                 owned_by="mistralai",
                 context_window=None, # Typically not specified or relevant for embedding models in this way
-                type="embedding"
             )
         ]

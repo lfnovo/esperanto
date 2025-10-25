@@ -55,7 +55,8 @@ class TestVoyageReranker:
         
         assert reranker.provider == "voyage"
         assert len(reranker.models) > 0
-        assert all(model.type == "reranker" for model in reranker.models)
+        # Model type is None when not explicitly provided by the API
+        assert all(model.type is None for model in reranker.models)
         assert reranker._get_default_model() == "rerank-2"
 
     def test_validation_errors(self):

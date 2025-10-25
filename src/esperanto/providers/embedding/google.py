@@ -212,8 +212,7 @@ class GoogleEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "google"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
             response = self.client.get(
@@ -228,14 +227,12 @@ class GoogleEmbeddingModel(EmbeddingModel):
                     id=model["name"].split("/")[-1],
                     owned_by="Google",
                     context_window=model.get("inputTokenLimit"),
-                    type="embedding",
                 )
                 for model in models_data.get("models", [])
-                if "embedContent" in model.get("supportedGenerationMethods", [])
             ]
         except Exception:
             # Fallback to known models if API call fails
             return [
-                Model(id="text-embedding-004", owned_by="Google", context_window=2048, type="embedding"),
-                Model(id="embedding-001", owned_by="Google", context_window=2048, type="embedding"),
+                Model(id="text-embedding-004", owned_by="Google", context_window=2048),
+                Model(id="embedding-001", owned_by="Google", context_window=2048),
             ]

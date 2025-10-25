@@ -194,7 +194,8 @@ class TestJinaEmbeddingModel:
         assert len(models) > 0
         assert any(m.id == "jina-embeddings-v4" for m in models)
         assert any(m.id == "jina-embeddings-v3" for m in models)
-        assert all(m.type == "embedding" for m in models)
+        # Model type is None when not explicitly provided by the API
+        assert all(m.type is None for m in models)
 
     def test_text_cleaning(self):
         """Test text cleaning is applied."""

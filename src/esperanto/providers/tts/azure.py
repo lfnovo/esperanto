@@ -1,26 +1,26 @@
-"""OpenAI Text-to-Speech provider implementation."""
+"""Azure OpenAI Text-to-Speech provider implementation."""
+
 import os
-import asyncio
 from pathlib import Path
-from typing import Optional, Union, Dict, Any, List
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 
-from .base import TextToSpeechModel, AudioResponse, Voice, Model
+from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
 
-class OpenAITextToSpeechModel(TextToSpeechModel):
-    """OpenAI Text-to-Speech provider implementation.
-    
-    Supports the TTS-1 model with multiple voice options.
+class AzureTextToSpeechModel(TextToSpeechModel):
+    """Azure OpenAI Text-to-Speech implementation using direct HTTP.
+
+    Supports Azure OpenAI TTS deployments with multiple voice options.
     Available voices: alloy, echo, fable, onyx, nova, shimmer
     """
-    
+
     DEFAULT_MODEL = "tts-1"
     DEFAULT_VOICE = "alloy"
     AVAILABLE_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
-    PROVIDER = "openai"
-    
+    PROVIDER = "azure"
+
     def __init__(
         self,
         model_name: str = DEFAULT_MODEL,
@@ -28,37 +28,78 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
         base_url: Optional[str] = None,
         **kwargs
     ):
-        """Initialize OpenAI TTS provider.
-        
+        """Initialize Azure TTS provider.
+
         Args:
-            model_name: Name of the model to use (default: tts-1)
-            api_key: OpenAI API key. If not provided, will try to get from OPENAI_API_KEY env var
-            base_url: Optional base URL for the API
+            model_name: Name of the Azure deployment to use
+            api_key: Azure API key. If not provided, will try env vars
+            base_url: Azure endpoint URL
             **kwargs: Additional configuration options
         """
         super().__init__(
             model_name=model_name,
-            api_key=api_key or os.getenv("OPENAI_API_KEY"),
+            api_key=api_key,
             base_url=base_url,
             config=kwargs
         )
-        
-        # Set base URL
-        self.base_url = self.base_url or "https://api.openai.com/v1"
-        
+
+        # Resolve configuration with priority: config dict → modality env var → generic env var
+        self.api_key = (
+            self.api_key or
+            self._config.get("api_key") or
+            os.getenv("AZURE_OPENAI_API_KEY_TTS") or
+            os.getenv("AZURE_OPENAI_API_KEY")
+        )
+
+        self.azure_endpoint = (
+            self.base_url or
+            self._config.get("azure_endpoint") or
+            os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or
+            os.getenv("AZURE_OPENAI_ENDPOINT")
+        )
+
+        self.api_version = (
+            self._config.get("api_version") or
+            os.getenv("AZURE_OPENAI_API_VERSION_TTS") or
+            os.getenv("AZURE_OPENAI_API_VERSION")
+        )
+
+        # deployment_name is model_name for Azure
+        self.deployment_name = self.model_name or self._get_default_model()
+
+        # Validate required parameters
+        if not self.api_key:
+            raise ValueError(
+                "Azure OpenAI API key not found. Set AZURE_OPENAI_API_KEY_TTS "
+                "or AZURE_OPENAI_API_KEY environment variable, or provide in config."
+            )
+        if not self.azure_endpoint:
+            raise ValueError(
+                "Azure OpenAI endpoint not found. Set AZURE_OPENAI_ENDPOINT_TTS "
+                "or AZURE_OPENAI_ENDPOINT environment variable, or provide in config."
+            )
+        if not self.api_version:
+            raise ValueError(
+                "Azure OpenAI API version not found. Set AZURE_OPENAI_API_VERSION_TTS "
+                "or AZURE_OPENAI_API_VERSION environment variable, or provide in config."
+            )
+
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
 
     def _get_headers(self) -> Dict[str, str]:
-        """Get headers for OpenAI API requests."""
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
+        """Get headers for Azure API requests."""
+        return {
+            "api-key": self.api_key,  # Azure uses api-key, not Bearer
             "Content-Type": "application/json",
         }
-        # Organization is optional for TTS models
-        if hasattr(self, 'organization') and self.organization:
-            headers["OpenAI-Organization"] = self.organization
-        return headers
+
+    def _build_url(self, path: str) -> str:
+        """Build Azure OpenAI URL with deployment name."""
+        # Remove trailing slash from endpoint
+        endpoint = self.azure_endpoint.rstrip('/')
+        # Azure URL pattern: {endpoint}/openai/deployments/{deployment}/{path}?api-version={version}
+        return f"{endpoint}/openai/deployments/{self.deployment_name}/{path}?api-version={self.api_version}"
 
     def _handle_error(self, response: httpx.Response) -> None:
         """Handle HTTP error responses."""
@@ -68,11 +109,11 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
                 error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
             except Exception:
                 error_message = f"HTTP {response.status_code}: {response.text}"
-            raise RuntimeError(f"OpenAI API error: {error_message}")
+            raise RuntimeError(f"Azure OpenAI API error: {error_message}")
 
     @property
     def available_voices(self) -> Dict[str, Voice]:
-        """Get available voices from OpenAI TTS.
+        """Get available voices from Azure OpenAI TTS.
 
         Returns:
             Dict[str, Voice]: Dictionary of available voices with their information
@@ -133,23 +174,12 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
         return self.DEFAULT_MODEL
 
     def _get_models(self) -> List[Model]:
-        """List all available models for this provider."""
-        response = self.client.get(
-            f"{self.base_url}/models",
-            headers=self._get_headers()
-        )
-        self._handle_error(response)
-        
-        models_data = response.json()
-        return [
-            Model(
-                id=model["id"],
-                owned_by=model.get("owned_by", "openai"),
-                context_window=None,  # Audio models don't have context windows
-            )
-            for model in models_data["data"]
-            if model["id"].startswith("tts")
-        ]
+        """List all available models for this provider.
+
+        Note: Azure doesn't have a models API endpoint - it uses deployments.
+        Returns an empty list since model discovery isn't available.
+        """
+        return []
 
     def generate_speech(
         self,
@@ -158,13 +188,13 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
         output_file: Optional[Union[str, Path]] = None,
         **kwargs
     ) -> AudioResponse:
-        """Generate speech from text using OpenAI's Text-to-Speech API.
+        """Generate speech from text using Azure OpenAI TTS.
 
         Args:
             text: Text to convert to speech
             voice: Voice to use (default: "alloy")
             output_file: Optional path to save the audio file
-            **kwargs: Additional parameters to pass to the OpenAI API
+            **kwargs: Additional parameters to pass to the Azure API
 
         Returns:
             AudioResponse containing the audio data and metadata
@@ -173,9 +203,11 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            url = self._build_url("audio/speech")
+
             # Prepare request payload
             payload = {
-                "model": self.model_name,
+                "model": self.deployment_name,
                 "voice": voice,
                 "input": text,
                 **kwargs
@@ -183,7 +215,7 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
 
             # Generate speech
             response = self.client.post(
-                f"{self.base_url}/audio/speech",
+                url,
                 headers=self._get_headers(),
                 json=payload
             )
@@ -191,7 +223,7 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
 
             # Get audio data (binary content)
             audio_data = response.content
-            
+
             # Save to file if specified
             if output_file:
                 output_file = Path(output_file)
@@ -201,7 +233,7 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             return AudioResponse(
                 audio_data=audio_data,
                 content_type="audio/mp3",
-                model=self.model_name,
+                model=self.deployment_name,
                 voice=voice,
                 provider=self.PROVIDER,
                 metadata={"text": text}
@@ -217,13 +249,13 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
         output_file: Optional[Union[str, Path]] = None,
         **kwargs
     ) -> AudioResponse:
-        """Generate speech from text using OpenAI's Text-to-Speech API asynchronously.
+        """Generate speech from text using Azure OpenAI TTS asynchronously.
 
         Args:
             text: Text to convert to speech
             voice: Voice to use (default: "alloy")
             output_file: Optional path to save the audio file
-            **kwargs: Additional parameters to pass to the OpenAI API
+            **kwargs: Additional parameters to pass to the Azure API
 
         Returns:
             AudioResponse containing the audio data and metadata
@@ -232,9 +264,11 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            url = self._build_url("audio/speech")
+
             # Prepare request payload
             payload = {
-                "model": self.model_name,
+                "model": self.deployment_name,
                 "voice": voice,
                 "input": text,
                 **kwargs
@@ -242,7 +276,7 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
 
             # Generate speech
             response = await self.async_client.post(
-                f"{self.base_url}/audio/speech",
+                url,
                 headers=self._get_headers(),
                 json=payload
             )
@@ -250,7 +284,7 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
 
             # Get audio data (binary content)
             audio_data = response.content
-            
+
             # Save to file if specified
             if output_file:
                 output_file = Path(output_file)
@@ -260,7 +294,7 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             return AudioResponse(
                 audio_data=audio_data,
                 content_type="audio/mp3",
-                model=self.model_name,
+                model=self.deployment_name,
                 voice=voice,
                 provider=self.PROVIDER,
                 metadata={"text": text}

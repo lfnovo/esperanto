@@ -157,33 +157,28 @@ class VertexTextToSpeechModel(TextToSpeechModel):
         }
         return voices
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(
                 id="standard",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
             Model(
                 id="wavenet",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
             Model(
                 id="neural2",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
             Model(
                 id="studio",
                 owned_by="Google",
                 context_window=None,
-                type="text_to_speech",
             ),
         ]
 

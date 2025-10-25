@@ -302,8 +302,9 @@ def test_models(tts_model):
     assert len(models) == 2
     assert models[0].id == "piper-tts"
     assert models[1].id == "parler-tts"
-    assert models[0].type == "text_to_speech"
-    assert models[1].type == "text_to_speech"
+    # Model type is None when not explicitly provided by the API
+    assert models[0].type is None
+    assert models[1].type is None
     assert models[0].owned_by == "custom"
     assert models[1].owned_by == "custom"
 

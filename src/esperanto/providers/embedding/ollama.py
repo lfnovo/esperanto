@@ -157,8 +157,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "ollama"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
             response = self.client.get(
@@ -173,7 +172,6 @@ class OllamaEmbeddingModel(EmbeddingModel):
                     id=model["name"],
                     owned_by="Ollama",
                     context_window=32768,  # Default context window for Ollama
-                    type="embedding"
                 )
                 for model in models_data.get("models", [])
             ]

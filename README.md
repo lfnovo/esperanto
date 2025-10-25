@@ -43,7 +43,7 @@ Whether you're building a quick prototype or a production application serving mi
   - Ollama (Local deployment multiple models)
   - Transformers (Universal local models - Qwen, CrossEncoder, BAAI, Jina, Mixedbread)
   - ElevenLabs (Text-to-Speech, Speech-to-Text)
-  - Azure OpenAI (Chat, Embedding)
+  - Azure OpenAI (Chat, Embedding, Whisper, TTS)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
   - Voyage (Embeddings, Reranking)
@@ -63,6 +63,7 @@ For detailed information about our providers, check out:
 - [Reranking Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/rerank.md)
 - [Speech-to-Text Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/speech_to_text.md)
 - [Text-to-Speech Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/text_to_speech.md)
+- **[CHANGELOG](https://github.com/lfnovo/esperanto/blob/main/CHANGELOG.md)** - Version history and migration guides
 
 ## Installation 🚀
 
@@ -123,7 +124,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ❌                | ✅             | ✅             | ❌        |
-| Azure OpenAI | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
+| Azure OpenAI | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 | Mistral      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
@@ -152,8 +153,8 @@ print(providers)
 #     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
-#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs'],
-#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex']
+#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure'],
+#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure']
 # }
 
 # Create model instances
@@ -180,6 +181,64 @@ embeddings = embedder.embed(texts)
 # Async usage
 embeddings = await embedder.aembed(texts)
 ```
+
+### Model Discovery 🔍
+
+Esperanto provides a convenient way to discover available models from providers without creating instances:
+
+```python
+from esperanto.factory import AIFactory
+
+# Discover available models from OpenAI
+models = AIFactory.get_provider_models("openai", api_key="your-api-key")
+for model in models:
+    print(f"{model.id} - owned by {model.owned_by}")
+
+# Filter by model type (for providers like OpenAI that support multiple types)
+language_models = AIFactory.get_provider_models(
+    "openai",
+    api_key="your-api-key",
+    model_type="language"  # Options: 'language', 'embedding', 'speech_to_text', 'text_to_speech'
+)
+
+# Some providers return hardcoded lists (e.g., Anthropic)
+claude_models = AIFactory.get_provider_models("anthropic")
+for model in claude_models:
+    print(f"{model.id} - Context: {model.context_window} tokens")
+
+# Example output:
+# claude-3-5-sonnet-20241022 - Context: 200000 tokens
+# claude-3-5-haiku-20241022 - Context: 200000 tokens
+# claude-3-opus-20240229 - Context: 200000 tokens
+
+# OpenAI-compatible endpoints (requires base_url)
+local_models = AIFactory.get_provider_models(
+    "openai-compatible",
+    base_url="http://localhost:1234/v1"  # LM Studio, vLLM, etc.
+)
+for model in local_models:
+    print(f"{model.id} - {model.owned_by}")
+```
+
+**Benefits of Static Discovery:**
+- ✅ **No instance creation required** - Query models without setting up providers
+- ✅ **Cached results** - Model lists are cached for 1 hour to reduce API calls
+- ✅ **Flexible configuration** - Pass provider-specific config (API keys, base URLs, etc.)
+- ✅ **Type filtering** - Filter models by type for multi-model providers
+
+**Supported Providers:**
+- **OpenAI** - Fetches models via API (supports type filtering)
+- **OpenAI-Compatible** - Fetches models from any OpenAI-compatible endpoint (LM Studio, vLLM, etc.)
+- **Anthropic** - Returns hardcoded list of Claude models
+- **Google/Gemini** - Fetches models via API
+- **Groq** - Fetches models via API
+- **Mistral** - Fetches models via API
+- **Ollama** - Fetches locally available models
+- **Jina** - Returns hardcoded list of embedding/reranking models
+- **Voyage** - Returns hardcoded list of embedding/reranking models
+- **And more...**
+
+> **Note**: This is the recommended way to discover models. The `.models` property on provider instances is deprecated and will be removed in version 3.0.
 
 ### Using Provider-Specific Classes
 

@@ -209,5 +209,6 @@ def test_models(tts_model):
     assert len(models) == 2
     assert models[0].id == "tts-1"
     assert models[1].id == "tts-1-hd"
-    assert models[0].type == "text_to_speech"
-    assert models[1].type == "text_to_speech"
+    # Model type is None when not explicitly provided by the API
+    assert models[0].type is None
+    assert models[1].type is None

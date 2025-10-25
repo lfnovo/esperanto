@@ -239,8 +239,7 @@ class OllamaLanguageModel(LanguageModel):
         """Get the default model name."""
         return "gemma2"  # Default model available on the server
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         response = self.client.get(
             f"{self.base_url}/api/tags",
@@ -254,7 +253,6 @@ class OllamaLanguageModel(LanguageModel):
                 id=model["name"],
                 owned_by="Ollama",
                 context_window=32768,  # Default context window for most Ollama models
-                type="language",
             )
             for model in models_data.get("models", [])
         ]

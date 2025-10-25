@@ -55,21 +55,18 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
         """Get the provider name."""
         return "elevenlabs"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(
                 id="scribe_v1",
                 owned_by="ElevenLabs",
                 context_window=None,  # Audio models don't have context windows
-                type="speech_to_text",
             ),
             Model(
                 id="scribe_v1_experimental",
                 owned_by="ElevenLabs",
                 context_window=None,  # Audio models don't have context windows
-                type="speech_to_text",
             ),
         ]
 

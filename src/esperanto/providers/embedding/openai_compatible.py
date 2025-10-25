@@ -140,8 +140,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
                 f"OpenAI-compatible embedding endpoint error: {error_message}"
             )
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider.
 
         Note: This attempts to fetch models from the /models endpoint.
@@ -159,7 +158,6 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
                     id=model["id"],
                     owned_by=model.get("owned_by", "custom"),
                     context_window=model.get("context_window", None),
-                    type="embedding",
                 )
                 for model in models_data.get("data", [])
             ]

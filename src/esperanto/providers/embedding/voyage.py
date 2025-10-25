@@ -123,50 +123,42 @@ class VoyageEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "voyage"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(
                 id="voyage-3-large",
                 owned_by="Voyage AI",
                 context_window=32000,
-                type="embedding",
             ),
             Model(
                 id="voyage-3.5",
                 owned_by="Voyage AI",
                 context_window=32000,
-                type="embedding",
             ),
             Model(
                 id="voyage-3.5-lite",
                 owned_by="Voyage AI",
                 context_window=32000,
-                type="embedding",
             ),
             Model(
                 id="voyage-code-3",
                 owned_by="Voyage AI",
                 context_window=32000,
-                type="embedding",
             ),
             Model(
                 id="voyage-finance-2",
                 owned_by="Voyage AI",
                 context_window=32000,
-                type="embedding",
             ),
             Model(
                 id="voyage-law-2",
                 owned_by="Voyage AI",
                 context_window=16000,
-                type="embedding",
             ),
             Model(
                 id="voyage-code-2",
                 owned_by="Voyage AI",
                 context_window=16000,
-                type="embedding",
             ),
         ]

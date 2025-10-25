@@ -148,12 +148,12 @@ class TestBaseClassTimeoutIntegration:
             def _get_default_model(self):
                 return "test-model"
 
-            @property
+            
             def provider(self):
                 return "test"
 
-            @property
-            def models(self):
+            
+            def _get_models(self):
                 return []
 
             def to_langchain(self):
@@ -175,12 +175,12 @@ class TestBaseClassTimeoutIntegration:
             def _get_default_model(self):
                 return "test-model"
 
-            @property
+            
             def provider(self):
                 return "test"
 
-            @property
-            def models(self):
+            
+            def _get_models(self):
                 return []
 
         model = TestEmbeddingModel(model_name="test")
@@ -199,12 +199,12 @@ class TestBaseClassTimeoutIntegration:
             def _get_default_model(self):
                 return "test-model"
 
-            @property
+            
             def provider(self):
                 return "test"
 
-            @property
-            def models(self):
+            
+            def _get_models(self):
                 return []
 
             def to_langchain(self):
@@ -226,12 +226,12 @@ class TestBaseClassTimeoutIntegration:
             def _get_default_model(self):
                 return "test-model"
 
-            @property
+            
             def provider(self):
                 return "test"
 
-            @property
-            def models(self):
+            
+            def _get_models(self):
                 return []
 
         model = TestSTTModel(model_name="test")
@@ -250,15 +250,15 @@ class TestBaseClassTimeoutIntegration:
             def _get_default_model(self):
                 return "test-model"
 
-            @property
+            
             def provider(self):
                 return "test"
 
-            @property
-            def models(self):
+            
+            def _get_models(self):
                 return []
 
-            @property
+            
             def available_voices(self):
                 return {}
 
@@ -290,12 +290,12 @@ class TestHTTPClientTimeoutIntegration:
             def _get_default_model(self):
                 return "test-model"
 
-            @property
+            
             def provider(self):
                 return "test"
 
-            @property
-            def models(self):
+            
+            def _get_models(self):
                 return []
 
             def to_langchain(self):
@@ -332,12 +332,12 @@ class TestHTTPClientTimeoutIntegration:
             def _get_default_model(self):
                 return "test-model"
 
-            @property
+            
             def provider(self):
                 return "test"
 
-            @property
-            def models(self):
+            
+            def _get_models(self):
                 return []
 
         model = TestEmbeddingModel()
@@ -370,12 +370,12 @@ class TestHTTPClientTimeoutIntegration:
                 def _get_default_model(self):
                     return "test-model"
 
-                @property
+                
                 def provider(self):
                     return "test"
 
-                @property
-                def models(self):
+                
+                def _get_models(self):
                     return []
 
                 def to_langchain(self):

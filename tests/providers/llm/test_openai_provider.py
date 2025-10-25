@@ -190,8 +190,9 @@ def test_models(openai_model):
     assert len(models) == 2
     assert models[0].id == "gpt-4"
     assert models[1].id == "gpt-3.5-turbo"
-    assert models[0].type == "language"
-    assert models[1].type == "language"
+    # Model type is None when not explicitly provided by the API
+    assert models[0].type is None
+    assert models[1].type is None
 
 
 def test_chat_complete(openai_model):

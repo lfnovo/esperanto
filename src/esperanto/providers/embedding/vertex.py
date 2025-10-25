@@ -177,26 +177,22 @@ class VertexEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "vertex"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(
                 id="text-embedding-005",
                 owned_by="Google",
                 context_window=3072,
-                type="embedding",
             ),
             Model(
                 id="textembedding-gecko",
                 owned_by="Google",
                 context_window=3072,
-                type="embedding",
             ),
             Model(
                 id="textembedding-gecko-multilingual",
                 owned_by="Google",
                 context_window=3072,
-                type="embedding",
             ),
         ]

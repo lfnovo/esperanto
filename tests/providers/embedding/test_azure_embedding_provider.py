@@ -17,19 +17,21 @@ def azure_openai_model():
                                 api_version="AZURE_OPENAI_API_VERSION",
                                 model_name="text-embedding-3-large")
 
-    # Mock response
+    # Mock httpx response
     mock_response = MagicMock()
-    mock_embedding_instance1 = MagicMock()
-    mock_embedding_instance1.embedding = [0.1, 0.2, 0.3]
-    mock_embedding_instance2 = MagicMock()
-    mock_embedding_instance2.embedding = [0.4, 0.5, 0.6]
-    mock_response.data = [mock_embedding_instance1, mock_embedding_instance2]
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "data": [
+            {"embedding": [0.1, 0.2, 0.3], "index": 0},
+            {"embedding": [0.4, 0.5, 0.6], "index": 1}
+        ]
+    }
 
-    # Mock the clients
+    # Mock the httpx clients
     mock_client = MagicMock()
-    mock_client.embeddings.create.return_value = mock_response
+    mock_client.post.return_value = mock_response
     mock_async_client = MagicMock()
-    mock_async_client.embeddings.create = AsyncMock(return_value=mock_response)
+    mock_async_client.post = AsyncMock(return_value=mock_response)
 
     model.client = mock_client
     model.async_client = mock_async_client
@@ -121,14 +123,16 @@ def test_embed(azure_openai_model):
     assert embeddings[1] == [0.4, 0.5, 0.6]
 
     # Verify client was called
-    azure_openai_model.client.embeddings.create.assert_called_once()
-    call_args = azure_openai_model.client.embeddings.create.call_args
+    azure_openai_model.client.post.assert_called_once()
+    call_args = azure_openai_model.client.post.call_args
 
+    # Check URL was built correctly
+    assert "deployments/text-embedding-3-large/embeddings" in call_args[0][0]
+
+    # Check request payload
     _, kwargs = call_args
-
-    # Check request
-    assert kwargs['input'] == texts
-    assert kwargs['model'] == "text-embedding-3-large"
+    assert kwargs['json']['input'] == texts
+    assert kwargs['json']['model'] == "text-embedding-3-large"
 
 
 @pytest.mark.asyncio
@@ -143,14 +147,16 @@ async def test_aembed(azure_openai_model):
     assert embeddings[1] == [0.4, 0.5, 0.6]
 
     # Verify client was called
-    azure_openai_model.async_client.embeddings.create.assert_called_once()
-    call_args = azure_openai_model.async_client.embeddings.create.call_args
+    azure_openai_model.async_client.post.assert_called_once()
+    call_args = azure_openai_model.async_client.post.call_args
 
+    # Check URL was built correctly
+    assert "deployments/text-embedding-3-large/embeddings" in call_args[0][0]
+
+    # Check request payload
     _, kwargs = call_args
-
-    # Check request
-    assert kwargs['input'] == texts
-    assert kwargs['model'] == "text-embedding-3-large"
+    assert kwargs['json']['input'] == texts
+    assert kwargs['json']['model'] == "text-embedding-3-large"
 
 
 def test_text_cleaning(azure_openai_model):
@@ -168,9 +174,9 @@ def test_text_cleaning(azure_openai_model):
     azure_openai_model.embed(texts)
 
     # Check that the input was cleaned
-    call_args = azure_openai_model.client.embeddings.create.call_args
+    call_args = azure_openai_model.client.post.call_args
     _, kwargs = call_args
-    assert kwargs['input'] == [
+    assert kwargs['json']['input'] == [
                                     "Hello, world!",
                                     "Hello world!",
                                     "Hello, world.",

@@ -187,8 +187,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         
         return kwargs
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider.
         
         Note: This attempts to fetch models from the /models endpoint.
@@ -207,7 +206,6 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                     id=model["id"],
                     owned_by=model.get("owned_by", "custom"),
                     context_window=model.get("context_window", None),
-                    type="language",
                 )
                 for model in models_data.get("data", [])
             ]

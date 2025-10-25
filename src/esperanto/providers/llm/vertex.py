@@ -108,33 +108,28 @@ class VertexLanguageModel(LanguageModel):
         model_name = self.get_model_name()
         return f"projects/{self.project_id}/locations/{self.location}/publishers/google/models/{model_name}"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
             Model(
                 id="gemini-2.0-flash",
                 owned_by="Google",
                 context_window=1000000,
-                type="language",
             ),
             Model(
                 id="gemini-1.5-pro",
                 owned_by="Google",
                 context_window=2000000,
-                type="language",
             ),
             Model(
                 id="gemini-1.5-flash",
                 owned_by="Google",
                 context_window=1000000,
-                type="language",
             ),
             Model(
                 id="gemini-pro",
                 owned_by="Google",
                 context_window=30720,
-                type="language",
             ),
         ]
 

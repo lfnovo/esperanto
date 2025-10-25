@@ -260,51 +260,38 @@ class JinaEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "jina"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List available Jina embedding models."""
         return [
             Model(
                 id="jina-embeddings-v4",
                 owned_by="jina",
-                context_window=8192,
-                type="embedding"
-            ),
+                context_window=8192),
             Model(
                 id="jina-embeddings-v3", 
                 owned_by="jina",
-                context_window=8192,
-                type="embedding"
-            ),
+                context_window=8192),
             Model(
                 id="jina-embeddings-v2-base-en",
                 owned_by="jina",
-                context_window=8192,
-                type="embedding"
-            ),
+                context_window=8192),
             Model(
                 id="jina-embeddings-v2-small-en",
                 owned_by="jina",
-                context_window=8192,
-                type="embedding"
-            ),
+                context_window=8192),
             Model(
                 id="jina-embeddings-v2-base-multilingual",
                 owned_by="jina",
-                context_window=8192,
-                type="embedding"
-            ),
+                context_window=8192),
             Model(
                 id="jina-clip-v1",
                 owned_by="jina",
                 context_window=None,  # Multimodal model
-                type="embedding"
             ),
             Model(
                 id="jina-clip-v2",
                 owned_by="jina",
                 context_window=None,  # Multimodal model
-                type="embedding"
             ),
         ]
 

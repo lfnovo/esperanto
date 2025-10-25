@@ -399,9 +399,9 @@ class TestTransformersRerankerUniversalFunctionality:
                 assert "BAAI/bge-reranker-base" in model_ids  # sentence_transformers
                 assert "jinaai/jina-reranker-v2-base-multilingual" in model_ids  # sequence_classification
                 assert "mixedbread-ai/mxbai-rerank-base-v2" in model_ids  # mixedbread_v2
-                
-                # Verify all are reranker type
-                assert all(model.type == "reranker" for model in models)
+
+                # Model type is None when not explicitly provided by the API
+                assert all(model.type is None for model in models)
 
     @patch('esperanto.providers.reranker.transformers.TRANSFORMERS_AVAILABLE', True)
     def test_async_rerank_functionality(self):

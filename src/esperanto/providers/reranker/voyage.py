@@ -272,22 +272,17 @@ class VoyageRerankerModel(RerankerModel):
         """Provider name."""
         return "voyage"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """Available Voyage reranker models."""
         return [
             Model(
                 id="rerank-2",
                 owned_by="voyage",
-                context_window=4000,
-                type="reranker"
-            ),
+                context_window=4000),
             Model(
                 id="rerank-1",
                 owned_by="voyage", 
-                context_window=4000,
-                type="reranker"
-            ),
+                context_window=4000),
         ]
 
     def __del__(self):

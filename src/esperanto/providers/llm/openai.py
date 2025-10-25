@@ -70,27 +70,23 @@ class OpenAILanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"OpenAI API error: {error_message}")
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         response = self.client.get(
             f"{self.base_url}/models",
             headers=self._get_headers()
         )
         self._handle_error(response)
-        
+
         models_data = response.json()
         return [
             Model(
                 id=model["id"],
                 owned_by=model.get("owned_by", "openai"),
                 context_window=model.get("context_window", None),
-                type="language",
             )
             for model in models_data["data"]
-            if model["id"].startswith(
-                ("gpt-")
-            )  # Only include GPT models for language tasks
+            if model["id"].startswith("gpt")  # Only return GPT language models
         ]
 
     def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:

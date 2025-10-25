@@ -25,26 +25,20 @@ class TestAzureReasoningModels:
     @pytest.mark.parametrize("model_name", ["o1-preview", "o1-mini", "o3-mini", "o4-mini", "gpt-5"])
     def test_is_reasoning_model_detection(self, azure_config, model_name):
         """Test reasoning model detection."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'):
-
+        with patch('httpx.Client'), patch('httpx.AsyncClient'):
             model = AzureLanguageModel(model_name=model_name, **azure_config)
             assert model._is_reasoning_model() is True
 
     @pytest.mark.parametrize("model_name", ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"])
     def test_is_not_reasoning_model_detection(self, azure_config, model_name):
         """Test non-reasoning model detection."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'):
-
+        with patch('httpx.Client'), patch('httpx.AsyncClient'):
             model = AzureLanguageModel(model_name=model_name, **azure_config)
             assert model._is_reasoning_model() is False
 
     def test_reasoning_model_api_kwargs(self, azure_config):
         """Test API kwargs for reasoning models."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'):
-
+        with patch('httpx.Client'), patch('httpx.AsyncClient'):
             model = AzureLanguageModel(
                 model_name="o1-preview",
                 max_tokens=1000,
@@ -70,8 +64,7 @@ class TestAzureReasoningModels:
 
     def test_reasoning_model_api_kwargs_default_max_tokens(self, azure_config):
         """Test API kwargs for reasoning models with default max_tokens."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'):
+        with patch('httpx.Client'), patch('httpx.AsyncClient'):
 
             model = AzureLanguageModel(
                 model_name="o1-preview",
@@ -87,8 +80,7 @@ class TestAzureReasoningModels:
 
     def test_non_reasoning_model_api_kwargs(self, azure_config):
         """Test API kwargs for non-reasoning models."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'):
+        with patch('httpx.Client'), patch('httpx.AsyncClient'):
 
             model = AzureLanguageModel(
                 model_name="gpt-4",
@@ -111,8 +103,8 @@ class TestAzureReasoningModels:
 
     def test_reasoning_model_to_langchain(self, azure_config):
         """Test LangChain conversion for reasoning models."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'), \
+        with patch('httpx.Client'), \
+             patch('httpx.AsyncClient'), \
              patch('langchain_openai.AzureChatOpenAI') as mock_azure_chat, \
              patch.object(AzureLanguageModel, '_clean_config', side_effect=lambda x: x):
 
@@ -142,8 +134,8 @@ class TestAzureReasoningModels:
 
     def test_reasoning_model_to_langchain_default_max_tokens(self, azure_config):
         """Test LangChain conversion for reasoning models with default max_tokens."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'), \
+        with patch('httpx.Client'), \
+             patch('httpx.AsyncClient'), \
              patch('langchain_openai.AzureChatOpenAI') as mock_azure_chat, \
              patch.object(AzureLanguageModel, '_clean_config', side_effect=lambda x: x):
 
@@ -172,8 +164,8 @@ class TestAzureReasoningModels:
 
     def test_non_reasoning_model_to_langchain(self, azure_config):
         """Test LangChain conversion for non-reasoning models."""
-        with patch('esperanto.providers.llm.azure.AzureOpenAI'), \
-             patch('esperanto.providers.llm.azure.AsyncAzureOpenAI'), \
+        with patch('httpx.Client'), \
+             patch('httpx.AsyncClient'), \
              patch('langchain_openai.AzureChatOpenAI') as mock_azure_chat, \
              patch.object(AzureLanguageModel, '_clean_config', side_effect=lambda x: x):
 

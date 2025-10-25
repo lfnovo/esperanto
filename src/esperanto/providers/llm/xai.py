@@ -49,8 +49,7 @@ class XAILanguageModel(OpenAILanguageModel):
 
         return kwargs
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         response = self.client.get(
             f"{self.base_url}/models",
@@ -64,7 +63,6 @@ class XAILanguageModel(OpenAILanguageModel):
                 id=model["id"],
                 owned_by="X.AI",
                 context_window=model.get("context_window", None),
-                type="language",
             )
             for model in models_data["data"]
             if model["id"].startswith("grok")  # Only include Grok models

@@ -291,22 +291,17 @@ class JinaRerankerModel(RerankerModel):
         """Provider name."""
         return "jina"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """Available Jina reranker models."""
         return [
             Model(
                 id="jina-reranker-v2-base-multilingual",
                 owned_by="jina",
-                context_window=1024,
-                type="reranker"
-            ),
+                context_window=1024),
             Model(
                 id="jina-reranker-v1-base-en",
                 owned_by="jina", 
-                context_window=512,
-                type="reranker"
-            ),
+                context_window=512),
         ]
 
     def __del__(self):

@@ -74,8 +74,7 @@ class MistralLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Mistral API error: {error_message}")
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List available Mistral models."""
         try:
             response = self.client.get(
@@ -83,17 +82,15 @@ class MistralLanguageModel(LanguageModel):
                 headers=self._get_headers()
             )
             self._handle_error(response)
-            
+
             models_data = response.json()
             return [
                 Model(
                     id=model["id"],
                     owned_by=model.get("owned_by", "mistralai"),
                     context_window=None,  # Context window not provided in API response
-                    type="language",
                 )
                 for model in models_data["data"]
-                if "embed" not in model["id"]  # Filter out embedding models
             ]
         except Exception as e:
             print(f"Warning: Could not dynamically list models from Mistral API: {e}. Falling back to a known list.")
@@ -106,7 +103,7 @@ class MistralLanguageModel(LanguageModel):
                 {"id": "mistral-large-latest", "context_window": 32000, "owned_by": "mistralai"},
             ]
             return [
-                Model(id=m["id"], owned_by=m["owned_by"], context_window=m["context_window"], type="language")
+                Model(id=m["id"], owned_by=m["owned_by"], context_window=m["context_window"])
                 for m in known_models
             ]
 

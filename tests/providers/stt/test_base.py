@@ -57,7 +57,7 @@ def test_concrete_implementation_works():
             return "test"
 
         @property
-        def models(self):
+        def _get_models(self):
             """List all available models for this provider."""
             return []
 
@@ -97,7 +97,7 @@ def test_model_name_from_config():
             return "test"
 
         @property
-        def models(self):
+        def _get_models(self):
             """List all available models for this provider."""
             return []
 

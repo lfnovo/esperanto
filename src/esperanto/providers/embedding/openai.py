@@ -124,8 +124,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         """Get the provider name."""
         return "openai"
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         response = self.client.get(
             f"{self.base_url}/models",
@@ -138,9 +137,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             Model(
                 id=model["id"],
                 owned_by=model.get("owned_by", "openai"),
-                context_window=model.get("context_window", None),
-                type="embedding"
-            )
+                context_window=model.get("context_window", None))
             for model in models_data["data"]
-            if model["id"].startswith("text-embedding")
+            if model["id"].startswith("text-embedding")  # Only return embedding models
         ]

@@ -74,8 +74,7 @@ class GoogleLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Google API error: {error_message}")
 
-    @property
-    def models(self) -> List[Model]:
+    def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         try:
             response = self.client.get(
@@ -90,17 +89,15 @@ class GoogleLanguageModel(LanguageModel):
                     id=model["name"].split("/")[-1],
                     owned_by="Google",
                     context_window=model.get("inputTokenLimit"),
-                    type="language",
                 )
                 for model in models_data.get("models", [])
-                if "generateContent" in model.get("supportedGenerationMethods", [])
             ]
         except Exception:
             # Fallback to known models if API call fails
             return [
-                Model(id="gemini-2.0-flash", owned_by="Google", context_window=1000000, type="language"),
-                Model(id="gemini-1.5-pro", owned_by="Google", context_window=2000000, type="language"),
-                Model(id="gemini-1.5-flash", owned_by="Google", context_window=1000000, type="language"),
+                Model(id="gemini-2.0-flash", owned_by="Google", context_window=1000000),
+                Model(id="gemini-1.5-pro", owned_by="Google", context_window=2000000),
+                Model(id="gemini-1.5-flash", owned_by="Google", context_window=1000000),
             ]
 
     @property

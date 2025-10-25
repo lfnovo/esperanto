@@ -5,6 +5,7 @@ Speech-to-text models convert audio recordings into written text through automat
 ## Supported Providers
 
 - **OpenAI** (Whisper models)
+- **Azure OpenAI** (Whisper models via Azure deployments)
 - **Groq** (Whisper models with faster inference)
 - **ElevenLabs** (Multilingual speech recognition)
 - **OpenAI-Compatible** (Any OpenAI-compatible STT endpoint)
@@ -304,4 +305,115 @@ logging.basicConfig(level=logging.DEBUG)
 
 # This will show detailed request/response information
 stt = AIFactory.create_speech_to_text("openai-compatible", ...)
+```
+
+## Azure OpenAI Speech-to-Text
+
+Azure OpenAI provides access to Whisper models through Azure deployments. The provider uses direct HTTP communication via httpx for optimal performance.
+
+### Configuration
+
+Azure STT requires three configuration parameters: API key, Azure endpoint, and API version:
+
+```python
+from esperanto.factory import AIFactory
+
+# Using config dictionary
+model = AIFactory.create_speech_to_text(
+    "azure",
+    model_name="whisper-deployment",  # Your Azure deployment name
+    config={
+        "api_key": "your-azure-api-key",
+        "azure_endpoint": "https://your-resource.openai.azure.com/",
+        "api_version": "2024-02-01"
+    }
+)
+
+# Using environment variables (recommended)
+# Set AZURE_OPENAI_API_KEY_STT=your-azure-api-key
+# Set AZURE_OPENAI_ENDPOINT_STT=https://your-resource.openai.azure.com/
+# Set AZURE_OPENAI_API_VERSION_STT=2024-02-01
+model = AIFactory.create_speech_to_text("azure", "whisper-deployment")
+```
+
+### Environment Variables
+
+Azure STT supports modality-specific environment variables with fallback to generic ones:
+
+**Priority order (highest to lowest):**
+1. Direct parameters (config dictionary or constructor arguments)
+2. Modality-specific variables: `AZURE_OPENAI_*_STT`
+3. Generic variables: `AZURE_OPENAI_*`
+
+**Modality-Specific Variables:**
+- `AZURE_OPENAI_API_KEY_STT`: API key for STT operations
+- `AZURE_OPENAI_ENDPOINT_STT`: Azure endpoint for STT operations
+- `AZURE_OPENAI_API_VERSION_STT`: API version for STT operations
+
+**Generic Variables (fallback):**
+- `AZURE_OPENAI_API_KEY`: Generic API key
+- `AZURE_OPENAI_ENDPOINT`: Generic Azure endpoint
+- `AZURE_OPENAI_API_VERSION`: Generic API version
+
+### Usage Examples
+
+**Basic Transcription:**
+```python
+from esperanto.factory import AIFactory
+
+# Create Azure STT model
+model = AIFactory.create_speech_to_text("azure", "whisper-1")
+
+# Transcribe audio
+response = model.transcribe("meeting.mp3")
+print(response.text)
+```
+
+**With Language and Prompt:**
+```python
+# Improve accuracy with language and context
+response = model.transcribe(
+    "podcast.wav",
+    language="en",
+    prompt="This is a technical discussion about AI and machine learning"
+)
+print(f"Transcription: {response.text}")
+```
+
+**Async Transcription:**
+```python
+async def transcribe_batch():
+    model = AIFactory.create_speech_to_text("azure", "whisper-1")
+
+    files = ["audio1.mp3", "audio2.wav", "audio3.m4a"]
+    for audio_file in files:
+        response = await model.atranscribe(audio_file)
+        print(f"{audio_file}: {response.text[:100]}...")
+```
+
+### Deployment Names
+
+In Azure OpenAI, the `model_name` parameter corresponds to your deployment name, not the underlying model name. Make sure to use the deployment name you configured in your Azure OpenAI resource.
+
+```python
+# Example: If your Azure deployment is named "my-whisper-deployment"
+model = AIFactory.create_speech_to_text("azure", "my-whisper-deployment")
+```
+
+### Timeout Configuration
+
+Azure STT uses the same timeout configuration as other providers (default: 300 seconds):
+
+```python
+# For large audio files (10 minutes)
+model = AIFactory.create_speech_to_text(
+    "azure",
+    "whisper-1",
+    config={
+        "api_key": "your-key",
+        "azure_endpoint": "https://your-resource.openai.azure.com/",
+        "api_version": "2024-02-01",
+        "timeout": 600  # 10 minutes
+    }
+)
 ```

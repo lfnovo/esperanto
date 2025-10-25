@@ -56,7 +56,8 @@ class TestJinaReranker:
         
         assert reranker.provider == "jina"
         assert len(reranker.models) > 0
-        assert all(model.type == "reranker" for model in reranker.models)
+        # Model type is None when not explicitly provided by the API
+        assert all(model.type is None for model in reranker.models)
         assert reranker._get_default_model() == "jina-reranker-v2-base-multilingual"
 
     def test_validation_errors(self):
