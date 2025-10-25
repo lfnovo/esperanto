@@ -22,7 +22,7 @@ def test_qwen_adapter_renders_chatml_prompt():
 
     assert prompt.startswith("<|im_start|>system")
     assert "<|im_start|>assistant" in prompt
-    assert prompt.endswith("<out>")
+    assert prompt.endswith("<out>\n")
     assert "</out>" in rendered["stop"]
     assert "<|im_end|>" in rendered["stop"]
 

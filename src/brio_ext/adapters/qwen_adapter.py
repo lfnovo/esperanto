@@ -23,5 +23,6 @@ class QwenAdapter(ChatAdapter):
         system_text = "\n".join(system_messages) if system_messages else ""
         conversation = "".join(block(m["role"], m["content"]) for m in user_and_tool)
 
-        prompt = f"{block('system', system_text)}{conversation}<|im_start|>assistant\n<out>"
+        # Add trailing newline after <out> so the model starts generating content
+        prompt = f"{block('system', system_text)}{conversation}<|im_start|>assistant\n<out>\n"
         return {"prompt": prompt, "stop": ["</out>", "<|im_end|>"]}
