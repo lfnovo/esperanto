@@ -11,6 +11,7 @@ from esperanto.common_types import Model
 from esperanto.model_discovery import (
     _create_cache_key,
     get_openai_models,
+    get_openai_compatible_models,
     get_anthropic_models,
     get_google_models,
     get_mistral_models,
@@ -230,13 +231,97 @@ class TestGoogleDiscovery:
             assert call_args.kwargs.get("params", {}).get("key") == "env-key"
 
 
+class TestOpenAICompatibleDiscovery:
+    """Test OpenAI-compatible model discovery."""
+
+    def test_get_openai_compatible_models_no_base_url(self):
+        """Test that ValueError is raised when base_url is missing."""
+        with pytest.raises(ValueError, match="base_url is required"):
+            get_openai_compatible_models()
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_compatible_models_success(self, mock_get):
+        """Test successful OpenAI-compatible model discovery."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"id": "local-model-1", "owned_by": "local"},
+                {"id": "local-model-2", "owned_by": "local"},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_openai_compatible_models(base_url="http://localhost:1234/v1")
+
+        assert len(models) == 2
+        assert all(isinstance(m, Model) for m in models)
+        assert models[0].id == "local-model-1"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_compatible_models_with_type_filter(self, mock_get):
+        """Test OpenAI-compatible discovery with type filtering."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"id": "llama-chat", "owned_by": "meta"},
+                {"id": "text-embedding-local", "owned_by": "local"},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        # Filter for language models
+        models = get_openai_compatible_models(
+            base_url="http://localhost:1234/v1",
+            model_type="language"
+        )
+
+        assert len(models) == 1
+        assert "chat" in models[0].id.lower()
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_compatible_models_with_api_key(self, mock_get):
+        """Test that API key is included in headers."""
+        _model_cache.clear()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_openai_compatible_models(
+            base_url="http://localhost:1234/v1",
+            api_key="test-key"
+        )
+
+        # Check that the API was called with Authorization header
+        mock_get.assert_called_once()
+        call_kwargs = mock_get.call_args.kwargs
+        assert "headers" in call_kwargs
+        assert call_kwargs["headers"]["Authorization"] == "Bearer test-key"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_compatible_models_strips_trailing_slash(self, mock_get):
+        """Test that trailing slash is stripped from base_url."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_openai_compatible_models(base_url="http://localhost:1234/v1/")
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "http://localhost:1234/v1/models"
+
+
 class TestProviderRegistry:
     """Test the provider registry."""
 
     def test_registry_contains_all_providers(self):
         """Test that registry has entries for all supported providers."""
         expected_providers = [
-            "openai", "anthropic", "google", "vertex", "mistral",
+            "openai", "openai-compatible", "anthropic", "google", "vertex", "mistral",
             "groq", "deepseek", "ollama", "openrouter", "xai",
             "perplexity", "jina", "voyage", "azure", "transformers"
         ]

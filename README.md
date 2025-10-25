@@ -210,6 +210,14 @@ for model in claude_models:
 # claude-3-5-sonnet-20241022 - Context: 200000 tokens
 # claude-3-5-haiku-20241022 - Context: 200000 tokens
 # claude-3-opus-20240229 - Context: 200000 tokens
+
+# OpenAI-compatible endpoints (requires base_url)
+local_models = AIFactory.get_provider_models(
+    "openai-compatible",
+    base_url="http://localhost:1234/v1"  # LM Studio, vLLM, etc.
+)
+for model in local_models:
+    print(f"{model.id} - {model.owned_by}")
 ```
 
 **Benefits of Static Discovery:**
@@ -220,6 +228,7 @@ for model in claude_models:
 
 **Supported Providers:**
 - **OpenAI** - Fetches models via API (supports type filtering)
+- **OpenAI-Compatible** - Fetches models from any OpenAI-compatible endpoint (LM Studio, vLLM, etc.)
 - **Anthropic** - Returns hardcoded list of Claude models
 - **Google/Gemini** - Fetches models via API
 - **Groq** - Fetches models via API

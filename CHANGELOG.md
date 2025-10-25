@@ -49,10 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     )
     ```
 
-- **Model Discovery Functions** - 15 provider-specific discovery functions in `model_discovery.py`:
-  - API-based: OpenAI, Google/Gemini, Vertex AI, Mistral, Groq, xAI, OpenRouter, Ollama
+- **Model Discovery Functions** - 16 provider-specific discovery functions in `model_discovery.py`:
+  - API-based: OpenAI, OpenAI-Compatible, Google/Gemini, Vertex AI, Mistral, Groq, xAI, OpenRouter, Ollama
   - Hardcoded lists: Anthropic, DeepSeek, Perplexity, Jina, Voyage
   - Special cases: Azure (deployments), Transformers (local models)
+  - OpenAI-Compatible supports any endpoint implementing the OpenAI API specification (LM Studio, vLLM, custom endpoints)
 
 - **ModelCache Utility** - Thread-safe caching system for model discovery with configurable TTL
 
@@ -185,6 +186,20 @@ warnings.filterwarnings('ignore', category=DeprecationWarning, module='esperanto
 - Fetches models via API
 - Requires API key (or `GOOGLE_API_KEY`/`GEMINI_API_KEY` environment variable)
 - Results are cached for 1 hour
+
+**OpenAI-Compatible:**
+- Fetches models from any OpenAI-compatible endpoint
+- Requires `base_url` parameter (e.g., `http://localhost:1234/v1` for LM Studio)
+- Optional `api_key` if the endpoint requires authentication
+- Supports type filtering
+- Results are cached for 1 hour
+- Example:
+  ```python
+  models = AIFactory.get_provider_models(
+      "openai-compatible",
+      base_url="http://localhost:1234/v1"
+  )
+  ```
 
 **Ollama:**
 - Lists locally available models

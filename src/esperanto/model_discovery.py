@@ -842,6 +842,106 @@ def get_azure_models(
     return []
 
 
+def get_openai_compatible_models(
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_type: Optional[str] = None,
+) -> List[Model]:
+    """Get available models from OpenAI-compatible endpoints.
+
+    This function attempts to fetch models from providers that implement the
+    OpenAI API specification (e.g., LM Studio, vLLM, custom endpoints).
+
+    Args:
+        base_url: Base URL for the API endpoint (required)
+        api_key: API key if required by the endpoint
+        model_type: Type of models to return (optional filtering)
+
+    Returns:
+        List of available models
+
+    Raises:
+        ValueError: If base_url is not provided
+        RuntimeError: If API request fails
+    """
+    if not base_url:
+        raise ValueError(
+            "base_url is required for OpenAI-compatible model discovery. "
+            "Provide the base URL of your OpenAI-compatible endpoint "
+            "(e.g., 'http://localhost:1234/v1' for LM Studio)."
+        )
+
+    # Check cache
+    cache_key = _create_cache_key("openai-compatible", base_url=base_url, model_type=model_type)
+    cached_models = _model_cache.get(cache_key)
+    if cached_models is not None:
+        return cached_models
+
+    # Prepare headers
+    headers = {
+        "Content-Type": "application/json",
+    }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    # Make request
+    try:
+        # Ensure base_url doesn't have trailing slash
+        base_url = base_url.rstrip("/")
+
+        response = httpx.get(
+            f"{base_url}/models",
+            headers=headers,
+            timeout=60.0
+        )
+
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"OpenAI-compatible API error: {error_message}")
+
+        models_data = response.json()
+
+        # Parse models - try to handle both OpenAI format and variations
+        all_models = []
+        models_list = models_data.get("data", [])
+
+        for model in models_list:
+            model_id = model.get("id", "")
+
+            # Optional type filtering (if provided)
+            if model_type is not None:
+                include = False
+                if model_type == "language" and ("gpt" in model_id.lower() or "chat" in model_id.lower() or "instruct" in model_id.lower()):
+                    include = True
+                elif model_type == "embedding" and "embedding" in model_id.lower():
+                    include = True
+                elif model_type == "speech_to_text" and "whisper" in model_id.lower():
+                    include = True
+                elif model_type == "text_to_speech" and "tts" in model_id.lower():
+                    include = True
+
+                if not include:
+                    continue
+
+            all_models.append(Model(
+                id=model_id,
+                owned_by=model.get("owned_by", "unknown"),
+                context_window=model.get("context_window", None),
+            ))
+
+        # Cache results
+        _model_cache.set(cache_key, all_models)
+
+        return all_models
+
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"Failed to fetch OpenAI-compatible models: {e}")
+
+
 def get_transformers_models(
     cache_dir: Optional[str] = None,
 ) -> List[Model]:
@@ -864,6 +964,7 @@ def get_transformers_models(
 # Provider registry mapping provider names to discovery functions
 PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "openai": get_openai_models,
+    "openai-compatible": get_openai_compatible_models,
     "anthropic": get_anthropic_models,
     "google": get_google_models,
     "vertex": get_vertex_models,
