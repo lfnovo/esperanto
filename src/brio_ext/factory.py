@@ -6,6 +6,7 @@ from copy import deepcopy
 from types import MethodType
 from typing import Any, Dict, Optional
 
+from esperanto.common_types import ChatCompletion, Message
 from esperanto.factory import AIFactory
 from esperanto.providers.llm.base import LanguageModel
 
@@ -74,7 +75,8 @@ def _wrap_language_model(
 
             prompt_handler = getattr(self, "prompt_complete", None)
             if callable(prompt_handler):
-                return prompt_handler(rendered["prompt"], stop=stops, stream=stream)
+                result = prompt_handler(rendered["prompt"], stop=stops, stream=stream)
+                return _ensure_fenced_completion(result)
             raise RuntimeError(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
             )
@@ -89,11 +91,15 @@ def _wrap_language_model(
 
             prompt_handler = getattr(self, "aprompt_complete", None)
             if callable(prompt_handler):
-                return await prompt_handler(rendered["prompt"], stop=stops, stream=stream)
+                result = await prompt_handler(
+                    rendered["prompt"], stop=stops, stream=stream
+                )
+                return _ensure_fenced_completion(result)
 
             sync_handler = getattr(self, "prompt_complete", None)
             if callable(sync_handler):
-                return sync_handler(rendered["prompt"], stop=stops, stream=stream)
+                result = sync_handler(rendered["prompt"], stop=stops, stream=stream)
+                return _ensure_fenced_completion(result)
 
             raise RuntimeError(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
@@ -105,6 +111,43 @@ def _wrap_language_model(
     setattr(model, "_brio_model_id", model_id)
     setattr(model, "_brio_provider", provider)
     return model
+
+
+def _ensure_fenced_completion(result):
+    """Ensure completion content is wrapped in <out>...</out> fences."""
+    if not isinstance(result, ChatCompletion):
+        return result
+
+    choices = []
+    for choice in result.choices:
+        message = choice.message
+        content = message.content or ""
+        fenced = _ensure_fence(content)
+        new_message = Message(
+            content=fenced,
+            role=message.role,
+            function_call=message.function_call,
+            tool_calls=message.tool_calls,
+        )
+        choices.append(
+            choice.model_copy(update={"message": new_message})
+        )
+
+    return result.model_copy(update={"choices": choices})
+
+
+def _ensure_fence(text: str) -> str:
+    stripped = text.strip()
+    if not stripped:
+        return "<out>\n</out>"
+
+    lower = stripped.lower()
+    if stripped.startswith("<out>"):
+        if stripped.endswith("</out>"):
+            return stripped
+        return f"{stripped.rstrip()}</out>"
+
+    return f"<out>\n{stripped}\n</out>"
 
 
 class _stop_config_guard:

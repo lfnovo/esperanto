@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 from brio_ext.factory import DEFAULT_STOP, _wrap_language_model
+from esperanto.common_types import ChatCompletion, Choice, Message
 from esperanto.providers.llm.base import LanguageModel
 
 MESSAGES = [
@@ -49,7 +50,19 @@ class DummyLanguageModel(LanguageModel):
                 "stop_snapshot": list(self._config.get("stop") or []),
             }
         )
-        return {"prompt": prompt}
+        response = ChatCompletion(
+            id="dummy",
+            model=self.get_model_name(),
+            provider=self.provider,
+            choices=[
+                Choice(
+                    index=0,
+                    message=Message(role="assistant", content="Polished clause."),
+                    finish_reason="stop",
+                )
+            ],
+        )
+        return response
 
     async def aprompt_complete(self, prompt: str, stop=None, stream: Optional[bool] = None):
         return self.prompt_complete(prompt, stop=stop, stream=stream)
@@ -86,7 +99,7 @@ def test_wrap_language_model_uses_prompt_handler_for_local_engines():
     model = DummyLanguageModel(model_name="dummy", config={"stop": ["<EOF>"]})
     wrapped = _wrap_language_model(model, model_id="qwen2.5-7b-instruct", provider="llamacpp")
 
-    wrapped.chat_complete(MESSAGES)
+    result = wrapped.chat_complete(MESSAGES)
     assert not model.chat_calls
     assert len(model.prompt_calls) == 1
 
@@ -97,6 +110,7 @@ def test_wrap_language_model_uses_prompt_handler_for_local_engines():
     assert "<|im_end|>" in call["stop"]
     assert call["stop_snapshot"] == ["</out>", "<|im_end|>"]
     assert model._config["stop"] == ["<EOF>"]
+    assert result.content == "<out>\nPolished clause.\n</out>"
 
 
 def test_wrap_language_model_is_idempotent():
