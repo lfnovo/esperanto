@@ -36,10 +36,13 @@ requires = ["hatchling", "pip"]
 build-backend = "hatchling.build"
 
 [tool.setuptools]
-package-dir = {"esperanto" = "src/esperanto"}
+package-dir = {"esperanto" = "src/esperanto", "brio_ext" = "src/brio_ext"}
 
-# [tool.hatch.build.targets.wheel]
-# packages = ["esperanto"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/esperanto", "src/brio_ext"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/esperanto", "src/brio_ext"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
