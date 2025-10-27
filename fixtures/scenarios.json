@@ -14,7 +14,7 @@
     "validation": {
       "should_contain": ["4"],
       "should_fence": true,
-      "notes": "Tests basic system message handling. If the model responds in pirate speak, system message was respected."
+      "notes": "Tests basic system message handling. Response should be fenced by brio_ext (not by LLM). If pirate speak, system message was respected."
     }
   },
   "inventor": {

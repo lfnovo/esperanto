@@ -1,0 +1,41 @@
+# Test cases - combine prompt components like BrioDocs does
+# Each test specifies which component files to use
+
+pirate:
+  description: "Simple system message test - Pirate personality"
+  system: prompts/system/pirate.txt
+  user: prompts/user/simple_math.txt
+  content: null
+  insights: []
+  validation:
+    should_contain: ["4"]
+    should_fence: true
+    notes: "Tests basic system message handling. Response should be fenced by brio_ext (not by LLM). If pirate speak, system message was respected."
+
+inventor:
+  description: "Medium context inventor lookup - Tests system message with content + insights"
+  system: prompts/system/patent_analyst.txt
+  user: prompts/user/who_are_inventors.txt
+  content: prompts/content/patent_mobile_device.txt
+  insights:
+    - prompts/insights/patent_dense_summary.txt
+  validation:
+    should_contain: ["Richard H. Xu", "Xiaolei Qin", "Phillip C. Krasko", "Douglas A. Cheline"]
+    should_fence: true
+    notes: "KEY test for Qwen system message bug. If model returns 'I don't know', system messages are being ignored."
+
+multiturn:
+  description: "Multi-turn conversation - Tests conversation history handling"
+  system: prompts/system/patent_analyst.txt
+  turns:
+    - user: prompts/user/who_are_inventors.txt
+      assistant: "The inventors of this patent are Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, and Douglas A. Cheline."
+    - user: prompts/user/what_problem_solved.txt
+      assistant: null  # This is what we're testing
+  content: null
+  insights:
+    - prompts/insights/patent_dense_summary.txt
+  validation:
+    should_contain: ["roaming", "cost"]
+    should_fence: true
+    notes: "Tests that conversation history is preserved and system context is maintained across turns."

@@ -20,5 +20,6 @@ class LlamaAdapter(ChatAdapter):
         system_text = "\n".join(system_messages) if system_messages else ""
         user_text = "\n".join(user_messages)
 
-        prompt = f"[INST] <<SYS>>\n{system_text}\n<</SYS>>\n{user_text} [/INST]\n<out>"
-        return {"prompt": prompt, "stop": ["</out>"]}
+        # Llama format - model generates content, brio_ext will fence it
+        prompt = f"[INST] <<SYS>>\n{system_text}\n<</SYS>>\n{user_text} [/INST]"
+        return {"prompt": prompt, "stop": []}

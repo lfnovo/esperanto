@@ -8,7 +8,8 @@ from typing import Dict, List
 from brio_ext.adapters import RenderedPrompt
 from brio_ext.registry import get_adapter
 
-DEFAULT_STOP = ["</out>"]
+# No default stop tokens - adapters provide model-specific stops, brio_ext handles fencing
+DEFAULT_STOP: List[str] = []
 TEMPLATE_PROVIDERS = {"openai", "anthropic", "grok", "ollama"}
 PROMPT_PROVIDERS = {"llamacpp", "hf_local"}
 

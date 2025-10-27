@@ -20,9 +20,10 @@ class GemmaAdapter(ChatAdapter):
         system_text = "\n".join(system_messages) if system_messages else ""
         user_text = "\n".join(user_messages)
 
+        # Gemma format - model generates content, brio_ext will fence it
         prompt = (
             f"<start_of_turn>system\n{system_text}\n<end_of_turn>\n"
             f"<start_of_turn>user\n{user_text}\n<end_of_turn>\n"
-            f"<start_of_turn>model\n<out>"
+            f"<start_of_turn>model\n"
         )
-        return {"prompt": prompt, "stop": ["</out>", "<end_of_turn>"]}
+        return {"prompt": prompt, "stop": ["<end_of_turn>"]}

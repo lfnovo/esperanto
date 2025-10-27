@@ -16,4 +16,5 @@ class PhiAdapter(ChatAdapter):
 
     def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
         # Phi models follow the OpenAI ChatML style in most runtimes.
-        return {"messages": messages, "stop": ["</out>"]}
+        # Let the provider handle stop tokens, brio_ext will fence the response.
+        return {"messages": messages, "stop": []}

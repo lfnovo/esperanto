@@ -116,3 +116,7 @@ claude-logs/
 
 
 specs/*
+
+# Model files (large GGUF files for manual testing)
+models/
+*.gguf

@@ -27,11 +27,11 @@ class QwenAdapter(ChatAdapter):
         system_text = "\n".join(system_messages) if system_messages else ""
         conversation = "".join(block(m["role"], m["content"]) for m in user_and_tool)
 
-        # Add trailing newline after <out> so the model starts generating content
-        prompt = f"{block('system', system_text)}{conversation}<|im_start|>assistant\n<out>\n"
+        # Start assistant turn - model will generate content, brio_ext will fence it
+        prompt = f"{block('system', system_text)}{conversation}<|im_start|>assistant\n"
 
         if os.getenv("BRIO_DEBUG"):
             print(f"[QwenAdapter] Generated prompt: {len(prompt)} chars")
-            print(f"[QwenAdapter] Stop tokens: ['</out>', '<|im_end|>']")
+            print(f"[QwenAdapter] Stop tokens: ['<|im_end|>']")
 
-        return {"prompt": prompt, "stop": ["</out>", "<|im_end|>"]}
+        return {"prompt": prompt, "stop": ["<|im_end|>"]}
