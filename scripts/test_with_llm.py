@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple manual test runner for brio_ext validation with full pipeline visibility.
+Manual test runner for brio_ext validation with full pipeline visibility.
 
 Usage:
     python scripts/test_with_llm.py [scenario] [model]
@@ -11,21 +11,28 @@ Scenarios:
     multiturn   - Multi-turn conversation
     all         - Run all scenarios
 
-Models:
-    qwen-2.5-7b-instruct         (provider: llamacpp, requires server)
-    gpt-4o-mini                  (provider: openai, baseline)
+Models (numbered for convenience):
+    1   - Qwen 2.5 7B Instruct         (provider: llamacpp, requires server)
+    2   - Qwen 2.5 3B Instruct         (provider: llamacpp, requires server)
+    3   - Llama 3.1 8B Instruct        (provider: llamacpp, requires server)
+    4   - Llama 3.2 3B Instruct        (provider: llamacpp, requires server)
+    5   - Mistral 7B Instruct v0.3     (provider: llamacpp, requires server)
+    6   - Phi-4 Mini Instruct          (provider: llamacpp, requires server)
+    7   - Phi-4 Reasoning              (provider: llamacpp, requires server)
+    openai - GPT-4o Mini               (provider: openai, baseline)
 
 Examples:
-    python scripts/test_with_llm.py pirate qwen-2.5-7b-instruct
-    python scripts/test_with_llm.py inventor gpt-4o-mini
-    python scripts/test_with_llm.py all qwen-2.5-7b-instruct
+    python scripts/test_with_llm.py pirate 1
+    python scripts/test_with_llm.py inventor openai
+    python scripts/test_with_llm.py all 1
 """
 
-import json
 import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import yaml
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -34,6 +41,66 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 os.environ["BRIO_DEBUG"] = "1"
 
 from brio_ext.factory import BrioAIFactory  # noqa: E402
+
+
+# Model configurations matching start_server.sh
+MODELS = {
+    "1": {
+        "name": "qwen-2.5-7b-instruct",
+        "display": "Qwen 2.5 7B Instruct",
+        "provider": "llamacpp",
+        "base_url": "http://127.0.0.1:8765",
+        "requires_server": True,
+    },
+    "2": {
+        "name": "qwen-2.5-3b-instruct",
+        "display": "Qwen 2.5 3B Instruct",
+        "provider": "llamacpp",
+        "base_url": "http://127.0.0.1:8765",
+        "requires_server": True,
+    },
+    "3": {
+        "name": "llama-3.1-8b-instruct",
+        "display": "Llama 3.1 8B Instruct",
+        "provider": "llamacpp",
+        "base_url": "http://127.0.0.1:8765",
+        "requires_server": True,
+    },
+    "4": {
+        "name": "llama-3.2-3b-instruct",
+        "display": "Llama 3.2 3B Instruct",
+        "provider": "llamacpp",
+        "base_url": "http://127.0.0.1:8765",
+        "requires_server": True,
+    },
+    "5": {
+        "name": "mistral-7b-instruct-v0.3",
+        "display": "Mistral 7B Instruct v0.3",
+        "provider": "llamacpp",
+        "base_url": "http://127.0.0.1:8765",
+        "requires_server": True,
+    },
+    "6": {
+        "name": "phi-4-mini-instruct",
+        "display": "Phi-4 Mini Instruct",
+        "provider": "llamacpp",
+        "base_url": "http://127.0.0.1:8765",
+        "requires_server": True,
+    },
+    "7": {
+        "name": "phi-4-reasoning",
+        "display": "Phi-4 Reasoning",
+        "provider": "llamacpp",
+        "base_url": "http://127.0.0.1:8765",
+        "requires_server": True,
+    },
+    "openai": {
+        "name": "gpt-4o-mini",
+        "display": "GPT-4o Mini",
+        "provider": "openai",
+        "requires_server": False,
+    },
+}
 
 
 def print_separator(char="=", width=80):
@@ -47,11 +114,103 @@ def print_section(title, char="─"):
     print_separator(char, 80)
 
 
-def load_scenarios():
-    """Load test scenarios from JSON file"""
-    scenarios_file = Path(__file__).parent.parent / "fixtures" / "scenarios.json"
-    with open(scenarios_file) as f:
-        return json.load(f)
+def load_test_cases():
+    """Load test cases from YAML file"""
+    test_cases_file = Path(__file__).parent.parent / "fixtures" / "test_cases.yaml"
+    with open(test_cases_file) as f:
+        return yaml.safe_load(f)
+
+
+def load_component(relative_path: str) -> str:
+    """Load a component file from fixtures directory"""
+    if not relative_path:
+        return ""
+    component_file = Path(__file__).parent.parent / "fixtures" / relative_path
+    with open(component_file) as f:
+        return f.read().strip()
+
+
+def assemble_messages(test_case: Dict) -> List[Dict[str, str]]:
+    """
+    Assemble messages like BrioDocs does:
+    1. System message = system prompt + content + insights
+    2. User message = user prompt
+
+    For multiturn, build conversation history
+    """
+    messages = []
+
+    # Handle multi-turn conversation
+    if "turns" in test_case:
+        # Build system message first
+        system_parts = []
+
+        # Load system prompt
+        if test_case.get("system"):
+            system_parts.append(load_component(test_case["system"]))
+
+        # Add content if present
+        if test_case.get("content"):
+            system_parts.append("\n\n# CONTENT\n")
+            system_parts.append(load_component(test_case["content"]))
+
+        # Add insights if present
+        insights = test_case.get("insights", [])
+        if insights:
+            system_parts.append("\n\n# INSIGHTS\n")
+            for insight_path in insights:
+                system_parts.append(load_component(insight_path))
+                system_parts.append("\n")
+
+        messages.append({
+            "role": "system",
+            "content": "\n".join(system_parts).strip()
+        })
+
+        # Add conversation turns
+        for turn in test_case["turns"]:
+            # Load user message
+            user_content = load_component(turn["user"])
+            messages.append({"role": "user", "content": user_content})
+
+            # Add assistant response if provided (for history)
+            if turn.get("assistant"):
+                messages.append({"role": "assistant", "content": turn["assistant"]})
+
+        return messages
+
+    # Single-turn: Assemble system message from components
+    system_parts = []
+
+    # Load system prompt
+    if test_case.get("system"):
+        system_parts.append(load_component(test_case["system"]))
+
+    # Add content if present
+    if test_case.get("content"):
+        system_parts.append("\n\n# CONTENT\n")
+        system_parts.append(load_component(test_case["content"]))
+
+    # Add insights if present
+    insights = test_case.get("insights", [])
+    if insights:
+        system_parts.append("\n\n# INSIGHTS\n")
+        for insight_path in insights:
+            system_parts.append(load_component(insight_path))
+            system_parts.append("\n")
+
+    # Create system message
+    messages.append({
+        "role": "system",
+        "content": "\n".join(system_parts).strip()
+    })
+
+    # Add user message
+    if test_case.get("user"):
+        user_content = load_component(test_case["user"])
+        messages.append({"role": "user", "content": user_content})
+
+    return messages
 
 
 def truncate_text(text: str, max_chars: int = 500, show_both_ends: bool = True) -> str:
@@ -84,31 +243,32 @@ def format_messages(messages: List[Dict[str, str]], truncate: bool = True) -> st
 
 
 def test_model(
-    model_name: str,
-    provider: str,
+    model_config: Dict,
     scenario_name: str,
-    scenario: Dict,
-    base_url: Optional[str] = None,
+    test_case: Dict,
 ) -> bool:
-    """Test a single model with a scenario, showing full pipeline"""
+    """Test a single model with a scenario, showing full 4-step pipeline"""
 
     print_separator()
     print(f"SCENARIO: {scenario_name}")
-    print(f"MODEL: {model_name}")
-    print(f"PROVIDER: {provider}")
-    if base_url:
-        print(f"BASE_URL: {base_url}")
-    print(f"DESCRIPTION: {scenario['description']}")
+    print(f"MODEL: {model_config['display']}")
+    print(f"PROVIDER: {model_config['provider']}")
+    if model_config.get("base_url"):
+        print(f"BASE_URL: {model_config['base_url']}")
+    print(f"DESCRIPTION: {test_case['description']}")
     print_separator()
 
-    # [1] INPUT
-    print_section("1. INPUT TO BRIO_EXT")
-    print("Messages being sent:")
-    print(format_messages(scenario["messages"]))
+    # Assemble messages from components
+    messages = assemble_messages(test_case)
 
-    # [2] BRIO_EXT PROCESSING - Debug output will appear here
-    print_section("2. BRIO_EXT PROCESSING")
-    print("(Watch for debug output from renderer and adapters)")
+    # [STEP 1] TEST → ESPERANTO/BRIO_EXT (Input Messages)
+    print_section("STEP 1: TEST → ESPERANTO/BRIO_EXT (Input Messages)")
+    print("Messages being sent to brio_ext:")
+    print(format_messages(messages))
+
+    # [STEP 2] ESPERANTO/BRIO_EXT → LLM SERVER (Converted/Rendered Prompt)
+    print_section("STEP 2: ESPERANTO/BRIO_EXT → LLM SERVER")
+    print("(Watch debug output below for rendered prompt sent to model)")
     print("")
 
     try:
@@ -117,41 +277,28 @@ def test_model(
             "temperature": 0.7,
             "max_tokens": 512,
         }
-        if base_url:
-            config["base_url"] = base_url
+        if model_config.get("base_url"):
+            config["base_url"] = model_config["base_url"]
 
         model = BrioAIFactory.create_language(
-            provider=provider,
-            model_name=model_name,
+            provider=model_config["provider"],
+            model_name=model_config["name"],
             config=config
         )
 
-        # [3] CALLING MODEL
-        print_section("3. CALLING MODEL")
-        print("Making request...")
+        # Call the model - BRIO_DEBUG will show the conversion
+        print("Calling model...")
+        response = model.chat_complete(messages)
         print("")
 
-        # Call the model - debug output will show what's sent
-        response = model.chat_complete(scenario["messages"])
-
-        # [4] RAW RESPONSE
-        print_section("4. RAW RESPONSE FROM PROVIDER")
+        # [STEP 3] LLM SERVER → ESPERANTO/BRIO_EXT (Raw Response)
+        print_section("STEP 3: LLM SERVER → ESPERANTO/BRIO_EXT (Raw Response)")
         content = response.choices[0].message.content
+        print("Raw response from model:")
         print(content)
 
-        # [5] METADATA
-        print_section("5. RESPONSE METADATA")
-        print(f"Model: {model_name}")
-        print(f"Provider: {provider}")
-        print(f"Finish reason: {response.choices[0].finish_reason}")
-
-        if hasattr(response, 'usage') and response.usage:
-            print(f"Prompt tokens: {response.usage.prompt_tokens:,}")
-            print(f"Completion tokens: {response.usage.completion_tokens:,}")
-            print(f"Total tokens: {response.usage.total_tokens:,}")
-
-        # [6] PARSED CONTENT
-        print_section("6. PARSED CONTENT")
+        # [STEP 4] ESPERANTO/BRIO_EXT → TEST/BRIODOCS (Final Response)
+        print_section("STEP 4: ESPERANTO/BRIO_EXT → TEST/BRIODOCS (Final Response)")
 
         # Check for fencing
         has_out_open = "<out>" in content
@@ -162,20 +309,34 @@ def test_model(
             start = content.find("<out>") + 5
             end = content.find("</out>")
             parsed_content = content[start:end].strip()
-            print("Extracted from <out>...</out> tags:")
+            print("✓ Response properly fenced in <out>...</out>")
+            print("\nExtracted content:")
             print(parsed_content)
         else:
             parsed_content = content
-            print("(No <out>...</out> fencing found)")
+            print("○ No <out>...</out> fencing found in response")
+            print("\nContent:")
             print(parsed_content)
 
-        # [7] VALIDATION
-        print_section("7. VALIDATION")
+        # [METADATA]
+        print_section("RESPONSE METADATA")
+        print(f"Model: {model_config['display']}")
+        print(f"Provider: {model_config['provider']}")
+        print(f"Finish reason: {response.choices[0].finish_reason}")
+
+        if hasattr(response, 'usage') and response.usage:
+            print(f"Prompt tokens: {response.usage.prompt_tokens:,}")
+            print(f"Completion tokens: {response.usage.completion_tokens:,}")
+            print(f"Total tokens: {response.usage.total_tokens:,}")
+
+        # [VALIDATION]
+        print_section("VALIDATION")
 
         validation_passed = True
 
         # Check fencing
-        if scenario["validation"].get("should_fence", False):
+        validation = test_case.get("validation", {})
+        if validation.get("should_fence", False):
             if properly_fenced:
                 print("✓ Response properly fenced in <out>...</out>")
             else:
@@ -185,7 +346,7 @@ def test_model(
             print("○ Fencing not required for this test")
 
         # Check for expected content
-        should_contain = scenario["validation"].get("should_contain", [])
+        should_contain = validation.get("should_contain", [])
         if should_contain:
             print(f"\nChecking for expected content ({len(should_contain)} phrases):")
             for phrase in should_contain:
@@ -203,12 +364,12 @@ def test_model(
                 print(f"\n○ Unusual stop reason: {response.choices[0].finish_reason}")
 
         # Notes
-        notes = scenario["validation"].get("notes")
+        notes = validation.get("notes")
         if notes:
             print(f"\nNotes: {notes}")
 
-        # [8] OVERALL RESULT
-        print_section("8. OVERALL RESULT")
+        # [OVERALL RESULT]
+        print_section("OVERALL RESULT")
         if validation_passed:
             print("✅ TEST PASSED")
         else:
@@ -237,58 +398,48 @@ def main():
         sys.exit(1)
 
     scenario_arg = sys.argv[1]
-    model_arg = sys.argv[2] if len(sys.argv) > 2 else "qwen-2.5-7b-instruct"
+    model_arg = sys.argv[2] if len(sys.argv) > 2 else "1"
 
-    # Model configuration
-    models_config = {
-        "qwen-2.5-7b-instruct": {
-            "provider": "llamacpp",
-            "base_url": "http://127.0.0.1:8765",
-            "requires_server": True,
-        },
-        "gpt-4o-mini": {
-            "provider": "openai",
-            "requires_server": False,
-        },
-    }
-
-    if model_arg not in models_config:
+    # Validate model selection
+    if model_arg not in MODELS:
         print(f"Error: Unknown model '{model_arg}'")
-        print("Available models: " + ", ".join(models_config.keys()))
+        print("\nAvailable models:")
+        for key, config in MODELS.items():
+            print(f"  {key:8s} - {config['display']}")
         sys.exit(1)
 
-    model_config = models_config[model_arg]
+    model_config = MODELS[model_arg]
 
     # Check prerequisites
-    if model_arg == "gpt-4o-mini" and not os.getenv("OPENAI_API_KEY"):
+    if model_arg == "openai" and not os.getenv("OPENAI_API_KEY"):
         print("Error: OPENAI_API_KEY environment variable not set")
         sys.exit(1)
 
     if model_config.get("requires_server"):
         import httpx
         try:
-            # Try /v1/models endpoint instead of /health
             response = httpx.get(f"{model_config['base_url']}/v1/models", timeout=2)
             if response.status_code != 200:
                 raise Exception("Server not responding")
         except Exception as e:
             print(f"Error: llama.cpp server not running at {model_config['base_url']}")
-            print("\nStart the server first:")
-            print(f"  ./scripts/start_server.sh {model_arg}")
+            print("\nStart the server with the model you want to test:")
+            print(f"  ./scripts/start_server.sh")
+            print(f"\nThen select model {model_arg} ({model_config['display']})")
             print(f"\nDebug: {e}")
             sys.exit(1)
 
-    # Load scenarios
-    scenarios = load_scenarios()
+    # Load test cases
+    test_cases = load_test_cases()
 
     # Determine which scenarios to run
     if scenario_arg == "all":
-        scenario_names = list(scenarios.keys())
-    elif scenario_arg in scenarios:
+        scenario_names = list(test_cases.keys())
+    elif scenario_arg in test_cases:
         scenario_names = [scenario_arg]
     else:
         print(f"Error: Unknown scenario '{scenario_arg}'")
-        print("Available scenarios: " + ", ".join(scenarios.keys()) + ", all")
+        print("Available scenarios: " + ", ".join(test_cases.keys()) + ", all")
         sys.exit(1)
 
     # Run tests
@@ -298,7 +449,7 @@ def main():
     print("=" * 80)
     print("BRIO_EXT MANUAL TEST RUNNER")
     print("=" * 80)
-    print(f"Model: {model_arg}")
+    print(f"Model: {model_config['display']}")
     print(f"Provider: {model_config['provider']}")
     print(f"Scenarios: {', '.join(scenario_names)}")
     print(f"Debug mode: ENABLED (BRIO_DEBUG=1)")
@@ -306,15 +457,13 @@ def main():
     print("\n")
 
     for scenario_name in scenario_names:
-        scenario = scenarios[scenario_name]
+        test_case = test_cases[scenario_name]
 
         # Test the model
         passed = test_model(
-            model_name=model_arg,
-            provider=model_config["provider"],
+            model_config=model_config,
             scenario_name=scenario_name,
-            scenario=scenario,
-            base_url=model_config.get("base_url"),
+            test_case=test_case,
         )
 
         results[scenario_name] = passed
@@ -329,7 +478,7 @@ def main():
     print("=" * 80)
     print("FINAL SUMMARY")
     print("=" * 80)
-    print(f"Model: {model_arg}")
+    print(f"Model: {model_config['display']}")
     print(f"Provider: {model_config['provider']}")
     print()
 
