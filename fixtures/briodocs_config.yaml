@@ -1,0 +1,73 @@
+# BrioDocs Standard Configuration
+# These parameters match what BrioDocs uses in production across all tiers
+
+# Standard model parameters (used by BrioDocs for all models)
+model_parameters:
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 40
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  max_tokens: 512
+  stream: false
+
+# Performance tiers configuration
+# These match how BrioDocs deploys models for different use cases
+tiers:
+  tier1_high_performance:
+    name: "High Performance (16GB+ RAM)"
+    candidate_count: 5  # BrioDocs generates 5 responses and reranks
+    context_window: 8192
+    use_case: "Development, research, maximum quality"
+    server_config:
+      n_ctx: 8192
+      n_gpu_layers: -1  # Use ALL GPU layers
+      use_mlock: true
+      n_threads: 8
+    models:
+      - qwen-2.5-7b-instruct
+      - llama-3.1-8b-instruct
+
+  tier2_balanced:
+    name: "Balanced (8GB+ RAM)"
+    candidate_count: 3  # BrioDocs generates 3 responses and reranks
+    context_window: 4096
+    use_case: "Production, most users"
+    server_config:
+      n_ctx: 4096
+      n_gpu_layers: -1  # Use ALL GPU layers
+      use_mlock: true
+      n_threads: 8
+    models:
+      - mistral-7b-instruct-v0.3
+      - qwen-2.5-3b-instruct
+
+  tier3_fast:
+    name: "Fast (4GB+ RAM, CPU-only)"
+    candidate_count: 1  # NO reranking
+    context_window: 2048
+    use_case: "Low-resource environments, quick testing"
+    server_config:
+      n_ctx: 2048
+      n_gpu_layers: 0  # CPU ONLY (no GPU)
+      use_mlock: true
+      n_threads: 8
+    models:
+      - phi-4-mini-instruct
+      - phi-4-reasoning
+
+# Model-specific chat formats (for llama.cpp server startup)
+chat_formats:
+  qwen-2.5-7b-instruct: chatml
+  qwen-2.5-3b-instruct: chatml
+  llama-3.1-8b-instruct: llama-3
+  llama-3.2-3b-instruct: llama-3
+  mistral-7b-instruct-v0.3: mistral-instruct
+  phi-4-mini-instruct: chatml
+  phi-4-reasoning: chatml
+
+# Notes for testing
+notes:
+  reranking: "BrioDocs handles reranking logic in the application. Esperanto just needs to handle individual requests correctly."
+  context_limits: "Old BrioDocs used custom context limits (6144, 4096) but now uses native model capacity via n_ctx."
+  temperature_note: "0.7 is BrioDocs standard. Lower values (0.1-0.3) may be needed for accuracy-critical tasks, but that's an application decision."

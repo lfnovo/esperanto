@@ -9,9 +9,9 @@ pirate:
   insights: []
   validation:
     should_contain_any:
-      - ["4", "four"]  # Accept either numeric or word form
+      - ["4", "four"]  # Accept numeric or word form (MUST be 4, not other numbers!)
     should_fence: true
-    notes: "Tests basic system message handling. Response should be fenced by brio_ext (not by LLM). If pirate speak, system message was respected."
+    notes: "Tests basic system message handling. Response should be fenced by brio_ext (not by LLM). If pirate speak, system message was respected. WARNING: Model may hallucinate wrong answers with personality prompts - this is a MODEL issue, not brio_ext!"
 
 inventor:
   description: "Medium context inventor lookup - Tests system message with content + insights"

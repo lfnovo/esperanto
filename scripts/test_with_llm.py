@@ -121,6 +121,13 @@ def load_test_cases():
         return yaml.safe_load(f)
 
 
+def load_briodocs_config():
+    """Load BrioDocs standard configuration"""
+    config_file = Path(__file__).parent.parent / "fixtures" / "briodocs_config.yaml"
+    with open(config_file) as f:
+        return yaml.safe_load(f)
+
+
 def load_component(relative_path: str) -> str:
     """Load a component file from fixtures directory"""
     if not relative_path:
@@ -272,10 +279,18 @@ def test_model(
     print("")
 
     try:
-        # Create model instance
+        # Load BrioDocs standard configuration
+        briodocs_config = load_briodocs_config()
+        model_params = briodocs_config["model_parameters"]
+
+        # Create model instance with BrioDocs-standard parameters
         config = {
-            "temperature": 0.7,
-            "max_tokens": 512,
+            "temperature": model_params["temperature"],
+            "top_p": model_params["top_p"],
+            "top_k": model_params["top_k"],
+            "frequency_penalty": model_params["frequency_penalty"],
+            "presence_penalty": model_params["presence_penalty"],
+            "max_tokens": model_params["max_tokens"],
         }
         if model_config.get("base_url"):
             config["base_url"] = model_config["base_url"]
@@ -466,6 +481,10 @@ def main():
     # Run tests
     results = {}
 
+    # Load BrioDocs config to display parameters
+    briodocs_config = load_briodocs_config()
+    model_params = briodocs_config["model_parameters"]
+
     print("\n\n")
     print("=" * 80)
     print("BRIO_EXT MANUAL TEST RUNNER")
@@ -474,6 +493,14 @@ def main():
     print(f"Provider: {model_config['provider']}")
     print(f"Scenarios: {', '.join(scenario_names)}")
     print(f"Debug mode: ENABLED (BRIO_DEBUG=1)")
+    print("")
+    print("BrioDocs-Standard Parameters:")
+    print(f"  temperature: {model_params['temperature']}")
+    print(f"  top_p: {model_params['top_p']}")
+    print(f"  top_k: {model_params['top_k']}")
+    print(f"  max_tokens: {model_params['max_tokens']}")
+    print(f"  frequency_penalty: {model_params['frequency_penalty']}")
+    print(f"  presence_penalty: {model_params['presence_penalty']}")
     print("=" * 80)
     print("\n")
 
