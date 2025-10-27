@@ -47,3 +47,27 @@ The factory wraps providers transparently:
 - Add new adapters under `brio_ext/adapters/` and register them in `brio_ext/registry.py`.
 - If a provider needs a prompt-based caller, implement it in `brio_ext/providers/` and add it to `_LANGUAGE_OVERRIDES` in `brio_ext/factory.py`.
 - Keep tests alongside the module under `brio_ext/tests/`.
+
+## Provider Smoke Tests
+
+Optional integration tests hit real providers to verify end-to-end behaviour. They are skipped unless you opt in via environment variables:
+
+```bash
+BRIO_TEST_OPENAI_MODEL=gpt-4o-mini \
+BRIO_TEST_ANTHROPIC_MODEL=claude-3-5-sonnet-20241022 \
+BRIO_TEST_GROQ_MODEL=groq/llama3-8b-8192-tool-use-preview \
+pytest src/brio_ext/tests/integration/test_provider_smoke.py -q -m integration
+
+# llama.cpp server (defaults to http://127.0.0.1:8765)
+BRIO_TEST_LLAMACPP_MODEL=qwen2.5-7b-instruct \
+pytest src/brio_ext/tests/integration/test_provider_smoke.py -q -m integration
+```
+
+For each provider, set `BRIO_TEST_<PROVIDER>_MODEL` (e.g. `BRIO_TEST_GROK_MODEL`,
+`BRIO_TEST_MISTRAL_MODEL`). Optional overrides include:
+
+- `BRIO_TEST_<PROVIDER>_PROVIDER` – custom provider string if you’re exercising a compatible endpoint.
+- `BRIO_TEST_<PROVIDER>_CONFIG` – JSON blob merged into the provider config for fields such as deployments or API versions.
+- `BRIO_TEST_<PROVIDER>_BASE_URL`, `BRIO_TEST_<PROVIDER>_MAX_TOKENS`, etc.
+
+Refer to `src/brio_ext/tests/integration/test_provider_smoke.py` for the complete list.

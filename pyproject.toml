@@ -49,6 +49,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --cov=esperanto --cov-report=term-missing"
+markers = ["integration: end-to-end provider smoke tests requiring live credentials"]
 
 [tool.ruff]
 line-length = 88

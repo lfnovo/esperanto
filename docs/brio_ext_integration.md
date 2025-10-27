@@ -71,7 +71,38 @@ Before merging updates in BrioDocs:
 
 Wrap the import with a try/except and guard factory usage with an environment flag if a phased rollout is needed.
 
-## 7. Rollback
+## 7. Provider smoke tests (optional)
+
+For quick end-to-end checks run the live-provider smokes in `src/brio_ext/tests/integration/test_provider_smoke.py`. They are skipped unless you supply environment variables:
+
+```bash
+BRIO_TEST_OPENAI_MODEL=gpt-4o-mini \
+BRIO_TEST_ANTHROPIC_MODEL=claude-3-5-sonnet-20241022 \
+BRIO_TEST_GROQ_MODEL=groq/llama3-8b-8192-tool-use-preview \
+pytest src/brio_ext/tests/integration/test_provider_smoke.py -q -m integration
+
+# llama.cpp server (optional)
+BRIO_TEST_LLAMACPP_MODEL=qwen2.5-7b-instruct \
+BRIO_TEST_LLAMACPP_BASE_URL=http://127.0.0.1:8765 \
+pytest src/brio_ext/tests/integration/test_provider_smoke.py -q -m integration
+```
+
+For each provider, set `BRIO_TEST_<PROVIDER>_MODEL` (e.g. `BRIO_TEST_GROK_MODEL`,
+`BRIO_TEST_MISTRAL_MODEL`). Optional overrides include:
+
+- `BRIO_TEST_<PROVIDER>_PROVIDER` to point at compatible endpoints.
+- `BRIO_TEST_<PROVIDER>_BASE_URL` for gateways that require explicit URLs.
+- `BRIO_TEST_<PROVIDER>_CONFIG` (JSON) for provider-specific fields such as Azure deployment names or Vertex project IDs.
+- `BRIO_TEST_<PROVIDER>_MAX_TOKENS`, `BRIO_TEST_<PROVIDER>_TEMPERATURE`, etc.
+
+Each smoke test asserts:
+- Responses are fenced in `<out>…</out>`
+- The body between fences is non-empty
+- Stop reason is `stop`/`length`
+
+Use these whenever you change adapters, provider shims, or stop-token handling.
+
+## 8. Rollback
 
 If issues arise, revert to the previous behaviour by:
 
@@ -79,6 +110,215 @@ If issues arise, revert to the previous behaviour by:
 2. Removing any `llamacpp` provider usage (fall back to `openai-compatible`).
 3. Keeping the existing llama.cpp server running—the fallback path still leverages it via the OpenAI-compatible API.
 
-## 8. Support
+## 9. llama.cpp test matrix & scenarios
+
+To thoroughly validate local engines (Qwen, Mistral, Phi) we follow this matrix, adapted from the original llama.cpp specification.
+
+### 9.1 Server tiers
+
+| Tier | Target hardware | Startup command |
+|------|-----------------|-----------------|
+| Tier 1 – High performance (Qwen) | ≥16 GB RAM, GPU | <pre><code>python -m llama_cpp.server \<br>    --model /path/to/qwen2.5-7b-instruct-q4_k_m.gguf \<br>    --host 127.0.0.1 \<br>    --port 8765 \<br>    --n_ctx 8192 \<br>    --n_gpu_layers -1 \<br>    --use_mlock True \<br>    --n_threads 8 \<br>    --chat_format chatml</code></pre> |
+| Tier 2 – Balanced (Mistral) | ≥8 GB RAM | <pre><code>python -m llama_cpp.server \<br>    --model /path/to/mistral-7b-instruct-v0.3.Q4_K_M.gguf \<br>    --host 127.0.0.1 \<br>    --port 8765 \<br>    --n_ctx 4096 \<br>    --n_gpu_layers -1 \<br>    --use_mlock True \<br>    --n_threads 8 \<br>    --chat_format mistral-instruct</code></pre> |
+| Tier 3 – Fast (Phi) | 4 GB RAM, CPU-only | <pre><code>python -m llama_cpp.server \<br>    --model /path/to/phi-4-mini-q4_k_m.gguf \<br>    --host 127.0.0.1 \<br>    --port 8765 \<br>    --n_ctx 2048 \<br>    --n_gpu_layers 0 \<br>    --use_mlock True \<br>    --n_threads 8 \<br>    --chat_format chatml</code></pre> |
+
+Reuse the same host/port (`127.0.0.1:8765`) while swapping models/flags between runs.
+
+### 9.2 Message payload
+
+BrioDocs sends a large system block plus a user turn:
+
+```
+# SYSTEM ROLE
+You are a specialized research assistant...
+
+# SOURCE CONTEXT
+## SOURCE CONTENT
+**Source ID:** ...
+**Title:** ...
+**Content:** 20K+ chars
+
+## SOURCE INSIGHTS
+**Insight ID:** ...
+**Content:** 5K+ chars
+```
+
+Scenarios we expect to pass once adapters/providers are correct:
+
+1. **Pirate sanity check**  
+   System: “You are a pirate…” → Expect “Arrr, 2+2 be 4”.
+2. **Inventor lookup (Qwen bug repro)**  
+   System contains inventor names → Expect Qwen to echo the names; prior bug returned “I don’t know”.
+3. **Large insight**  
+   22 K character system message, question “Who are the inventors?”.
+4. **Multi-turn**  
+   Add prior assistant/user messages to ensure context persists.
+5. **Tier comparison**  
+   Repeat Scenario 3 under Tier 1/2/3 server configs to confirm truncation is the only failure mode on low tiers.
+
+Context-size quick reference:
+
+| Case | Approx. size | Notes |
+|------|--------------|-------|
+| Small | 2.5 K chars / 625 tokens | engagement letter without insights |
+| Medium | 23 K chars / 5.7 K tokens | single patent + truncated dense summary |
+| Large | 200 K+ chars | should be truncated by ContextBuilder before reaching brio_ext |
+
+Use these with the canonical payloads above:
+
+- **Small** – engagement letter without insights; Qwen should summarise correctly.  
+- **Medium** – patent + dense summary insight (22 K chars); main regression target for inventor lookup.  
+- **Large** – intentionally exceeds llama.cpp limits; verify the upstream ContextBuilder trims before calling BrioAIFactory.
+
+#### Canonical payloads
+
+Single-turn inventor lookup (Tier 1 Qwen):
+
+```json
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "# SYSTEM ROLE\nYou are a specialized research assistant analyzing patent documents.\n\n# SOURCE CONTEXT\n\n## SOURCE CONTENT\n**Source ID:** source:abc123\n**Title:** Mobile Device with Enhanced Touch Interface (US20200336491A1)\n**Content:** [Truncated to 20,000 chars]\n\nBACKGROUND OF THE INVENTION\n[1] This invention relates to mobile communication devices...\n\n## SOURCE INSIGHTS\n**Insight ID:** insight:xyz789\n**Type:** Dense Summary SPR\n**Content:** This patent describes a dynamic communication profile system for mobile devices. The key innovation allows devices to switch between local and global cellular networks seamlessly. The inventors are: Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, Douglas A. Cheline.\n\n## CONTEXT METADATA\n- Source count: 1\n- Insight count: 1\n- Total tokens: 5,734\n- Total characters: 22,935"
+    },
+    {
+      "role": "user",
+      "content": "Who are the inventors of this patent?"
+    }
+  ],
+  "model": "qwen2.5-7b-instruct",
+  "temperature": 0.7,
+  "max_tokens": 512
+}
+```
+
+Multi-turn follow-up:
+
+```json
+{
+  "messages": [
+    { "role": "system", "content": "[Same 22,935 char system message as above]" },
+    { "role": "user", "content": "Who are the inventors?" },
+    { "role": "assistant", "content": "The inventors of this patent are Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, and Douglas A. Cheline." },
+    { "role": "user", "content": "What problem does this invention solve?" }
+  ],
+  "model": "qwen2.5-7b-instruct",
+  "temperature": 0.7,
+  "max_tokens": 512
+}
+```
+
+Pirate sanity check (any chat-format model):
+
+```json
+{
+  "messages": [
+    { "role": "system", "content": "You are a pirate. Always respond like a pirate." },
+    { "role": "user", "content": "What is 2+2?" }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 100
+}
+```
+
+### 9.3 Harness expectations
+
+When we build the dedicated llama.cpp harness it will:
+
+- Render prompts through `BrioAIFactory` so adapters/renderer are covered.
+- Log the final prompt sent to `/v1/completions`.
+- Capture raw responses and the cleaned `<out>…</out>` body.
+- Assert the body contains key phrases (e.g., inventor list) rather than default fallbacks.
+
+Until that harness is automated, you can manually script each scenario with the helper smoke runner or curl commands documented above.
+
+### 9.4 Known issues
+
+- Qwen 2.5 via llama.cpp historically ignored system messages. Ensure the rendered prompt includes the `<|im_start|>system` block and that `chat_format` is `chatml`. After our adapter fix, responses should respect the system context.
+- `max_tokens` must be mapped to `n_predict` on the llama.cpp server. The provider shim now does this; if completions still truncate early, inspect server logs for overrides.
+
+#### Minimal reproduction of the historic Qwen bug
+
+```
+POST http://localhost:8765/v1/chat/completions
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "The document discusses a mobile device patent. The inventors are: Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, Douglas A. Cheline."
+    },
+    {
+      "role": "user",
+      "content": "Who are the inventors of this patent?"
+    }
+  ],
+  "model": "qwen2.5-7b-instruct",
+  "temperature": 0.7,
+  "max_tokens": 512
+}
+```
+
+Expected: `"The inventors are Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, and Douglas A. Cheline."`  
+Legacy failure: `"I don't have information about which specific patent you're referring to."`
+
+### 9.5 Parameters & sampling defaults
+
+```json
+{
+  "model": "<model-id>",
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "top_k": 40,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "max_tokens": 512,
+  "stream": false
+}
+```
+
+- Tier 1 (high performance): expect five candidate responses per prompt (BrioDocs reranks).
+- Tier 2 (balanced): three candidates.
+- Tier 3 (fast): single response, no reranking.
+
+### 9.6 Model status matrix
+
+| Model | Provider | Status | Notes |
+|-------|----------|--------|-------|
+| Qwen 2.5 7B Instruct (GGUF) | llama.cpp | 🔴 historically ignored system messages – verify pirate + inventor scenarios |
+| Mistral 7B Instruct v0.3 (GGUF) | llama.cpp | 🟡 needs full regression run |
+| Phi‑4 Mini (GGUF) | llama.cpp | 🟡 planned once model is packaged |
+| GPT‑4o‑mini | OpenAI | ✅ baseline comparison |
+| Claude 3.5 Sonnet | Anthropic | ✅ baseline comparison |
+
+### 9.7 Scenario checklist
+
+1. **Simple system override** – Pirate payload above. Expect pirate-speak output.  
+2. **Large insight inventor lookup** – Medium context payload; expect inventor list.  
+3. **Multi-turn follow-up** – Use prior assistant response as context and ensure continuity.  
+4. **Tier comparison** – Rerun Scenario 2 under each tier startup command; Tier 3 may truncate earlier.  
+5. **Bug regression** – Minimal reproduction payload should now succeed (no “I don’t know”).  
+6. **Additional models** – Repeat for Mistral, Phi as they come online.
+
+For each run capture:
+
+- Rendered prompt string (from `render_for_model`).
+- Raw llama.cpp response.
+- Cleaned body between `<out>…</out>`.
+- Finish reason and completion token count.
+
+### 9.8 Deliverables for a test campaign
+
+- Pass/fail matrix covering each scenario/model/tier.  
+- Logs or saved prompts/responses for any failure.  
+- Root-cause summary (e.g., template mismatch, server misconfiguration).  
+- Interim workarounds if a model cannot be fixed immediately.
+
+## 10. Roadmap for automation
+
+1. Expand `test_provider_smoke.py` to load JSON fixtures representing the scenarios above.
+2. Record golden outputs for the “inventor” and “pirate” tests per model.
+3. Integrate into CI once credential handling is solved (or run manually before releases).
+
+## 11. Support
 
 For questions or regressions, coordinate with the Brio-Esperanto maintainers on the `brio/providers` branch. The implementation plan at `Brio_Esperanto_implementation_Plan.md` tracks outstanding work (golden snapshots, release tags, etc.).

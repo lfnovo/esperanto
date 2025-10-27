@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Dict, List
 
 from brio_ext.adapters import ChatAdapter, RenderedPrompt
@@ -14,6 +15,9 @@ class QwenAdapter(ChatAdapter):
         return "qwen" in (model_id or "").lower()
 
     def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
+        if os.getenv("BRIO_DEBUG"):
+            print(f"[QwenAdapter] Rendering {len(messages)} messages")
+
         def block(role: str, content: str) -> str:
             return f"<|im_start|>{role}\n{content}\n<|im_end|>\n"
 
@@ -25,4 +29,9 @@ class QwenAdapter(ChatAdapter):
 
         # Add trailing newline after <out> so the model starts generating content
         prompt = f"{block('system', system_text)}{conversation}<|im_start|>assistant\n<out>\n"
+
+        if os.getenv("BRIO_DEBUG"):
+            print(f"[QwenAdapter] Generated prompt: {len(prompt)} chars")
+            print(f"[QwenAdapter] Stop tokens: ['</out>', '<|im_end|>']")
+
         return {"prompt": prompt, "stop": ["</out>", "<|im_end|>"]}

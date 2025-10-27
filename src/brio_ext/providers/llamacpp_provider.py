@@ -108,6 +108,13 @@ class LlamaCppLanguageModel(LanguageModel):
         if stop:
             payload["stop"] = stop
 
+        if os.getenv("BRIO_DEBUG"):
+            print(f"[LlamaCppProvider] Calling /v1/completions")
+            print(f"[LlamaCppProvider] base_url={self.base_url}")
+            print(f"[LlamaCppProvider] prompt_length={len(prompt)} chars")
+            print(f"[LlamaCppProvider] stop_tokens={payload.get('stop', [])}")
+            print(f"[LlamaCppProvider] max_tokens={payload.get('max_tokens', 'default')}")
+
         response = self.client.post(
             f"{self.base_url}/v1/completions",
             headers=self._get_headers(),

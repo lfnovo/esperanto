@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Dict, List
 
 from brio_ext.adapters import RenderedPrompt
@@ -21,10 +22,18 @@ def render_for_model(
     provider_key = (provider or "").lower()
     adapter = get_adapter(model_id)
 
+    if os.getenv("BRIO_DEBUG"):
+        print(f"[RENDERER] model_id={model_id}, provider={provider_key}")
+        print(f"[RENDERER] adapter={adapter.__class__.__name__ if adapter else None}")
+
     if adapter:
         if provider_key in PROMPT_PROVIDERS:
             payload = dict(adapter.render(messages))
             payload["stop"] = _merge_stops(payload.get("stop"), DEFAULT_STOP)
+            if os.getenv("BRIO_DEBUG"):
+                print(f"[RENDERER] mode=PROMPT (completions)")
+                print(f"[RENDERER] prompt_length={len(payload.get('prompt', ''))} chars")
+                print(f"[RENDERER] stops={payload['stop']}")
             return payload
 
         rendered = adapter.render(messages)
@@ -33,17 +42,26 @@ def render_for_model(
                 "messages": rendered["messages"],
                 "stop": _merge_stops(rendered.get("stop"), DEFAULT_STOP),
             }
+            if os.getenv("BRIO_DEBUG"):
+                print(f"[RENDERER] mode=MESSAGES (chat)")
+                print(f"[RENDERER] stops={payload['stop']}")
             return payload
 
         # If adapter produced a prompt but provider is not prompt-capable, fall through
         # to the default message behavior.
 
     if provider_key in TEMPLATE_PROVIDERS or adapter is None:
+        if os.getenv("BRIO_DEBUG"):
+            print(f"[RENDERER] mode=PASSTHROUGH (template provider or no adapter)")
+            print(f"[RENDERER] stops={DEFAULT_STOP}")
         return {"messages": messages, "stop": DEFAULT_STOP.copy()}
 
     if adapter:
         payload = dict(adapter.render(messages))
         payload["stop"] = _merge_stops(payload.get("stop"), DEFAULT_STOP)
+        if os.getenv("BRIO_DEBUG"):
+            print(f"[RENDERER] mode=FALLBACK (adapter without prompt provider)")
+            print(f"[RENDERER] stops={payload['stop']}")
         return payload
 
     return {"messages": messages, "stop": DEFAULT_STOP.copy()}

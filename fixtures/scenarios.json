@@ -1,0 +1,64 @@
+{
+  "pirate": {
+    "description": "Simple system message test - Pirate personality",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a pirate. Always respond like a pirate."
+      },
+      {
+        "role": "user",
+        "content": "What is 2+2?"
+      }
+    ],
+    "validation": {
+      "should_contain": ["4"],
+      "should_fence": true,
+      "notes": "Tests basic system message handling. If the model responds in pirate speak, system message was respected."
+    }
+  },
+  "inventor": {
+    "description": "Medium context inventor lookup (~5K tokens) - Tests system message with context",
+    "messages": [
+      {
+        "role": "system",
+        "content": "# SYSTEM ROLE\nYou are a specialized research assistant analyzing patent documents.\n\n# SOURCE CONTEXT\n\n## SOURCE CONTENT\n**Source ID:** source:abc123\n**Title:** Mobile Device with Enhanced Touch Interface (US20200336491A1)\n**Content:** This patent application describes a mobile communication device with advanced networking capabilities. The device includes multiple communication interfaces (Wi-Fi, cellular, Bluetooth) and intelligent switching logic.\n\nBACKGROUND OF THE INVENTION\n\n[1] The present invention relates generally to mobile communication devices and, more particularly, to systems and methods for managing network connectivity in mobile devices that operate across multiple geographic regions and network types.\n\n[2] Modern mobile devices must handle increasingly complex networking scenarios. Users frequently travel between regions with different cellular networks, requiring devices to switch between local and global (roaming) connectivity modes. Traditional approaches to this problem have significant limitations, particularly with respect to cost efficiency and user experience.\n\n[3] Current mobile devices typically maintain a single network profile configuration, which becomes problematic when users travel internationally. The device continues attempting to use the home network provider, resulting in expensive roaming charges. Some devices offer manual switching between network profiles, but this requires user intervention and technical knowledge.\n\n[4] There is a need for an improved system that can automatically detect available networks, assess their suitability based on location and other factors, and seamlessly switch between network profiles without user intervention.\n\nSUMMARY OF THE INVENTION\n\n[5] The present invention addresses these limitations by providing a dynamic communication profile system for mobile devices. The system automatically switches between local and global cellular networks based on the device's geographic location, available networks, and user preferences.\n\n[6] In one embodiment, the mobile device maintains multiple communication profiles, each optimized for different network environments. The device continuously monitors its location using GPS or other positioning systems, and when it detects a change in geographic region, it evaluates available networks and selects the most appropriate profile.\n\n[7] The invention includes intelligent decision logic that considers multiple factors: signal strength, network availability, cost considerations, user preferences, and quality of service requirements. This ensures optimal connectivity while minimizing costs and maintaining user experience.\n\n## SOURCE INSIGHTS\n**Insight ID:** insight:xyz789\n**Type:** Dense Summary SPR\n**Content:** This patent describes a dynamic communication profile system for mobile devices. The key innovation allows devices to switch between local and global cellular networks seamlessly based on geographic location. The system uses GPS positioning to detect location changes and automatically selects the optimal network profile. Key benefits include reduced roaming costs and improved user experience through automatic network switching without manual intervention. The inventors are: Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, Douglas A. Cheline. The patent addresses the problem of expensive international roaming by enabling automatic local network detection and profile switching when traveling between regions.\n\n## CONTEXT METADATA\n- Source count: 1\n- Insight count: 1\n- Total tokens (estimated): 5,734\n- Total characters: 22,935"
+      },
+      {
+        "role": "user",
+        "content": "Who are the inventors of this patent?"
+      }
+    ],
+    "validation": {
+      "should_contain": ["Richard H. Xu", "Xiaolei Qin", "Phillip C. Krasko", "Douglas A. Cheline"],
+      "should_fence": true,
+      "notes": "This is the KEY test for Qwen system message bug. If model returns 'I don't know', system messages are being ignored."
+    }
+  },
+  "multiturn": {
+    "description": "Multi-turn conversation - Tests conversation history handling",
+    "messages": [
+      {
+        "role": "system",
+        "content": "# SYSTEM ROLE\nYou are a specialized research assistant analyzing patent documents.\n\n# SOURCE CONTEXT\n\n## SOURCE INSIGHTS\n**Content:** This patent describes a dynamic communication profile system for mobile devices. The inventors are: Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, Douglas A. Cheline. The patent addresses automatic network switching to reduce roaming costs."
+      },
+      {
+        "role": "user",
+        "content": "Who are the inventors?"
+      },
+      {
+        "role": "assistant",
+        "content": "<out>The inventors of this patent are Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, and Douglas A. Cheline.</out>"
+      },
+      {
+        "role": "user",
+        "content": "What problem does this invention solve?"
+      }
+    ],
+    "validation": {
+      "should_contain": ["roaming", "cost", "network"],
+      "should_fence": true,
+      "notes": "Tests that conversation history is preserved and system context is maintained across turns."
+    }
+  }
+}
