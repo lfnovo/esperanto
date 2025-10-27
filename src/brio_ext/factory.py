@@ -137,16 +137,24 @@ def _ensure_fenced_completion(result):
 
 
 def _ensure_fence(text: str) -> str:
+    """
+    Ensure text is wrapped in <out>...</out> fences.
+
+    If LLM generated <out> tags, strip them first and re-fence cleanly.
+    This ensures consistent fencing regardless of whether the LLM
+    tried to add its own tags.
+    """
     stripped = text.strip()
     if not stripped:
         return "<out>\n</out>"
 
-    lower = stripped.lower()
+    # Strip any LLM-generated <out> tags before re-fencing
     if stripped.startswith("<out>"):
-        if stripped.endswith("</out>"):
-            return stripped
-        return f"{stripped.rstrip()}</out>"
+        stripped = stripped[5:].lstrip()  # Remove opening tag and whitespace
+    if stripped.endswith("</out>"):
+        stripped = stripped[:-6].rstrip()  # Remove closing tag and whitespace
 
+    # Re-fence with clean tags
     return f"<out>\n{stripped}\n</out>"
 
 

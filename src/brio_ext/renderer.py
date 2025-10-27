@@ -35,6 +35,10 @@ def render_for_model(
                 print(f"[RENDERER] mode=PROMPT (completions)")
                 print(f"[RENDERER] prompt_length={len(payload.get('prompt', ''))} chars")
                 print(f"[RENDERER] stops={payload['stop']}")
+                print(f"[RENDERER] Full prompt sent to model:")
+                print("─" * 80)
+                print(payload.get('prompt', ''))
+                print("─" * 80)
             return payload
 
         rendered = adapter.render(messages)
