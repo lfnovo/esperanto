@@ -128,11 +128,18 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-# Make sure we're in conda environment
-if [ -z "$CONDA_DEFAULT_ENV" ]; then
-    echo "Warning: Not in a conda environment!"
-    echo "Run: conda activate briodocs"
+# Check if llama_cpp is installed
+if ! python -c "import llama_cpp" 2>/dev/null; then
+    echo "Error: llama-cpp-python not installed!"
     echo ""
+    echo "Install it with:"
+    echo "  pip install llama-cpp-python[server]"
+    echo ""
+    echo "Or if using conda:"
+    echo "  conda activate base"
+    echo "  pip install llama-cpp-python[server]"
+    echo ""
+    exit 1
 fi
 
 # Start the server
