@@ -19,8 +19,8 @@ if [ -z "$CHOICE" ]; then
     echo "  3  llama-3.1-8b-instruct    - Llama 3.1 8B Instruct (Tier 1: 8K context, GPU)"
     echo "  4  llama-3.2-3b-instruct    - Llama 3.2 3B Instruct (Tier 2: 4K context)"
     echo "  5  mistral-7b-instruct      - Mistral 7B Instruct v0.3 (Tier 2: 4K context)"
-    echo "  6  phi-4-mini-instruct      - Phi-4 Mini Instruct (Tier 2: 4K context)"
-    echo "  7  phi-4-reasoning           - Phi-4 Reasoning (Tier 2: 4K context)"
+    echo "  6  phi-4-mini-instruct      - Phi-4 Mini Instruct (Tier 3: 2K context, CPU-only)"
+    echo "  7  phi-4-reasoning           - Phi-4 Reasoning (Tier 3: 2K context, CPU-only)"
     echo ""
     echo "Example:"
     echo "  $0 1    # Start Qwen 2.5 7B Instruct"
@@ -81,17 +81,17 @@ case $CHOICE in
         MODEL_NAME="Phi-4 Mini Instruct"
         MODEL_FILE="$MODELS_DIR/Phi-4-mini-instruct-Q4_K_M.gguf"
         CHAT_FORMAT="chatml"
-        CONTEXT=4096
-        GPU_LAYERS=-1
-        TIER="Tier 2 (Balanced)"
+        CONTEXT=2048
+        GPU_LAYERS=0  # CPU-only for Tier 3
+        TIER="Tier 3 (Fast - CPU Only)"
         ;;
     7)
         MODEL_NAME="Phi-4 Reasoning"
         MODEL_FILE="$MODELS_DIR/phi-4-reasoning-Q4_K_M.gguf"
         CHAT_FORMAT="chatml"
-        CONTEXT=4096
-        GPU_LAYERS=-1
-        TIER="Tier 2 (Balanced - Reasoning)"
+        CONTEXT=2048
+        GPU_LAYERS=0  # CPU-only for Tier 3
+        TIER="Tier 3 (Fast - CPU Only)"
         ;;
     *)
         echo "Error: Invalid choice '$CHOICE'. Must be 1-7."
