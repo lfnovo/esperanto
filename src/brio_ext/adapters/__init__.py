@@ -21,5 +21,16 @@ class ChatAdapter(ABC):
         """Render Esperanto messages into provider-specific payloads."""
         raise NotImplementedError
 
+    def clean_response(self, text: str) -> str:
+        """
+        Clean model-specific format markers from response text.
+
+        Each adapter should override this to strip its model's format markers
+        (e.g., [/INST] for Llama, <|im_end|> for Qwen/Phi, etc.).
+
+        Default implementation returns text unchanged.
+        """
+        return text
+
 
 __all__ = ["ChatAdapter", "RenderedPrompt"]

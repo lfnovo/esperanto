@@ -27,3 +27,11 @@ class GemmaAdapter(ChatAdapter):
             f"<start_of_turn>model\n"
         )
         return {"prompt": prompt, "stop": ["<end_of_turn>"]}
+
+    def clean_response(self, text: str) -> str:
+        """Remove Gemma format markers from response."""
+        # Strip any Gemma turn markers that leaked through
+        cleaned = text
+        for marker in ["<start_of_turn>", "<end_of_turn>"]:
+            cleaned = cleaned.replace(marker, "")
+        return cleaned.strip()

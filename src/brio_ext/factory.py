@@ -65,6 +65,10 @@ def _wrap_language_model(
     original_chat = model.chat_complete
     original_achat = model.achat_complete
 
+    # Get adapter for response cleaning
+    from brio_ext.registry import get_adapter
+    adapter = get_adapter(model_id)
+
     def chat_complete(self, messages, stream=None):
         rendered = render_for_model(model_id, messages, provider)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
@@ -76,7 +80,7 @@ def _wrap_language_model(
             prompt_handler = getattr(self, "prompt_complete", None)
             if callable(prompt_handler):
                 result = prompt_handler(rendered["prompt"], stop=stops, stream=stream)
-                return _ensure_fenced_completion(result)
+                return _ensure_fenced_completion(result, adapter)
             raise RuntimeError(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
             )
@@ -94,12 +98,12 @@ def _wrap_language_model(
                 result = await prompt_handler(
                     rendered["prompt"], stop=stops, stream=stream
                 )
-                return _ensure_fenced_completion(result)
+                return _ensure_fenced_completion(result, adapter)
 
             sync_handler = getattr(self, "prompt_complete", None)
             if callable(sync_handler):
                 result = sync_handler(rendered["prompt"], stop=stops, stream=stream)
-                return _ensure_fenced_completion(result)
+                return _ensure_fenced_completion(result, adapter)
 
             raise RuntimeError(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
@@ -113,7 +117,7 @@ def _wrap_language_model(
     return model
 
 
-def _ensure_fenced_completion(result):
+def _ensure_fenced_completion(result, adapter=None):
     """Ensure completion content is wrapped in <out>...</out> fences."""
     if not isinstance(result, ChatCompletion):
         return result
@@ -122,7 +126,7 @@ def _ensure_fenced_completion(result):
     for choice in result.choices:
         message = choice.message
         content = message.content or ""
-        fenced = _ensure_fence(content)
+        fenced = _ensure_fence(content, adapter)
         new_message = Message(
             content=fenced,
             role=message.role,
@@ -136,7 +140,7 @@ def _ensure_fenced_completion(result):
     return result.model_copy(update={"choices": choices})
 
 
-def _ensure_fence(text: str) -> str:
+def _ensure_fence(text: str, adapter=None) -> str:
     """
     Ensure text is wrapped in <out>...</out> fences.
 
@@ -147,6 +151,10 @@ def _ensure_fence(text: str) -> str:
     stripped = text.strip()
     if not stripped:
         return "<out>\n</out>"
+
+    # Clean model-specific format markers if adapter available
+    if adapter:
+        stripped = adapter.clean_response(stripped)
 
     # Strip any LLM-generated <out> tags before re-fencing
     if stripped.startswith("<out>"):

@@ -21,6 +21,13 @@ class LlamaAdapter(ChatAdapter):
         user_text = "\n".join(user_messages)
 
         # Llama format - model generates content, brio_ext will fence it
-        # Stop at [INST] to prevent model from generating additional turns
         prompt = f"[INST] <<SYS>>\n{system_text}\n<</SYS>>\n{user_text} [/INST]"
-        return {"prompt": prompt, "stop": ["[INST]", "[/INST]"]}
+        return {"prompt": prompt, "stop": []}
+
+    def clean_response(self, text: str) -> str:
+        """Remove Llama format markers from response."""
+        # Strip [INST] and [/INST] markers that may appear in response
+        cleaned = text
+        for marker in ["[INST]", "[/INST]", "<<SYS>>", "<</SYS>>"]:
+            cleaned = cleaned.replace(marker, "")
+        return cleaned.strip()

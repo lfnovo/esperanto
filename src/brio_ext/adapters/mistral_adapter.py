@@ -23,3 +23,11 @@ class MistralAdapter(ChatAdapter):
         # Mistral format - model generates content, brio_ext will fence it
         prompt = f"[INST] {system_text}\n{user_text} [/INST]"
         return {"prompt": prompt, "stop": []}
+
+    def clean_response(self, text: str) -> str:
+        """Remove Mistral format markers from response."""
+        # Strip [INST] and [/INST] markers that may appear in response
+        cleaned = text
+        for marker in ["[INST]", "[/INST]"]:
+            cleaned = cleaned.replace(marker, "")
+        return cleaned.strip()

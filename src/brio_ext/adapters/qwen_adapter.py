@@ -35,3 +35,11 @@ class QwenAdapter(ChatAdapter):
             print(f"[QwenAdapter] Stop tokens: ['<|im_end|>']")
 
         return {"prompt": prompt, "stop": ["<|im_end|>"]}
+
+    def clean_response(self, text: str) -> str:
+        """Remove ChatML format markers from response."""
+        # Strip any ChatML markers that leaked through
+        cleaned = text
+        for marker in ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]:
+            cleaned = cleaned.replace(marker, "")
+        return cleaned.strip()
