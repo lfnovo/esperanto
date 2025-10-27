@@ -291,14 +291,14 @@ def test_model(
         response = model.chat_complete(messages)
         print("")
 
-        # [STEP 3] LLM SERVER → ESPERANTO/BRIO_EXT (Raw Response)
-        print_section("STEP 3: LLM SERVER → ESPERANTO/BRIO_EXT (Raw Response)")
+        # [STEP 3] BRIO_EXT → TEST (Fenced Response)
+        print_section("STEP 3: BRIO_EXT → TEST (Fenced Response)")
         content = response.choices[0].message.content
-        print("Raw response from model:")
+        print("Response with brio_ext fencing applied:")
         print(content)
 
-        # [STEP 4] ESPERANTO/BRIO_EXT → TEST/BRIODOCS (Final Response)
-        print_section("STEP 4: ESPERANTO/BRIO_EXT → TEST/BRIODOCS (Final Response)")
+        # [STEP 4] PARSE & VALIDATE
+        print_section("STEP 4: PARSE & VALIDATE")
 
         # Check for fencing
         has_out_open = "<out>" in content
@@ -310,11 +310,11 @@ def test_model(
             end = content.find("</out>")
             parsed_content = content[start:end].strip()
             print("✓ Response properly fenced in <out>...</out>")
-            print("\nExtracted content:")
+            print("\nExtracted content (ready for BrioDocs):")
             print(parsed_content)
         else:
             parsed_content = content
-            print("○ No <out>...</out> fencing found in response")
+            print("✗ No <out>...</out> fencing found (this shouldn't happen!)")
             print("\nContent:")
             print(parsed_content)
 
