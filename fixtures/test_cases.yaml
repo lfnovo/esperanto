@@ -8,7 +8,8 @@ pirate:
   content: null
   insights: []
   validation:
-    should_contain: ["4"]
+    should_contain_any:
+      - ["4", "four"]  # Accept either numeric or word form
     should_fence: true
     notes: "Tests basic system message handling. Response should be fenced by brio_ext (not by LLM). If pirate speak, system message was respected."
 
@@ -36,6 +37,8 @@ multiturn:
   insights:
     - prompts/insights/patent_dense_summary.txt
   validation:
-    should_contain: ["roaming", "cost"]
+    should_contain_any:
+      - ["roaming"]  # Must mention roaming
+      - ["cost", "expensive"]  # Accept either "cost" or "expensive"
     should_fence: true
     notes: "Tests that conversation history is preserved and system context is maintained across turns."

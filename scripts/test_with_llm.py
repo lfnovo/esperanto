@@ -345,7 +345,7 @@ def test_model(
         else:
             print("○ Fencing not required for this test")
 
-        # Check for expected content
+        # Check for expected content (all must be present)
         should_contain = validation.get("should_contain", [])
         if should_contain:
             print(f"\nChecking for expected content ({len(should_contain)} phrases):")
@@ -354,6 +354,27 @@ def test_model(
                     print(f"  ✓ Found: '{phrase}'")
                 else:
                     print(f"  ✗ Missing: '{phrase}'")
+                    validation_passed = False
+
+        # Check for expected content (at least one from each group must be present)
+        should_contain_any = validation.get("should_contain_any", [])
+        if should_contain_any:
+            print(f"\nChecking for expected content ({len(should_contain_any)} groups, any match per group):")
+            for group in should_contain_any:
+                found = False
+                found_phrase = None
+                for phrase in group:
+                    if phrase.lower() in parsed_content.lower():
+                        found = True
+                        found_phrase = phrase
+                        break
+
+                if found:
+                    alternatives = " OR ".join(f"'{p}'" for p in group)
+                    print(f"  ✓ Found '{found_phrase}' (from: {alternatives})")
+                else:
+                    alternatives = " OR ".join(f"'{p}'" for p in group)
+                    print(f"  ✗ Missing any of: {alternatives}")
                     validation_passed = False
 
         # Check stop token
