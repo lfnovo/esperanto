@@ -44,14 +44,13 @@ multiturn:
     notes: "Tests that conversation history is preserved and system context is maintained across turns."
 
 reasoning:
-  description: "Complex analysis task - Tests reasoning model with structured output"
+  description: "Complex analysis task - Tests reasoning model with chain-of-thought"
   system: prompts/system/reasoning_analyst.txt
   user: prompts/user/extract_risks.txt
   content: prompts/content/patent_mobile_device.txt
   insights: []
   validation:
     should_contain_any:
-      - ["reasoning", "analysis"]  # Should show reasoning process
-      - ["risk", "limitation", "challenge"]  # Should identify risks/limitations
+      - ["FINAL ANSWER", "limitation", "risk"]  # Should conclude with answer
     should_fence: true
-    notes: "Tests reasoning models (like Phi-4 Reasoning) that provide chain-of-thought. Model should structure output with reasoning and answer sections for complex analytical tasks."
+    notes: "Tests reasoning models (Phi-4 Reasoning) that expose chain-of-thought. The verbose reasoning IS the feature - BrioDocs can parse 'FINAL ANSWER:' to extract conclusion for users while keeping full reasoning for audit trails."
