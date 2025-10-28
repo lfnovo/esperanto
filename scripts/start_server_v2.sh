@@ -162,8 +162,13 @@ echo "=========================================="
 echo ""
 echo "Server will be available at: http://$HOST:$PORT"
 echo ""
+echo "Remember: Tier $TIER ($TIER_NAME) | Model: $MODEL_NAME"
+echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
+
+# Set terminal title to show tier and model
+printf "\033]0;llama.cpp: Tier $TIER - $MODEL_NAME\007"
 
 # Check if llama_cpp is installed
 if ! python -c "import llama_cpp" 2>/dev/null; then
