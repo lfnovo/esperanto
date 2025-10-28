@@ -78,12 +78,10 @@ All models use these parameters regardless of tier:
 
 ### Models
 - Phi-4 Mini Instruct (model 6)
-- Phi-4 Reasoning (model 7)
 
 ### Server Configuration
 ```bash
 ./scripts/start_server.sh 6  # Phi-4 Mini
-./scripts/start_server.sh 7  # Phi-4 Reasoning
 
 # Configuration:
 --n_ctx 2048
@@ -92,6 +90,31 @@ All models use these parameters regardless of tier:
 --n_threads 8
 --chat_format chatml
 ```
+
+---
+
+## Tier 2 Reasoning: Complex Analysis (8GB+ RAM, GPU)
+
+**Use Case:** Complex analytical tasks - risk extraction, contradiction detection, material facts analysis
+**Candidate Count:** 1 response (reasoning models don't benefit from reranking)
+**Context Window:** 4,096 tokens
+
+### Models
+- Phi-4 Reasoning (model 7)
+
+### Server Configuration
+```bash
+./scripts/start_server.sh 7  # Phi-4 Reasoning
+
+# Configuration:
+--n_ctx 4096
+--n_gpu_layers -1    # Use GPU for performance
+--use_mlock True
+--n_threads 8
+--chat_format chatml
+```
+
+**Note:** Reasoning models expose chain-of-thought and work best with structured output prompts. Use the `reasoning_analyst.txt` system prompt for complex analytical queries.
 
 ---
 
