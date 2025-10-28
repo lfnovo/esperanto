@@ -3,7 +3,7 @@
 
 # Standard model parameters (used by BrioDocs for all models)
 model_parameters:
-  temperature: 0.7
+  temperature: 0.5
   top_p: 0.9
   top_k: 40
   frequency_penalty: 0.0
