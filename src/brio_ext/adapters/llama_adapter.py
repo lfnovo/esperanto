@@ -22,14 +22,24 @@ class LlamaAdapter(ChatAdapter):
 
         # Llama format - model generates content, brio_ext will fence it
         prompt = f"[INST] <<SYS>>\n{system_text}\n<</SYS>>\n{user_text} [/INST]"
-        # Stop token prevents model from starting a new instruction turn
-        # Note: We can't use [/INST] as stop token since it's in the prompt!
-        return {"prompt": prompt, "stop": ["[INST]"]}
+
+        # Stop tokens for Llama 3.1:
+        # - "[INST]" prevents model from starting a new instruction turn
+        # - "<|eot_id|>" is Llama 3.1's end-of-turn token
+        # - "<|end_of_text|>" is the EOS token
+        # Note: We can't use [/INST] as stop token since it appears in the prompt!
+        return {"prompt": prompt, "stop": ["[INST]", "<|eot_id|>", "<|end_of_text|>"]}
 
     def clean_response(self, text: str) -> str:
         """Remove Llama format markers from response."""
-        # Strip [INST] and [/INST] markers that may appear in response
         cleaned = text
+
+        # Strip Llama instruction format markers
         for marker in ["[INST]", "[/INST]", "<<SYS>>", "<</SYS>>"]:
             cleaned = cleaned.replace(marker, "")
+
+        # Strip Llama 3.1 special tokens
+        for marker in ["<|eot_id|>", "<|end_of_text|>", "<|start_header_id|>", "<|end_header_id|>"]:
+            cleaned = cleaned.replace(marker, "")
+
         return cleaned.strip()
