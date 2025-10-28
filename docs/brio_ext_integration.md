@@ -112,9 +112,21 @@ If issues arise, revert to the previous behaviour by:
 
 ## 9. llama.cpp test matrix & scenarios
 
+**NOTE:** Section 9 has been updated for the new tier-based architecture. See **[brio_ext_integration_v2.md](./brio_ext_integration_v2.md)** for the latest server configuration, test scenarios, and troubleshooting guide.
+
+**Quick Start:**
+```bash
+# Start server with tier-based launcher
+./scripts/start_server_v2.sh --tier 2 --model 1
+
+# Run tests (positional arguments)
+python scripts/test_with_llm.py pirate 1
+python scripts/test_with_llm.py reasoning 1
+```
+
 To thoroughly validate local engines (Qwen, Mistral, Phi) we follow this matrix, adapted from the original llama.cpp specification.
 
-### 9.1 Server tiers
+### 9.1 Server tiers (Legacy - See brio_ext_integration_v2.md for current)
 
 | Tier | Target hardware | Startup command |
 |------|-----------------|-----------------|

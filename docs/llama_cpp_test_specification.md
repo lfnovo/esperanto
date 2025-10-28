@@ -1,39 +1,105 @@
 # llama.cpp Server Test Specification for brio-esperanto
 
-**Version:** 1.0  
-**Date:** October 25, 2025  
+**Version:** 2.0
+**Date:** October 27, 2025
 **Purpose:** Comprehensive testing specification for brio-esperanto library integration with BrioDocs llama.cpp server
+
+**Status:** ✅ Core issues resolved. Qwen system message bug fixed via adapter-based architecture.
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Server Configuration](#server-configuration)
-3. [Message Structure](#message-structure)
-4. [Context Size Test Cases](#context-size-test-cases)
-5. [Parameters & Sampling](#parameters--sampling)
-6. [Models to Test](#models-to-test)
-7. [The Bug](#the-bug)
-8. [Test Scenarios](#test-scenarios)
+2. [Quick Start](#quick-start)
+3. [Server Configuration](#server-configuration)
+4. [Test Scenarios](#test-scenarios)
+5. [Message Structure](#message-structure)
+6. [Context Size Test Cases](#context-size-test-cases)
+7. [Parameters & Sampling](#parameters--sampling)
+8. [Models to Test](#models-to-test)
 9. [Expected Behavior](#expected-behavior)
+10. [Resolution Status](#resolution-status)
 
 ---
 
 ## Overview
 
-BrioDocs uses a local llama.cpp server to run quantized language models. The server provides an OpenAI-compatible API that brio-esperanto wraps. This document specifies how to test that brio-esperanto correctly handles:
+BrioDocs uses a local llama.cpp server to run quantized language models. The server provides an OpenAI-compatible API that brio-esperanto wraps through the `brio_ext` package. This document specifies how to test that brio-esperanto correctly handles:
 
 - System messages with large context (insights, document content)
 - Multi-turn chat history
 - Different performance tiers
-- Various model configurations (Qwen, Mistral, Phi-4)
+- Various model configurations (Qwen, Llama, Mistral, Phi-4)
+- Adapter-based prompt rendering for different chat formats
+- Response cleaning and `<out>...</out>` fencing
 
-**Critical Issue:** Qwen models ignore system messages, leading to "I don't know" responses even when context is provided.
+**Historical Issue:** Qwen models ignored system messages, leading to "I don't know" responses even when context was provided.
+
+**Resolution:** Fixed via adapter-based architecture that properly renders chat templates for each model format (ChatML, Llama, Mistral).
+
+---
+
+## Quick Start
+
+### 1. Start llama.cpp Server
+
+Use the new tier-based launcher:
+
+```bash
+# Tier 2 (GPU + 4K context) with Qwen 2.5 7B (Model 1)
+./scripts/start_server_v2.sh --tier 2 --model 1
+```
+
+**Tier Selection:**
+- **Tier 1**: 8K context, GPU, best for development
+- **Tier 2**: 4K context, GPU, recommended for production
+- **Tier 3**: 2K context, CPU-only, for quick testing
+
+### 2. Run Test Scenarios
+
+```bash
+# Test individual scenario
+python scripts/test_with_llm.py pirate 1
+
+# Run all tests
+python scripts/test_with_llm.py all 1
+```
+
+**Available Scenarios:**
+- `pirate` - Simple system message test
+- `inventor` - Medium context (KEY test for Qwen bug)
+- `multiturn` - Conversation history handling
+- `reasoning` - Complex patent risk analysis (requires Tier 2+)
+
+### 3. Expected Results
+
+All tests should **PASS** with proper `<out>...</out>` fencing:
+
+```
+✅ TEST PASSED
+✓ Response properly fenced in <out>...</out>
+✓ Found: 'Richard H. Xu'
+✓ Stop reason: stop
+```
 
 ---
 
 ## Server Configuration
+
+### New Tier-Based Architecture (v2.0)
+
+The `start_server_v2.sh` script separates **HOW** to run (tier) from **WHAT** to run (model):
+
+```bash
+./scripts/start_server_v2.sh --tier <1-3> --model <1-7>
+```
+
+**Benefits:**
+- Centralized configuration in `fixtures/briodocs_config.yaml`
+- Model selection independent of performance tier
+- Clear separation of concerns
+- Terminal title shows active tier and model
 
 ### Performance Tier 1: High Performance (16GB+ RAM, GPU)
 
@@ -586,5 +652,85 @@ Please provide:
 
 ---
 
-**Last Updated:** October 25, 2025  
-**Version:** 1.0
+## Resolution Status
+
+### ✅ Qwen System Message Bug - RESOLVED
+
+**Problem:** Qwen models returned "I don't know" even when context was provided in system messages.
+
+**Root Cause:** llama.cpp's automatic chat template rendering wasn't being used. The library was sending raw chat completions API calls without proper ChatML formatting.
+
+**Solution:** Implemented adapter-based architecture in `brio_ext`:
+- `QwenAdapter`: Renders ChatML format (`<|im_start|>system...`)
+- `LlamaAdapter`: Renders Llama format (`[INST] <<SYS>>...`)
+- `MistralAdapter`: Renders Mistral format
+- Stop token configuration per adapter
+- Response cleaning to remove format markers
+
+**Test Results:**
+| Test | Qwen 2.5 7B | Llama 3.1 8B | Mistral 7B | Phi-4 Mini |
+|------|-------------|--------------|------------|------------|
+| pirate | ✅ | ✅ | ✅ | ✅ |
+| inventor | ✅ | ✅ | ✅ | ✅ |
+| multiturn | ✅ | ✅ | ✅ | ✅ |
+| reasoning | ✅ | ✅ | ✅ | ✅ |
+
+### 🆕 New Features (v2.0)
+
+**Tier-Based Server Configuration:**
+- Centralized YAML configuration (`fixtures/briodocs_config.yaml`)
+- Command-line tier selection: `--tier <1-3> --model <1-7>`
+- Terminal title shows active configuration
+
+**Reasoning Test Scenario:**
+- Complex patent risk analysis with 1.3K token prompt
+- Tests structured output with specific risk categories
+- Requires Tier 2+ for good performance (GPU acceleration)
+- Temperature reduced to 0.5 for better accuracy
+
+**BrioDocs-Standard Parameters:**
+- `temperature: 0.5` (reduced from 0.7 after testing)
+- Per-test max_tokens override capability
+- Standardized sampling parameters across tiers
+
+### 📊 Performance Characteristics
+
+| Tier | Context | GPU | Reasoning Test Performance |
+|------|---------|-----|----------------------------|
+| Tier 1 | 8K | ✅ | Fast (~20s with 7B model) |
+| Tier 2 | 4K | ✅ | Fast (~30s with 7B model) |
+| Tier 3 | 2K | ❌ | Slow (>2min or timeout) |
+
+**Recommendation:** Use Tier 2 (GPU + 4K context) for all production testing.
+
+### 🔄 Migration Guide
+
+**From old start_server.sh to start_server_v2.sh:**
+
+```bash
+# Old way (model-specific scripts)
+./scripts/start_server.sh qwen-2.5-7b-instruct
+
+# New way (tier + model selection)
+./scripts/start_server_v2.sh --tier 2 --model 1
+```
+
+**Test script usage (unchanged):**
+```bash
+# Still uses positional arguments
+python scripts/test_with_llm.py pirate 1
+python scripts/test_with_llm.py reasoning 7
+```
+
+### 📚 Updated Documentation
+
+- **[scripts/README.md](../scripts/README.md)** - Complete testing guide with new architecture
+- **[brio_ext_integration.md](./brio_ext_integration.md)** - Integration guide for BrioDocs apps
+- **[briodocs_config.yaml](../fixtures/briodocs_config.yaml)** - Centralized tier configuration
+- **[test_cases.yaml](../fixtures/test_cases.yaml)** - Test scenario definitions
+
+---
+
+**Last Updated:** October 27, 2025
+**Version:** 2.0
+**Status:** Production Ready

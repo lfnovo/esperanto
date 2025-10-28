@@ -1,6 +1,6 @@
 # Manual Testing Scripts for brio_ext
 
-Simple scripts to validate brio_ext pipeline with real models.
+Test scripts for validating brio_ext integration with llama.cpp models and BrioDocs configuration.
 
 ## Quick Start
 
@@ -16,33 +16,88 @@ This downloads to `models/qwen2.5-7b-instruct-q4_k_m.gguf`
 
 ### 2. Start the Server (Terminal 1)
 
+Use the new tier-based server launcher:
+
 ```bash
 conda activate briodocs
-./scripts/start_server.sh qwen-2.5-7b-instruct
+
+# Start with Tier 2 (GPU + 4K context) and Model 1 (Qwen 2.5 7B)
+./scripts/start_server_v2.sh --tier 2 --model 1
 ```
 
-Wait for "Server ready" or "Uvicorn running" message.
+**Tier Selection Guide:**
+- **Tier 1** (High Performance): 8K context, GPU acceleration, best for development
+- **Tier 2** (Balanced): 4K context, GPU acceleration, recommended for production
+- **Tier 3** (Fast): 2K context, CPU-only, for quick testing (not recommended for reasoning test)
+
+Wait for "Server ready" or "Uvicorn running" message. The terminal title will show your tier and model configuration.
 
 ### 3. Run Tests (Terminal 2)
 
 ```bash
 conda activate briodocs
-python scripts/test_with_llm.py pirate qwen2.5-7b-instruct
+
+# Test by scenario and model number (positional arguments)
+python scripts/test_with_llm.py pirate 1
 ```
 
-## Usage
+**IMPORTANT**: The test script uses positional arguments, not flags:
+- First argument: scenario name (`pirate`, `inventor`, `multiturn`, `reasoning`, `all`)
+- Second argument: model number (`1`-`7`) or `openai`
+
+## Available Test Scenarios
+
+### pirate
+- **Purpose**: Simple system message test
+- **What it tests**: Basic adapter selection and system message handling
+- **Expected**: Model responds in pirate speak (e.g., "Arrr, that be 4!")
+- **If it fails**: System messages are being ignored or adapter not selected
+- **Best tier**: Any (Tier 3 is fine for this lightweight test)
+
+### inventor
+- **Purpose**: Medium context with real BrioDocs-style payload
+- **What it tests**: The Qwen system message bug fix
+- **Expected**: Model extracts inventor names from system context
+- **If it fails**: System messages not working (this was the original bug)
+- **Best tier**: Tier 2+ for good performance
+
+### multiturn
+- **Purpose**: Multi-turn conversation with context
+- **What it tests**: Conversation history handling
+- **Expected**: Model uses previous turns to answer follow-up question
+- **If it fails**: Context not being maintained across turns
+- **Best tier**: Tier 2+ recommended
+
+### reasoning
+- **Purpose**: Complex patent risk analysis with detailed output
+- **What it tests**: Structured risk analysis with multiple technical/legal areas
+- **Expected**: Model identifies 5-7 technical/legal risks in patent content
+- **Details**:
+  - Large prompt (1.3K tokens) + long response (600+ tokens)
+  - Uses 1024 max_tokens (vs 512 for other tests)
+  - Improved prompt points model to specific risk categories
+- **If it fails**: Check if model has enough context/tokens or if prompt needs refinement
+- **Best tier**: **Tier 2+ required** (Tier 3 CPU-only will timeout or be very slow >2 min)
+
+## Usage Examples
 
 ### Test Individual Scenarios
 
 ```bash
-# Pirate test (simple system message)
-python scripts/test_with_llm.py pirate qwen2.5-7b-instruct
+# Pirate test with Model 1 (Qwen 2.5 7B)
+python scripts/test_with_llm.py pirate 1
 
-# Inventor test (the KEY test for Qwen system message bug)
-python scripts/test_with_llm.py inventor qwen2.5-7b-instruct
+# Inventor test with Model 3 (Llama 3.1 8B)
+python scripts/test_with_llm.py inventor 3
 
-# Multi-turn conversation
-python scripts/test_with_llm.py multiturn qwen2.5-7b-instruct
+# Multi-turn test with Model 6 (Phi-4 Mini)
+python scripts/test_with_llm.py multiturn 6
+
+# Reasoning test with Model 7 (Phi-4 Reasoning) - requires Tier 2+
+python scripts/test_with_llm.py reasoning 7
+
+# Reasoning test with Model 1 (Qwen) - also works well
+python scripts/test_with_llm.py reasoning 1
 ```
 
 ### Test Against OpenAI Baseline
@@ -51,173 +106,214 @@ python scripts/test_with_llm.py multiturn qwen2.5-7b-instruct
 # Make sure OPENAI_API_KEY is set
 export OPENAI_API_KEY=sk-...
 
-# Test pirate scenario with GPT-4o-mini
-python scripts/test_with_llm.py pirate gpt-4o-mini
-
-# Test inventor scenario with GPT-4o-mini
-python scripts/test_with_llm.py inventor gpt-4o-mini
+# Test scenarios with GPT-4o-mini (baseline)
+python scripts/test_with_llm.py pirate openai
+python scripts/test_with_llm.py inventor openai
+python scripts/test_with_llm.py reasoning openai
 ```
 
 ### Run All Scenarios
 
 ```bash
-python scripts/test_with_llm.py all qwen2.5-7b-instruct
-```
+# Run all tests with Model 1
+python scripts/test_with_llm.py all 1
 
-## What You'll See
-
-The test runner shows **full pipeline visibility**:
-
-1. **Input to brio_ext**: The messages being sent
-2. **brio_ext Processing**: Debug output showing:
-   - Which adapter was selected (e.g., QwenAdapter)
-   - Rendering mode (PROMPT vs MESSAGES)
-   - Stop tokens being added
-   - Prompt length
-3. **Calling Model**: What's being sent to the provider
-4. **Raw Response**: Exactly what came back
-5. **Response Metadata**: Tokens, finish reason, etc.
-6. **Parsed Content**: Extracted from `<out>...</out>` tags
-7. **Validation**: Pass/fail checks for expected behavior
-8. **Overall Result**: Test passed or failed
-
-### Example Output
-
-```
-================================================================================
-SCENARIO: inventor
-MODEL: qwen2.5-7b-instruct
-PROVIDER: llamacpp
-BASE_URL: http://127.0.0.1:8765
-================================================================================
-
-[1. INPUT TO BRIO_EXT]
-────────────────────────────────────────────────────────────────────────────
-Messages being sent:
-1. SYSTEM:
-   You are a specialized research assistant...
-   The inventors are: Richard H. Xu, Xiaolei Qin, Phillip C. Krasko...
-
-2. USER:
-   Who are the inventors of this patent?
-
-[2. BRIO_EXT PROCESSING]
-────────────────────────────────────────────────────────────────────────────
-[RENDERER] model_id=qwen2.5-7b-instruct, provider=llamacpp
-[RENDERER] adapter=QwenAdapter
-[QwenAdapter] Rendering 2 messages
-[QwenAdapter] Generated prompt: 2847 chars
-[QwenAdapter] Stop tokens: ['</out>', '<|im_end|>']
-[RENDERER] mode=PROMPT (completions)
-[RENDERER] prompt_length=2847 chars
-[RENDERER] stops=['</out>', '<|im_end|>']
-
-[3. CALLING MODEL]
-────────────────────────────────────────────────────────────────────────────
-[LlamaCppProvider] Calling /v1/completions
-[LlamaCppProvider] base_url=http://127.0.0.1:8765
-[LlamaCppProvider] prompt_length=2847 chars
-[LlamaCppProvider] stop_tokens=['</out>', '<|im_end|>']
-[LlamaCppProvider] max_tokens=512
-
-[4. RAW RESPONSE FROM PROVIDER]
-────────────────────────────────────────────────────────────────────────────
-The inventors are Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, and Douglas A. Cheline.</out>
-
-[5. RESPONSE METADATA]
-────────────────────────────────────────────────────────────────────────────
-Model: qwen2.5-7b-instruct
-Provider: llamacpp
-Finish reason: stop
-Prompt tokens: 711
-Completion tokens: 28
-Total tokens: 739
-
-[6. PARSED CONTENT]
-────────────────────────────────────────────────────────────────────────────
-Extracted from <out>...</out> tags:
-The inventors are Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, and Douglas A. Cheline.
-
-[7. VALIDATION]
-────────────────────────────────────────────────────────────────────────────
-✓ Response properly fenced in <out>...</out>
-
-Checking for expected content (4 phrases):
-  ✓ Found: 'Richard H. Xu'
-  ✓ Found: 'Xiaolei Qin'
-  ✓ Found: 'Phillip C. Krasko'
-  ✓ Found: 'Douglas A. Cheline'
-
-✓ Stop reason: stop
-
-[8. OVERALL RESULT]
-────────────────────────────────────────────────────────────────────────────
-✅ TEST PASSED
+# Press Enter to continue between scenarios
 ```
 
 ## Available Models
 
-Download any of these:
+| Model # | Name | Size | Format | Notes |
+|---------|------|------|--------|-------|
+| 1 | Qwen 2.5 7B Instruct | 4.4GB | ChatML | Default, good all-rounder |
+| 2 | Qwen 2.5 3B Instruct | 2.0GB | ChatML | Faster, lighter |
+| 3 | Llama 3.1 8B Instruct | 4.9GB | Llama | Requires proper stop tokens |
+| 4 | Llama 3.2 3B Instruct | 2.0GB | Llama | Lighter Llama variant |
+| 5 | Mistral 7B Instruct v0.3 | 4.4GB | Mistral | Alternative 7B model |
+| 6 | Phi-4 Mini Instruct | 2.7GB | ChatML | Microsoft's efficient model |
+| 7 | Phi-4 Reasoning | ~3GB | ChatML | Chain-of-thought reasoning |
+
+**Download models:**
 
 ```bash
-# Start with this one
-./scripts/download_models.sh qwen-2.5-7b-instruct    # 4.4GB
+# Single model
+./scripts/download_models.sh qwen-2.5-7b-instruct
 
-# Other models
-./scripts/download_models.sh qwen-2.5-3b-instruct    # 2.0GB
-./scripts/download_models.sh llama-3.1-8b-instruct   # 4.9GB
-./scripts/download_models.sh llama-3.2-3b-instruct   # 2.0GB
-./scripts/download_models.sh mistral-7b-instruct     # 4.4GB
-./scripts/download_models.sh phi-4-mini              # 2.7GB
-
-# Download everything (~20GB)
+# All models (~20GB)
 ./scripts/download_models.sh all
 ```
 
-To test a different model, switch the server:
+**Switch models:**
 
 ```bash
 # Terminal 1: Stop current server
 ./scripts/stop_server.sh
 
-# Start new model
-./scripts/start_server.sh mistral-7b-instruct
+# Start with different tier and model
+./scripts/start_server_v2.sh --tier 1 --model 7
 
-# Terminal 2: Test with new model
-python scripts/test_with_llm.py all mistral-7b-instruct
+# Terminal 2: Test with the new model
+python scripts/test_with_llm.py reasoning 7
 ```
 
-## Test Scenarios Explained
+## Server Configuration (start_server_v2.sh)
 
-### pirate
-- **Purpose**: Simple system message test
-- **What it tests**: Basic adapter selection and system message handling
-- **Expected**: Model responds in pirate speak (e.g., "Arrr, that be 4!")
-- **If it fails**: System messages are being ignored or adapter not selected
+The new tier-based launcher separates configuration concerns:
 
-### inventor
-- **Purpose**: Medium context with real BrioDocs-style payload
-- **What it tests**: The Qwen system message bug fix
-- **Expected**: Model extracts inventor names from system context
-- **If it fails**: System messages not working (this was the original bug)
+**Syntax:**
+```bash
+./scripts/start_server_v2.sh --tier <1-3> --model <1-7>
+```
 
-### multiturn
-- **Purpose**: Multi-turn conversation
-- **What it tests**: Conversation history handling
-- **Expected**: Model uses previous turns to answer follow-up question
-- **If it fails**: Context not being maintained across turns
+**Tiers (HOW to run):**
+- Tier 1: 8K context, GPU (-1 layers), 8 threads - High performance
+- Tier 2: 4K context, GPU (-1 layers), 8 threads - Balanced
+- Tier 3: 2K context, CPU (0 layers), 8 threads - Fast/testing
+
+**Models (WHAT to run):**
+- Model selection is independent of tier
+- Server detects model format and applies correct chat template
+- Configuration centralized in `fixtures/briodocs_config.yaml`
+
+**Terminal title displays:**
+```
+llama.cpp: Tier 2 - Qwen 2.5 7B Instruct
+```
+
+## Test Output Explained
+
+The test runner shows **full pipeline visibility**:
+
+### 1. Test Configuration
+```
+SCENARIO: reasoning
+MODEL: Qwen 2.5 7B Instruct
+PROVIDER: llamacpp
+DESCRIPTION: Complex analysis task - Tests patent risk analysis with detailed output
+```
+
+### 2. Step 1: TEST → ESPERANTO/BRIO_EXT
+Shows the messages being sent to brio_ext (system + user)
+
+### 3. Step 2: ESPERANTO/BRIO_EXT → LLM SERVER
+Debug output shows:
+- Adapter selected (e.g., QwenAdapter, LlamaAdapter)
+- Rendered prompt sent to model
+- Stop tokens applied
+
+### 4. Step 3: BRIO_EXT → TEST (Fenced Response)
+The complete response with `<out>...</out>` fencing
+
+### 5. Step 4: PARSE & VALIDATE
+- Fence validation (should be present)
+- Extracted content (what's inside `<out>...</out>`)
+- Content validation (checks for expected phrases)
+
+### 6. Response Metadata
+```
+Model: Qwen 2.5 7B Instruct
+Provider: llamacpp
+Finish reason: stop
+Prompt tokens: 1,348
+Completion tokens: 599
+Total tokens: 1,947
+```
+
+### 7. Validation Results
+```
+✓ Response properly fenced in <out>...</out>
+
+Checking for expected content (1 groups, any match per group):
+  ✓ Found 'risk' (from: 'FINAL ANSWER' OR 'limitation' OR 'risk')
+
+✓ Stop reason: stop
+```
+
+### 8. Overall Result
+```
+✅ TEST PASSED
+```
+
+## Configuration Files
+
+### fixtures/briodocs_config.yaml
+Centralized BrioDocs-standard configuration:
+
+```yaml
+model_parameters:
+  temperature: 0.5      # Changed from 0.7 after testing
+  top_p: 0.9
+  top_k: 40
+  max_tokens: 512
+  # ... other parameters
+
+tiers:
+  tier1:
+    name: "High Performance"
+    server_config:
+      n_ctx: 8192
+      n_gpu_layers: -1
+      n_threads: 8
+  # ... tier2, tier3
+```
+
+### fixtures/test_cases.yaml
+Test case definitions with validation rules:
+
+```yaml
+reasoning:
+  description: "Complex analysis task - Tests patent risk analysis"
+  system: prompts/system/reasoning_analyst.txt
+  user: prompts/user/extract_risks.txt
+  content: prompts/content/patent_mobile_device.txt
+  max_tokens: 1024  # Override for heavy tests
+  validation:
+    should_contain_any:
+      - ["FINAL ANSWER", "limitation", "risk"]
+    should_fence: true
+```
 
 ## Troubleshooting
 
-### Server won't start - port in use
+### Wrong Command Syntax
+
+**WRONG:**
+```bash
+python scripts/test_with_llm.py --tier 1 --model 1  # ❌ NO FLAGS
+```
+
+**CORRECT:**
+```bash
+# Tier/model selection is for SERVER startup only:
+./scripts/start_server_v2.sh --tier 2 --model 1
+
+# Tests use positional arguments:
+python scripts/test_with_llm.py pirate 1
+```
+
+### Server Won't Start - Port in Use
 
 ```bash
 ./scripts/stop_server.sh
+
 # Or manually:
 kill $(lsof -t -i:8765)
 ```
 
-### Model file not found
+### Test Timeouts (Reasoning Test)
+
+**Symptom**: Test times out or takes >2 minutes
+
+**Cause**: Running Tier 3 (CPU-only) with heavy tests
+
+**Solution**: Use Tier 2 or higher:
+```bash
+./scripts/stop_server.sh
+./scripts/start_server_v2.sh --tier 2 --model 1
+python scripts/test_with_llm.py reasoning 1
+```
+
+### Model File Not Found
 
 ```bash
 # Check if it exists
@@ -227,53 +323,73 @@ ls -lh models/
 ./scripts/download_models.sh qwen-2.5-7b-instruct
 ```
 
-### OpenAI tests fail
+### Import Errors
 
 ```bash
-# Make sure API key is set
+# Make sure you're in the conda environment
+conda activate briodocs
+
+# Verify brio_ext can be imported
+python -c "from brio_ext.factory import BrioAIFactory; print('OK')"
+```
+
+### OpenAI Tests Fail
+
+```bash
+# Check API key is set
 echo $OPENAI_API_KEY
 
 # Set it if needed
 export OPENAI_API_KEY=sk-...
 ```
 
-### Import errors
-
-```bash
-# Make sure you're in the conda environment
-conda activate briodocs
-
-# And that brio_ext can be imported
-python -c "from brio_ext.factory import BrioAIFactory; print('OK')"
-```
-
 ## What This Tests
 
-This manual testing environment validates:
+This environment validates the complete brio_ext integration:
 
-1. **Adapter Selection**: Does brio_ext pick the right adapter?
-2. **Prompt Rendering**: Is the ChatML template correct?
-3. **Stop Token Merging**: Are `</out>` and adapter stops combined?
-4. **Provider Integration**: Does llamacpp_provider work correctly?
-5. **System Message Handling**: The KEY question - does Qwen respect system messages?
-6. **Output Fencing**: Do responses come back in `<out>...</out>` tags?
-7. **Baseline Comparison**: Does OpenAI passthrough work?
+1. **Adapter Selection**: Does brio_ext pick the right adapter for each model?
+2. **Prompt Rendering**: Are chat templates (ChatML, Llama, Mistral) correct?
+3. **Response Cleaning**: Do adapters clean format markers before fencing?
+4. **Stop Token Handling**: Are stop tokens properly configured and merged?
+5. **Output Fencing**: Do responses come back in `<out>...</out>` tags?
+6. **System Message Handling**: The KEY question - do models respect system context?
+7. **Provider Integration**: Does llamacpp_provider work correctly with server?
+8. **Baseline Comparison**: Does OpenAI passthrough work as expected?
+
+## Performance Characteristics
+
+| Test | Prompt Size | Response Size | Tier 3 (CPU) | Tier 2 (GPU) |
+|------|-------------|---------------|--------------|--------------|
+| pirate | ~200 tokens | ~50 tokens | Fast (<10s) | Very Fast (<5s) |
+| inventor | ~750 tokens | ~30 tokens | Medium (~30s) | Fast (<10s) |
+| multiturn | ~800 tokens | ~100 tokens | Medium (~40s) | Fast (<15s) |
+| reasoning | ~1.3K tokens | ~600 tokens | **Slow (>2min or timeout)** | Fast (~30s) |
+
+**Recommendation**: Use Tier 2 (GPU + 4K context) for all testing except quick pirate checks.
 
 ## Next Steps
 
-Once you validate Qwen 2.5 7B works:
-1. Test other models (Mistral, Llama, Phi-4)
-2. Add more test scenarios if needed
-3. Integrate into BrioDocs application
-4. Consider automating these as pytest integration tests
+Once you validate the test environment:
+
+1. ✅ **Core Tests Pass**: pirate, inventor, multiturn
+2. ✅ **Reasoning Test Works**: With Tier 2+, identifies multiple risks
+3. 🔄 **Test Other Models**: Llama, Mistral, Phi variants
+4. 🔄 **Integrate into BrioDocs**: Use brio_ext in production application
+5. 🔄 **Add More Scenarios**: As needed for specific BrioDocs features
 
 ## Debug Mode
 
-Debug mode is **always enabled** in the test script (`BRIO_DEBUG=1`). This shows:
-- Renderer decisions
-- Adapter selection
-- Prompt generation
-- Stop token merging
-- Provider calls
+Debug mode is **always enabled** in test scripts (`BRIO_DEBUG=1`). This shows:
+- Renderer decisions and adapter selection
+- Prompt generation with exact template format
+- Stop token merging logic
+- Provider API calls with parameters
 
-This is the key to understanding if brio_ext is working correctly!
+This visibility is the key to understanding if brio_ext is working correctly!
+
+## Related Documentation
+
+- **[llama.cpp Test Specification](../docs/llama_cpp_test_specification.md)** - Original test spec with detailed scenarios
+- **[brio_ext Integration Guide](../docs/brio_ext_integration.md)** - Integration guide for BrioDocs apps
+- **[BrioDocs Config](../fixtures/briodocs_config.yaml)** - Tier and model parameter configuration
+- **[Test Cases](../fixtures/test_cases.yaml)** - Test scenario definitions

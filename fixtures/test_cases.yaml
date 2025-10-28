@@ -44,14 +44,14 @@ multiturn:
     notes: "Tests that conversation history is preserved and system context is maintained across turns."
 
 reasoning:
-  description: "Complex analysis task - Tests reasoning model with chain-of-thought"
+  description: "Complex analysis task - Tests patent risk analysis with detailed output"
   system: prompts/system/reasoning_analyst.txt
   user: prompts/user/extract_risks.txt
   content: prompts/content/patent_mobile_device.txt
   insights: []
-  max_tokens: 1024  # Reasoning models need more tokens for chain-of-thought
+  max_tokens: 1024  # Analysis requires more tokens for comprehensive risk assessment
   validation:
     should_contain_any:
       - ["FINAL ANSWER", "limitation", "risk"]  # Should conclude with answer
     should_fence: true
-    notes: "Tests reasoning models (Phi-4 Reasoning) that expose chain-of-thought. The verbose reasoning IS the feature - BrioDocs can parse 'FINAL ANSWER:' to extract conclusion for users while keeping full reasoning for audit trails."
+    notes: "Heavy test - large prompt (1.3K tokens) + long response (600+ tokens). Requires Tier 2+ for acceptable performance. Tier 3 (CPU-only) will timeout or be very slow (>2 min). Tests structured risk analysis with multiple technical/legal areas."
