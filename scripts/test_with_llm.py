@@ -284,13 +284,14 @@ def test_model(
         model_params = briodocs_config["model_parameters"]
 
         # Create model instance with BrioDocs-standard parameters
+        # Allow test case to override max_tokens for reasoning models
         config = {
             "temperature": model_params["temperature"],
             "top_p": model_params["top_p"],
             "top_k": model_params["top_k"],
             "frequency_penalty": model_params["frequency_penalty"],
             "presence_penalty": model_params["presence_penalty"],
-            "max_tokens": model_params["max_tokens"],
+            "max_tokens": test_case.get("max_tokens", model_params["max_tokens"]),
         }
         if model_config.get("base_url"):
             config["base_url"] = model_config["base_url"]

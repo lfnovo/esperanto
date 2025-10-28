@@ -49,6 +49,7 @@ reasoning:
   user: prompts/user/extract_risks.txt
   content: prompts/content/patent_mobile_device.txt
   insights: []
+  max_tokens: 1024  # Reasoning models need more tokens for chain-of-thought
   validation:
     should_contain_any:
       - ["FINAL ANSWER", "limitation", "risk"]  # Should conclude with answer
