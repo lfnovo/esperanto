@@ -76,7 +76,8 @@ def _wrap_language_model(
 
         with _stop_config_guard(self, stops):
             if "messages" in rendered:
-                return original_chat(rendered["messages"], stream=stream)
+                result = original_chat(rendered["messages"], stream=stream)
+                return _ensure_fenced_completion(result, adapter)
 
             prompt_handler = getattr(self, "prompt_complete", None)
             if callable(prompt_handler):
@@ -92,7 +93,8 @@ def _wrap_language_model(
 
         with _stop_config_guard(self, stops):
             if "messages" in rendered:
-                return await original_achat(rendered["messages"], stream=stream)
+                result = await original_achat(rendered["messages"], stream=stream)
+                return _ensure_fenced_completion(result, adapter)
 
             prompt_handler = getattr(self, "aprompt_complete", None)
             if callable(prompt_handler):
