@@ -51,20 +51,13 @@ class LlamaAdapter(ChatAdapter):
                 print(f"[BRIO_DEBUG] Found and removing token: {marker}", file=sys.stderr)
             cleaned = cleaned.replace(marker, "")
 
-        # Aggressive cleanup: Remove repeated whitespace and trailing special chars
+        # Aggressive cleanup: Remove repeated whitespace
         # This catches cases where model generates "[/SYS]  [/SYS]  [/SYS]..." after JSON
         cleaned = re.sub(r'\s+', ' ', cleaned)  # Normalize whitespace
         cleaned = cleaned.strip()
 
-        # Remove incomplete tokens at the end (e.g., "[/", "[/S", "[/SY", "[I", etc.)
-        # Model sometimes generates partial tokens that get truncated by max_tokens
-        # Pattern matches: "[/", "[/SYS", "[INST", "[I", etc. at the end
-        cleaned = re.sub(r'\s*\[/?[A-Z]*\s*$', '', cleaned)
-        cleaned = cleaned.strip()
-
-        # Also catch incomplete angle bracket tokens (e.g., "<|", "<|e", etc.)
-        cleaned = re.sub(r'\s*<\|[a-z_]*\s*$', '', cleaned)
-        cleaned = cleaned.strip()
+        # Note: Incomplete tokens (e.g., "[/", "<|e") are handled by
+        # _strip_trailing_incomplete_tokens() in factory.py for ALL adapters
 
         print(f"[BRIO_DEBUG] Output text ends with: {cleaned[-100:]}", file=sys.stderr)
         return cleaned
