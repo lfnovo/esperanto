@@ -104,7 +104,12 @@ class BrioLangChainWrapper:
         """
         # Convert input to messages format
         if isinstance(input, str):
-            messages = [{"role": "user", "content": input}]
+            # LangChain pattern: single string is typically a system prompt or standalone user message
+            # Heuristic: if it contains system prompt indicators, treat as system message
+            if any(marker in input[:500].lower() for marker in ["you are a", "you are an", "# system", "system role", "your role is"]):
+                messages = [{"role": "system", "content": input}]
+            else:
+                messages = [{"role": "user", "content": input}]
         elif isinstance(input, list):
             messages = self._convert_messages(input)
         else:
@@ -142,7 +147,12 @@ class BrioLangChainWrapper:
         """
         # Convert input to messages format
         if isinstance(input, str):
-            messages = [{"role": "user", "content": input}]
+            # LangChain pattern: single string is typically a system prompt or standalone user message
+            # Heuristic: if it contains system prompt indicators, treat as system message
+            if any(marker in input[:500].lower() for marker in ["you are a", "you are an", "# system", "system role", "your role is"]):
+                messages = [{"role": "system", "content": input}]
+            else:
+                messages = [{"role": "user", "content": input}]
         elif isinstance(input, list):
             messages = self._convert_messages(input)
         else:
