@@ -88,12 +88,17 @@ def _wrap_language_model(
             )
 
     async def achat_complete(self, messages, stream=None):
+        import sys
+        print(f"[BRIO_DEBUG] achat_complete called: model_id={model_id}, provider={provider}", file=sys.stderr)
         rendered = render_for_model(model_id, messages, provider)
+        print(f"[BRIO_DEBUG] rendered keys: {list(rendered.keys())}", file=sys.stderr)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
         with _stop_config_guard(self, stops):
             if "messages" in rendered:
+                print(f"[BRIO_DEBUG] Taking messages-based path (OpenAI-compatible)", file=sys.stderr)
                 result = await original_achat(rendered["messages"], stream=stream)
+                print(f"[BRIO_DEBUG] Calling _ensure_fenced_completion with adapter={adapter}", file=sys.stderr)
                 return _ensure_fenced_completion(result, adapter)
 
             prompt_handler = getattr(self, "aprompt_complete", None)
@@ -122,14 +127,19 @@ def _wrap_language_model(
 
 def _ensure_fenced_completion(result, adapter=None):
     """Ensure completion content is wrapped in <out>...</out> fences."""
+    import sys
+    print(f"[BRIO_DEBUG] _ensure_fenced_completion called, adapter={adapter}", file=sys.stderr)
     if not isinstance(result, ChatCompletion):
+        print(f"[BRIO_DEBUG] Result is not ChatCompletion: {type(result)}", file=sys.stderr)
         return result
 
     choices = []
     for choice in result.choices:
         message = choice.message
         content = message.content or ""
+        print(f"[BRIO_DEBUG] Original content length: {len(content)}, preview: {content[:100]}...", file=sys.stderr)
         fenced = _ensure_fence(content, adapter)
+        print(f"[BRIO_DEBUG] Fenced content length: {len(fenced)}, preview: {fenced[:100]}...", file=sys.stderr)
         new_message = Message(
             content=fenced,
             role=message.role,
@@ -151,13 +161,17 @@ def _ensure_fence(text: str, adapter=None) -> str:
     This ensures consistent fencing regardless of whether the LLM
     tried to add its own tags.
     """
+    import sys
+    print(f"[BRIO_DEBUG] _ensure_fence called, adapter={adapter}", file=sys.stderr)
     stripped = text.strip()
     if not stripped:
         return "<out>\n</out>"
 
     # Clean model-specific format markers if adapter available
     if adapter:
+        print(f"[BRIO_DEBUG] Before cleaning: {stripped[-100:]}", file=sys.stderr)
         stripped = adapter.clean_response(stripped)
+        print(f"[BRIO_DEBUG] After cleaning: {stripped[-100:]}", file=sys.stderr)
 
     # Strip any LLM-generated <out> tags before re-fencing
     if stripped.startswith("<out>"):
