@@ -32,14 +32,21 @@ class LlamaAdapter(ChatAdapter):
 
     def clean_response(self, text: str) -> str:
         """Remove Llama format markers from response."""
+        import re
         cleaned = text
 
         # Strip Llama instruction format markers
-        for marker in ["[INST]", "[/INST]", "<<SYS>>", "<</SYS>>"]:
+        # Note: [/SYS] is not standard Llama format but models sometimes hallucinate it
+        for marker in ["[INST]", "[/INST]", "<<SYS>>", "<</SYS>>", "[/SYS]", "[SYS]"]:
             cleaned = cleaned.replace(marker, "")
 
         # Strip Llama 3.1 special tokens
         for marker in ["<|eot_id|>", "<|end_of_text|>", "<|start_header_id|>", "<|end_header_id|>"]:
             cleaned = cleaned.replace(marker, "")
 
-        return cleaned.strip()
+        # Aggressive cleanup: Remove repeated whitespace and trailing special chars
+        # This catches cases where model generates "[/SYS]  [/SYS]  [/SYS]..." after JSON
+        cleaned = re.sub(r'\s+', ' ', cleaned)  # Normalize whitespace
+        cleaned = cleaned.strip()
+
+        return cleaned
