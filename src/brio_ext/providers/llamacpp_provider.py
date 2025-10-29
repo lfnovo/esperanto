@@ -160,21 +160,117 @@ class LlamaCppLanguageModel(LanguageModel):
     def chat_complete(
         self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
-        prompt = "\n".join(message.get("content", "") for message in messages)
+        """
+        Chat completion using llamacpp's /v1/chat/completions endpoint.
+
+        This endpoint applies the model's native chat template automatically,
+        which is essential for Llama 3.1+ models configured with --chat-template.
+        """
+        should_stream = stream if stream is not None else self.streaming
+        payload: Dict[str, Any] = {
+            "model": self.get_model_name(),
+            "messages": messages,  # Pass messages directly for chat template rendering
+            "stream": should_stream,
+            **self._get_api_kwargs(),
+        }
+
+        # Override stop tokens from config if provided
         stop = getattr(self, "_config", {}).get("stop")
-        return self.prompt_complete(prompt, stop=stop, stream=stream)
+        if stop:
+            payload["stop"] = stop
+
+        if os.getenv("BRIO_DEBUG"):
+            print(f"[LlamaCppProvider] Calling /v1/chat/completions")
+            print(f"[LlamaCppProvider] base_url={self.base_url}")
+            print(f"[LlamaCppProvider] num_messages={len(messages)}")
+            print(f"[LlamaCppProvider] stop_tokens={payload.get('stop', [])}")
+            print(f"[LlamaCppProvider] max_tokens={payload.get('max_tokens', 'default')}")
+
+        response = self.client.post(
+            f"{self.base_url}/v1/chat/completions",
+            headers=self._get_headers(),
+            json=payload,
+        )
+        self._handle_error(response)
+
+        if should_stream:
+            return (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
+        return self._normalize_chat_response(response.json())
 
     async def achat_complete(
         self, messages: List[Dict[str, str]], stream: Optional[bool] = None
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
-        prompt = "\n".join(message.get("content", "") for message in messages)
+        """
+        Async chat completion using llamacpp's /v1/chat/completions endpoint.
+
+        This endpoint applies the model's native chat template automatically,
+        which is essential for Llama 3.1+ models configured with --chat-template.
+        """
+        should_stream = stream if stream is not None else self.streaming
+        payload: Dict[str, Any] = {
+            "model": self.get_model_name(),
+            "messages": messages,  # Pass messages directly for chat template rendering
+            "stream": should_stream,
+            **self._get_api_kwargs(),
+        }
+
+        # Override stop tokens from config if provided
         stop = getattr(self, "_config", {}).get("stop")
-        return await self.aprompt_complete(prompt, stop=stop, stream=stream)
+        if stop:
+            payload["stop"] = stop
+
+        response = await self.async_client.post(
+            f"{self.base_url}/v1/chat/completions",
+            headers=self._get_headers(),
+            json=payload,
+        )
+        self._handle_error(response)
+
+        if should_stream:
+            async def _stream() -> AsyncGenerator[ChatCompletionChunk, None]:
+                async for chunk in self._parse_stream_async(response):
+                    yield self._normalize_chunk(chunk)
+
+            return _stream()
+        return self._normalize_chat_response(response.json())
 
     def _normalize_response(self, data: Dict[str, Any]) -> ChatCompletion:
+        """Normalize response from /v1/completions endpoint."""
         choices = data.get("choices", [])
         first = choices[0] if choices else {}
         text = first.get("text") or first.get("content") or ""
+        finish_reason = first.get("finish_reason")
+
+        usage_data = data.get("usage") or {}
+        usage = Usage(
+            prompt_tokens=usage_data.get("prompt_tokens", 0),
+            completion_tokens=usage_data.get("completion_tokens", 0),
+            total_tokens=usage_data.get("total_tokens", 0),
+        )
+
+        return ChatCompletion(
+            id=data.get("id", str(uuid.uuid4())),
+            choices=[
+                Choice(
+                    index=first.get("index", 0),
+                    message=Message(role="assistant", content=text),
+                    finish_reason=finish_reason,
+                )
+            ],
+            created=data.get("created"),
+            model=data.get("model", self.get_model_name()),
+            provider=self.provider,
+            usage=usage,
+        )
+
+    def _normalize_chat_response(self, data: Dict[str, Any]) -> ChatCompletion:
+        """Normalize response from /v1/chat/completions endpoint."""
+        choices = data.get("choices", [])
+        first = choices[0] if choices else {}
+
+        # For chat completions, content is in message.content not text
+        message_data = first.get("message", {})
+        text = message_data.get("content", "")
         finish_reason = first.get("finish_reason")
 
         usage_data = data.get("usage") or {}

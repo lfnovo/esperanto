@@ -14,21 +14,26 @@ class LlamaAdapter(ChatAdapter):
         return "llama" in (model_id or "").lower()
 
     def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
-        system_messages = [m["content"] for m in messages if m["role"] == "system"]
-        user_messages = [m["content"] for m in messages if m["role"] == "user"]
+        """
+        Render messages for Llama models.
 
-        system_text = "\n".join(system_messages) if system_messages else ""
-        user_text = "\n".join(user_messages)
+        For llamacpp provider with native chat template support (Llama 3.1+),
+        we return messages directly and let llamacpp apply the correct template.
+        This avoids format mismatches when the server is configured with
+        --chat-template llama-3 or similar.
 
-        # Llama format - model generates content, brio_ext will fence it
-        prompt = f"[INST] <<SYS>>\n{system_text}\n<</SYS>>\n{user_text} [/INST]"
-
-        # Stop tokens for Llama 3.1:
-        # - "[INST]" prevents model from starting a new instruction turn
-        # - "<|eot_id|>" is Llama 3.1's end-of-turn token
-        # - "<|end_of_text|>" is the EOS token
-        # Note: We can't use [/INST] as stop token since it appears in the prompt!
-        return {"prompt": prompt, "stop": ["[INST]", "<|eot_id|>", "<|end_of_text|>"]}
+        For other providers or Llama 2, we'd need to manually render prompts,
+        but for now we rely on llamacpp's native template handling.
+        """
+        # Return messages in OpenAI format for llamacpp to apply native chat template
+        # This works with llamacpp's /v1/chat/completions endpoint which handles:
+        # - Llama 3.1: <|start_header_id|>role<|end_header_id|>\n\ncontent<|eot_id|>
+        # - Llama 2: [INST] <<SYS>>...<</SYS>>... [/INST]
+        # - Other Llama variants automatically
+        return {
+            "messages": messages,
+            "stop": ["<|eot_id|>", "<|end_of_text|>"]  # Llama 3.1+ stop tokens
+        }
 
     def clean_response(self, text: str) -> str:
         """Remove Llama format markers from response."""
