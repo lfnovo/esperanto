@@ -10,6 +10,7 @@ from esperanto.common_types import ChatCompletion, Message
 from esperanto.factory import AIFactory
 from esperanto.providers.llm.base import LanguageModel
 
+from brio_ext.langchain_wrapper import BrioLangChainWrapper
 from brio_ext.renderer import DEFAULT_STOP, render_for_model
 
 _LANGUAGE_OVERRIDES = {
@@ -164,6 +165,29 @@ def _ensure_fence(text: str, adapter=None) -> str:
 
     # Re-fence with clean tags
     return f"<out>\n{stripped}\n</out>"
+
+
+def create_langchain_wrapper(model: LanguageModel) -> BrioLangChainWrapper:
+    """
+    Create a LangChain-compatible wrapper for a brio_ext model.
+
+    This wrapper allows the model to be used with LangGraph and other LangChain
+    tools while preserving brio_ext's chat template rendering and response
+    cleaning pipeline.
+
+    Args:
+        model: A LanguageModel instance from BrioAIFactory.create_language()
+
+    Returns:
+        BrioLangChainWrapper that can be used with LangChain/LangGraph
+
+    Example:
+        >>> model = BrioAIFactory.create_language("llamacpp", "llama-3.1-8b-instruct")
+        >>> langchain_model = create_langchain_wrapper(model)
+        >>> result = await langchain_model.ainvoke("What is 2+2?")
+        >>> print(result.content)  # Clean output, no <out> tags
+    """
+    return BrioLangChainWrapper(model)
 
 
 class _stop_config_guard:
