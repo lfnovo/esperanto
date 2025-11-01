@@ -1,6 +1,5 @@
 """Ollama embedding model provider."""
 
-import json
 import os
 from typing import Any, Dict, List
 
@@ -52,6 +51,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
         Args:
             texts: List of texts to create embeddings for.
             **kwargs: Additional arguments to pass to the embedding API.
+                     Supports: truncate, dimensions, keep_alive, options
 
         Returns:
             List of embeddings, one for each input text.
@@ -62,40 +62,42 @@ class OllamaEmbeddingModel(EmbeddingModel):
         if not texts:
             raise ValueError("Texts cannot be empty")
 
-        results = []
-
+        # Validate texts
         for text in texts:
             if text is None:
                 raise ValueError("Text cannot be None")
             if not text.strip():
                 raise ValueError("Text cannot be empty")
 
-            text = self._clean_text(text)
-            
-            # Prepare request payload
-            payload = {
-                "model": self.get_model_name(),
-                "prompt": text,
-                **self._get_api_kwargs(),
-                **kwargs
-            }
+        # Clean all texts
+        cleaned_texts = [self._clean_text(text) for text in texts]
 
-            try:
-                # Make HTTP request
-                response = self.client.post(
-                    f"{self.base_url}/api/embeddings",
-                    headers=self._get_headers(),
-                    json=payload
-                )
-                self._handle_error(response)
-                
-                response_data = response.json()
-                # Convert embeddings to regular floats
-                results.append([float(value) for value in response_data["embedding"]])
-            except Exception as e:
-                raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
+        # Prepare request payload - use batch processing with input array
+        payload = {
+            "model": self.get_model_name(),
+            "input": cleaned_texts,
+            **self._get_api_kwargs(),
+            **kwargs
+        }
 
-        return results
+        try:
+            # Make HTTP request to new /api/embed endpoint
+            response = self.client.post(
+                f"{self.base_url}/api/embed",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            response_data = response.json()
+            # Convert embeddings to regular floats
+            results = [
+                [float(value) for value in embedding]
+                for embedding in response_data["embeddings"]
+            ]
+            return results
+        except Exception as e:
+            raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -103,6 +105,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
         Args:
             texts: List of texts to create embeddings for.
             **kwargs: Additional arguments to pass to the embedding API.
+                     Supports: truncate, dimensions, keep_alive, options
 
         Returns:
             List of embeddings, one for each input text.
@@ -113,40 +116,42 @@ class OllamaEmbeddingModel(EmbeddingModel):
         if not texts:
             raise ValueError("Texts cannot be empty")
 
-        results = []
-
+        # Validate texts
         for text in texts:
             if text is None:
                 raise ValueError("Text cannot be None")
             if not text.strip():
                 raise ValueError("Text cannot be empty")
 
-            text = self._clean_text(text)
-            
-            # Prepare request payload
-            payload = {
-                "model": self.get_model_name(),
-                "prompt": text,
-                **self._get_api_kwargs(),
-                **kwargs
-            }
+        # Clean all texts
+        cleaned_texts = [self._clean_text(text) for text in texts]
 
-            try:
-                # Make async HTTP request
-                response = await self.async_client.post(
-                    f"{self.base_url}/api/embeddings",
-                    headers=self._get_headers(),
-                    json=payload
-                )
-                self._handle_error(response)
-                
-                response_data = response.json()
-                # Convert embeddings to regular floats
-                results.append([float(value) for value in response_data["embedding"]])
-            except Exception as e:
-                raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
+        # Prepare request payload - use batch processing with input array
+        payload = {
+            "model": self.get_model_name(),
+            "input": cleaned_texts,
+            **self._get_api_kwargs(),
+            **kwargs
+        }
 
-        return results
+        try:
+            # Make async HTTP request to new /api/embed endpoint
+            response = await self.async_client.post(
+                f"{self.base_url}/api/embed",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            response_data = response.json()
+            # Convert embeddings to regular floats
+            results = [
+                [float(value) for value in embedding]
+                for embedding in response_data["embeddings"]
+            ]
+            return results
+        except Exception as e:
+            raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
