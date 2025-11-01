@@ -390,11 +390,17 @@ class AnthropicLanguageModel(LanguageModel):
         if not model_name:
             raise ValueError("Model name is required for Langchain integration.")
 
-        # Pass arguments directly to ChatAnthropic
-        return ChatAnthropic(
-            model=model_name,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            top_p=self.top_p,
-            api_key=self.api_key,
-        )
+        # Anthropic does not allow both temperature and top_p to be set
+        # Prioritize temperature if both are provided
+        kwargs = {
+            "model": model_name,
+            "max_tokens": self.max_tokens,
+            "api_key": self.api_key,
+        }
+
+        if self.temperature is not None:
+            kwargs["temperature"] = self.temperature
+        elif self.top_p is not None:
+            kwargs["top_p"] = self.top_p
+
+        return ChatAnthropic(**kwargs)
