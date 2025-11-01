@@ -22,7 +22,7 @@ def azure_config():
 class TestAzureReasoningModels:
     """Test Azure reasoning model support."""
 
-    @pytest.mark.parametrize("model_name", ["o1-preview", "o1-mini", "o3-mini", "o4-mini", "gpt-5"])
+    @pytest.mark.parametrize("model_name", ["o1-preview", "o1-mini", "o3-mini", "o4-mini", "gpt-5", "gpt-5-mini"])
     def test_is_reasoning_model_detection(self, azure_config, model_name):
         """Test reasoning model detection."""
         with patch('httpx.Client'), patch('httpx.AsyncClient'):

@@ -58,8 +58,13 @@ def mock_openai_models_response():
 
 @pytest.fixture
 def mock_ollama_embedding_response():
+    """Mock response for new /api/embed endpoint."""
     return {
-        "embedding": [0.1, 0.2, 0.3]
+        "model": "mxbai-embed-large",
+        "embeddings": [[0.1, 0.2, 0.3]],
+        "total_duration": 1000000,
+        "load_duration": 500000,
+        "prompt_eval_count": 10
     }
 
 
@@ -154,7 +159,7 @@ def mock_ollama_response(mock_ollama_embedding_response):
 
     # Configure responses based on URL
     def mock_post_side_effect(url, **kwargs):
-        if url.endswith("/api/embeddings"):
+        if url.endswith("/api/embed"):
             return make_response(200, mock_ollama_embedding_response)
         elif url.endswith("/api/tags"):
             return make_response(200, {"models": [{"name": "mxbai-embed-large"}]})
@@ -166,7 +171,7 @@ def mock_ollama_response(mock_ollama_embedding_response):
         return make_response(404, {"error": "Not found"})
 
     async def mock_async_post_side_effect(url, **kwargs):
-        if url.endswith("/api/embeddings"):
+        if url.endswith("/api/embed"):
             return make_async_response(200, mock_ollama_embedding_response)
         elif url.endswith("/api/tags"):
             return make_async_response(200, {"models": [{"name": "mxbai-embed-large"}]})
@@ -456,17 +461,17 @@ def test_ollama_embed(ollama_embedding_model):
     embeddings = ollama_embedding_model.embed(texts)
     assert len(embeddings) == 1
     assert embeddings[0] == [0.1, 0.2, 0.3]
-    
+
     # Verify HTTP POST was called
     ollama_embedding_model.client.post.assert_called_once()
     call_args = ollama_embedding_model.client.post.call_args
-    
-    # Check URL
-    assert call_args[0][0] == "http://localhost:11434/api/embeddings"
-    
-    # Check request payload
+
+    # Check URL - now uses /api/embed
+    assert call_args[0][0] == "http://localhost:11434/api/embed"
+
+    # Check request payload - now uses input array
     json_payload = call_args[1]["json"]
-    assert json_payload["prompt"] == "Hello, world!"
+    assert json_payload["input"] == ["Hello, world!"]
     assert json_payload["model"] == "mxbai-embed-large"
 
 
@@ -477,44 +482,51 @@ async def test_ollama_aembed(ollama_embedding_model):
     embeddings = await ollama_embedding_model.aembed(texts)
     assert len(embeddings) == 1
     assert embeddings[0] == [0.1, 0.2, 0.3]
-    
+
     # Verify async HTTP POST was called
     ollama_embedding_model.async_client.post.assert_called_once()
     call_args = ollama_embedding_model.async_client.post.call_args
-    
-    # Check URL
-    assert call_args[0][0] == "http://localhost:11434/api/embeddings"
-    
-    # Check request payload
+
+    # Check URL - now uses /api/embed
+    assert call_args[0][0] == "http://localhost:11434/api/embed"
+
+    # Check request payload - now uses input array
     json_payload = call_args[1]["json"]
-    assert json_payload["prompt"] == "Hello, world!"
+    assert json_payload["input"] == ["Hello, world!"]
     assert json_payload["model"] == "mxbai-embed-large"
 
 
 def test_ollama_embed_multiple_texts(ollama_embedding_model):
-    """Test embed method with multiple texts."""
-    # Mock different responses for each call
+    """Test embed method with multiple texts using batch processing."""
+    # Mock response for batch request
     def mock_post_side_effect(url, **kwargs):
         response = Mock()
         response.status_code = 200
-        # Return different embeddings based on the prompt
-        prompt = kwargs.get("json", {}).get("prompt", "")
-        if prompt == "Hello, world!":
-            response.json.return_value = {"embedding": [0.1, 0.2, 0.3]}
-        elif prompt == "Another text":
-            response.json.return_value = {"embedding": [0.4, 0.5, 0.6]}
-        else:
-            response.json.return_value = {"embedding": [0.1, 0.2, 0.3]}
+        # New API returns all embeddings in one response
+        response.json.return_value = {
+            "model": "mxbai-embed-large",
+            "embeddings": [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+            "total_duration": 2000000,
+            "load_duration": 500000,
+            "prompt_eval_count": 20
+        }
         return response
-    
+
     ollama_embedding_model.client.post.side_effect = mock_post_side_effect
-    
+
     texts = ["Hello, world!", "Another text"]
     embeddings = ollama_embedding_model.embed(texts)
     assert len(embeddings) == 2
     assert embeddings[0] == [0.1, 0.2, 0.3]
     assert embeddings[1] == [0.4, 0.5, 0.6]
-    assert ollama_embedding_model.client.post.call_count == 2
+
+    # With batch processing, should only make ONE API call
+    assert ollama_embedding_model.client.post.call_count == 1
+
+    # Verify the input was sent as an array
+    call_args = ollama_embedding_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["input"] == ["Hello, world!", "Another text"]
 
 
 # Tests for Google Embedding Provider
