@@ -277,7 +277,8 @@ def test_to_langchain_with_custom_params():
 
     # assert langchain_model.lc_kwargs.get("max_tokens_to_sample") == 1000 # Removed failing assertion
     assert langchain_model.temperature == 0.8
-    assert langchain_model.top_p == 0.95
+    # When both temperature and top_p are set, only temperature is passed (Anthropic doesn't allow both)
+    assert langchain_model.top_p is None
     # assert langchain_model.streaming is True # Streaming is not an init param
     # Base URL in LangChain may not match exactly, skipping assertion
     assert langchain_model.model == "claude-3-sonnet"
@@ -302,6 +303,48 @@ async def test_achat_complete_error_handling(anthropic_model):
         await anthropic_model.achat_complete(messages)
 
     assert "Rate limit exceeded" in str(exc_info.value)
+
+
+def test_langchain_only_top_p():
+    """Test LangChain conversion when temperature is None and top_p is set.
+
+    Since the base class provides default values, we need to explicitly set
+    temperature to None to use only top_p.
+    """
+    model = AnthropicLanguageModel(
+        api_key="test-key",
+        model_name="claude-3-sonnet",
+        temperature=None,
+        top_p=0.95
+    )
+
+    langchain_model = model.to_langchain()
+
+    # When temperature is None and top_p is set, top_p should be passed
+    assert langchain_model.top_p == 0.95
+    assert langchain_model.temperature is None
+
+
+def test_langchain_temperature_takes_precedence_over_top_p():
+    """Test that temperature takes precedence over top_p in LangChain conversion.
+
+    Anthropic API does not allow both temperature and top_p to be set.
+    When both are provided, temperature should be used and top_p should be excluded.
+    """
+    model = AnthropicLanguageModel(
+        api_key="test-key",
+        model_name="claude-3-sonnet",
+        temperature=0.8,
+        top_p=0.95
+    )
+
+    langchain_model = model.to_langchain()
+
+    # Verify temperature is included
+    assert langchain_model.temperature == 0.8
+
+    # Verify top_p is NOT included (None, not 0.95)
+    assert langchain_model.top_p is None
 
 
 def test_temperature_takes_precedence_over_top_p():
