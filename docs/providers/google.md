@@ -539,9 +539,9 @@ Error: Request timed out
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [Embeddings Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/embedding.md)
-- [Text-to-Speech Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/text_to_speech.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Anthropic Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/anthropic.md)
-- [Azure Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/azure.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [Embeddings Guide](../capabilities/embedding.md)
+- [Text-to-Speech Guide](../capabilities/text-to-speech.md)
+- [OpenAI Provider](./openai.md)
+- [Anthropic Provider](./anthropic.md)
+- [Azure Provider](./azure.md)

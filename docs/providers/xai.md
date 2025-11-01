@@ -497,8 +497,8 @@ Error: Model not found
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Anthropic Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/anthropic.md)
-- [Google Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/google.md)
-- [Perplexity Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/perplexity.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [OpenAI Provider](./openai.md)
+- [Anthropic Provider](./anthropic.md)
+- [Google Provider](./google.md)
+- [Perplexity Provider](./perplexity.md)

@@ -475,8 +475,8 @@ benchmark_task_optimization()
 
 ## See Also
 
-- [Embedding Capabilities Guide](/docs/capabilities/embeddings.md) - Overview of embedding features
-- [Jina Provider](/docs/providers/jina.md) - Native task-aware support
-- [Google Provider](/docs/providers/google.md) - Native task-aware support
-- [Transformers Features](/docs/advanced/transformers-features.md) - Local task-aware implementation
-- [Model Discovery](/docs/advanced/model-discovery.md) - Finding compatible models
+- [Embedding Capabilities Guide](../capabilities/embedding.md) - Overview of embedding features
+- [Jina Provider](../providers/jina.md) - Native task-aware support
+- [Google Provider](../providers/google.md) - Native task-aware support
+- [Transformers Features](./transformers-features.md) - Local task-aware implementation
+- [Model Discovery](./model-discovery.md) - Finding compatible models

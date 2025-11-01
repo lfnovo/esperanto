@@ -723,9 +723,9 @@ embeddings = classifier_embedder.embed(documents)
 
 ## See Also
 
-- [Embeddings Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/embedding.md)
-- [Reranking Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/rerank.md)
-- [Embedding Providers](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/embedding/providers.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Transformers Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/transformers.md)
-- [Voyage Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/voyage.md)
+- [Embeddings Guide](../capabilities/embedding.md)
+- [Reranking Guide](../capabilities/reranking.md)
+- [Embedding Providers](../capabilities/embedding.md)
+- [OpenAI Provider](./openai.md)
+- [Transformers Provider](./transformers.md)
+- [Voyage Provider](./voyage.md)

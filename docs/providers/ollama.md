@@ -491,7 +491,7 @@ nvidia-smi  # For NVIDIA GPUs
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [Embeddings Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/embedding.md)
-- [OpenAI-Compatible Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai-compatible.md)
-- [Transformers Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/transformers.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [Embeddings Guide](../capabilities/embedding.md)
+- [OpenAI-Compatible Provider](./openai-compatible.md)
+- [Transformers Provider](./transformers.md)

@@ -633,8 +633,8 @@ class ModelFactory:
 
 ## See Also
 
-- [Language Model Capabilities](/docs/capabilities/language.md) - LLM features and usage
-- [Embedding Capabilities](/docs/capabilities/embeddings.md) - Embedding features
-- [Speech-to-Text Capabilities](/docs/capabilities/speech-to-text.md) - Transcription features
-- [Text-to-Speech Capabilities](/docs/capabilities/text-to-speech.md) - Audio generation features
-- [OpenAI Provider](/docs/providers/openai.md) - Provider-specific details
+- [Language Model Capabilities](../capabilities/llm.md) - LLM features and usage
+- [Embedding Capabilities](../capabilities/embedding.md) - Embedding features
+- [Speech-to-Text Capabilities](../capabilities/speech-to-text.md) - Transcription features
+- [Text-to-Speech Capabilities](../capabilities/text-to-speech.md) - Audio generation features
+- [OpenAI Provider](../providers/openai.md) - Provider-specific details

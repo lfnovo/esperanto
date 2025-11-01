@@ -617,8 +617,8 @@ langchain_model = model.to_langchain()
 
 ## See Also
 
-- [Language Model Capabilities](/docs/capabilities/language.md) - Overview of LLM features
-- [OpenAI Provider](/docs/providers/openai.md) - OpenAI-specific features
-- [Anthropic Provider](/docs/providers/anthropic.md) - Claude-specific features
-- [Timeout Configuration](/docs/advanced/timeout-configuration.md) - Configure timeouts
+- [Language Model Capabilities](../capabilities/llm.md) - Overview of LLM features
+- [OpenAI Provider](../providers/openai.md) - OpenAI-specific features
+- [Anthropic Provider](../providers/anthropic.md) - Claude-specific features
+- [Timeout Configuration](./timeout-configuration.md) - Configure timeouts
 - [LangChain Documentation](https://python.langchain.com/) - Official LangChain docs

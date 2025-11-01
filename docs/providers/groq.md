@@ -557,8 +557,8 @@ for item in large_dataset:
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [Speech-to-Text Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/speech_to_text.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Anthropic Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/anthropic.md)
-- [Google Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/google.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [Speech-to-Text Guide](../capabilities/speech-to-text.md)
+- [OpenAI Provider](./openai.md)
+- [Anthropic Provider](./anthropic.md)
+- [Google Provider](./google.md)

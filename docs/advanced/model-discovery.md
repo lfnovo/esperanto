@@ -742,8 +742,7 @@ available_models = AIFactory.get_provider_models("openai", api_key="your-key")
 
 ## See Also
 
-- [Language Model Capabilities](/docs/capabilities/language.md) - LLM features overview
-- [Embedding Capabilities](/docs/capabilities/embeddings.md) - Embedding features
-- [Provider Guides](/docs/providers/) - Provider-specific documentation
-- [AIFactory Reference](/docs/api/factory.md) - Factory API documentation
+- [Language Model Capabilities](../capabilities/llm.md) - LLM features overview
+- [Embedding Capabilities](../capabilities/embedding.md) - Embedding features
+- [Provider Guides](../providers/) - Provider-specific documentation
 

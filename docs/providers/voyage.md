@@ -669,9 +669,9 @@ general_embedder = get_embedder("general")
 
 ## See Also
 
-- [Embeddings Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/embedding.md)
-- [Reranking Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/rerank.md)
-- [Embedding Providers](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/embedding/providers.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Jina Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/jina.md)
-- [Transformers Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/transformers.md)
+- [Embeddings Guide](../capabilities/embedding.md)
+- [Reranking Guide](../capabilities/reranking.md)
+- [Embedding Providers](../capabilities/embedding.md)
+- [OpenAI Provider](./openai.md)
+- [Jina Provider](./jina.md)
+- [Transformers Provider](./transformers.md)

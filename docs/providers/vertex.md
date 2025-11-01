@@ -609,8 +609,8 @@ response = eu_llm.chat_complete(messages)
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [Embeddings Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/embedding.md)
-- [Text-to-Speech Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/text_to_speech.md)
-- [Google Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/google.md)
-- [Azure Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/azure.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [Embeddings Guide](../capabilities/embedding.md)
+- [Text-to-Speech Guide](../capabilities/text-to-speech.md)
+- [Google Provider](./google.md)
+- [Azure Provider](./azure.md)

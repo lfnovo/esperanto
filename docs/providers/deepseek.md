@@ -508,8 +508,8 @@ Error: Model not found
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Anthropic Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/anthropic.md)
-- [Mistral Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/mistral.md)
-- [Google Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/google.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [OpenAI Provider](./openai.md)
+- [Anthropic Provider](./anthropic.md)
+- [Mistral Provider](./mistral.md)
+- [Google Provider](./google.md)

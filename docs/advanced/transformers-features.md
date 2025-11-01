@@ -12,7 +12,7 @@ This guide covers the Transformers provider's advanced capabilities:
 - **Model-Aware Configuration**: Optimized settings for different transformer models
 - **Graceful Degradation**: Fallback behavior when optional dependencies are missing
 
-For general Transformers provider usage, see the [Transformers Provider Guide](/docs/providers/transformers.md).
+For general Transformers provider usage, see the [Transformers Provider Guide](../providers/transformers.md).
 
 ## Installation
 
@@ -562,7 +562,7 @@ This ensures provider-agnostic development while maintaining the privacy and cos
 
 ## See Also
 
-- [Transformers Provider Guide](/docs/providers/transformers.md) - Basic provider usage
-- [Task-Aware Embeddings](/docs/advanced/task-aware-embeddings.md) - Deep dive on task types
-- [Embedding Capabilities](/docs/capabilities/embeddings.md) - Overview of embedding features
-- [Jina Provider](/docs/providers/jina.md) - Cloud alternative with native features
+- [Transformers Provider Guide](../providers/transformers.md) - Basic provider usage
+- [Task-Aware Embeddings](./task-aware-embeddings.md) - Deep dive on task types
+- [Embedding Capabilities](../capabilities/embedding.md) - Overview of embedding features
+- [Jina Provider](../providers/jina.md) - Cloud alternative with native features

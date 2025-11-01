@@ -408,7 +408,7 @@ config={"timeout": 120.0, "max_tokens": 1024}
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Google Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/google.md)
-- [Groq Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/groq.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [OpenAI Provider](./openai.md)
+- [Google Provider](./google.md)
+- [Groq Provider](./groq.md)

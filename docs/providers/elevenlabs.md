@@ -642,8 +642,8 @@ with open("meeting_transcript.txt", "w") as f:
 
 ## See Also
 
-- [Text-to-Speech Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/text_to_speech.md)
-- [Speech-to-Text Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/speech_to_text.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Google Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/google.md)
-- [Groq Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/groq.md)
+- [Text-to-Speech Guide](../capabilities/text-to-speech.md)
+- [Speech-to-Text Guide](../capabilities/speech-to-text.md)
+- [OpenAI Provider](./openai.md)
+- [Google Provider](./google.md)
+- [Groq Provider](./groq.md)

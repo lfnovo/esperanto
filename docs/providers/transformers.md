@@ -805,9 +805,9 @@ for model_name in models:
 
 ## See Also
 
-- [Embeddings Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/embedding.md)
-- [Reranking Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/rerank.md)
-- [Transformers Advanced Features](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/TRANSFORMERS_ADVANCED_FEATURES.md)
-- [Embedding Providers](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/embedding/providers.md)
-- [OpenAI Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/openai.md)
-- [Jina Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/jina.md)
+- [Embeddings Guide](../capabilities/embedding.md)
+- [Reranking Guide](../capabilities/reranking.md)
+- [Transformers Advanced Features](../advanced/transformers-features.md)
+- [Embedding Providers](../capabilities/embedding.md)
+- [OpenAI Provider](./openai.md)
+- [Jina Provider](./jina.md)

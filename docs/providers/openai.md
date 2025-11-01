@@ -522,9 +522,9 @@ Error: Request timed out
 
 ## See Also
 
-- [Language Models Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/llm.md)
-- [Embeddings Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/embedding.md)
-- [Speech-to-Text Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/speech_to_text.md)
-- [Text-to-Speech Guide](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/capabilities/text_to_speech.md)
-- [Anthropic Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/anthropic.md)
-- [Google Provider](/Users/luisnovo/dev/projetos/esperanto/esperanto/docs/providers/google.md)
+- [Language Models Guide](../capabilities/llm.md)
+- [Embeddings Guide](../capabilities/embedding.md)
+- [Speech-to-Text Guide](../capabilities/speech-to-text.md)
+- [Text-to-Speech Guide](../capabilities/text-to-speech.md)
+- [Anthropic Provider](./anthropic.md)
+- [Google Provider](./google.md)
