@@ -303,13 +303,14 @@ class AnthropicLanguageModel(LanguageModel):
         
         if system_message:
             payload["system"] = system_message
-            
+
+        # Anthropic does not allow both temperature and top_p to be set
+        # Prioritize temperature if both are provided
         if self.temperature is not None:
             payload["temperature"] = max(0.0, min(1.0, float(self.temperature)))
-            
-        if self.top_p is not None:
+        elif self.top_p is not None:
             payload["top_p"] = float(self.top_p)
-            
+
         if stream:
             payload["stream"] = True
             
