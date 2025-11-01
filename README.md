@@ -57,13 +57,31 @@ Whether you're building a quick prototype or a production application serving mi
 - **Structured Output**: JSON output formatting (where supported)
 - **LangChain Integration**: Easy conversion to LangChain chat models
 
-For detailed information about our providers, check out:
-- [LLM Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/llm.md)
-- [Embedding Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/embedding.md)
-- [Reranking Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/rerank.md)
-- [Speech-to-Text Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/speech_to_text.md)
-- [Text-to-Speech Providers Documentation](https://github.com/lfnovo/esperanto/blob/main/docs/text_to_speech.md)
-- **[CHANGELOG](https://github.com/lfnovo/esperanto/blob/main/CHANGELOG.md)** - Version history and migration guides
+## 📚 Documentation
+
+- **[Quick Start Guide](https://github.com/lfnovo/esperanto/blob/main/docs/quickstart.md)** - Get started in 5 minutes
+- **[Documentation Index](https://github.com/lfnovo/esperanto/blob/main/docs/README.md)** - Complete documentation hub
+- **[Provider Comparison](https://github.com/lfnovo/esperanto/blob/main/docs/providers/README.md)** - Choose the right provider
+- **[Configuration Guide](https://github.com/lfnovo/esperanto/blob/main/docs/configuration.md)** - Environment setup
+
+### By Capability
+- [Language Models (LLM)](https://github.com/lfnovo/esperanto/blob/main/docs/capabilities/llm.md) - Text generation and chat
+- [Embeddings](https://github.com/lfnovo/esperanto/blob/main/docs/capabilities/embedding.md) - Vector representations
+- [Reranking](https://github.com/lfnovo/esperanto/blob/main/docs/capabilities/reranking.md) - Search relevance
+- [Speech-to-Text](https://github.com/lfnovo/esperanto/blob/main/docs/capabilities/speech-to-text.md) - Audio transcription
+- [Text-to-Speech](https://github.com/lfnovo/esperanto/blob/main/docs/capabilities/text-to-speech.md) - Voice generation
+
+### By Provider
+- [Provider Setup Guides](https://github.com/lfnovo/esperanto/blob/main/docs/providers/) - Complete setup for all 17 providers
+
+### Advanced Topics
+- [Task-Aware Embeddings](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/task-aware-embeddings.md)
+- [LangChain Integration](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/langchain-integration.md)
+- [Timeout Configuration](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/timeout-configuration.md)
+- [Model Discovery](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/model-discovery.md)
+- [Transformers Features](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/transformers-features.md)
+
+**[CHANGELOG](https://github.com/lfnovo/esperanto/blob/main/CHANGELOG.md)** - Version history and migration guides
 
 ## Installation 🚀
 
@@ -694,9 +712,14 @@ chain = ConversationChain(llm=langchain_model)
 
 ## Documentation 📚
 
-You can find the documentation for Esperanto in the [docs](https://github.com/lfnovo/esperanto/tree/main/docs) directory.
+Complete documentation is available in the [docs](https://github.com/lfnovo/esperanto/tree/main/docs) directory:
 
-There is also a cool beginner's tutorial in the [tutorial](https://github.com/lfnovo/esperanto/blob/main/docs/tutorial/index.md) directory.
+- **[Quick Start Guide](https://github.com/lfnovo/esperanto/blob/main/docs/quickstart.md)** - Get up and running in 5 minutes
+- **[Documentation Index](https://github.com/lfnovo/esperanto/blob/main/docs/README.md)** - Navigation hub for all documentation
+- **[Provider Comparison](https://github.com/lfnovo/esperanto/blob/main/docs/providers/README.md)** - Compare and choose providers
+- **[Capability Guides](https://github.com/lfnovo/esperanto/tree/main/docs/capabilities)** - Learn about LLM, Embeddings, Reranking, STT, TTS
+- **[Provider Setup Guides](https://github.com/lfnovo/esperanto/tree/main/docs/providers)** - Setup instructions for all 17 providers
+- **[Advanced Topics](https://github.com/lfnovo/esperanto/tree/main/docs/advanced)** - Task-aware embeddings, LangChain, timeouts, and more
 
 ## Contributing 🤝
 
