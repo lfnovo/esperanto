@@ -302,3 +302,52 @@ async def test_achat_complete_error_handling(anthropic_model):
         await anthropic_model.achat_complete(messages)
 
     assert "Rate limit exceeded" in str(exc_info.value)
+
+
+def test_temperature_takes_precedence_over_top_p():
+    """Test that temperature takes precedence over top_p when both are provided.
+
+    Anthropic API does not allow both temperature and top_p to be set.
+    When both are provided, temperature should be used and top_p should be excluded.
+    """
+    # Create model with both temperature and top_p
+    model = AnthropicLanguageModel(
+        api_key="test-key",
+        temperature=0.8,
+        top_p=0.95
+    )
+
+    messages = [{"role": "user", "content": "Hello!"}]
+
+    # Create the request payload
+    payload = model._create_request_payload(messages)
+
+    # Verify temperature is included
+    assert "temperature" in payload
+    assert payload["temperature"] == 0.8
+
+    # Verify top_p is NOT included
+    assert "top_p" not in payload
+
+
+def test_top_p_used_when_temperature_not_set():
+    """Test that top_p is used when temperature is explicitly set to None."""
+    # Create model with temperature=None and top_p set
+    # Note: We need to explicitly set temperature to None to avoid the default value
+    model = AnthropicLanguageModel(
+        api_key="test-key",
+        temperature=None,
+        top_p=0.95
+    )
+
+    messages = [{"role": "user", "content": "Hello!"}]
+
+    # Create the request payload
+    payload = model._create_request_payload(messages)
+
+    # Verify top_p is included
+    assert "top_p" in payload
+    assert payload["top_p"] == 0.95
+
+    # Verify temperature is NOT included (because it was None)
+    assert "temperature" not in payload
