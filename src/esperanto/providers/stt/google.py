@@ -4,7 +4,7 @@ import base64
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, List, Optional, Union
+from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Union
 
 import httpx
 
@@ -26,10 +26,10 @@ class GoogleSpeechToTextModel(SpeechToTextModel):
         super().__post_init__()
 
         # Get API key - check both GOOGLE_API_KEY and GEMINI_API_KEY
-        self.api_key = (
+        self._api_key = (
             self.api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         )
-        if not self.api_key:
+        if not self._api_key:
             raise ValueError(
                 "Google API key not found. Please set GOOGLE_API_KEY or GEMINI_API_KEY environment variable."
             )
@@ -114,7 +114,7 @@ class GoogleSpeechToTextModel(SpeechToTextModel):
 
         return mime_types[extension]
 
-    def _encode_audio(self, audio_file: Union[str, BinaryIO]) -> tuple[bytes, str]:
+    def _encode_audio(self, audio_file: Union[str, BinaryIO]) -> Tuple[bytes, str]:
         """Read and base64 encode audio file.
 
         Args:
@@ -131,7 +131,7 @@ class GoogleSpeechToTextModel(SpeechToTextModel):
         else:
             # BinaryIO
             audio_bytes = audio_file.read()
-            filename = getattr(audio_file, 'name', 'audio.mp3')
+            filename = getattr(audio_file, 'name', 'audio_input.mp3')
             return audio_bytes, filename
 
     def _build_prompt(
@@ -181,21 +181,21 @@ class GoogleSpeechToTextModel(SpeechToTextModel):
                 f"Response structure: {list(response_data.keys())}"
             )
 
-    def transcribe(
+    def _prepare_request_payload(
         self,
         audio_file: Union[str, BinaryIO],
         language: Optional[str] = None,
         prompt: Optional[str] = None,
-    ) -> TranscriptionResponse:
-        """Transcribe audio to text using Google Gemini API.
+    ) -> Tuple[Dict[str, Any], str]:
+        """Prepare request payload for transcription.
 
         Args:
             audio_file: Path to audio file or file-like object
-            language: Optional language code (e.g., 'en', 'es', 'pt')
-            prompt: Optional text to guide the transcription
+            language: Optional language code
+            prompt: Optional text to guide transcription
 
         Returns:
-            TranscriptionResponse containing the transcribed text and metadata
+            Tuple of (payload dict, model_name)
         """
         # Encode audio
         audio_bytes, file_identifier = self._encode_audio(audio_file)
@@ -223,9 +223,30 @@ class GoogleSpeechToTextModel(SpeechToTextModel):
             }]
         }
 
+        return payload, model_name
+
+    def transcribe(
+        self,
+        audio_file: Union[str, BinaryIO],
+        language: Optional[str] = None,
+        prompt: Optional[str] = None,
+    ) -> TranscriptionResponse:
+        """Transcribe audio to text using Google Gemini API.
+
+        Args:
+            audio_file: Path to audio file or file-like object
+            language: Optional language code (e.g., 'en', 'es', 'pt')
+            prompt: Optional text to guide the transcription
+
+        Returns:
+            TranscriptionResponse containing the transcribed text and metadata
+        """
+        # Prepare request
+        payload, model_name = self._prepare_request_payload(audio_file, language, prompt)
+
         # Make HTTP request
         response = self.client.post(
-            f"{self.base_url}/models/{model_name}:generateContent?key={self.api_key}",
+            f"{self.base_url}/models/{model_name}:generateContent?key={self._api_key}",
             headers=self._get_headers(),
             json=payload
         )
@@ -259,35 +280,12 @@ class GoogleSpeechToTextModel(SpeechToTextModel):
         Returns:
             TranscriptionResponse containing the transcribed text and metadata
         """
-        # Encode audio
-        audio_bytes, file_identifier = self._encode_audio(audio_file)
-        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
-
-        # Get MIME type
-        mime_type = self._get_mime_type(file_identifier)
-
-        # Build prompt
-        text_prompt = self._build_prompt(language, prompt)
-
-        # Construct request payload
-        model_name = self.get_model_name()
-        payload = {
-            "contents": [{
-                "parts": [
-                    {"text": text_prompt},
-                    {
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": audio_base64
-                        }
-                    }
-                ]
-            }]
-        }
+        # Prepare request
+        payload, model_name = self._prepare_request_payload(audio_file, language, prompt)
 
         # Make async HTTP request
         response = await self.async_client.post(
-            f"{self.base_url}/models/{model_name}:generateContent?key={self.api_key}",
+            f"{self.base_url}/models/{model_name}:generateContent?key={self._api_key}",
             headers=self._get_headers(),
             json=payload
         )

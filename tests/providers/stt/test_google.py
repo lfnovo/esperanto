@@ -90,14 +90,14 @@ class TestGoogleSpeechToTextModel:
         """Test initialization with GOOGLE_API_KEY."""
         with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key-123"}):
             model = GoogleSpeechToTextModel()
-            assert model.api_key == "test-key-123"
+            assert model._api_key == "test-key-123"
             assert model.provider == "google"
 
     def test_init_with_gemini_api_key(self):
         """Test initialization fallback to GEMINI_API_KEY."""
         with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-key-456"}, clear=True):
             model = GoogleSpeechToTextModel()
-            assert model.api_key == "gemini-key-456"
+            assert model._api_key == "gemini-key-456"
 
     def test_init_without_api_key(self):
         """Test that initialization fails without API key."""
