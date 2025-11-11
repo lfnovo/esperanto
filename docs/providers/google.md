@@ -2,7 +2,7 @@
 
 ## Overview
 
-Google provides access to Gemini models for language tasks, embeddings with native task optimization, and text-to-speech through the Generative AI API.
+Google provides access to Gemini models for language tasks, embeddings with native task optimization, speech-to-text audio transcription, and text-to-speech through the Generative AI API.
 
 **Supported Capabilities:**
 
@@ -11,7 +11,7 @@ Google provides access to Gemini models for language tasks, embeddings with nati
 | Language Models (LLM) | ✅ | Gemini 2.0 Flash, Gemini 1.5 Pro |
 | Embeddings | ✅ | text-embedding-004 with native task types |
 | Reranking | ❌ | Not available |
-| Speech-to-Text | ❌ | Not available |
+| Speech-to-Text | ✅ | Gemini audio transcription (gemini-2.5-flash) |
 | Text-to-Speech | ✅ | 30+ unique voices with personalities |
 
 **Official Documentation:** https://ai.google.dev/docs
@@ -293,6 +293,91 @@ qa_model = AIFactory.create_embedding(
 
 questions = ["What is Python?", "How does photosynthesis work?"]
 embeddings = qa_model.embed(questions)
+```
+
+### Speech-to-Text
+
+Google's Speech-to-Text capability uses Gemini's audio transcription via the `generateContent` endpoint. **Note**: This is NOT Cloud Speech-to-Text API v2 Chirp 3, but Gemini's audio understanding feature which provides comparable transcription quality with simpler authentication.
+
+**Supported Audio Formats:**
+- MP3 (`.mp3`)
+- WAV (`.wav`)
+- AIFF (`.aiff`)
+- AAC (`.aac`)
+- OGG Vorbis (`.ogg`)
+- FLAC (`.flac`)
+
+**Default Model:** `gemini-2.5-flash`
+
+**Audio File Size Limits:**
+- Request size limit: ~20MB total (including base64-encoded audio)
+- For larger files (>20MB), you would need to use Google's Files API (not currently implemented)
+
+**Basic Usage:**
+
+```python
+from esperanto.factory import AIFactory
+
+# Create STT instance
+model = AIFactory.create_speech_to_text(
+    "google",
+    "gemini-2.5-flash"
+)
+
+# Transcribe audio file
+response = model.transcribe("path/to/audio.mp3")
+print(response.text)
+
+# With language hint
+response = model.transcribe(
+    "path/to/audio.mp3",
+    language="en"
+)
+
+# With custom prompt for guidance
+response = model.transcribe(
+    "path/to/audio.mp3",
+    prompt="Focus on technical terminology"
+)
+
+# Async transcription
+response = await model.atranscribe("path/to/audio.mp3")
+```
+
+**Using with BinaryIO:**
+
+```python
+# Transcribe from file-like object
+with open("audio.mp3", "rb") as audio_file:
+    response = model.transcribe(audio_file)
+    print(response.text)
+```
+
+**Response Structure:**
+
+```python
+# TranscriptionResponse attributes
+response.text       # Transcribed text
+response.model      # Model used (e.g., "gemini-2.5-flash")
+response.language   # Language code (if provided in request)
+```
+
+**Important Notes:**
+- The `language` parameter is optional and serves as a hint to improve accuracy
+- The `prompt` parameter can guide the transcription focus (e.g., "medical terminology", "technical jargon")
+- Audio is base64-encoded and sent inline with the request
+- No streaming support (entire audio must be processed at once)
+- Gemini supports 68+ languages but doesn't return detected language in response
+
+**Timeout Configuration:**
+
+```python
+# Custom timeout (default is 300 seconds for STT)
+model = AIFactory.create_speech_to_text(
+    "google",
+    "gemini-2.5-flash",
+    config={"timeout": 600.0}  # 10 minutes for large files
+)
 ```
 
 ### Text-to-Speech

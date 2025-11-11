@@ -172,6 +172,7 @@ vtt_content = transcriber.transcribe("audio.mp3")
 
 - **OpenAI**: Industry standard Whisper model, excellent accuracy
 - **Groq**: Fastest transcription, Whisper-based, low latency
+- **Google**: Gemini audio transcription, supports multiple formats, simple API key auth
 - **Azure**: Enterprise compliance, private deployment
 - **ElevenLabs**: Specialized for voice, good multilingual support
 - **OpenAI-Compatible**: Local Whisper deployment (faster-whisper, etc.)
@@ -232,6 +233,32 @@ transcript = transcriber.transcribe(
 )
 print(transcript)
 ```
+
+### Google (Gemini) Transcription
+
+```python
+# Basic Gemini transcription
+transcriber = AIFactory.create_speech_to_text("google", "gemini-2.5-flash")
+
+transcript = transcriber.transcribe("audio.mp3")
+print(transcript.text)
+
+# With language hint for better accuracy
+transcript = transcriber.transcribe(
+    "portuguese_audio.mp3",
+    language="pt"
+)
+print(transcript.text)
+
+# With custom prompt for specialized content
+transcript = transcriber.transcribe(
+    "medical_consultation.mp3",
+    prompt="This is a medical consultation. Focus on medical terminology and patient symptoms."
+)
+print(transcript.text)
+```
+
+> **Note**: Esperanto's Google STT provider uses Gemini API's audio transcription capabilities, not Cloud Speech-to-Text API v2 (Chirp 3). This provides simpler authentication (API key only) and consistent integration with other Google GenAI features. Supported formats: MP3, WAV, AIFF, AAC, OGG, FLAC.
 
 ### Async Batch Processing
 

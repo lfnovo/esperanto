@@ -38,7 +38,7 @@ Whether you're building a quick prototype or a production application serving mi
   - xAI (Grok)
   - Perplexity (Sonar models)
   - Groq (Mixtral, Llama, Whisper)
-  - Google GenAI (Gemini LLM, Text To Speech, Embedding with native task optimization)
+  - Google GenAI (Gemini LLM, Speech-to-Text, Text-to-Speech, Embedding with native task optimization)
   - Vertex AI (Google Cloud, LLM, Embedding, TTS)
   - Ollama (Local deployment multiple models)
   - Transformers (Universal local models - Qwen, CrossEncoder, BAAI, Jina, Mixedbread)
@@ -136,7 +136,7 @@ pip install "langchain-google-vertexai>=2.0.24"
 | OpenAI-Compatible | ✅          | ✅               | ❌                | ✅             | ✅             | ⚠️*       |
 | Anthropic    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Groq         | ✅          | ❌               | ❌                | ✅             | ❌             | ✅        |
-| Google (GenAI) | ✅          | ✅               | ❌                | ❌             | ✅             | ✅        |
+| Google (GenAI) | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 | Vertex AI    | ✅          | ✅               | ❌                | ❌             | ✅             | ❌        |
 | Ollama       | ✅          | ✅               | ❌                | ❌             | ❌             | ❌        |
 | Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |

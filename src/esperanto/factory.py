@@ -50,6 +50,7 @@ class AIFactory:
             "elevenlabs": "esperanto.providers.stt.elevenlabs:ElevenLabsSpeechToTextModel",
             "openai-compatible": "esperanto.providers.stt.openai_compatible:OpenAICompatibleSpeechToTextModel",
             "azure": "esperanto.providers.stt.azure:AzureSpeechToTextModel",
+            "google": "esperanto.providers.stt.google:GoogleSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
