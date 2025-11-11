@@ -43,6 +43,7 @@ class AIFactory:
             "mistral": "esperanto.providers.embedding.mistral:MistralEmbeddingModel",
             "azure": "esperanto.providers.embedding.azure:AzureEmbeddingModel",
             "jina": "esperanto.providers.embedding.jina:JinaEmbeddingModel",
+            "openrouter": "esperanto.providers.embedding.openrouter:OpenRouterEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
