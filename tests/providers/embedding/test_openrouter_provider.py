@@ -24,39 +24,6 @@ def mock_openrouter_response():
 
 
 @pytest.fixture
-def mock_openrouter_models_response():
-    """Mock httpx response for OpenRouter models API."""
-    return {
-        "data": [
-            {
-                "id": "openai/text-embedding-3-small",
-                "context_length": 8191
-            },
-            {
-                "id": "openai/text-embedding-3-large",
-                "context_length": 8191
-            },
-            {
-                "id": "cohere/embed-english-v3.0",
-                "context_length": 512
-            },
-            {
-                "id": "voyage/voyage-3-lite",
-                "context_length": 32000
-            },
-            {
-                "id": "anthropic/claude-3-opus",  # Should be filtered out (not embedding model)
-                "context_length": 200000
-            },
-            {
-                "id": "openai/gpt-4",  # Should be filtered out (not embedding model)
-                "context_length": 8192
-            }
-        ]
-    }
-
-
-@pytest.fixture
 def openrouter_model(mock_openrouter_response):
     """Create OpenRouterEmbeddingModel with mocked HTTP client."""
     model = OpenRouterEmbeddingModel(api_key="test-key", model_name="openai/text-embedding-3-small")
@@ -264,17 +231,39 @@ def test_text_cleaning(openrouter_model):
     assert payload["input"] == ["Hello World", "Test Text"]
 
 
-def test_models_list(mock_openrouter_models_response):
-    """Test listing available models filters to embedding models only."""
+def test_models_list():
+    """Test listing available models uses dedicated embeddings endpoint."""
     model = OpenRouterEmbeddingModel(api_key="test-key")
 
     # Mock the HTTP client
     mock_client = Mock()
 
+    # Mock response from /embeddings/models endpoint (only contains embedding models)
+    embeddings_models_response = {
+        "data": [
+            {
+                "id": "openai/text-embedding-3-small",
+                "context_length": 8191
+            },
+            {
+                "id": "openai/text-embedding-3-large",
+                "context_length": 8191
+            },
+            {
+                "id": "cohere/embed-english-v3.0",
+                "context_length": 512
+            },
+            {
+                "id": "voyage/voyage-3-lite",
+                "context_length": 32000
+            }
+        ]
+    }
+
     def mock_get_side_effect(url, **kwargs):
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = mock_openrouter_models_response
+        mock_response.json.return_value = embeddings_models_response
         return mock_response
 
     mock_client.get.side_effect = mock_get_side_effect
@@ -282,19 +271,19 @@ def test_models_list(mock_openrouter_models_response):
 
     models = model._get_models()
 
-    # Should only include embedding models (4 out of 6 in mock response)
+    # Verify the correct endpoint was called
+    mock_client.get.assert_called_once()
+    call_args = mock_client.get.call_args
+    assert "/embeddings/models" in call_args[0][0]
+
+    # Should include all models from the embeddings endpoint
     assert len(models) == 4
     model_ids = [m.id for m in models]
 
-    # These should be included (embedding models)
     assert "openai/text-embedding-3-small" in model_ids
     assert "openai/text-embedding-3-large" in model_ids
     assert "cohere/embed-english-v3.0" in model_ids
     assert "voyage/voyage-3-lite" in model_ids
-
-    # These should be filtered out (LLM models)
-    assert "anthropic/claude-3-opus" not in model_ids
-    assert "openai/gpt-4" not in model_ids
 
 
 def test_models_list_owned_by():

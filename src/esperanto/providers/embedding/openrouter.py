@@ -134,36 +134,31 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
         return "openrouter"
 
     def _get_models(self) -> List[Model]:
-        """List all available embedding models for this provider."""
+        """List all available embedding models for this provider.
+
+        Uses OpenRouter's dedicated embeddings/models endpoint which returns
+        only embedding models, avoiding the need for filtering.
+        """
         headers = self._get_headers()
 
         response = self.client.get(
-            f"{self.base_url}/models",
+            f"{self.base_url}/embeddings/models",
             headers=headers
         )
         self._handle_error(response)
 
         models_data = response.json()
 
-        # Filter for embedding models only
+        # OpenRouter's /embeddings/models endpoint returns only embedding models
         embedding_models = []
         for model in models_data["data"]:
             model_id = model["id"]
-            # Filter for embedding models (models with IDs containing "embed" or starting with providers known for embeddings)
-            if (
-                "embed" in model_id.lower() or
-                model_id.startswith("text-embedding") or
-                model_id.startswith("openai/text-embedding") or
-                model_id.startswith("cohere/embed") or
-                model_id.startswith("voyage/") or
-                model_id.startswith("jina/")
-            ):
-                embedding_models.append(
-                    Model(
-                        id=model_id,
-                        owned_by=model_id.split("/")[0] if "/" in model_id else "OpenRouter",
-                        context_window=model.get("context_length", None),
-                    )
+            embedding_models.append(
+                Model(
+                    id=model_id,
+                    owned_by=model_id.split("/")[0] if "/" in model_id else "OpenRouter",
+                    context_window=model.get("context_length", None),
                 )
+            )
 
         return embedding_models
