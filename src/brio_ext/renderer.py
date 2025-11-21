@@ -18,10 +18,22 @@ def render_for_model(
     model_id: str,
     messages: List[Dict[str, str]],
     provider: str,
+    chat_format: str = None,
 ) -> RenderedPrompt:
-    """Render Esperanto messages into provider/model specific payloads."""
+    """
+    Render Esperanto messages into provider/model specific payloads.
+
+    Args:
+        model_id: The model identifier (e.g., "qwen2.5-7b-instruct")
+        messages: List of message dictionaries with 'role' and 'content' keys
+        provider: The provider name (e.g., "llamacpp", "openai")
+        chat_format: Optional chat format hint (e.g., "chatml", "llama", "mistral-instruct")
+
+    Returns:
+        RenderedPrompt dictionary with 'prompt' or 'messages' key and 'stop' tokens
+    """
     provider_key = (provider or "").lower()
-    adapter = get_adapter(model_id)
+    adapter = get_adapter(model_id, chat_format=chat_format)
 
     if os.getenv("BRIO_DEBUG"):
         print(f"[RENDERER] model_id={model_id}, provider={provider_key}")

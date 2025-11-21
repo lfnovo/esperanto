@@ -33,7 +33,9 @@ class BrioAIFactory(AIFactory):
         cls, provider: str, model_name: str, config: Optional[Dict[str, Any]] = None
     ) -> LanguageModel:
         model = super().create_language(provider, model_name, config=config or {})
-        return _wrap_language_model(model, model_name, provider)
+        # Extract chat_format from config if present
+        chat_format = (config or {}).get("chat_format")
+        return _wrap_language_model(model, model_name, provider, chat_format=chat_format)
 
 
 def register_with_factory(factory_cls: type[AIFactory]) -> type[AIFactory]:
@@ -48,7 +50,9 @@ def register_with_factory(factory_cls: type[AIFactory]) -> type[AIFactory]:
         config: Optional[Dict[str, Any]] = None,
     ):
         model = original_create_language(cls, provider, model_name, config=config or {})
-        return _wrap_language_model(model, model_name, provider)
+        # Extract chat_format from config if present
+        chat_format = (config or {}).get("chat_format")
+        return _wrap_language_model(model, model_name, provider, chat_format=chat_format)
 
     factory_cls.create_language = classmethod(_patched_create_language)  # type: ignore[assignment]
     return factory_cls
@@ -58,6 +62,7 @@ def _wrap_language_model(
     model: LanguageModel,
     model_id: str,
     provider: str,
+    chat_format: Optional[str] = None,
 ) -> LanguageModel:
     """Attach prompt rendering hooks to a provider instance."""
     if getattr(model, "_brio_wrapped", False):
@@ -66,12 +71,12 @@ def _wrap_language_model(
     original_chat = model.chat_complete
     original_achat = model.achat_complete
 
-    # Get adapter for response cleaning
+    # Get adapter for response cleaning - use chat_format hint if available
     from brio_ext.registry import get_adapter
-    adapter = get_adapter(model_id)
+    adapter = get_adapter(model_id, chat_format=chat_format)
 
     def chat_complete(self, messages, stream=None):
-        rendered = render_for_model(model_id, messages, provider)
+        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
         with _stop_config_guard(self, stops):
@@ -88,7 +93,7 @@ def _wrap_language_model(
             )
 
     async def achat_complete(self, messages, stream=None):
-        rendered = render_for_model(model_id, messages, provider)
+        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
         with _stop_config_guard(self, stops):
@@ -117,6 +122,7 @@ def _wrap_language_model(
     setattr(model, "_brio_wrapped", True)
     setattr(model, "_brio_model_id", model_id)
     setattr(model, "_brio_provider", provider)
+    setattr(model, "_brio_chat_format", chat_format)
     return model
 
 

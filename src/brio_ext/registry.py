@@ -20,12 +20,57 @@ ADAPTERS: tuple[ChatAdapter, ...] = (
 )
 
 
-def get_adapter(model_id: str) -> Optional[ChatAdapter]:
-    """Return the first adapter that can handle the supplied model identifier."""
+def get_adapter(model_id: str, chat_format: Optional[str] = None) -> Optional[ChatAdapter]:
+    """
+    Return the first adapter that can handle the supplied model identifier.
+
+    Args:
+        model_id: The model identifier (e.g., "qwen2.5-7b-instruct", "phi-4-mini-reasoning")
+        chat_format: Optional chat format hint (e.g., "chatml", "llama", "mistral-instruct")
+                    If provided, this takes precedence over model_id pattern matching
+
+    Returns:
+        The matching ChatAdapter, or None if no adapter matches
+    """
     if not model_id:
         return None
 
+    # If chat_format is provided, use it as the primary selector
+    if chat_format:
+        adapter = _get_adapter_by_format(chat_format)
+        if adapter:
+            return adapter
+
+    # Fall back to model_id pattern matching
     for adapter in ADAPTERS:
         if adapter.can_handle(model_id):
             return adapter
+    return None
+
+
+def _get_adapter_by_format(chat_format: str) -> Optional[ChatAdapter]:
+    """
+    Map chat format strings to adapters.
+
+    This allows external systems (like BrioDocs) to specify the chat format
+    explicitly when the model name doesn't follow standard patterns.
+    """
+    format_key = (chat_format or "").lower()
+
+    # ChatML format -> Qwen or Phi adapter (Qwen is more general)
+    if format_key in ("chatml", "chat-ml"):
+        return QwenAdapter()
+
+    # Llama format
+    if format_key in ("llama", "llama3", "llama-3"):
+        return LlamaAdapter()
+
+    # Mistral format
+    if format_key in ("mistral", "mistral-instruct"):
+        return MistralAdapter()
+
+    # Gemma format
+    if format_key in ("gemma",):
+        return GemmaAdapter()
+
     return None
