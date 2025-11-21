@@ -37,6 +37,32 @@ response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
+### Custom Model Names with `chat_format`
+
+If you're using custom model names that don't match standard patterns (e.g., "phi-4-mini-reasoning"), you can explicitly specify the chat format:
+
+```python
+model = BrioAIFactory.create_language(
+    provider="llamacpp",
+    model_name="phi-4-mini-reasoning",  # Custom model name
+    config={
+        "base_url": "http://localhost:8765",
+        "chat_format": "chatml",  # Explicitly specify ChatML format
+        "temperature": 0.5,
+    },
+)
+```
+
+Supported `chat_format` values:
+- `"chatml"` or `"chat-ml"` – ChatML format (Qwen, Phi-4, etc.)
+- `"llama"`, `"llama3"`, or `"llama-3"` – Llama native format
+- `"mistral"` or `"mistral-instruct"` – Mistral format
+- `"gemma"` – Gemma format
+
+If `chat_format` is not provided, brio_ext will automatically detect the format based on the model name.
+
+## How It Works
+
 The factory wraps providers transparently:
 
 - Remote providers (OpenAI, Anthropic, Grok, Ollama, etc.) keep their native chat payloads, but we enforce the shared `<out>...</out>` stop sequence by injecting it into provider configs.

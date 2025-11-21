@@ -44,6 +44,32 @@ Use the tier-based launcher for simplified configuration:
 - Terminal title shows active tier and model
 - Easy switching: `./scripts/stop_server.sh` then restart with different tier/model
 
+### Custom Model Names with `chat_format`
+
+When working with custom model names (e.g., from BrioDocs model database), you can specify the chat format explicitly:
+
+```python
+from brio_ext.factory import BrioAIFactory
+
+model = BrioAIFactory.create_language(
+    provider="llamacpp",
+    model_name="phi-4-mini-reasoning",  # Custom model name
+    config={
+        "base_url": "http://127.0.0.1:8765",
+        "chat_format": "chatml",  # Explicitly specify ChatML format
+        "temperature": 0.5,
+    },
+)
+```
+
+**Supported `chat_format` values:**
+- `"chatml"` – for Qwen, Phi-4 (models 1, 2, 6, 7 above)
+- `"llama"` / `"llama3"` – for Llama models (models 3, 4)
+- `"mistral"` – for Mistral (model 5)
+- `"gemma"` – for Gemma models
+
+**Use case:** This is essential when integrating with systems that store model configurations in databases (like BrioDocs `model_defaults.json`). You can pass the `chat_format` field directly from your model config, enabling custom model names that don't follow standard patterns.
+
 ## 9.2 Test Scenarios
 
 Run tests using the test runner:

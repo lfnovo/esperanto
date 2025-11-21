@@ -47,6 +47,30 @@ model = AIFactory.create_language(
 - The provider defaults to the llama.cpp HTTP server started by `start_briodocs.sh`. Override `BRIO_LLAMACPP_BASE_URL` if the server runs elsewhere.
 - Legacy fallback (OpenAI-compatible path) is still available by importing `esperanto.AIFactory` directly.
 
+### Custom Model Names with `chat_format`
+
+If you're using custom model names that don't match standard patterns (e.g., "phi-4-mini-reasoning"), explicitly specify the `chat_format` in the config:
+
+```python
+model = AIFactory.create_language(
+    provider="llamacpp",
+    model_name="phi-4-mini-reasoning",  # Custom name from model_defaults.json
+    config={
+        "base_url": "http://127.0.0.1:8765",
+        "chat_format": "chatml",  # Hint: use ChatML format for Phi-4
+        "temperature": 0.5,
+    },
+)
+```
+
+**Supported `chat_format` values:**
+- `"chatml"` or `"chat-ml"` – ChatML format (Qwen, Phi-4)
+- `"llama"`, `"llama3"`, or `"llama-3"` – Llama format
+- `"mistral"` or `"mistral-instruct"` – Mistral format
+- `"gemma"` – Gemma format
+
+**Why this matters:** When integrating with BrioDocs model database, you can store `chat_format` alongside model configs and pass it through to brio_ext. This enables custom model names that don't follow standard patterns to still use the correct chat template.
+
 ## 4. Remote providers
 
 Cloud providers (OpenAI, Anthropic, Grok, Ollama, etc.) continue to use chat payloads. The Brio factory injects the `<out>...</out>` stop sequence automatically, so BrioDocs payloads remain unchanged.
