@@ -378,60 +378,139 @@ class TestBaseClassIntegration:
 
 
 class TestHTTPClientCreation:
-    """Test that HTTP clients are created with SSL configuration."""
+    """Test that HTTP clients are created with SSL configuration via _create_http_clients."""
 
     def test_http_client_created_with_ssl_verify_false(self):
-        """Test that httpx clients are created with verify=False when configured."""
-        from unittest.mock import MagicMock, patch
+        """Test that _create_http_clients passes verify=False to httpx clients."""
+        from unittest.mock import patch
+        from esperanto.providers.llm.base import LanguageModel
 
-        # Create a mock model that uses _create_http_clients
-        model = MockSSLModel(config={"verify_ssl": False})
+        class TestLanguageModel(LanguageModel):
+            def __init__(self, **kwargs):
+                self.model_name = kwargs.get("model_name", "test")
+                self.api_key = "test-key"
+                self.base_url = "https://api.test.com"
+                self.config = {"verify_ssl": False}
+                super().__post_init__()
+
+            def chat_complete(self, messages, **kwargs):
+                pass
+
+            async def achat_complete(self, messages, **kwargs):
+                pass
+
+            def _get_default_model(self):
+                return "test-model"
+
+            @property
+            def provider(self):
+                return "test"
+
+            def _get_models(self):
+                return []
+
+            def to_langchain(self):
+                pass
 
         with patch("httpx.Client") as mock_client, \
              patch("httpx.AsyncClient") as mock_async_client:
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                model = TestLanguageModel()
+                model._create_http_clients()
 
-            # Simulate what _create_http_clients does
-            import httpx
-            timeout = 60.0  # default
-            verify = model._get_ssl_verify()
-
-            # Verify that _get_ssl_verify returns False
-            assert verify is False
-
-            # Simulate the httpx client creation
-            httpx.Client(timeout=timeout, verify=verify)
-            httpx.AsyncClient(timeout=timeout, verify=verify)
-
-            # Verify httpx was called with verify=False
-            mock_client.assert_called_once_with(timeout=60.0, verify=False)
-            mock_async_client.assert_called_once_with(timeout=60.0, verify=False)
+            # Verify httpx clients were called with verify=False
+            mock_client.assert_called_once()
+            mock_async_client.assert_called_once()
+            assert mock_client.call_args.kwargs["verify"] is False
+            assert mock_async_client.call_args.kwargs["verify"] is False
 
     def test_http_client_created_with_ca_bundle(self):
-        """Test that httpx clients are created with CA bundle path when configured."""
+        """Test that _create_http_clients passes CA bundle path to httpx clients."""
         from unittest.mock import patch
+        from esperanto.providers.embedding.base import EmbeddingModel
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as f:
             ca_path = f.name
             f.write(b"fake ca bundle content")
 
         try:
-            model = MockSSLModel(config={"ssl_ca_bundle": ca_path})
+            class TestEmbeddingModel(EmbeddingModel):
+                def __init__(self, ca_bundle_path, **kwargs):
+                    self.model_name = kwargs.get("model_name", "test")
+                    self.api_key = "test-key"
+                    self.base_url = "https://api.test.com"
+                    self.config = {"ssl_ca_bundle": ca_bundle_path}
+                    super().__post_init__()
+
+                def embed(self, texts, **kwargs):
+                    pass
+
+                async def aembed(self, texts, **kwargs):
+                    pass
+
+                def _get_default_model(self):
+                    return "test-model"
+
+                @property
+                def provider(self):
+                    return "test"
+
+                def _get_models(self):
+                    return []
 
             with patch("httpx.Client") as mock_client, \
                  patch("httpx.AsyncClient") as mock_async_client:
+                model = TestEmbeddingModel(ca_bundle_path=ca_path)
+                model._create_http_clients()
 
-                timeout = 60.0
-                verify = model._get_ssl_verify()
-
-                # Verify that _get_ssl_verify returns the CA path
-                assert verify == ca_path
-
-                # Simulate the httpx client creation
-                import httpx
-                httpx.Client(timeout=timeout, verify=verify)
-                httpx.AsyncClient(timeout=timeout, verify=verify)
-
-                mock_client.assert_called_once_with(timeout=60.0, verify=ca_path)
-                mock_async_client.assert_called_once_with(timeout=60.0, verify=ca_path)
+                # Verify httpx clients were called with the CA bundle path
+                mock_client.assert_called_once()
+                mock_async_client.assert_called_once()
+                assert mock_client.call_args.kwargs["verify"] == ca_path
+                assert mock_async_client.call_args.kwargs["verify"] == ca_path
         finally:
             os.unlink(ca_path)
+
+    def test_http_client_created_with_ssl_verify_default(self):
+        """Test that _create_http_clients passes verify=True by default."""
+        from unittest.mock import patch
+        from esperanto.providers.reranker.base import RerankerModel
+
+        class TestRerankerModel(RerankerModel):
+            def __init__(self, **kwargs):
+                self.model_name = kwargs.get("model_name", "test")
+                self.api_key = "test-key"
+                self.base_url = "https://api.test.com"
+                self.config = {}  # No SSL config - should default to True
+                super().__post_init__()
+
+            def rerank(self, query, documents, **kwargs):
+                pass
+
+            async def arerank(self, query, documents, **kwargs):
+                pass
+
+            def _get_default_model(self):
+                return "test-model"
+
+            @property
+            def provider(self):
+                return "test"
+
+            def _get_models(self):
+                return []
+
+            def to_langchain(self):
+                pass
+
+        with patch("httpx.Client") as mock_client, \
+             patch("httpx.AsyncClient") as mock_async_client:
+            model = TestRerankerModel()
+            model._create_http_clients()
+
+            # Verify httpx clients were called with verify=True (default)
+            mock_client.assert_called_once()
+            mock_async_client.assert_called_once()
+            assert mock_client.call_args.kwargs["verify"] is True
+            assert mock_async_client.call_args.kwargs["verify"] is True
