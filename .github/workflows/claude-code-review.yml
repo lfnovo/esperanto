@@ -48,6 +48,7 @@ jobs:
             - Performance considerations
             - Security concerns
             - Test coverage
+            - Confirm that the documentation is up to date and complete
             
             Be constructive and helpful in your feedback.
           

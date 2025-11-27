@@ -4,15 +4,15 @@ import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
-import httpx
 
 from esperanto.common_types import Model
 from esperanto.common_types.reranker import RerankResponse
+from esperanto.utils.ssl import SSLMixin
 from esperanto.utils.timeout import TimeoutMixin
 
 
 @dataclass
-class RerankerModel(TimeoutMixin, ABC):
+class RerankerModel(TimeoutMixin, SSLMixin, ABC):
     """Base class for all reranker providers."""
 
     api_key: Optional[str] = None
@@ -96,15 +96,16 @@ class RerankerModel(TimeoutMixin, ABC):
         return "reranker"
 
     def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout.
+        """Create HTTP clients with configured timeout and SSL settings.
 
         Call this method in provider's __post_init__ after setting up
         API keys and base URLs.
         """
         import httpx
         timeout = self._get_timeout()
-        self.client = httpx.Client(timeout=timeout)
-        self.async_client = httpx.AsyncClient(timeout=timeout)
+        verify = self._get_ssl_verify()
+        self.client = httpx.Client(timeout=timeout, verify=verify)
+        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
 
     @abstractmethod
     def rerank(

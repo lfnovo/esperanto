@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.1] - 2025-11-27
+
+### Added
+
+- **SSL Verification Configuration** - Added ability to disable SSL verification or use custom CA bundles for local providers with self-signed certificates (Ollama, LM Studio, etc.)
+  - Configuration priority hierarchy: config dict > environment variables > default (True)
+  - Config parameter `verify_ssl` (boolean) to disable SSL verification
+  - Config parameter `ssl_ca_bundle` (string path) for custom CA certificates
+  - Environment variables `ESPERANTO_SSL_VERIFY` and `ESPERANTO_SSL_CA_BUNDLE`
+  - Security warning emitted when SSL verification is disabled
+  - Type validation for `verify_ssl` accepts booleans, integers, and common string representations ("true", "false", "yes", "no", "0", "1")
+  - Available across all provider types: LLM, Embedding, STT, TTS, Reranker
+  - Example:
+    ```python
+    # Disable SSL verification (development only)
+    model = AIFactory.create_language(
+        "ollama",
+        "llama3",
+        config={"verify_ssl": False}
+    )
+
+    # Use custom CA bundle (recommended for self-signed certs)
+    model = AIFactory.create_language(
+        "ollama",
+        "llama3",
+        config={"ssl_ca_bundle": "/path/to/ca-bundle.pem"}
+    )
+    ```
+
 ## [2.8.0] - 2025-10-25
 
 ### Added

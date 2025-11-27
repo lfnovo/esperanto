@@ -78,6 +78,7 @@ Whether you're building a quick prototype or a production application serving mi
 - [Task-Aware Embeddings](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/task-aware-embeddings.md)
 - [LangChain Integration](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/langchain-integration.md)
 - [Timeout Configuration](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/timeout-configuration.md)
+- [SSL Configuration](https://github.com/lfnovo/esperanto/blob/main/docs/configuration.md#ssl-verification-configuration)
 - [Model Discovery](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/model-discovery.md)
 - [Transformers Features](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/transformers-features.md)
 

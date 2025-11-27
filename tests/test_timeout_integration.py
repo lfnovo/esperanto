@@ -409,9 +409,9 @@ class TestRealProviderTimeoutIntegration:
                     config={"timeout": 150.0}
                 )
 
-                # Verify httpx clients were called with correct timeout
-                mock_client.assert_called_once_with(timeout=150.0)
-                mock_async_client.assert_called_once_with(timeout=150.0)
+                # Verify httpx clients were called with correct timeout and SSL verify
+                mock_client.assert_called_once_with(timeout=150.0, verify=True)
+                mock_async_client.assert_called_once_with(timeout=150.0, verify=True)
 
         except ImportError:
             pytest.skip("OpenAI provider not available")
@@ -429,8 +429,8 @@ class TestRealProviderTimeoutIntegration:
                     config={"timeout": 180.0}
                 )
 
-                mock_client.assert_called_once_with(timeout=180.0)
-                mock_async_client.assert_called_once_with(timeout=180.0)
+                mock_client.assert_called_once_with(timeout=180.0, verify=True)
+                mock_async_client.assert_called_once_with(timeout=180.0, verify=True)
 
         except ImportError:
             pytest.skip("OpenAI provider not available")
@@ -448,8 +448,8 @@ class TestRealProviderTimeoutIntegration:
                     timeout=450.0  # STT uses direct parameter
                 )
 
-                mock_client.assert_called_once_with(timeout=450.0)
-                mock_async_client.assert_called_once_with(timeout=450.0)
+                mock_client.assert_called_once_with(timeout=450.0, verify=True)
+                mock_async_client.assert_called_once_with(timeout=450.0, verify=True)
 
         except ImportError:
             pytest.skip("OpenAI STT provider not available")

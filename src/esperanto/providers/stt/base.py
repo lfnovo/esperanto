@@ -6,11 +6,12 @@ from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 from esperanto.common_types import Model, TranscriptionResponse
+from esperanto.utils.ssl import SSLMixin
 from esperanto.utils.timeout import TimeoutMixin
 
 
 @dataclass
-class SpeechToTextModel(TimeoutMixin, ABC):
+class SpeechToTextModel(TimeoutMixin, SSLMixin, ABC):
     """Base class for speech-to-text models.
 
     Attributes:
@@ -112,15 +113,16 @@ class SpeechToTextModel(TimeoutMixin, ABC):
         return "speech_to_text"
 
     def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout.
+        """Create HTTP clients with configured timeout and SSL settings.
 
         Call this method in provider's __post_init__ after setting up
         API keys and base URLs.
         """
         import httpx
         timeout = self._get_timeout()
-        self.client = httpx.Client(timeout=timeout)
-        self.async_client = httpx.AsyncClient(timeout=timeout)
+        verify = self._get_ssl_verify()
+        self.client = httpx.Client(timeout=timeout, verify=verify)
+        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
 
     @property
     def models(self) -> List[Model]:
