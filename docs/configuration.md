@@ -317,6 +317,105 @@ transcriber = AIFactory.create_speech_to_text(
 
 → **[Full Timeout Configuration Guide](./advanced/timeout-configuration.md)**
 
+## SSL Verification Configuration
+
+Configure SSL certificate verification for providers using HTTPS connections. This is useful when connecting to local services with self-signed certificates.
+
+### Default Behavior
+
+SSL verification is **enabled by default** for security. All HTTPS connections verify SSL certificates using the system's certificate store.
+
+### Disabling SSL Verification
+
+> **Security Warning:** Disabling SSL verification exposes you to man-in-the-middle attacks. Only disable for development/testing with local services.
+
+**Via environment variable:**
+
+```bash
+ESPERANTO_SSL_VERIFY=false
+```
+
+**Via config parameter:**
+
+```python
+model = AIFactory.create_language(
+    "ollama", "llama3",
+    config={"verify_ssl": False}
+)
+```
+
+### Using Custom CA Certificates
+
+For self-signed certificates, the **recommended** approach is to specify a custom CA bundle instead of disabling verification:
+
+**Via environment variable:**
+
+```bash
+ESPERANTO_SSL_CA_BUNDLE=/path/to/ca-bundle.pem
+```
+
+**Via config parameter:**
+
+```python
+model = AIFactory.create_language(
+    "ollama", "llama3",
+    config={"ssl_ca_bundle": "/path/to/ca-bundle.pem"}
+)
+```
+
+### Priority Order
+
+1. **Config parameter** `ssl_ca_bundle` (highest priority)
+2. **Config parameter** `verify_ssl`
+3. **Environment variable** `ESPERANTO_SSL_CA_BUNDLE`
+4. **Environment variable** `ESPERANTO_SSL_VERIFY`
+5. **Default** `True` (SSL verification enabled)
+
+### Common Use Cases
+
+**Local Ollama with reverse proxy (self-signed cert):**
+
+```python
+# Option 1: Disable verification (development only)
+model = AIFactory.create_language(
+    "ollama", "llama3",
+    config={
+        "base_url": "https://localhost:8443",
+        "verify_ssl": False
+    }
+)
+
+# Option 2: Use custom CA bundle (recommended)
+model = AIFactory.create_language(
+    "ollama", "llama3",
+    config={
+        "base_url": "https://localhost:8443",
+        "ssl_ca_bundle": "/etc/ssl/certs/my-ca.pem"
+    }
+)
+```
+
+**LM Studio behind Caddy proxy:**
+
+```bash
+# In .env
+OPENAI_COMPATIBLE_BASE_URL=https://lmstudio.local
+ESPERANTO_SSL_CA_BUNDLE=/path/to/caddy-ca.pem
+```
+
+```python
+model = AIFactory.create_language("openai-compatible", "my-model")
+```
+
+### SSL Configuration Applies To
+
+All provider types that use HTTP clients:
+- Language Models (LLM)
+- Embedding Models
+- Speech-to-Text (STT)
+- Text-to-Speech (TTS)
+- Rerankers
+
 ## Common Parameters
 
 ### Language Models (LLM)

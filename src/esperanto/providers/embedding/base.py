@@ -8,11 +8,12 @@ from typing import Any, Dict, List, Optional
 
 from esperanto.common_types import Model
 from esperanto.common_types.task_type import EmbeddingTaskType
+from esperanto.utils.ssl import SSLMixin
 from esperanto.utils.timeout import TimeoutMixin
 
 
 @dataclass
-class EmbeddingModel(TimeoutMixin, ABC):
+class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
     """Base class for all embedding models."""
 
     api_key: Optional[str] = None
@@ -341,12 +342,13 @@ class EmbeddingModel(TimeoutMixin, ABC):
         return "embedding"
 
     def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout.
+        """Create HTTP clients with configured timeout and SSL settings.
 
         Call this method in provider's __post_init__ after setting up
         API keys and base URLs.
         """
         import httpx
         timeout = self._get_timeout()
-        self.client = httpx.Client(timeout=timeout)
-        self.async_client = httpx.AsyncClient(timeout=timeout)
+        verify = self._get_ssl_verify()
+        self.client = httpx.Client(timeout=timeout, verify=verify)
+        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
