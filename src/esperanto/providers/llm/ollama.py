@@ -281,11 +281,19 @@ class OllamaLanguageModel(LanguageModel):
         if not model_name:
             raise ValueError("Model name is required for Langchain integration.")
 
-        return ChatOllama(
-            model=model_name,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            num_predict=self.max_tokens,
-            # streaming=self.streaming, # Not a constructor arg
-            base_url=self.base_url,
-        )
+        langchain_kwargs = {
+            "model": model_name,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "num_predict": self.max_tokens,
+            "base_url": self.base_url,
+        }
+
+        # Pass SSL verification settings to LangChain via client_kwargs
+        # ChatOllama uses httpx internally and passes these kwargs to the client
+        ssl_verify = self._get_ssl_verify()
+        if ssl_verify is not True:  # Only set if SSL is disabled or custom CA bundle
+            client_kwargs = {"verify": ssl_verify}
+            langchain_kwargs["client_kwargs"] = client_kwargs
+
+        return ChatOllama(**self._clean_config(langchain_kwargs))
