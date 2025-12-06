@@ -304,11 +304,20 @@ class GroqLanguageModel(LanguageModel):
         if not model_name:
             raise ValueError("Model name must be set to use Langchain integration.")
 
-        return ChatGroq(
-            model=model_name,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
+        langchain_kwargs = {
+            "model": model_name,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
             # top_p=self.top_p, # Still not supported
-            streaming=self.streaming,
-            api_key=self.api_key,  # Pass the raw API key string
-        )
+            "streaming": self.streaming,
+            "api_key": self.api_key,  # Pass the raw API key string
+        }
+
+        # Pass SSL-configured httpx clients to LangChain
+        # This ensures SSL verification settings are respected
+        if hasattr(self, "client") and self.client is not None:
+            langchain_kwargs["http_client"] = self.client
+        if hasattr(self, "async_client") and self.async_client is not None:
+            langchain_kwargs["http_async_client"] = self.async_client
+
+        return ChatGroq(**self._clean_config(langchain_kwargs))
