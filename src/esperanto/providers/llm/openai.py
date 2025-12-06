@@ -360,6 +360,13 @@ class OpenAILanguageModel(LanguageModel):
             "model_kwargs": model_kwargs,
         }
 
+        # Pass SSL-configured httpx clients to LangChain
+        # This ensures SSL verification settings are respected
+        if hasattr(self, "client") and self.client is not None:
+            langchain_kwargs["http_client"] = self.client
+        if hasattr(self, "async_client") and self.async_client is not None:
+            langchain_kwargs["http_async_client"] = self.async_client
+
         is_reasoning_model = self._is_reasoning_model()
 
         if is_reasoning_model:
