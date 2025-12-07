@@ -379,6 +379,13 @@ class AzureLanguageModel(LanguageModel):
             "model_kwargs": model_kwargs,
         }
 
+        # Pass SSL-configured httpx clients to LangChain
+        # This ensures SSL verification settings are respected
+        if hasattr(self, "client") and self.client is not None:
+            langchain_kwargs["http_client"] = self.client
+        if hasattr(self, "async_client") and self.async_client is not None:
+            langchain_kwargs["http_async_client"] = self.async_client
+
         if is_reasoning_model:
             # For reasoning models, put max_completion_tokens in model_kwargs
             if self.max_tokens != 850:

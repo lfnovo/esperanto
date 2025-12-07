@@ -360,10 +360,17 @@ class PerplexityLanguageModel(LanguageModel):
             "model_kwargs": model_kwargs,
         }
 
+        # Pass SSL-configured httpx clients to LangChain
+        # This ensures SSL verification settings are respected
+        if hasattr(self, "client") and self.client is not None:
+            langchain_kwargs["http_client"] = self.client
+        if hasattr(self, "async_client") and self.async_client is not None:
+            langchain_kwargs["http_async_client"] = self.async_client
+
         # Ensure model name is set
         model_name = self.get_model_name()
         if not model_name:
             raise ValueError("Model name is required for Langchain integration.")
         langchain_kwargs["model"] = model_name  # Update model name in kwargs
 
-        return ChatOpenAI(**langchain_kwargs)
+        return ChatOpenAI(**self._clean_config(langchain_kwargs))
