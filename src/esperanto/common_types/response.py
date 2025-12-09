@@ -28,6 +28,25 @@ class Usage(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class Timings(BaseModel):
+    """Performance timing metrics from LLM inference."""
+
+    ttft_ms: Optional[float] = Field(
+        default=None, description="Time to first token in milliseconds"
+    )
+    tokens_per_second: Optional[float] = Field(
+        default=None, description="Token generation speed (tokens/sec)"
+    )
+    prompt_tokens_per_second: Optional[float] = Field(
+        default=None, description="Prompt processing speed (tokens/sec)"
+    )
+    total_time_ms: Optional[float] = Field(
+        default=None, description="Total request time in milliseconds"
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Message(BaseModel):
     """A message in a chat completion."""
 
@@ -156,6 +175,9 @@ class ChatCompletion(BaseModel):
     )
     usage: Optional[Usage] = Field(
         default=None, description="Usage statistics for this completion"
+    )
+    timings: Optional[Timings] = Field(
+        default=None, description="Performance timing metrics for this completion"
     )
     object: str = Field(
         default="chat.completion", description="Object type, always 'chat.completion'"

@@ -9,6 +9,7 @@ from .response import (
     DeltaMessage,
     Message,
     StreamChoice,
+    Timings,
     Usage,
 )
 from .stt import TranscriptionResponse
@@ -18,6 +19,7 @@ from .reranker import RerankResponse, RerankResult
 
 __all__ = [
     "Usage",
+    "Timings",
     "Message",
     "DeltaMessage",
     "Choice",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import uuid
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
@@ -17,9 +18,68 @@ from esperanto.common_types import (
     Message,
     Model,
     StreamChoice,
+    Timings,
     Usage,
 )
 from esperanto.providers.llm.base import LanguageModel
+
+
+class StreamingResponse:
+    """Wrapper for streaming responses that tracks timing metrics."""
+
+    def __init__(
+        self,
+        generator: Generator[ChatCompletionChunk, None, None],
+        start_time: float,
+    ):
+        self._generator = generator
+        self._start_time = start_time
+        self._ttft_ms: Optional[float] = None
+        self._first_chunk = True
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> ChatCompletionChunk:
+        chunk = next(self._generator)
+        if self._first_chunk:
+            self._ttft_ms = (time.perf_counter() - self._start_time) * 1000
+            self._first_chunk = False
+        return chunk
+
+    @property
+    def ttft_ms(self) -> Optional[float]:
+        """Time to first token in milliseconds. Available after first chunk."""
+        return self._ttft_ms
+
+
+class AsyncStreamingResponse:
+    """Async wrapper for streaming responses that tracks timing metrics."""
+
+    def __init__(
+        self,
+        generator: AsyncGenerator[ChatCompletionChunk, None],
+        start_time: float,
+    ):
+        self._generator = generator
+        self._start_time = start_time
+        self._ttft_ms: Optional[float] = None
+        self._first_chunk = True
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> ChatCompletionChunk:
+        chunk = await self._generator.__anext__()
+        if self._first_chunk:
+            self._ttft_ms = (time.perf_counter() - self._start_time) * 1000
+            self._first_chunk = False
+        return chunk
+
+    @property
+    def ttft_ms(self) -> Optional[float]:
+        """Time to first token in milliseconds. Available after first chunk."""
+        return self._ttft_ms
 
 
 class LlamaCppLanguageModel(LanguageModel):
@@ -115,6 +175,7 @@ class LlamaCppLanguageModel(LanguageModel):
             print(f"[LlamaCppProvider] stop_tokens={payload.get('stop', [])}")
             print(f"[LlamaCppProvider] max_tokens={payload.get('max_tokens', 'default')}")
 
+        start_time = time.perf_counter()
         response = self.client.post(
             f"{self.base_url}/v1/completions",
             headers=self._get_headers(),
@@ -123,7 +184,8 @@ class LlamaCppLanguageModel(LanguageModel):
         self._handle_error(response)
 
         if should_stream:
-            return (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
+            generator = (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
+            return StreamingResponse(generator, start_time)
         return self._normalize_response(response.json())
 
     async def aprompt_complete(
@@ -142,6 +204,7 @@ class LlamaCppLanguageModel(LanguageModel):
         if stop:
             payload["stop"] = stop
 
+        start_time = time.perf_counter()
         response = await self.async_client.post(
             f"{self.base_url}/v1/completions",
             headers=self._get_headers(),
@@ -154,7 +217,7 @@ class LlamaCppLanguageModel(LanguageModel):
                 async for chunk in self._parse_stream_async(response):
                     yield self._normalize_chunk(chunk)
 
-            return _stream()
+            return AsyncStreamingResponse(_stream(), start_time)
         return self._normalize_response(response.json())
 
     def chat_complete(
@@ -186,6 +249,7 @@ class LlamaCppLanguageModel(LanguageModel):
             print(f"[LlamaCppProvider] stop_tokens={payload.get('stop', [])}")
             print(f"[LlamaCppProvider] max_tokens={payload.get('max_tokens', 'default')}")
 
+        start_time = time.perf_counter()
         response = self.client.post(
             f"{self.base_url}/v1/chat/completions",
             headers=self._get_headers(),
@@ -194,7 +258,8 @@ class LlamaCppLanguageModel(LanguageModel):
         self._handle_error(response)
 
         if should_stream:
-            return (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
+            generator = (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
+            return StreamingResponse(generator, start_time)
         return self._normalize_chat_response(response.json())
 
     async def achat_complete(
@@ -219,6 +284,7 @@ class LlamaCppLanguageModel(LanguageModel):
         if stop:
             payload["stop"] = stop
 
+        start_time = time.perf_counter()
         response = await self.async_client.post(
             f"{self.base_url}/v1/chat/completions",
             headers=self._get_headers(),
@@ -231,8 +297,19 @@ class LlamaCppLanguageModel(LanguageModel):
                 async for chunk in self._parse_stream_async(response):
                     yield self._normalize_chunk(chunk)
 
-            return _stream()
+            return AsyncStreamingResponse(_stream(), start_time)
         return self._normalize_chat_response(response.json())
+
+    def _extract_timings(self, data: Dict[str, Any]) -> Optional[Timings]:
+        """Extract timing metrics from llama.cpp response."""
+        timings_data = data.get("timings")
+        if not timings_data:
+            return None
+        return Timings(
+            tokens_per_second=timings_data.get("predicted_per_second"),
+            prompt_tokens_per_second=timings_data.get("prompt_per_second"),
+            total_time_ms=timings_data.get("total_t"),  # llama.cpp uses total_t
+        )
 
     def _normalize_response(self, data: Dict[str, Any]) -> ChatCompletion:
         """Normalize response from /v1/completions endpoint."""
@@ -261,6 +338,7 @@ class LlamaCppLanguageModel(LanguageModel):
             model=data.get("model", self.get_model_name()),
             provider=self.provider,
             usage=usage,
+            timings=self._extract_timings(data),
         )
 
     def _normalize_chat_response(self, data: Dict[str, Any]) -> ChatCompletion:
@@ -293,6 +371,7 @@ class LlamaCppLanguageModel(LanguageModel):
             model=data.get("model", self.get_model_name()),
             provider=self.provider,
             usage=usage,
+            timings=self._extract_timings(data),
         )
 
     def _normalize_chunk(self, chunk: Dict[str, Any]) -> ChatCompletionChunk:

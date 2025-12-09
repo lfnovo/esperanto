@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from copy import deepcopy
 from types import MethodType
 from typing import Any, Dict, Optional
@@ -11,7 +12,60 @@ from esperanto.factory import AIFactory
 from esperanto.providers.llm.base import LanguageModel
 
 from brio_ext.langchain_wrapper import BrioLangChainWrapper
+from brio_ext.metrics import MetricsLogger
 from brio_ext.renderer import DEFAULT_STOP, render_for_model
+
+# Module-level metrics logger (disabled by default)
+_metrics_logger: Optional[MetricsLogger] = None
+_metrics_enabled: bool = False
+
+# Initialize from env var at import time
+if os.getenv("BRIO_METRICS_ENABLED", "").lower() in ("1", "true", "yes"):
+    _metrics_logger = MetricsLogger()
+    _metrics_enabled = True
+
+
+def enable_metrics(log_path: Optional[str] = None) -> None:
+    """Enable metrics logging at runtime. Call from Settings page."""
+    global _metrics_logger, _metrics_enabled
+    from pathlib import Path
+    if _metrics_logger is None:
+        _metrics_logger = MetricsLogger(log_path=Path(log_path) if log_path else None)
+    _metrics_enabled = True
+
+
+def disable_metrics() -> None:
+    """Disable metrics logging at runtime. Call from Settings page."""
+    global _metrics_enabled
+    _metrics_enabled = False
+
+
+def is_metrics_enabled() -> bool:
+    """Check if metrics logging is currently enabled."""
+    return _metrics_enabled
+
+
+def _log_completion_metrics(
+    result: ChatCompletion,
+    model_id: str,
+    provider: str,
+    tier_id: Optional[str] = None,
+    tier_label: Optional[str] = None,
+    context_size: Optional[int] = None,
+) -> None:
+    """Log metrics for a completed (non-streaming) response."""
+    if not _metrics_enabled or _metrics_logger is None:
+        return
+
+    _metrics_logger.log_from_response(
+        tier_id=tier_id or provider,  # Fall back to provider if no tier
+        model=model_id,
+        timings=result.timings.model_dump() if result.timings else None,
+        usage=result.usage.model_dump() if result.usage else None,
+        tier_label=tier_label,
+        context_size=context_size,
+    )
+
 
 _LANGUAGE_OVERRIDES = {
     "llamacpp": "brio_ext.providers.llamacpp_provider:LlamaCppLanguageModel",
@@ -32,7 +86,9 @@ class BrioAIFactory(AIFactory):
     def create_language(
         cls, provider: str, model_name: str, config: Optional[Dict[str, Any]] = None
     ) -> LanguageModel:
-        model = super().create_language(provider, model_name, config=config or {})
+        # Use our own provider lookup to ensure _LANGUAGE_OVERRIDES are used
+        provider_class = cls._import_provider_class("language", provider)
+        model = provider_class(model_name=model_name, config=config or {})
         # Extract chat_format from config if present
         chat_format = (config or {}).get("chat_format")
         return _wrap_language_model(model, model_name, provider, chat_format=chat_format)
@@ -79,15 +135,28 @@ def _wrap_language_model(
         rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
+        # Extract tier info from config at call time (allows per-request updates)
+        config = getattr(self, "_config", {}) or {}
+        tier_id = config.get("tier_id")
+        tier_label = config.get("tier_label")
+        context_size = config.get("context_size")
+
         with _stop_config_guard(self, stops):
             if "messages" in rendered:
                 result = original_chat(rendered["messages"], stream=stream)
-                return _ensure_fenced_completion(result, adapter)
+                fenced = _ensure_fenced_completion(result, adapter)
+                # Log metrics for non-streaming responses
+                if isinstance(fenced, ChatCompletion):
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                return fenced
 
             prompt_handler = getattr(self, "prompt_complete", None)
             if callable(prompt_handler):
                 result = prompt_handler(rendered["prompt"], stop=stops, stream=stream)
-                return _ensure_fenced_completion(result, adapter)
+                fenced = _ensure_fenced_completion(result, adapter)
+                if isinstance(fenced, ChatCompletion):
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                return fenced
             raise RuntimeError(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
             )
@@ -96,22 +165,37 @@ def _wrap_language_model(
         rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
+        # Extract tier info from config at call time (allows per-request updates)
+        config = getattr(self, "_config", {}) or {}
+        tier_id = config.get("tier_id")
+        tier_label = config.get("tier_label")
+        context_size = config.get("context_size")
+
         with _stop_config_guard(self, stops):
             if "messages" in rendered:
                 result = await original_achat(rendered["messages"], stream=stream)
-                return _ensure_fenced_completion(result, adapter)
+                fenced = _ensure_fenced_completion(result, adapter)
+                if isinstance(fenced, ChatCompletion):
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                return fenced
 
             prompt_handler = getattr(self, "aprompt_complete", None)
             if callable(prompt_handler):
                 result = await prompt_handler(
                     rendered["prompt"], stop=stops, stream=stream
                 )
-                return _ensure_fenced_completion(result, adapter)
+                fenced = _ensure_fenced_completion(result, adapter)
+                if isinstance(fenced, ChatCompletion):
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                return fenced
 
             sync_handler = getattr(self, "prompt_complete", None)
             if callable(sync_handler):
                 result = sync_handler(rendered["prompt"], stop=stops, stream=stream)
-                return _ensure_fenced_completion(result, adapter)
+                fenced = _ensure_fenced_completion(result, adapter)
+                if isinstance(fenced, ChatCompletion):
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                return fenced
 
             raise RuntimeError(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
