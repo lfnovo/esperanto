@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from copy import deepcopy
 from types import MethodType
 from typing import Any, Dict, Optional
@@ -52,6 +53,7 @@ def _log_completion_metrics(
     tier_id: Optional[str] = None,
     tier_label: Optional[str] = None,
     context_size: Optional[int] = None,
+    request_time_ms: Optional[float] = None,
 ) -> None:
     """Log metrics for a completed (non-streaming) response."""
     if not _metrics_enabled or _metrics_logger is None:
@@ -64,6 +66,7 @@ def _log_completion_metrics(
         usage=result.usage.model_dump() if result.usage else None,
         tier_label=tier_label,
         context_size=context_size,
+        request_time_ms=request_time_ms,
     )
 
 
@@ -143,19 +146,23 @@ def _wrap_language_model(
 
         with _stop_config_guard(self, stops):
             if "messages" in rendered:
+                start_time = time.perf_counter()
                 result = original_chat(rendered["messages"], stream=stream)
+                request_time_ms = (time.perf_counter() - start_time) * 1000
                 fenced = _ensure_fenced_completion(result, adapter)
                 # Log metrics for non-streaming responses
                 if isinstance(fenced, ChatCompletion):
-                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size, request_time_ms)
                 return fenced
 
             prompt_handler = getattr(self, "prompt_complete", None)
             if callable(prompt_handler):
+                start_time = time.perf_counter()
                 result = prompt_handler(rendered["prompt"], stop=stops, stream=stream)
+                request_time_ms = (time.perf_counter() - start_time) * 1000
                 fenced = _ensure_fenced_completion(result, adapter)
                 if isinstance(fenced, ChatCompletion):
-                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size, request_time_ms)
                 return fenced
             raise RuntimeError(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
@@ -173,28 +180,34 @@ def _wrap_language_model(
 
         with _stop_config_guard(self, stops):
             if "messages" in rendered:
+                start_time = time.perf_counter()
                 result = await original_achat(rendered["messages"], stream=stream)
+                request_time_ms = (time.perf_counter() - start_time) * 1000
                 fenced = _ensure_fenced_completion(result, adapter)
                 if isinstance(fenced, ChatCompletion):
-                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size, request_time_ms)
                 return fenced
 
             prompt_handler = getattr(self, "aprompt_complete", None)
             if callable(prompt_handler):
+                start_time = time.perf_counter()
                 result = await prompt_handler(
                     rendered["prompt"], stop=stops, stream=stream
                 )
+                request_time_ms = (time.perf_counter() - start_time) * 1000
                 fenced = _ensure_fenced_completion(result, adapter)
                 if isinstance(fenced, ChatCompletion):
-                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size, request_time_ms)
                 return fenced
 
             sync_handler = getattr(self, "prompt_complete", None)
             if callable(sync_handler):
+                start_time = time.perf_counter()
                 result = sync_handler(rendered["prompt"], stop=stops, stream=stream)
+                request_time_ms = (time.perf_counter() - start_time) * 1000
                 fenced = _ensure_fenced_completion(result, adapter)
                 if isinstance(fenced, ChatCompletion):
-                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size)
+                    _log_completion_metrics(fenced, model_id, provider, tier_id, tier_label, context_size, request_time_ms)
                 return fenced
 
             raise RuntimeError(

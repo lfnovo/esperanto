@@ -120,6 +120,7 @@ class MetricsLogger:
         tier_label: Optional[str] = None,
         context_size: Optional[int] = None,
         ttft_ms: Optional[float] = None,
+        request_time_ms: Optional[float] = None,
         extra: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
@@ -135,6 +136,7 @@ class MetricsLogger:
             tier_label: Human-readable tier name (optional)
             context_size: Context window size for this tier (optional)
             ttft_ms: Override TTFT if measured externally (optional)
+            request_time_ms: Wall-clock request time in milliseconds (optional)
             extra: Additional custom fields to include (optional)
 
         Returns:
@@ -143,17 +145,27 @@ class MetricsLogger:
         timings = timings or {}
         usage = usage or {}
 
+        # Get tokens_per_second from llama.cpp timings, or calculate from request time
+        tokens_per_second = timings.get("tokens_per_second")
+        completion_tokens = usage.get("completion_tokens")
+
+        # Calculate tokens_per_second if not provided but we have the data
+        if tokens_per_second is None and request_time_ms and completion_tokens:
+            request_time_sec = request_time_ms / 1000
+            if request_time_sec > 0:
+                tokens_per_second = completion_tokens / request_time_sec
+
         return self.log(
             tier_id=tier_id,
             model=model,
             tier_label=tier_label,
             context_size=context_size,
             ttft_ms=ttft_ms or timings.get("ttft_ms"),
-            tokens_per_second=timings.get("tokens_per_second"),
+            tokens_per_second=tokens_per_second,
             prompt_tokens_per_second=timings.get("prompt_tokens_per_second"),
-            total_time_ms=timings.get("total_time_ms"),
+            total_time_ms=request_time_ms or timings.get("total_time_ms"),
             prompt_tokens=usage.get("prompt_tokens"),
-            completion_tokens=usage.get("completion_tokens"),
+            completion_tokens=completion_tokens,
             total_tokens=usage.get("total_tokens"),
             extra=extra,
         )

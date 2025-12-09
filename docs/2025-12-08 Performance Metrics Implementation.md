@@ -275,6 +275,51 @@ current_state = is_metrics_enabled()
 
 **Note:** Streaming responses do not log automatically. For streaming, access `response.ttft_ms` after consuming the stream and log manually if needed.
 
+---
+
+## Logged Metrics
+
+Each log entry contains the following fields:
+
+| Field | Type | Description | Source |
+|-------|------|-------------|--------|
+| `ts` | string | ISO 8601 timestamp | Generated |
+| `tier_id` | string | Tier identifier (e.g., "llamacpp") | Config or provider |
+| `model` | string | Model name used | Request |
+| `total_time_ms` | float | Wall-clock request duration (ms) | Measured in factory |
+| `tokens_per_second` | float | Generation speed (tokens/sec) | Calculated or llama.cpp |
+| `prompt_tokens` | int | Input token count | llama.cpp response |
+| `completion_tokens` | int | Output token count | llama.cpp response |
+| `total_tokens` | int | Total tokens used | llama.cpp response |
+| `tier_label` | string | Human-readable tier name | Config (optional) |
+| `context_size` | int | Context window size | Config (optional) |
+| `ttft_ms` | float | Time to first token (streaming only) | Measured (optional) |
+
+### Example Log Entry
+
+```json
+{"ts": "2025-12-09T02:15:30.123Z", "tier_id": "llamacpp", "model": "mistral-7b-instruct", "tokens_per_second": 4.71, "total_time_ms": 76425.32, "prompt_tokens": 223, "completion_tokens": 360, "total_tokens": 583}
+```
+
+### Tokens Per Second Calculation
+
+`tokens_per_second` is calculated automatically if not provided by llama.cpp:
+
+```
+tokens_per_second = completion_tokens / (total_time_ms / 1000)
+```
+
+### TTFT vs Total Time
+
+| Metric | Description | When Available |
+|--------|-------------|----------------|
+| `ttft_ms` | Time to first token | **Streaming only** - first chunk arrival |
+| `total_time_ms` | Complete request duration | **All requests** - wall-clock time |
+
+For non-streaming requests, all tokens arrive at once, so only `total_time_ms` is meaningful.
+
+---
+
 ## Files Changed
 
 - `src/esperanto/common_types/response.py` - Added `Timings` class
