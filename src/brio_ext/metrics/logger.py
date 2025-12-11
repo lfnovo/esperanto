@@ -4,9 +4,37 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+
+def _get_default_metrics_path() -> str:
+    """
+    Get platform-appropriate default metrics path.
+
+    Respects BRIODOCS_ENV for dev/prod isolation:
+    - BRIODOCS_ENV=dev -> logs-dev/metrics.jsonl
+    - BRIODOCS_ENV=prod (default) -> logs/metrics.jsonl
+
+    Platform locations:
+    - macOS: ~/Library/Application Support/BrioDocs/
+    - Windows: %APPDATA%/BrioDocs/
+    - Linux: ~/.config/briodocs/
+    """
+    system = platform.system()
+    env = os.getenv("BRIODOCS_ENV", "prod").lower()
+    suffix = "-dev" if env == "dev" else ""
+
+    if system == "Darwin":
+        base = Path.home() / "Library" / "Application Support" / "BrioDocs"
+    elif system == "Windows":
+        base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "BrioDocs"
+    else:
+        base = Path.home() / ".config" / "briodocs"
+
+    return str(base / f"logs{suffix}" / "metrics.jsonl")
 
 
 class MetricsLogger:
@@ -31,12 +59,12 @@ class MetricsLogger:
         Initialize the metrics logger.
 
         Args:
-            log_path: Path to the JSONL log file. Defaults to ~/.briodocs/metrics.jsonl
+            log_path: Path to the JSONL log file.
+                      Defaults to platform-appropriate location with env-based isolation.
+                      Can be overridden with BRIODOCS_METRICS_PATH env var.
         """
         if log_path is None:
-            # Default to ~/.briodocs/metrics.jsonl
-            log_path = Path(os.getenv("BRIODOCS_METRICS_PATH", "~/.briodocs/metrics.jsonl"))
-
+            log_path = Path(os.getenv("BRIODOCS_METRICS_PATH", _get_default_metrics_path()))
         self.log_path = Path(log_path).expanduser()
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
 
