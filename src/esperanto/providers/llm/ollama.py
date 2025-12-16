@@ -289,6 +289,12 @@ class OllamaLanguageModel(LanguageModel):
             "base_url": self.base_url,
         }
 
+        # Handle JSON format if structured output is requested
+        if self.structured and isinstance(self.structured, dict):
+            structured_type = self.structured.get("type")
+            if structured_type in ["json", "json_object"]:
+                langchain_kwargs["format"] = "json"
+
         # Pass SSL verification settings to LangChain via client_kwargs
         # ChatOllama uses httpx internally and passes these kwargs to the client
         ssl_verify = self._get_ssl_verify()

@@ -246,6 +246,33 @@ def test_ollama_to_langchain(ollama_model):
     assert langchain_model.model == "gemma2"
 
 
+def test_ollama_to_langchain_with_json_format():
+    """Test that to_langchain passes format parameter when structured={"type": "json"}."""
+    model = OllamaLanguageModel(
+        model_name="gemma2",
+        structured={"type": "json"}
+    )
+    langchain_model = model.to_langchain()
+    assert langchain_model.format == "json"
+
+
+def test_ollama_to_langchain_with_json_object_format():
+    """Test that to_langchain passes format parameter when structured={"type": "json_object"}."""
+    model = OllamaLanguageModel(
+        model_name="gemma2",
+        structured={"type": "json_object"}
+    )
+    langchain_model = model.to_langchain()
+    assert langchain_model.format == "json"
+
+
+def test_ollama_to_langchain_without_structured():
+    """Test that to_langchain does not set format when structured is not set."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    langchain_model = model.to_langchain()
+    assert langchain_model.format is None
+
+
 def test_ollama_chat_complete_with_system_message():
     """Test chat completion with system message using httpx mocking."""
     from unittest.mock import Mock
