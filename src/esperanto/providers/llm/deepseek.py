@@ -4,8 +4,6 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from openai import AsyncOpenAI, OpenAI
-
 from esperanto.common_types import Model
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.utils.logging import logger
