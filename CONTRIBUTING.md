@@ -58,7 +58,12 @@ cd esperanto
 ```bash
 uv venv
 source .venv/bin/activate
-uv pip install -e ".[dev,all]"
+uv sync --group dev
+```
+
+Note: If you need the `transformers` extra (for local model support), use:
+```bash
+uv sync --group dev --extra transformers
 ```
 
 3. Run tests:
