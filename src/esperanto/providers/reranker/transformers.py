@@ -506,7 +506,7 @@ class TransformersRerankerModel(RerankerModel):
     def to_langchain(self):
         """Convert to LangChain-compatible reranker."""
         try:
-            from langchain.schema import Document
+            from langchain_core.documents import Document
             from langchain_core.callbacks.manager import Callbacks
         except ImportError:
             raise ImportError(

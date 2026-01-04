@@ -274,6 +274,7 @@ def test_to_langchain():
             temperature=model.temperature,
             max_tokens=model.max_tokens,
             top_p=model.top_p,
+            google_api_key="test-key",
         )
     assert langchain_model.temperature == 1.0
     assert langchain_model.top_p == 0.9
