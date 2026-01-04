@@ -142,7 +142,7 @@ class GoogleLanguageModel(LanguageModel):
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 top_p=self.top_p,
-                # Removed streaming and google_api_key as they cause errors
+                google_api_key=self.api_key,
             )
         return self._langchain_model
 
