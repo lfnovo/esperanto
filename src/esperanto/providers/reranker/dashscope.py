@@ -178,6 +178,49 @@ class DashScopeRerankerModel(RerankerModel):
             usage=usage
         )
     
+    def rerank(
+        self,
+        query: str,
+        documents: List[str],
+        top_k: Optional[int] = None,
+        instruct: Optional[str] = None,
+        **kwargs
+    ) -> RerankResponse:
+        """Rerank documents using DashScope API.
+        
+        Args:
+            query: The search query to rank documents against.
+            documents: List of documents to rerank.
+            top_k: Maximum number of results to return.
+            instruct: system instruct passed to reranker.
+            
+        Returns:
+            RerankResponse with ranked results.
+        """
+        # Validate inputs
+        query, documents, top_k = self._validate_inputs(query, documents, top_k)
+
+        # Build request
+        payload = self._build_request_payload(query, documents, top_k, instruct=instruct)
+
+        try:
+            response = self.client.post(
+                f"{self.base_url}/services/rerank/text-rerank/text-rerank",
+                json=payload,
+                headers=self._get_headers()
+            )
+
+            if response.status_code != 200:
+                self._handle_error(response)
+            
+            response_data = response.json()
+            return self._parse_response(response_data, documents)
+        
+        except httpx.TimeoutException:
+            raise RuntimeError("Request to DashScope API timed out.")
+        except httpx.RequestError as e:
+            raise RuntimeError(f"Network error calling DashScope API: {str(e)}")
+    
     def __del__(self):
         """Clean up HTTP clients on destruction."""
         try:
