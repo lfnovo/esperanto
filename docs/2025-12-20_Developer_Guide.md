@@ -3,6 +3,67 @@
 **Date:** 2025-12-20
 **Version:** 2.7.1
 
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.9 - 3.13
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+
+### Clone and Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Brio-AI/esperanto.git
+cd esperanto
+
+# Install dependencies with uv
+uv sync
+
+# Or with pip
+pip install -e ".[dev]"
+```
+
+### Verify Installation
+
+```bash
+# Run tests
+uv run pytest -v
+
+# Quick import check
+uv run python -c "from esperanto.factory import AIFactory; print('OK')"
+uv run python -c "from brio_ext.factory import BrioAIFactory; print('OK')"
+```
+
+### Environment Variables (Optional)
+
+For testing with real providers, set API keys:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+### Dependency Management
+
+This project uses **pyproject.toml** (modern Python standard) instead of requirements.txt.
+
+| Command | What Gets Installed |
+|---------|---------------------|
+| `uv sync` | Core + dev dependencies (recommended) |
+| `pip install -e .` | Core only (pydantic, httpx) |
+| `pip install -e ".[dev]"` | Core + dev tools (pytest, ruff, mypy) |
+| `pip install -e ".[transformers]"` | Core + ML/transformer libs |
+
+All dependencies are defined in `pyproject.toml`:
+- **Core** (lines 16-19): `pydantic`, `httpx`
+- **Dev** (lines 66+): `pytest`, `ruff`, `mypy`, `pytest-asyncio`, etc.
+- **Optional** (lines 21-31): `transformers`, `torch`, etc.
+
+---
+
 ## Overview
 
 Esperanto is a unified interface library for interacting with multiple AI model providers. It provides standardized access to 15+ LLM providers, embedding models, rerankers, speech-to-text, and text-to-speech capabilities.
