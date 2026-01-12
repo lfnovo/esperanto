@@ -247,7 +247,7 @@ class DashScopeRerankerModel(RerankerModel):
         payload = self._build_request_payload(query, documents, top_k, instruct=instruct)
 
         try:
-            response = self.async_client.post(
+            response = await self.async_client.post(
                 f"{self.base_url}/services/rerank/text-rerank/text-rerank",
                 json=payload,
                 headers=self._get_headers()
@@ -268,7 +268,7 @@ class DashScopeRerankerModel(RerankerModel):
         """Convert to LangChain-compatible reranker."""
         try:
             from langchain_core.documents import Document
-            from langchain_core.callbacks.base import Callbacks
+            from langchain_core.callbacks.manager import Callbacks
         except ImportError:
             raise ImportError(
                 "LangChain not installed. Install with: pip install langchain."
