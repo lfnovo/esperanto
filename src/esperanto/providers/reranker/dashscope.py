@@ -30,7 +30,7 @@ class DashScopeRerankerModel(RerankerModel):
             raise ValueError(
                 "DashScope API key not found. Set DASHSCOPE_API_KEY environment variable or pass api_key parameter."
             )
-        
+
         # API configuration
         self.base_url = self.base_url or "https://dashscope.aliyuncs.com/api/v1"
 
@@ -51,15 +51,15 @@ class DashScopeRerankerModel(RerankerModel):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-    
+
     def _get_default_model(self) -> str:
         """Get default DashScope model."""
         return "qwen3-rerank"
-    
+
     @property
     def provider(self) -> str:
         return "dashscope"
-    
+
     def _get_models(self) -> List[Model]:
         """Available DashScope reranker models"""
         return [
@@ -74,7 +74,7 @@ class DashScopeRerankerModel(RerankerModel):
                 context_window=4000
             ),
         ]
-    
+
     def _build_request_payload(
         self,
         query: str,
@@ -111,7 +111,7 @@ class DashScopeRerankerModel(RerankerModel):
             payload.update({"instruct": instruct})
 
         return payload
-    
+
     def _handle_error(self, response: httpx.Response) -> None:
         """Handle error responses from DashScope API.
 
@@ -130,14 +130,14 @@ class DashScopeRerankerModel(RerankerModel):
             raise RuntimeError(
                 f"DashScope API error: {response.status_code} - {response.text}"
             )
-        
+
     def _parse_response(self, response_data: Dict[str, Any], documents: List[str]) -> RerankResponse:
         """Parse DashScope API response into standardized format.
-        
+
         Args:
             response_data: Raw response from DashScope API.
             documents: Original documents list for fallback.
-            
+
         Returns:
             Standardized RerankResponse.
         """
@@ -160,7 +160,7 @@ class DashScopeRerankerModel(RerankerModel):
                 document=cur_doc,
                 relevance_score=norm_score
             ))
-        
+
         # Create usage
         if "usage" in response_data:
             usage_data = response_data["usage"]
@@ -177,7 +177,7 @@ class DashScopeRerankerModel(RerankerModel):
             model=self.get_model_name(),
             usage=usage
         )
-    
+
     def rerank(
         self,
         query: str,
@@ -187,13 +187,13 @@ class DashScopeRerankerModel(RerankerModel):
         **kwargs
     ) -> RerankResponse:
         """Rerank documents using DashScope API.
-        
+
         Args:
             query: The search query to rank documents against.
             documents: List of documents to rerank.
             top_k: Maximum number of results to return.
-            instruct: system instruct passed to reranker.
-            
+            instruct: System instruct passed to reranker.
+
         Returns:
             RerankResponse with ranked results.
         """
@@ -212,15 +212,104 @@ class DashScopeRerankerModel(RerankerModel):
 
             if response.status_code != 200:
                 self._handle_error(response)
-            
+
             response_data = response.json()
             return self._parse_response(response_data, documents)
-        
+
         except httpx.TimeoutException:
             raise RuntimeError("Request to DashScope API timed out.")
         except httpx.RequestError as e:
             raise RuntimeError(f"Network error calling DashScope API: {str(e)}")
-    
+
+    async def arerank(
+        self,
+        query: str,
+        documents: List[str],
+        top_k: Optional[int] = None,
+        instruct: Optional[str] = None,
+        **kwargs
+    ) -> RerankResponse:
+        """Async rerank documents using DashScope API.
+
+        Args:
+            query: The search query to rank documents against.
+            documents: List of documents to rerank.
+            top_k: Maximum number of results to return.
+            instruct: System instruct passed to reranker.
+
+        Returns:
+            RerankResponse with ranked results.
+        """
+        # Validate inputs
+        query, documents, top_k = self._validate_inputs(query, documents, top_k)
+
+        # Build request
+        payload = self._build_request_payload(query, documents, top_k, instruct=instruct)
+
+        try:
+            response = self.async_client.post(
+                f"{self.base_url}/services/rerank/text-rerank/text-rerank",
+                json=payload,
+                headers=self._get_headers()
+            )
+
+            if response.status_code != 200:
+                self._handle_error(response)
+
+            response_data = response.json()
+            return self._parse_response(response_data, documents)
+
+        except httpx.TimeoutException:
+            raise RuntimeError("Request to DashScope API timed out.")
+        except httpx.RequestError as e:
+            raise RuntimeError(f"Network error calling DashScope API: {str(e)}")
+
+    def to_langchain(self):
+        """Convert to LangChain-compatible reranker."""
+        try:
+            from langchain_core.documents import Document
+            from langchain_core.callbacks.base import Callbacks
+        except ImportError:
+            raise ImportError(
+                "LangChain not installed. Install with: pip install langchain."
+            )
+
+
+        class LangChainDashScopeReranker:
+            def __init__(self, dashscope_reranker: "DashScopeRerankerModel"):
+                self.reranker = dashscope_reranker
+
+            def compress_documents(
+                self,
+                documents: List[Document],
+                query: str,
+                callbacks: Optional[Callbacks] = None
+            ) -> List[Document]:
+                """Compress documents using DashScope reranker."""
+                texts = [doc.page_content for doc in documents]
+
+                # Rerank using DashScope
+                rerank_response = self.reranker.rerank(query, texts)
+
+                # Convert back to LangChain documents
+                reranked_docs = []
+                for result in rerank_response.results:
+                    if result.index < len(documents):
+                        original_doc = documents[result.index]
+                        # Add relevance score to metadata
+                        new_metadata = original_doc.metadata.copy()
+                        new_metadata["relevance_score"] = result.relevance_score
+
+                        reranked_docs.append(Document(
+                            page_content=original_doc.page_content,
+                            metadata=new_metadata
+                        ))
+
+                return reranked_docs
+
+
+        return LangChainDashScopeReranker(self)
+
     def __del__(self):
         """Clean up HTTP clients on destruction."""
         try:
