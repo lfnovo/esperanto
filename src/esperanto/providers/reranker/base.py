@@ -5,14 +5,15 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from httpx import Client, AsyncClient
+
 from esperanto.common_types import Model
 from esperanto.common_types.reranker import RerankResponse
-from esperanto.utils.ssl import SSLMixin
-from esperanto.utils.timeout import TimeoutMixin
+from esperanto.utils.connect import HttpConnectionMixin
 
 
 @dataclass
-class RerankerModel(TimeoutMixin, SSLMixin, ABC):
+class RerankerModel(HttpConnectionMixin, ABC):
     """Base class for all reranker providers."""
 
     api_key: Optional[str] = None
@@ -20,8 +21,8 @@ class RerankerModel(TimeoutMixin, SSLMixin, ABC):
     model_name: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
     _config: Dict[str, Any] = field(default_factory=dict)
-    client: Any = None
-    async_client: Any = None
+    client: Optional[Client] = None
+    async_client: Optional[AsyncClient] = None
 
     def __post_init__(self):
         """Initialize configuration after dataclass initialization."""
@@ -95,18 +96,6 @@ class RerankerModel(TimeoutMixin, SSLMixin, ABC):
         """
         return "reranker"
 
-    def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout and SSL settings.
-
-        Call this method in provider's __post_init__ after setting up
-        API keys and base URLs.
-        """
-        import httpx
-        timeout = self._get_timeout()
-        verify = self._get_ssl_verify()
-        self.client = httpx.Client(timeout=timeout, verify=verify)
-        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
-
     @abstractmethod
     def rerank(
         self,
@@ -169,9 +158,9 @@ class RerankerModel(TimeoutMixin, SSLMixin, ABC):
         return self._get_default_model()
 
     def _validate_inputs(
-        self, 
-        query: str, 
-        documents: List[str], 
+        self,
+        query: str,
+        documents: List[str],
         top_k: Optional[int]
     ) -> Tuple[str, List[str], int]:
         """Validate and normalize inputs.
