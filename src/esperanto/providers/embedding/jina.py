@@ -13,24 +13,24 @@ from .base import EmbeddingModel
 
 class JinaEmbeddingModel(EmbeddingModel):
     """Jina AI embeddings with native support for all advanced features."""
-    
+
     # Jina supports all advanced features natively
     SUPPORTED_FEATURES = ["task_type", "late_chunking", "output_dimensions", "truncate_at_max_length"]
-    
+
     # Task type mapping from universal enum to Jina API values
     TASK_MAPPING = {
         EmbeddingTaskType.RETRIEVAL_QUERY: "retrieval.query",
         EmbeddingTaskType.RETRIEVAL_DOCUMENT: "retrieval.passage",
         EmbeddingTaskType.SIMILARITY: "text-matching",
-        EmbeddingTaskType.CLASSIFICATION: "classification", 
+        EmbeddingTaskType.CLASSIFICATION: "classification",
         EmbeddingTaskType.CLUSTERING: "separation",
         EmbeddingTaskType.CODE_RETRIEVAL: "code.query",
         EmbeddingTaskType.DEFAULT: None
     }
-    
+
     def __init__(self, **kwargs):
         """Initialize Jina embedding model.
-        
+
         Args:
             **kwargs: Configuration parameters including:
                 - api_key: Jina API key (or set JINA_API_KEY env var)
@@ -46,118 +46,77 @@ class JinaEmbeddingModel(EmbeddingModel):
                 "variable or pass it as 'api_key' parameter."
             )
         self.base_url = kwargs.get("base_url", "https://api.jina.ai/v1/embeddings")
-        
+
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
-    
-    def close(self):
-        """Explicitly close HTTP clients."""
-        try:
-            if hasattr(self, 'client') and not self.client.is_closed:
-                self.client.close()
-        except Exception:
-            pass  # Ignore cleanup errors
-            
-    async def aclose(self):
-        """Asynchronously close HTTP clients."""
-        try:
-            if hasattr(self, 'async_client') and not self.async_client.is_closed:
-                await self.async_client.aclose()
-        except Exception:
-            pass  # Ignore cleanup errors
-            
-    def __del__(self):
-        """Clean up HTTP clients on object destruction."""
-        # Only handle sync client cleanup in destructor
-        try:
-            if hasattr(self, 'client') and not self.client.is_closed:
-                self.client.close()
-        except Exception:
-            pass  # Ignore cleanup errors
-            
-    def __enter__(self):
-        """Context manager entry."""
-        return self
-        
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit with cleanup."""
-        self.close()
-        
-    async def __aenter__(self):
-        """Async context manager entry."""
-        return self
-        
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit with cleanup."""
-        await self.aclose()
-        
+
     def _apply_task_optimization(self, texts: List[str]) -> List[str]:
         """Jina handles task optimization natively via API."""
         # Don't apply prefix - Jina API handles this natively
         return texts
-    
+
     def _apply_late_chunking(self, texts: List[str]) -> List[str]:
         """Jina handles late chunking natively via API."""
         # Don't chunk here - Jina API handles this natively
         return texts
-    
+
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers."""
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-    
+
     def _map_task_type(self) -> str:
         """Map universal task type to Jina-specific value."""
         if not self.task_type:
             return None
         return self.TASK_MAPPING.get(self.task_type)
-    
+
     def _build_request_payload(self, texts: List[str]) -> Dict[str, Any]:
         """Build request payload for Jina API.
-        
+
         Args:
             texts: List of texts to embed.
-            
+
         Returns:
             Request payload dict.
         """
         # Clean texts using base class method
         cleaned_texts = [self._clean_text(text) for text in texts]
-        
+
         # Build Jina-specific payload
         input_data = [{"text": text} for text in cleaned_texts]
-        
+
         payload = {
             "model": self.get_model_name(),
             "input": input_data
         }
-        
+
         # Map and add task type if specified
         if self.task_type:
             jina_task = self._map_task_type()
             if jina_task:
                 payload["task"] = jina_task
-                
+
         # Add other advanced features - all natively supported
         if self.late_chunking:
             payload["late_chunking"] = True
-            
+
         if self.truncate_at_max_length:
             payload["truncate"] = True
-            
+
         if self.output_dimensions:
             payload["dimensions"] = self.output_dimensions
-            
+
         return payload
-    
+
     def _handle_error(self, response: httpx.Response) -> None:
         """Handle error responses from Jina API.
-        
+
         Args:
             response: HTTP response object.
-            
+
         Raises:
             RuntimeError: With details from the error response.
         """
@@ -171,31 +130,31 @@ class JinaEmbeddingModel(EmbeddingModel):
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts.
-        
+
         Args:
             texts: List of texts to create embeddings for.
             **kwargs: Additional arguments (not used for Jina).
-            
+
         Returns:
             List of embeddings, one for each input text.
         """
         if not texts:
             return []
-            
+
         payload = self._build_request_payload(texts)
-        
+
         try:
             response = self.client.post(
                 self.base_url,
                 json=payload,
                 headers=self._get_headers()
             )
-            
+
             if response.status_code != 200:
                 self._handle_error(response)
-                
+
             response_data = response.json()
-            
+
             # Extract embeddings from response
             embeddings = []
             for item in response_data.get("data", []):
@@ -203,9 +162,9 @@ class JinaEmbeddingModel(EmbeddingModel):
                 if embedding:
                     # Ensure all values are floats for consistency
                     embeddings.append([float(value) for value in embedding])
-                    
+
             return embeddings
-            
+
         except httpx.TimeoutException:
             raise RuntimeError("Request to Jina API timed out")
         except httpx.RequestError as e:
@@ -215,31 +174,31 @@ class JinaEmbeddingModel(EmbeddingModel):
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
-        
+
         Args:
             texts: List of texts to create embeddings for.
             **kwargs: Additional arguments (not used for Jina).
-            
+
         Returns:
             List of embeddings, one for each input text.
         """
         if not texts:
             return []
-            
+
         payload = self._build_request_payload(texts)
-        
+
         try:
             response = await self.async_client.post(
                 self.base_url,
                 json=payload,
                 headers=self._get_headers()
             )
-            
+
             if response.status_code != 200:
                 self._handle_error(response)
-                
+
             response_data = response.json()
-            
+
             # Extract embeddings from response
             embeddings = []
             for item in response_data.get("data", []):
@@ -247,9 +206,9 @@ class JinaEmbeddingModel(EmbeddingModel):
                 if embedding:
                     # Ensure all values are floats for consistency
                     embeddings.append([float(value) for value in embedding])
-                    
+
             return embeddings
-            
+
         except httpx.TimeoutException:
             raise RuntimeError("Request to Jina API timed out")
         except httpx.RequestError as e:
@@ -268,7 +227,7 @@ class JinaEmbeddingModel(EmbeddingModel):
                 owned_by="jina",
                 context_window=8192),
             Model(
-                id="jina-embeddings-v3", 
+                id="jina-embeddings-v3",
                 owned_by="jina",
                 context_window=8192),
             Model(
