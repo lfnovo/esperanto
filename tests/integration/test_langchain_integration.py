@@ -114,7 +114,9 @@ def test_xai_langchain_conversion(xai_model):
 def test_google_langchain_conversion(google_model):
     langchain_model = google_model.to_langchain()
     assert isinstance(langchain_model, ChatGoogleGenerativeAI)
-    assert langchain_model.model == "gemini-1.5-pro"
+
+    # Specific design for Google SDK: 'model' attribute is the full model name with "models/" prefix
+    assert langchain_model.model == "models/gemini-1.5-pro"
     assert langchain_model.temperature == 0.7
     assert langchain_model.max_output_tokens == 100
     assert langchain_model.top_p == 0.9
