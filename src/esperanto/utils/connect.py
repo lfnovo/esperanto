@@ -15,7 +15,7 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
 
     This mixin already provides timeout and SSL configuration functionality as httpx client relies on `_get_timeout` and `_get_ssl_verify` methods.
 
-    This mixin must be used with classes that have:
+    The `_create_http_clients` method should be used with classes that have:
     - client: httpx.Client and async_client: httpx.AsyncClient attributes
     - Provider-specific __post_init__() that calls super().__post_init__()
     """
