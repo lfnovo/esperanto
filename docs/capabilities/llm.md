@@ -172,6 +172,7 @@ response = model.chat_complete(messages)
 - **Timeout Configuration**: [docs/advanced/timeout-configuration.md](../advanced/timeout-configuration.md)
 - **LangChain Integration**: [docs/advanced/langchain-integration.md](../advanced/langchain-integration.md)
 - **Model Discovery**: [docs/advanced/model-discovery.md](../advanced/model-discovery.md)
+- **Resource Management**: [docs/advanced/connection-resource-management.md](../advanced/connection-resource-management.md)
 
 ## Examples
 
@@ -237,6 +238,31 @@ messages = [
 response = model.chat_complete(messages)
 print(response.content)
 ```
+
+### Using Context Manager for Resource Management
+
+For long-running applications or explicit resource control, use context managers:
+
+```python
+# Synchronous context manager
+with AIFactory.create_language("openai", "gpt-4") as model:
+    response = model.chat_complete(messages)
+    print(response.content)
+    # HTTP client automatically closed when exiting context
+
+# Async context manager
+import asyncio
+
+async def main():
+    async with AIFactory.create_language("openai", "gpt-4") as model:
+        response = await model.achat_complete(messages)
+        print(response.content)
+        # Async HTTP client automatically closed
+
+asyncio.run(main())
+```
+
+See [Resource Management](../configuration.md#http-client-resource-management) for more details.
 
 ## See Also
 
