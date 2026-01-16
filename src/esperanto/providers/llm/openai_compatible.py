@@ -2,14 +2,26 @@
 
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
-from esperanto.common_types import Model
+from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
+
+# Error message indicating the endpoint doesn't support json_object response format
+_RESPONSE_FORMAT_ERROR = "'response_format.type' must be 'json_schema'"
 
 
 @dataclass
@@ -60,6 +72,22 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
 
         # Call parent's post_init to set up HTTP clients and normalized response handling
         super().__post_init__()
+
+        # Track if we've detected that this endpoint doesn't support json_object
+        self._response_format_unsupported = False
+
+    def _is_likely_lmstudio(self) -> bool:
+        """Check if this endpoint is likely LM Studio based on port.
+
+        LM Studio uses port 1234 by default. This is a heuristic to avoid
+        sending unsupported response_format parameter.
+
+        Known issue: If you use another OpenAI-compatible provider on port 1234,
+        structured output with json_object may not work. Use a different port.
+        """
+        if not self.base_url:
+            return False
+        return ":1234" in self.base_url
 
     def _handle_error(self, response) -> None:
         """Handle HTTP error responses with graceful degradation."""
@@ -169,23 +197,95 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             model=model,
         )
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self, exclude_stream: bool = False, exclude_response_format: bool = False
+    ) -> Dict[str, Any]:
         """Get API kwargs with graceful feature fallback.
-        
+
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
-            
+            exclude_response_format: If True, excludes response_format parameter.
+
         Returns:
             Dict containing API parameters for the request.
         """
         # Get base kwargs from parent
         kwargs = super()._get_api_kwargs(exclude_stream)
-        
-        # For OpenAI-compatible endpoints, we attempt all features
-        # and let the endpoint handle graceful degradation
-        # This includes streaming, JSON mode, and other OpenAI features
-        
+
+        # Remove response_format if:
+        # 1. Explicitly requested (for retry logic)
+        # 2. Endpoint is likely LM Studio (port 1234 heuristic)
+        # 3. We've previously detected this endpoint doesn't support it
+        should_skip_response_format = (
+            exclude_response_format
+            or self._is_likely_lmstudio()
+            or self._response_format_unsupported
+        )
+
+        if should_skip_response_format and "response_format" in kwargs:
+            logger.debug(
+                "Removing response_format parameter for OpenAI-compatible endpoint"
+            )
+            kwargs.pop("response_format")
+
         return kwargs
+
+    def _is_response_format_error(self, error: Exception) -> bool:
+        """Check if the error is due to unsupported response_format."""
+        error_str = str(error)
+        return _RESPONSE_FORMAT_ERROR in error_str
+
+    def chat_complete(
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+    ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
+        """Send a chat completion request with retry for unsupported response_format.
+
+        Args:
+            messages: List of messages in the conversation.
+            stream: Whether to stream the response. If None, uses the instance's streaming setting.
+
+        Returns:
+            Either a ChatCompletion or a Generator yielding ChatCompletionChunks if streaming.
+        """
+        try:
+            return super().chat_complete(messages, stream)
+        except RuntimeError as e:
+            # Check if it's a response_format error and we haven't already disabled it
+            if self._is_response_format_error(e) and not self._response_format_unsupported:
+                logger.debug(
+                    "Endpoint doesn't support json_object response_format, retrying without it"
+                )
+                # Mark this endpoint as not supporting response_format
+                self._response_format_unsupported = True
+                # Retry without response_format
+                return super().chat_complete(messages, stream)
+            raise
+
+    async def achat_complete(
+        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+    ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
+        """Send an async chat completion request with retry for unsupported response_format.
+
+        Args:
+            messages: List of messages in the conversation.
+            stream: Whether to stream the response. If None, uses the instance's streaming setting.
+
+        Returns:
+            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks if streaming.
+        """
+        try:
+            return await super().achat_complete(messages, stream)
+        except RuntimeError as e:
+            # Check if it's a response_format error and we haven't already disabled it
+            if self._is_response_format_error(e) and not self._response_format_unsupported:
+                logger.debug(
+                    "Endpoint doesn't support json_object response_format, retrying without it"
+                )
+                # Mark this endpoint as not supporting response_format
+                self._response_format_unsupported = True
+                # Retry without response_format
+                return await super().achat_complete(messages, stream)
+            raise
 
     def _get_models(self) -> List[Model]:
         """List all available models for this provider.
@@ -242,7 +342,15 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             ) from e
 
         model_kwargs = {}
-        if self.structured and isinstance(self.structured, dict):
+        # Only set response_format if endpoint is likely to support it
+        should_skip_response_format = (
+            self._is_likely_lmstudio() or self._response_format_unsupported
+        )
+        if (
+            self.structured
+            and isinstance(self.structured, dict)
+            and not should_skip_response_format
+        ):
             structured_type = self.structured.get("type")
             if structured_type in ["json", "json_object"]:
                 model_kwargs["response_format"] = {"type": "json_object"}
