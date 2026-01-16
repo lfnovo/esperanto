@@ -262,7 +262,7 @@ async def main():
 asyncio.run(main())
 ```
 
-See [Resource Management](../configuration.md#http-client-resource-management) for more details.
+See [Resource Management](../advanced/connection-resource-management.md) for more details.
 
 ## See Also
 
