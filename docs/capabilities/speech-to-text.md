@@ -363,6 +363,7 @@ Most providers have file size limits (typically 25MB). For larger files:
 ## Advanced Topics
 
 - **Timeout Configuration**: [docs/advanced/timeout-configuration.md](../advanced/timeout-configuration.md)
+- **Resource Management**: [docs/advanced/connection-resource-management.md](../advanced/connection-resource-management.md)
 
 ## See Also
 

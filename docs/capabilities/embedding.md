@@ -310,6 +310,7 @@ print(f"Similarity: {similarity:.4f}")
 - **Task-Aware Embeddings**: [docs/advanced/task-aware-embeddings.md](../advanced/task-aware-embeddings.md)
 - **Transformers Advanced Features**: [docs/advanced/transformers-features.md](../advanced/transformers-features.md)
 - **Timeout Configuration**: [docs/advanced/timeout-configuration.md](../advanced/timeout-configuration.md)
+- **Resource Management**: [docs/advanced/connection-resource-management.md](../advanced/connection-resource-management.md)
 
 ## See Also
 

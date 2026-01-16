@@ -295,6 +295,7 @@ final_results = reranker.rerank(query, candidates, top_k=5)
 
 - **Transformers Advanced Features**: [docs/advanced/transformers-features.md](../advanced/transformers-features.md)
 - **Timeout Configuration**: [docs/advanced/timeout-configuration.md](../advanced/timeout-configuration.md)
+- **Resource Management**: [docs/advanced/connection-resource-management.md](../advanced/connection-resource-management.md)
 
 ## See Also
 

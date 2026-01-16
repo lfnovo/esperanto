@@ -5,13 +5,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
+from httpx import Client, AsyncClient
+
 from esperanto.common_types import Model, TranscriptionResponse
-from esperanto.utils.ssl import SSLMixin
-from esperanto.utils.timeout import TimeoutMixin
+from esperanto.utils.connect import HttpConnectionMixin
 
 
 @dataclass
-class SpeechToTextModel(TimeoutMixin, SSLMixin, ABC):
+class SpeechToTextModel(HttpConnectionMixin, ABC):
     """Base class for speech-to-text models.
 
     Attributes:
@@ -28,6 +29,8 @@ class SpeechToTextModel(TimeoutMixin, SSLMixin, ABC):
     config: Optional[Dict[str, Any]] = None
     timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
+    client: Optional[Client] = None
+    async_client: Optional[AsyncClient] = None
 
     def __post_init__(self):
         """Initialize configuration after dataclass initialization."""
@@ -111,18 +114,6 @@ class SpeechToTextModel(TimeoutMixin, SSLMixin, ABC):
             str: "speech_to_text" for STT providers
         """
         return "speech_to_text"
-
-    def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout and SSL settings.
-
-        Call this method in provider's __post_init__ after setting up
-        API keys and base URLs.
-        """
-        import httpx
-        timeout = self._get_timeout()
-        verify = self._get_ssl_verify()
-        self.client = httpx.Client(timeout=timeout, verify=verify)
-        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
 
     @property
     def models(self) -> List[Model]:
