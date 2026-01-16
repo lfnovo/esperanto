@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.1] - 2026-01-16
+
+### Fixed
+
+- **LM Studio Compatibility** - Fixed `response_format` parameter rejection by LM Studio (#46)
+  - LM Studio only supports `json_schema` response format, not `json_object`
+  - Added automatic detection for LM Studio (port 1234 heuristic)
+  - Added graceful degradation: retries without `response_format` if endpoint rejects it
+  - Affects both direct API calls and LangChain integration
+  - See also: [lmstudio-ai/lmstudio-bug-tracker#189](https://github.com/lmstudio-ai/lmstudio-bug-tracker/issues/189)
+
 ## [2.14.0] - 2026-01-16
 
 ### Added
