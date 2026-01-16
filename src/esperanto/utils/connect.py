@@ -1,5 +1,6 @@
 """Connection utilities for Esperanto providers."""
 
+import os
 from abc import ABC
 
 import httpx
@@ -20,16 +21,33 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
     - Provider-specific __post_init__() that calls super().__post_init__()
     """
 
+    def _get_proxy(self) -> str | None:
+        """Get proxy URL from config or environment.
+
+        Priority order:
+        1. Config dict: config={"proxy": "http://proxy:8080"}
+        2. Environment variable: ESPERANTO_PROXY
+
+        Returns:
+            Proxy URL string or None if not configured.
+        """
+        if hasattr(self, "config") and self.config:
+            proxy = self.config.get("proxy")
+            if proxy:
+                return proxy
+        return os.getenv("ESPERANTO_PROXY")
+
     def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout and SSL settings.
+        """Create HTTP clients with configured timeout, SSL, and proxy settings.
 
         Call this method in provider's __post_init__ after setting up
         API keys and base URLs.
         """
         timeout = self._get_timeout()
         verify = self._get_ssl_verify()
-        self.client = httpx.Client(timeout=timeout, verify=verify)
-        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
+        proxy = self._get_proxy()
+        self.client = httpx.Client(timeout=timeout, verify=verify, proxy=proxy)
+        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify, proxy=proxy)
 
     def close(self):
         """Explicitly close HTTP clients."""
