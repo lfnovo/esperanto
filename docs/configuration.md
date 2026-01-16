@@ -416,6 +416,83 @@ All provider types that use HTTP clients:
 - Text-to-Speech (TTS)
 - Rerankers
 
+## Proxy Configuration
+
+Configure HTTP proxy for all provider connections. Useful for corporate networks, VPNs, or routing traffic through specific endpoints.
+
+### Setting a Proxy
+
+**Via environment variable (recommended):**
+
+```bash
+ESPERANTO_PROXY=http://proxy.example.com:8080
+```
+
+**Via config parameter:**
+
+```python
+model = AIFactory.create_language(
+    "openai", "gpt-4",
+    config={"proxy": "http://proxy.example.com:8080"}
+)
+```
+
+### Proxy URL Formats
+
+```bash
+# HTTP proxy
+ESPERANTO_PROXY=http://proxy.example.com:8080
+
+# HTTPS proxy
+ESPERANTO_PROXY=https://secure-proxy.example.com:443
+
+# Proxy with authentication
+ESPERANTO_PROXY=http://username:password@proxy.example.com:8080
+```
+
+### Priority Order
+
+1. **Config parameter** `proxy` (highest priority)
+2. **Environment variable** `ESPERANTO_PROXY`
+3. **Default** `None` (no proxy)
+
+### Common Use Cases
+
+**Corporate network with proxy:**
+
+```bash
+# In .env
+ESPERANTO_PROXY=http://corporate-proxy.internal:3128
+```
+
+```python
+# All providers automatically use the proxy
+model = AIFactory.create_language("openai", "gpt-4")
+embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")
+```
+
+**Different proxy per instance:**
+
+```python
+# Use specific proxy for this instance
+model = AIFactory.create_language(
+    "openai", "gpt-4",
+    config={"proxy": "http://special-proxy.example.com:8080"}
+)
+
+# Another instance without proxy (if ESPERANTO_PROXY is not set)
+model_no_proxy = AIFactory.create_language("ollama", "llama3")
+```
+
+### Proxy Configuration Applies To
+
+All provider types that use HTTP clients:
+- Language Models (LLM)
+- Embedding Models
+- Speech-to-Text (STT)
+- Text-to-Speech (TTS)
+- Rerankers
+
 ## Common Parameters
 
 ### Language Models (LLM)
