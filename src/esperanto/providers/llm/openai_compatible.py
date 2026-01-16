@@ -87,7 +87,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         """
         if not self.base_url:
             return False
-        return ":1234" in self.base_url
+        # Check for exact port 1234 (not 12345, 12346, etc.)
+        # Port is followed by "/" or end of host portion
+        return ":1234/" in self.base_url or self.base_url.rstrip("/").endswith(":1234")
 
     def _handle_error(self, response) -> None:
         """Handle HTTP error responses with graceful degradation."""

@@ -402,6 +402,22 @@ class TestOpenAICompatibleLanguageModel:
         )
         assert model._is_likely_lmstudio() is False
 
+    def test_is_likely_lmstudio_port_12345_not_matched(self):
+        """Test that port 12345 is NOT detected as LM Studio (regression test)."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:12345/v1"
+        )
+        assert model._is_likely_lmstudio() is False
+
+    def test_is_likely_lmstudio_port_12346_not_matched(self):
+        """Test that port 12346 is NOT detected as LM Studio (regression test)."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:12346/v1"
+        )
+        assert model._is_likely_lmstudio() is False
+
     def test_is_likely_lmstudio_127_0_0_1(self):
         """Test that 127.0.0.1:1234 is detected as likely LM Studio."""
         model = OpenAICompatibleLanguageModel(
