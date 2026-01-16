@@ -76,10 +76,9 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
         # Only handle sync client cleanup in destructor
         try:
             if (
-                hasattr(self, "client")
-                and self.client is not None
-                and not self.client.is_closed
+                hasattr(self, "close")
+                and callable(self.close)
             ):
-                self.client.close()
+                self.close()
         except Exception:
             pass  # Ignore cleanup errors
