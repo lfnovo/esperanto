@@ -44,7 +44,7 @@ All providers convert their API responses to Esperanto's common types:
 
 ### Message Structure
 
-Chat messages follow OpenAI-style format (response.py:31):
+Chat messages follow OpenAI-style format (response.py:34):
 
 ```python
 Message(
@@ -54,6 +54,27 @@ Message(
     tool_calls=None,     # Optional tool calls
 )
 ```
+
+### Message Thinking Properties
+
+The `Message` class provides properties for handling models that include reasoning traces (like Qwen3, DeepSeek R1):
+
+- **`thinking`**: Extracts content inside `<think>` tags (returns `None` if no tags)
+- **`cleaned_content`**: Returns content with `<think>` tags removed
+
+```python
+# Response from a model with reasoning traces
+msg = Message(
+    content="<think>Let me analyze this...</think>\n\n{\"answer\": 42}",
+    role="assistant"
+)
+
+msg.content          # "<think>Let me analyze this...</think>\n\n{\"answer\": 42}"
+msg.thinking         # "Let me analyze this..."
+msg.cleaned_content  # "{\"answer\": 42}"
+```
+
+Multiple `<think>` blocks are concatenated with `\n\n`. If content has no `<think>` tags, `thinking` returns `None` and `cleaned_content` returns the full content.
 
 ### Usage Tracking
 
@@ -238,4 +259,28 @@ print(msg["content"])  # "Hello"
 
 # Convert to dict
 msg_dict = msg.model_dump()  # {"content": "Hello", "role": "user", ...}
+```
+
+### Handling Reasoning Traces
+
+```python
+from esperanto import AIFactory
+
+# Models like Qwen3, DeepSeek R1 include <think> tags
+model = AIFactory.create_language("openai-compatible", "qwen/qwen3-4b", config={...})
+response = model.chat_complete([{"role": "user", "content": "What is 2+2?"}])
+
+msg = response.choices[0].message
+
+# Full response with reasoning
+print(msg.content)
+# "<think>I need to add 2 and 2...</think>\n\n4"
+
+# Just the reasoning (useful for debugging/logging)
+print(msg.thinking)
+# "I need to add 2 and 2..."
+
+# Just the answer (useful for parsing/display)
+print(msg.cleaned_content)
+# "4"
 ```

@@ -323,6 +323,24 @@ async for chunk in model.achat_complete(messages):
     print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
+#### Handling Reasoning Traces
+
+Some models (like Qwen3, DeepSeek R1) include chain-of-thought reasoning in `<think>` tags. The `Message` class provides convenient properties to handle this:
+
+```python
+response = model.chat_complete(messages)
+msg = response.choices[0].message
+
+# Full response including reasoning
+msg.content  # "<think>Let me analyze...</think>\n\n{\"answer\": 42}"
+
+# Just the reasoning (returns None if no <think> tags)
+msg.thinking  # "Let me analyze..."
+
+# Just the actual response (with <think> tags removed)
+msg.cleaned_content  # "{\"answer\": 42}"
+```
+
 ### Embedding Responses
 
 ```python

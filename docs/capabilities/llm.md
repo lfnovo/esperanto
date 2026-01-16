@@ -133,6 +133,26 @@ chunk = next(model.chat_complete(messages, stream=True))
 chunk.choices[0].delta.content                # Incremental content
 ```
 
+### Handling Reasoning Traces
+
+Some models (like Qwen3, DeepSeek R1) include chain-of-thought reasoning in `<think>` tags. The `Message` class provides convenient properties to parse these:
+
+```python
+response = model.chat_complete(messages)
+msg = response.choices[0].message
+
+# Full response with reasoning
+msg.content          # "<think>Let me analyze...</think>\n\n42"
+
+# Just the reasoning trace (returns None if no <think> tags)
+msg.thinking         # "Let me analyze..."
+
+# Just the actual answer (with <think> tags removed)
+msg.cleaned_content  # "42"
+```
+
+Multiple `<think>` blocks are concatenated. If the response has no `<think>` tags, `thinking` returns `None` and `cleaned_content` returns the full content unchanged.
+
 ## Structured Output
 
 Request JSON-formatted responses (where supported):
@@ -263,6 +283,27 @@ asyncio.run(main())
 ```
 
 See [Resource Management](../advanced/connection-resource-management.md) for more details.
+
+### Handling Reasoning Traces
+
+```python
+# Works with models that include <think> tags (Qwen3, DeepSeek R1, etc.)
+model = AIFactory.create_language(
+    "openai-compatible", "qwen/qwen3-4b",
+    config={"base_url": "http://localhost:1234/v1"}
+)
+
+messages = [{"role": "user", "content": "What is 15 * 24?"}]
+response = model.chat_complete(messages)
+msg = response.choices[0].message
+
+# Get just the answer, without the reasoning
+print(msg.cleaned_content)  # "360"
+
+# Or inspect the reasoning for debugging
+if msg.thinking:
+    print(f"Model's reasoning: {msg.thinking}")
+```
 
 ## See Also
 

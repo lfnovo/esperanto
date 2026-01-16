@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.15.0] - 2026-01-16
+
+### Added
+
+- **Message Thinking Properties** - Added `thinking` and `cleaned_content` properties to `Message` class
+  - `thinking`: Extracts content inside `<think>` tags (reasoning trace from models like Qwen3, DeepSeek R1)
+  - `cleaned_content`: Returns content with `<think>` tags removed (actual response)
+  - Multiple `<think>` blocks are concatenated
+  - Returns `None` for `thinking` if no tags present
+
 ## [2.14.1] - 2026-01-16
 
 ### Fixed
