@@ -2,7 +2,6 @@
 
 import gc
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
 
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
@@ -152,14 +151,14 @@ class MockTextToSpeechModel(TextToSpeechModel):
     def _get_models(self):
         return []
 
-    async def agenerate_speech(self, text, **kwargs):
+    async def agenerate_speech(self, text, voice, **kwargs):
         pass
 
     @property
     def available_voices(self):
         return {}
 
-    def generate_speech(self, text, **kwargs):
+    def generate_speech(self, text, voice, **kwargs):
         pass
 
 
@@ -535,7 +534,6 @@ class TestEdgeCases:
     def test_context_manager_nested_usage(self, model_class):
         """Test that context manager can be used multiple times (recreating clients)."""
         model = model_class()
-        original_client = model.client
 
         # First context manager usage
         with model:
@@ -569,7 +567,6 @@ class TestEdgeCases:
     async def test_async_context_manager_nested_usage(self, model_class):
         """Test that async context manager can be used multiple times."""
         model = model_class()
-        original_async_client = model.async_client
 
         # First async context manager usage
         async with model:

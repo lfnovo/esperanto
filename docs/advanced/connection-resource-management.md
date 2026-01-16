@@ -17,7 +17,7 @@ response = model.chat_complete(messages)
 # Clients are automatically closed when model goes out of scope
 # No manual cleanup needed for short-lived instances
 ```
-> NOTE: THe default auto-cleanup approach only works for synchronous cases and cannot be used for asynchronous clients.
+> NOTE: The default auto-cleanup approach only works for synchronous cases and cannot be used for asynchronous clients.
 
 
 ### Explicit Resource Management
@@ -89,18 +89,20 @@ asyncio.run(main())
 
 **Closing Both Clients:**
 ```python
-model = AIFactory.create_language("openai", "gpt-4")
-
-# Use both sync and async methods
-response = model.chat_complete(messages)
-async_response = await model.achat_complete(messages)
-
-# Close both clients
-model.close()      # Closes sync client
-await model.aclose()  # Closes async client
+import asyncio
+from esperanto.factory import AIFactory
+async def main():
+    model = AIFactory.create_language("openai", "gpt-4")
+    # Use both sync and async methods
+    response = model.chat_complete(messages)
+    async_response = await model.achat_complete(messages)
+    # Close both clients
+    model.close()          # Closes sync client
+    await model.aclose()   # Closes async client
+asyncio.run(main())
 ```
 
-**Benifits**:
+**Benefits**:
 - ✅ Clear, well-defined
 - ✅ Support for **connection resource re-use** for huge amount of requests
 
