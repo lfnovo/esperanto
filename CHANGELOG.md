@@ -5,6 +5,131 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.15.0] - 2026-01-16
+
+### Added
+
+- **Message Thinking Properties** - Added `thinking` and `cleaned_content` properties to `Message` class
+  - `thinking`: Extracts content inside `<think>` tags (reasoning trace from models like Qwen3, DeepSeek R1)
+  - `cleaned_content`: Returns content with `<think>` tags removed (actual response)
+  - Multiple `<think>` blocks are concatenated
+  - Returns `None` for `thinking` if no tags present
+
+## [2.14.1] - 2026-01-16
+
+### Fixed
+
+- **LM Studio Compatibility** - Fixed `response_format` parameter rejection by LM Studio (#46)
+  - LM Studio only supports `json_schema` response format, not `json_object`
+  - Added automatic detection for LM Studio (port 1234 heuristic)
+  - Added graceful degradation: retries without `response_format` if endpoint rejects it
+  - Affects both direct API calls and LangChain integration
+  - See also: [lmstudio-ai/lmstudio-bug-tracker#189](https://github.com/lmstudio-ai/lmstudio-bug-tracker/issues/189)
+
+## [2.14.0] - 2026-01-16
+
+### Added
+
+- **Proxy Configuration** - Added HTTP proxy support for all provider connections
+  - Configuration via environment variable: `ESPERANTO_PROXY`
+  - Configuration via config dict: `config={"proxy": "http://proxy:8080"}`
+  - Supports HTTP, HTTPS, and authenticated proxies
+  - Priority order: config dict > environment variable > none
+  - Example:
+    ```python
+    # Via environment variable
+    export ESPERANTO_PROXY="http://proxy.example.com:8080"
+
+    # Via config dict
+    model = AIFactory.create_language(
+        "openai", "gpt-4",
+        config={"proxy": "http://proxy.example.com:8080"}
+    )
+    ```
+
+### Changed
+
+- Updated dependencies to latest versions
+- General codebase cleanup and maintenance
+
+### Fixed
+
+- **HTTP Client Resource Management** - Fixed async client not being properly closed when deleting model instances (#60)
+  - Added `HttpConnectionMixin` consolidating timeout, SSL, and client lifecycle management
+  - Providers now support context managers (`with model:` and `async with model:`)
+  - Added explicit `close()` and `aclose()` methods for resource cleanup
+  - Destructor now properly cleans up sync clients
+
+## [2.13.0] - 2026-01-04
+
+### Changed
+
+- **Dependency Updates** - Updated all dependencies to latest major versions (#55)
+
+### Fixed
+
+- Fixed CONTRIBUTING.md to use correct `uv sync` command for PEP735 dependency groups (#54)
+- Fixed unused `openai` import that could cause errors in tests (#53)
+
+## [2.12.1] - 2025-12-15
+
+### Fixed
+
+- **Ollama LangChain JSON Format** - Fixed `OllamaLanguageModel.to_langchain()` to correctly pass `format="json"` when `structured={"type": "json"}` is configured (#49)
+
+## [2.12.0] - 2025-12-14
+
+### Fixed
+
+- **SSL Configuration for LangChain** - Extended SSL verification configuration to all LangChain integrations (#47)
+  - Anthropic, Groq, Mistral, and Ollama providers now pass SSL settings to LangChain
+
+## [2.11.0] - 2025-12-14
+
+### Added
+
+- **SSL Verification Configuration** - Added ability to disable SSL verification or use custom CA bundles (#45)
+  - See [2.9.1] for full feature documentation (feature was backported)
+
+## [2.10.0] - 2025-11-27
+
+### Added
+
+- **OpenRouter Embedding Provider** - Access 60+ embedding providers through OpenRouter's unified API (#44)
+  - Inherits from `OpenAIEmbeddingModel` following existing patterns
+  - Supports `OPENROUTER_API_KEY` and `OPENROUTER_BASE_URL` environment variables
+  - Model discovery filters embedding models from OpenRouter's `/models` endpoint
+  - Example:
+    ```python
+    model = AIFactory.create_embedding(
+        "openrouter",
+        "openai/text-embedding-3-small"
+    )
+    embeddings = model.embed(["Hello", "World"])
+    ```
+
+- **Google Speech-to-Text** - Added STT support using Gemini API's audio transcription (#43)
+  - Supports `gemini-2.5-flash` and `gemini-2.0-flash` models
+  - Base64 audio encoding with automatic MIME type detection
+  - Supports MP3, WAV, AIFF, AAC, OGG, FLAC formats
+  - Language hints and custom prompts for improved accuracy
+  - Example:
+    ```python
+    model = AIFactory.create_speech_to_text("google", "gemini-2.5-flash")
+    response = model.transcribe("audio.mp3", language="en")
+    ```
+
+### Fixed
+
+- **Anthropic Temperature/Top-p Conflict** - Fixed issue where passing both `temperature` and `top_p` to Anthropic LangChain integration caused errors (#42, #39)
+  - Now prioritizes `temperature` over `top_p` when both are set
+
+## [2.9.2] - 2025-11-11
+
+### Fixed
+
+- **Ollama Embeddings API** - Updated to use newer `/api/embed` endpoint for compatibility with recent Ollama versions (#37)
+
 ## [2.9.1] - 2025-11-27
 
 ### Added
@@ -294,8 +419,6 @@ grep -r "EmbeddingModel.*\.models" --include="*.py" .
 - Improved code coverage to 68%
 
 ---
-
-## [Unreleased]
 
 ### Planned for 3.0.0
 - Remove deprecated `.models` property from all provider base classes

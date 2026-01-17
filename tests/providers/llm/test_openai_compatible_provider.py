@@ -260,19 +260,37 @@ class TestOpenAICompatibleLanguageModel:
             assert result == mock_instance
 
     def test_langchain_integration_with_structured_output(self):
-        """Test LangChain integration with structured output."""
+        """Test LangChain integration with structured output (non-LM Studio port)."""
+        # Use port 8080 (not 1234) to test that response_format IS set
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080",
+            structured={"type": "json"}
+        )
+
+        with patch('langchain_openai.ChatOpenAI') as mock_chat_openai:
+            model.to_langchain()
+
+            call_args = mock_chat_openai.call_args[1]
+            assert "model_kwargs" in call_args
+            assert call_args["model_kwargs"]["response_format"] == {"type": "json_object"}
+
+    def test_langchain_integration_lmstudio_skips_response_format(self):
+        """Test LangChain integration skips response_format for LM Studio (port 1234)."""
+        # Port 1234 is the default LM Studio port - response_format should be skipped
         model = OpenAICompatibleLanguageModel(
             api_key="test-key",
             base_url="http://localhost:1234",
             structured={"type": "json"}
         )
-        
+
         with patch('langchain_openai.ChatOpenAI') as mock_chat_openai:
             model.to_langchain()
-            
+
             call_args = mock_chat_openai.call_args[1]
             assert "model_kwargs" in call_args
-            assert call_args["model_kwargs"]["response_format"] == {"type": "json_object"}
+            # response_format should NOT be set for LM Studio
+            assert "response_format" not in call_args["model_kwargs"]
 
     def test_langchain_integration_reasoning_model(self):
         """Test LangChain integration with reasoning model (o1)."""
@@ -367,3 +385,93 @@ class TestOpenAICompatibleLanguageModel:
             error_message = str(exc_info.value)
             assert "OPENAI_COMPATIBLE_BASE_URL_LLM" in error_message
             assert "OPENAI_COMPATIBLE_BASE_URL" in error_message
+
+    def test_is_likely_lmstudio_port_1234(self):
+        """Test that port 1234 is detected as likely LM Studio."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:1234/v1"
+        )
+        assert model._is_likely_lmstudio() is True
+
+    def test_is_likely_lmstudio_other_port(self):
+        """Test that other ports are not detected as LM Studio."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1"
+        )
+        assert model._is_likely_lmstudio() is False
+
+    def test_is_likely_lmstudio_port_12345_not_matched(self):
+        """Test that port 12345 is NOT detected as LM Studio (regression test)."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:12345/v1"
+        )
+        assert model._is_likely_lmstudio() is False
+
+    def test_is_likely_lmstudio_port_12346_not_matched(self):
+        """Test that port 12346 is NOT detected as LM Studio (regression test)."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:12346/v1"
+        )
+        assert model._is_likely_lmstudio() is False
+
+    def test_is_likely_lmstudio_127_0_0_1(self):
+        """Test that 127.0.0.1:1234 is detected as likely LM Studio."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://127.0.0.1:1234/v1"
+        )
+        assert model._is_likely_lmstudio() is True
+
+    def test_response_format_skipped_for_lmstudio(self):
+        """Test that response_format is skipped for LM Studio (port 1234)."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:1234/v1",
+            structured={"type": "json_object"}
+        )
+        kwargs = model._get_api_kwargs()
+        assert "response_format" not in kwargs
+
+    def test_response_format_included_for_other_ports(self):
+        """Test that response_format is included for non-LM Studio endpoints."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1",
+            structured={"type": "json_object"}
+        )
+        kwargs = model._get_api_kwargs()
+        assert "response_format" in kwargs
+        assert kwargs["response_format"] == {"type": "json_object"}
+
+    def test_is_response_format_error(self):
+        """Test detection of response_format error message."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1"
+        )
+        # Test the specific error from LM Studio
+        error = RuntimeError("'response_format.type' must be 'json_schema' or 'text'")
+        assert model._is_response_format_error(error) is True
+
+        # Test other errors
+        other_error = RuntimeError("Some other error")
+        assert model._is_response_format_error(other_error) is False
+
+    def test_response_format_unsupported_flag(self):
+        """Test that _response_format_unsupported flag is properly set."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1",
+            structured={"type": "json_object"}
+        )
+        # Initially should be False
+        assert model._response_format_unsupported is False
+
+        # After setting the flag, response_format should be skipped
+        model._response_format_unsupported = True
+        kwargs = model._get_api_kwargs()
+        assert "response_format" not in kwargs

@@ -6,14 +6,15 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from httpx import Client, AsyncClient
+
 from esperanto.common_types import Model
 from esperanto.common_types.task_type import EmbeddingTaskType
-from esperanto.utils.ssl import SSLMixin
-from esperanto.utils.timeout import TimeoutMixin
+from esperanto.utils.connect import HttpConnectionMixin
 
 
 @dataclass
-class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
+class EmbeddingModel(HttpConnectionMixin, ABC):
     """Base class for all embedding models."""
 
     api_key: Optional[str] = None
@@ -22,6 +23,8 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
     organization: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
     _config: Dict[str, Any] = field(default_factory=dict)
+    client: Optional[Client] = None
+    async_client: Optional[AsyncClient] = None
 
     def __post_init__(self):
         """Initialize configuration after dataclass initialization."""
@@ -38,13 +41,13 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
             for key, value in self._config.items():
                 if hasattr(self, key):
                     setattr(self, key, value)
-        
+
         # Extract task-aware settings from config
         self.task_type = self._config.get("task_type")
         self.late_chunking = self._config.get("late_chunking", False)
         self.output_dimensions = self._config.get("output_dimensions")
         self.truncate_at_max_length = self._config.get("truncate_at_max_length", True)
-        
+
         # Convert string task_type to enum if needed
         if self.task_type and isinstance(self.task_type, str):
             try:
@@ -100,47 +103,47 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
 
     def _clean_text(self, text: str) -> str:
         """Clean and normalize text for embedding.
-        
+
         Based on Microsoft Azure OpenAI best practices but useful for all providers.
         Normalizes spacing, removes unwanted characters, and cleans up punctuation.
-        
+
         Args:
             text: The text to clean and normalize.
-            
+
         Returns:
             The cleaned and normalized text.
         """
         # Normalize spacing - replace multiple spaces with single space
         text = re.sub(r'\s+', ' ', text)
-        
+
         # Remove spaces before punctuation
         text = re.sub(r'\s+([.,])', r'\1', text)
-        
+
         # Remove repeated punctuation (multiple dots)
         text = re.sub(r'\.{2,}', '.', text)
-        
+
         # Replace newlines and carriage returns with spaces
         text = re.sub(r'[\n\r]+', ' ', text)
-        
+
         # Strip to clean up after replacements
         return text.strip()
-    
+
     def _apply_task_optimization(self, texts: List[str]) -> List[str]:
         """Apply task-specific optimization to texts (base implementation).
-        
+
         This default implementation adds task-specific prefixes for providers
         that don't have native task optimization support. Providers with native
         support should override this method to return texts unchanged.
-        
+
         Args:
             texts: List of texts to optimize.
-            
+
         Returns:
             List of optimized texts.
         """
         if not self.task_type or self.task_type == EmbeddingTaskType.DEFAULT:
             return texts
-            
+
         # Default implementation: add task-specific prefix
         prefix_map = {
             EmbeddingTaskType.RETRIEVAL_QUERY: "query: ",
@@ -152,28 +155,28 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
             EmbeddingTaskType.QUESTION_ANSWERING: "question: ",
             EmbeddingTaskType.FACT_VERIFICATION: "verify: "
         }
-        
+
         prefix = prefix_map.get(self.task_type, "")
         if prefix:
             return [prefix + text for text in texts]
         return texts
-    
+
     def _apply_late_chunking(self, texts: List[str], max_chunk_size: int = 512) -> List[str]:
         """Apply late chunking if enabled (base implementation).
-        
+
         This is a simple implementation for providers without native support.
         Providers with sophisticated chunking should override this method.
-        
+
         Args:
             texts: List of texts to chunk.
             max_chunk_size: Maximum size of each chunk in characters.
-            
+
         Returns:
             List of chunked texts.
         """
         if not self.late_chunking:
             return texts
-            
+
         chunked = []
         for text in texts:
             # Simple chunking by sentence boundaries or max length
@@ -183,46 +186,46 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
                 # Split by sentences first
                 sentences = text.split('. ')
                 current_chunk = ""
-                
+
                 for sentence in sentences:
                     sentence = sentence.strip()
                     if not sentence:
                         continue
-                        
+
                     # Add period back if it was removed
                     if not sentence.endswith('.'):
                         sentence += '.'
-                        
+
                     # Check if adding this sentence would exceed max size
                     if current_chunk and len(current_chunk) + len(sentence) + 1 > max_chunk_size:
                         chunked.append(current_chunk.strip())
                         current_chunk = sentence
                     else:
                         current_chunk = (current_chunk + " " + sentence).strip()
-                
+
                 # Add the last chunk
                 if current_chunk:
                     chunked.append(current_chunk.strip())
-                    
+
         return chunked
-    
+
     def _log_unsupported_feature(self, feature: str) -> None:
         """Log when a feature isn't supported by this provider.
-        
+
         Args:
             feature: Name of the unsupported feature.
         """
         # Silent logging - providers can override if they want to log
         pass
-    
+
     def _serialize_config_for_api(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Serialize config values for API calls.
-        
+
         Converts enum values to their string representations for JSON serialization.
-        
+
         Args:
             config: Configuration dictionary that may contain enum values.
-            
+
         Returns:
             Serialized configuration dictionary.
         """
@@ -234,19 +237,19 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
             else:
                 serialized[key] = value
         return serialized
-    
+
     def _filter_unsupported_params(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Filter out parameters not supported by this provider.
-        
+
         Args:
             kwargs: Configuration dictionary with all parameters.
-            
+
         Returns:
             Filtered dictionary with only supported parameters.
         """
         # Define known advanced features
         advanced_features = ["task_type", "late_chunking", "output_dimensions", "truncate_at_max_length"]
-        
+
         # If provider doesn't explicitly support advanced features, remove them
         supported_features = getattr(self.__class__, 'SUPPORTED_FEATURES', [])
         if not supported_features:
@@ -257,32 +260,32 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
             for feature in advanced_features:
                 if feature not in supported_features:
                     kwargs.pop(feature, None)
-        
+
         return kwargs
-    
+
     def _get_api_kwargs(self) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
-        
+
         This is a base implementation that providers can override or use directly.
-        
+
         Returns:
             Filtered and serialized kwargs ready for API calls.
         """
         # Start with a copy of the config
         kwargs = self._config.copy()
-        
+
         # Remove common provider-specific kwargs
         kwargs.pop("model_name", None)
         kwargs.pop("api_key", None)
         kwargs.pop("base_url", None)
         kwargs.pop("organization", None)
-        
+
         # Filter out unsupported advanced features
         kwargs = self._filter_unsupported_params(kwargs)
-        
+
         # Serialize enums to string values
         kwargs = self._serialize_config_for_api(kwargs)
-        
+
         return kwargs
 
     @property
@@ -340,15 +343,3 @@ class EmbeddingModel(TimeoutMixin, SSLMixin, ABC):
             str: "embedding" for embedding providers
         """
         return "embedding"
-
-    def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout and SSL settings.
-
-        Call this method in provider's __post_init__ after setting up
-        API keys and base URLs.
-        """
-        import httpx
-        timeout = self._get_timeout()
-        verify = self._get_ssl_verify()
-        self.client = httpx.Client(timeout=timeout, verify=verify)
-        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)

@@ -6,14 +6,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from httpx import Client, AsyncClient
+
 from esperanto.common_types import Model
 from esperanto.common_types.tts import AudioResponse, Voice
-from esperanto.utils.ssl import SSLMixin
-from esperanto.utils.timeout import TimeoutMixin
+from esperanto.utils.connect import HttpConnectionMixin
 
 
 @dataclass
-class TextToSpeechModel(TimeoutMixin, SSLMixin, ABC):
+class TextToSpeechModel(HttpConnectionMixin, ABC):
     """Base class for text-to-speech models.
 
     Attributes:
@@ -30,6 +31,8 @@ class TextToSpeechModel(TimeoutMixin, SSLMixin, ABC):
     config: Optional[Dict[str, Any]] = None
     timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
+    client: Optional[Client] = None
+    async_client: Optional[AsyncClient] = None
 
     # Common SSML tags supported across providers
     COMMON_SSML_TAGS = [
@@ -152,18 +155,6 @@ class TextToSpeechModel(TimeoutMixin, SSLMixin, ABC):
             str: "text_to_speech" for TTS providers
         """
         return "text_to_speech"
-
-    def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout and SSL settings.
-
-        Call this method in provider's __post_init__ after setting up
-        API keys and base URLs.
-        """
-        import httpx
-        timeout = self._get_timeout()
-        verify = self._get_ssl_verify()
-        self.client = httpx.Client(timeout=timeout, verify=verify)
-        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
 
     def get_supported_tags(self) -> List[str]:
         """Get list of supported SSML tags for this provider.

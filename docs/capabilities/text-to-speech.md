@@ -396,6 +396,7 @@ speaker = AIFactory.create_text_to_speech(
 ## Advanced Topics
 
 - **Timeout Configuration**: [docs/advanced/timeout-configuration.md](../advanced/timeout-configuration.md)
+- **Resource Management**: [docs/advanced/connection-resource-management.md](../advanced/connection-resource-management.md)
 
 ## See Also
 

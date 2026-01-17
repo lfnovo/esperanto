@@ -1,8 +1,12 @@
 """Response types for Esperanto."""
 
+import re
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+# Regex pattern to match <think>...</think> blocks (including multiline)
+_THINK_PATTERN = re.compile(r"<think>(.*?)</think>", re.DOTALL)
 
 
 def to_dict(obj: Any) -> Dict[str, Any]:
@@ -49,6 +53,46 @@ class Message(BaseModel):
     def __getitem__(self, key: str) -> Any:
         """Enable dict-like access for backward compatibility."""
         return getattr(self, key)
+
+    @property
+    def thinking(self) -> Optional[str]:
+        """Extract content inside <think> tags (reasoning trace).
+
+        Returns the concatenated content of all <think>...</think> blocks
+        in the message. Returns None if no thinking tags are present or
+        if all thinking blocks are empty.
+
+        This is useful for models like Qwen3, DeepSeek R1, and others that
+        include chain-of-thought reasoning in their responses.
+        """
+        if not self.content:
+            return None
+        matches = _THINK_PATTERN.findall(self.content)
+        if not matches:
+            return None
+        # Concatenate all thinking blocks, stripping whitespace
+        non_empty = [match.strip() for match in matches if match.strip()]
+        if not non_empty:
+            return None
+        return "\n\n".join(non_empty)
+
+    @property
+    def cleaned_content(self) -> str:
+        """Get content with <think> tags removed (actual response).
+
+        Returns the message content with all <think>...</think> blocks
+        removed. If there are no thinking tags, returns the original content.
+
+        This is useful for getting the actual response from models that
+        include chain-of-thought reasoning in their responses.
+        """
+        if not self.content:
+            return ""
+        # Remove all <think>...</think> blocks and clean up whitespace
+        cleaned = _THINK_PATTERN.sub("", self.content)
+        # Clean up extra whitespace/newlines left behind
+        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+        return cleaned.strip()
 
     @model_validator(mode="before")
     @classmethod
