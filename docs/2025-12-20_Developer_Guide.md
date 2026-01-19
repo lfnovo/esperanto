@@ -72,6 +72,8 @@ Esperanto is a unified interface library for interacting with multiple AI model 
 - `esperanto` - Core library with provider implementations
 - `brio_ext` - BrioDocs-specific extensions (custom rendering, metrics, local model support)
 
+> **Note:** This library handles AI provider interfaces only. Database connections (SurrealDB) and application logic live in the **BrioDocs main application**, which consumes this library as a dependency.
+
 ---
 
 ## Project Structure
