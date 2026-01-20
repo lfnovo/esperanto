@@ -3,9 +3,26 @@
 import json
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional  # Added Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Union,
+)
 
-from esperanto.common_types import Model
+from esperanto.common_types import (
+    ChatCompletion,
+    ChatCompletionChunk,
+    Model,
+    Tool,
+)
+from esperanto.common_types.validation import (
+    validate_tool_calls as _validate_tool_calls,
+)
 from esperanto.providers.llm.openai import OpenAILanguageModel
 
 if TYPE_CHECKING:
@@ -92,16 +109,50 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
 
         return kwargs
 
-    def chat_complete(self, messages, stream=None):
-        """Override to use OpenRouter-specific HTTP format."""
-        from typing import Generator, Union
+    def chat_complete(
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
+    ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
+        """Send a chat completion request using OpenRouter-specific HTTP format.
 
-        from esperanto.common_types import ChatCompletion, ChatCompletionChunk
-        
+        Args:
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+                Note: Tool support depends on the underlying model in OpenRouter.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
+
+        Returns:
+            Either a ChatCompletion or a Generator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
+        """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
-        
+
+        # Resolve tool configuration
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
         # Transform messages for o1 models
         if is_reasoning_model:
             messages = self._transform_messages_for_o1(
@@ -109,32 +160,82 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             )
 
         # Prepare request payload
-        payload = {
+        payload: Dict[str, Any] = {
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
             **self._get_api_kwargs(exclude_stream=True),
         }
+
+        # Add tool-related parameters if configured
+        if resolved_tools:
+            payload["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            payload["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            payload["parallel_tool_calls"] = resolved_parallel
 
         # Make HTTP request using OpenRouter format
         response = self._make_http_request(payload)
 
         if should_stream:
             return (self._normalize_chunk(chunk_data) for chunk_data in self._parse_sse_stream(response))
-        
+
         response_data = response.json()
-        return self._normalize_response(response_data)
+        result = self._normalize_response(response_data)
 
-    async def achat_complete(self, messages, stream=None):
-        """Override to use OpenRouter-specific async HTTP format."""
-        from typing import AsyncGenerator, Union
+        # Validate tool calls if requested
+        if validate_tool_calls and resolved_tools:
+            for choice in result.choices:
+                if choice.message.tool_calls:
+                    _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
-        from esperanto.common_types import ChatCompletion, ChatCompletionChunk
-        
+        return result
+
+    async def achat_complete(
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
+    ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
+        """Send an async chat completion request using OpenRouter-specific HTTP format.
+
+        Args:
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+                Note: Tool support depends on the underlying model in OpenRouter.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
+
+        Returns:
+            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
+        """
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
-        
+
+        # Resolve tool configuration
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
         # Transform messages for o1 models
         if is_reasoning_model:
             messages = self._transform_messages_for_o1(
@@ -142,12 +243,20 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             )
 
         # Prepare request payload
-        payload = {
+        payload: Dict[str, Any] = {
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
             **self._get_api_kwargs(exclude_stream=True),
         }
+
+        # Add tool-related parameters if configured
+        if resolved_tools:
+            payload["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            payload["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            payload["parallel_tool_calls"] = resolved_parallel
 
         # Make async HTTP request using OpenRouter format
         response = await self._make_async_http_request(payload)
@@ -158,9 +267,17 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
                     yield self._normalize_chunk(chunk_data)
 
             return generate()
-        
+
         response_data = response.json()
-        return self._normalize_response(response_data)
+        result = self._normalize_response(response_data)
+
+        # Validate tool calls if requested
+        if validate_tool_calls and resolved_tools:
+            for choice in result.choices:
+                if choice.message.tool_calls:
+                    _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        return result
 
     def _get_default_model(self) -> str:
         """Get the default model name."""

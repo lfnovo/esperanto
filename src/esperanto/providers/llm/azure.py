@@ -21,10 +21,16 @@ from esperanto.common_types import (
     ChatCompletionChunk,
     Choice,
     DeltaMessage,
+    FunctionCall,
     Message,
     Model,
     StreamChoice,
+    Tool,
+    ToolCall,
     Usage,
+)
+from esperanto.common_types.validation import (
+    validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
 
@@ -119,21 +125,71 @@ class AzureLanguageModel(LanguageModel):
         """
         return []
 
+    def _convert_tools_to_openai(
+        self, tools: Optional[List[Tool]]
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Convert Esperanto tools to OpenAI/Azure format.
+
+        Args:
+            tools: List of Esperanto Tool objects.
+
+        Returns:
+            List of tools in OpenAI/Azure API format, or None if no tools provided.
+        """
+        if not tools:
+            return None
+        result = []
+        for tool in tools:
+            tool_dict: Dict[str, Any] = {
+                "type": tool.type,
+                "function": {
+                    "name": tool.function.name,
+                    "description": tool.function.description,
+                    "parameters": tool.function.parameters,
+                },
+            }
+            # Add strict mode if specified
+            if tool.function.strict is not None:
+                tool_dict["function"]["strict"] = tool.function.strict
+            result.append(tool_dict)
+        return result
+
     def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
         """Normalize Azure response to our format."""
-        return ChatCompletion(
-            id=response_data["id"],
-            choices=[
+        choices = []
+        for choice in response_data["choices"]:
+            message_data = choice.get("message", {})
+
+            # Extract tool_calls if present
+            tool_calls = None
+            if "tool_calls" in message_data and message_data["tool_calls"]:
+                tool_calls = [
+                    ToolCall(
+                        id=tc["id"],
+                        type=tc.get("type", "function"),
+                        function=FunctionCall(
+                            name=tc["function"]["name"],
+                            arguments=tc["function"]["arguments"],
+                        ),
+                    )
+                    for tc in message_data["tool_calls"]
+                ]
+
+            choices.append(
                 Choice(
                     index=choice["index"],
                     message=Message(
-                        content=choice["message"]["content"] or "",
-                        role=choice["message"]["role"],
+                        content=message_data.get("content") or "",
+                        role=message_data.get("role", "assistant"),
+                        tool_calls=tool_calls,
                     ),
-                    finish_reason=choice["finish_reason"],
+                    finish_reason=choice.get("finish_reason"),
                 )
-                for choice in response_data["choices"]
-            ],
+            )
+
+        return ChatCompletion(
+            id=response_data["id"],
+            choices=choices,
             created=response_data["created"],
             model=response_data["model"],
             provider=self.provider,
@@ -261,7 +317,7 @@ class AzureLanguageModel(LanguageModel):
         return {k: v for k, v in effective_kwargs.items() if v is not None}
 
     def _chat_complete_streaming(
-        self, messages: List[Dict[str, str]], api_kwargs: Dict[str, Any]
+        self, messages: List[Dict[str, Any]], api_kwargs: Dict[str, Any]
     ) -> Generator[ChatCompletionChunk, None, None]:
         """Handle streaming chat completion."""
         url = self._build_url("chat/completions")
@@ -276,15 +332,58 @@ class AzureLanguageModel(LanguageModel):
                 yield self._normalize_chunk(chunk_data)
 
     def chat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
-        """Send a chat completion request."""
-        call_override_kwargs = {}
+        """Send a chat completion request.
+
+        Args:
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
+
+        Returns:
+            Either a ChatCompletion or a Generator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
+        """
+        call_override_kwargs: Dict[str, Any] = {}
         if stream is not None:
             call_override_kwargs["stream"] = stream
 
+        # Resolve tool configuration
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
         api_kwargs = self._get_api_kwargs(override_kwargs=call_override_kwargs)
         effective_stream_setting = api_kwargs.pop("stream", False)
+
+        # Add tool-related parameters if configured
+        if resolved_tools:
+            api_kwargs["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            api_kwargs["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            api_kwargs["parallel_tool_calls"] = resolved_parallel
 
         if effective_stream_setting:
             # Return streaming generator
@@ -298,10 +397,18 @@ class AzureLanguageModel(LanguageModel):
                 json={"messages": messages, "stream": False, **api_kwargs},
             )
             self._handle_error(response)
-            return self._normalize_response(response.json())
+            result = self._normalize_response(response.json())
+
+            # Validate tool calls if requested
+            if validate_tool_calls and resolved_tools:
+                for choice in result.choices:
+                    if choice.message.tool_calls:
+                        _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+            return result
 
     async def _achat_complete_streaming(
-        self, messages: List[Dict[str, str]], api_kwargs: Dict[str, Any]
+        self, messages: List[Dict[str, Any]], api_kwargs: Dict[str, Any]
     ) -> AsyncGenerator[ChatCompletionChunk, None]:
         """Handle async streaming chat completion."""
         url = self._build_url("chat/completions")
@@ -316,15 +423,58 @@ class AzureLanguageModel(LanguageModel):
                 yield self._normalize_chunk(chunk_data)
 
     async def achat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
-        """Send an async chat completion request."""
-        call_override_kwargs = {}
+        """Send an async chat completion request.
+
+        Args:
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
+
+        Returns:
+            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
+        """
+        call_override_kwargs: Dict[str, Any] = {}
         if stream is not None:
             call_override_kwargs["stream"] = stream
 
+        # Resolve tool configuration
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
         api_kwargs = self._get_api_kwargs(override_kwargs=call_override_kwargs)
         effective_stream_setting = api_kwargs.pop("stream", False)
+
+        # Add tool-related parameters if configured
+        if resolved_tools:
+            api_kwargs["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            api_kwargs["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            api_kwargs["parallel_tool_calls"] = resolved_parallel
 
         if effective_stream_setting:
             # Return async streaming generator
@@ -338,7 +488,15 @@ class AzureLanguageModel(LanguageModel):
                 json={"messages": messages, "stream": False, **api_kwargs},
             )
             self._handle_error(response)
-            return self._normalize_response(response.json())
+            result = self._normalize_response(response.json())
+
+            # Validate tool calls if requested
+            if validate_tool_calls and resolved_tools:
+                for choice in result.choices:
+                    if choice.message.tool_calls:
+                        _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+            return result
 
     def to_langchain(
         self, **kwargs: Any

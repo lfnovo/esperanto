@@ -13,7 +13,7 @@ from typing import (
     Union,
 )
 
-from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model
+from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.utils.logging import logger
 
@@ -238,19 +238,44 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         return _RESPONSE_FORMAT_ERROR in error_str
 
     def chat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request with retry for unsupported response_format.
 
         Args:
-            messages: List of messages in the conversation.
-            stream: Whether to stream the response. If None, uses the instance's streaming setting.
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+                Note: Tool support depends on the specific OpenAI-compatible endpoint.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
 
         Returns:
-            Either a ChatCompletion or a Generator yielding ChatCompletionChunks if streaming.
+            Either a ChatCompletion or a Generator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
         """
         try:
-            return super().chat_complete(messages, stream)
+            return super().chat_complete(
+                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+            )
         except RuntimeError as e:
             # Check if it's a response_format error and we haven't already disabled it
             if self._is_response_format_error(e) and not self._response_format_unsupported:
@@ -260,23 +285,50 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 # Mark this endpoint as not supporting response_format
                 self._response_format_unsupported = True
                 # Retry without response_format
-                return super().chat_complete(messages, stream)
+                return super().chat_complete(
+                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                )
             raise
 
     async def achat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request with retry for unsupported response_format.
 
         Args:
-            messages: List of messages in the conversation.
-            stream: Whether to stream the response. If None, uses the instance's streaming setting.
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+                Note: Tool support depends on the specific OpenAI-compatible endpoint.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
 
         Returns:
-            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks if streaming.
+            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
         """
         try:
-            return await super().achat_complete(messages, stream)
+            return await super().achat_complete(
+                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+            )
         except RuntimeError as e:
             # Check if it's a response_format error and we haven't already disabled it
             if self._is_response_format_error(e) and not self._response_format_unsupported:
@@ -286,7 +338,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 # Mark this endpoint as not supporting response_format
                 self._response_format_unsupported = True
                 # Retry without response_format
-                return await super().achat_complete(messages, stream)
+                return await super().achat_complete(
+                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                )
             raise
 
     def _get_models(self) -> List[Model]:
