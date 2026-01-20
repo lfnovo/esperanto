@@ -3,6 +3,16 @@ Esperanto: A unified interface for language models.
 This module exports all public components of the library.
 """
 
+from esperanto.common_types import (
+    FunctionCall,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
+    find_tool_by_name,
+    validate_tool_call,
+    validate_tool_calls,
+)
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.stt.base import SpeechToTextModel
@@ -128,7 +138,24 @@ provider_classes = [name for name, cls in __provider_classes.items() if cls is n
 # Import factory after defining providers
 from esperanto.factory import AIFactory
 
-__all__ = ["AIFactory", "LanguageModel", "EmbeddingModel", "SpeechToTextModel", "TextToSpeechModel"] + provider_classes
+__all__ = [
+    # Factory
+    "AIFactory",
+    # Base classes
+    "LanguageModel",
+    "EmbeddingModel",
+    "SpeechToTextModel",
+    "TextToSpeechModel",
+    # Tool types
+    "Tool",
+    "ToolFunction",
+    "ToolCall",
+    "FunctionCall",
+    "ToolCallValidationError",
+    "validate_tool_call",
+    "validate_tool_calls",
+    "find_tool_by_name",
+] + provider_classes
 
 # Make provider classes available at module level
 globals().update({k: v for k, v in __provider_classes.items() if v is not None})

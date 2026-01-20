@@ -1,12 +1,70 @@
 """Response types for Esperanto."""
 
 import re
+import warnings
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # Regex pattern to match <think>...</think> blocks (including multiline)
 _THINK_PATTERN = re.compile(r"<think>(.*?)</think>", re.DOTALL)
+
+
+# =============================================================================
+# Tool-related types
+# =============================================================================
+
+
+class FunctionCall(BaseModel):
+    """A function call within a tool call."""
+
+    name: str = Field(description="Name of the function to call")
+    arguments: str = Field(description="JSON-encoded arguments for the function")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ToolCall(BaseModel):
+    """A tool call from the model."""
+
+    id: str = Field(description="Unique identifier for this tool call")
+    type: str = Field(default="function", description="Type of tool call")
+    function: FunctionCall = Field(description="The function call details")
+    index: Optional[int] = Field(
+        default=None, description="Index for streaming tool calls"
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ToolFunction(BaseModel):
+    """Definition of a function that can be called as a tool."""
+
+    name: str = Field(description="Name of the function")
+    description: str = Field(description="Description of what the function does")
+    parameters: Dict[str, Any] = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        description="JSON Schema for function parameters",
+    )
+    strict: Optional[bool] = Field(
+        default=None, description="Enable strict mode (OpenAI-specific)"
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
+class Tool(BaseModel):
+    """A tool definition to send to the model."""
+
+    type: str = Field(default="function", description="Type of tool")
+    function: ToolFunction = Field(description="The function definition")
+
+    model_config = ConfigDict(frozen=True)
+
+
+# =============================================================================
+# Helper functions
+# =============================================================================
 
 
 def to_dict(obj: Any) -> Dict[str, Any]:
@@ -44,9 +102,9 @@ class Message(BaseModel):
     )
     function_call: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Function call details if the message is a function call",
+        description="Deprecated: Use tool_calls instead. Will be removed in v3.0.",
     )
-    tool_calls: Optional[List[Dict[str, Any]]] = Field(
+    tool_calls: Optional[List[ToolCall]] = Field(
         default=None, description="Tool calls if the message contains tool invocations"
     )
 
@@ -96,15 +154,38 @@ class Message(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def convert_mock_content(cls, data: Any) -> Any:
-        """Convert mock objects to strings for content field."""
+    def normalize_message_data(cls, data: Any) -> Any:
+        """Normalize message data including tool_calls and content."""
         if not isinstance(data, dict):
             data = to_dict(data)
+
+        # Convert mock objects to strings for content field
         if "content" in data and data["content"] is not None:
             try:
                 data["content"] = str(data["content"])
             except Exception:
                 pass
+
+        # Convert dict tool_calls to ToolCall objects for backward compatibility
+        if "tool_calls" in data and data["tool_calls"]:
+            normalized = []
+            for tc in data["tool_calls"]:
+                if isinstance(tc, ToolCall):
+                    normalized.append(tc)
+                elif isinstance(tc, dict):
+                    # Handle nested function dict
+                    if "function" in tc and isinstance(tc["function"], dict):
+                        func_data = tc["function"]
+                        tc = {
+                            **tc,
+                            "function": FunctionCall(
+                                name=func_data.get("name", ""),
+                                arguments=func_data.get("arguments", "{}"),
+                            ),
+                        }
+                    normalized.append(ToolCall(**tc))
+            data["tool_calls"] = normalized
+
         return data
 
     model_config = ConfigDict(
