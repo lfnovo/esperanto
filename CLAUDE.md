@@ -8,6 +8,10 @@ Esperanto is a unified interface library for multiple AI model providers. The co
 - `esperanto` - Core library (15+ LLM providers, embeddings, rerankers, TTS, STT)
 - `brio_ext` - BrioDocs extensions (local model support, chat adapters, metrics)
 
+**Scope:** This library handles AI provider interfaces only. Database (SurrealDB) and app logic live in the BrioDocs main application.
+
+**Integration:** BrioDocs includes this repo as a git submodule. Use git tags (e.g., `v2.7.1`) for releases.
+
 ## Critical Guidelines
 
 ### Consistency is Everything

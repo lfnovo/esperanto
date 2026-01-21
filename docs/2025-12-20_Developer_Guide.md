@@ -76,6 +76,38 @@ Esperanto is a unified interface library for interacting with multiple AI model 
 
 ---
 
+## Integration with BrioDocs
+
+BrioDocs includes brio-esperanto as a **git submodule** for CI/CD release automation. This means:
+
+- **BrioDocs pins to specific commits** - The BrioDocs team controls when to pull in new changes
+- **Releases are reproducible** - Same commit = same build every time
+- **No action needed from brio-esperanto developers** - Just keep developing normally
+
+### For BrioDocs Developers
+
+To update brio-esperanto in BrioDocs:
+
+```bash
+cd BrioDocs/external/brio-esperanto
+git pull origin main
+cd ../..
+git add external/brio-esperanto
+git commit -m "Update brio-esperanto to latest"
+git push
+```
+
+### Versioning
+
+Use git tags for releases (e.g., `v2.7.1`) so BrioDocs can pin to specific versions rather than commit hashes:
+
+```bash
+git tag v2.7.1
+git push origin v2.7.1
+```
+
+---
+
 ## Project Structure
 
 ```
