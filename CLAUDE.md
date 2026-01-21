@@ -148,10 +148,43 @@ Factory imports providers dynamically via `_import_provider_class()`:
 All providers convert API responses to Esperanto's common types:
 
 - Language: `ChatCompletion` / `ChatCompletionChunk`
+- Language (tools): `Tool`, `ToolFunction`, `ToolCall`, `FunctionCall`
 - Embedding: `List[List[float]]`
 - Reranker: `RerankResponse`
 - STT: `TranscriptionResponse`
 - TTS: `AudioResponse`
+
+### Tool Calling
+
+Esperanto provides unified tool/function calling across all LLM providers:
+
+```python
+from esperanto import AIFactory
+from esperanto.common_types import Tool, ToolFunction
+
+# Define tools once - works with any provider
+tools = [
+    Tool(
+        type="function",
+        function=ToolFunction(
+            name="get_weather",
+            description="Get weather for a city",
+            parameters={"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}
+        )
+    )
+]
+
+# Use with any provider - identical code
+model = AIFactory.create_language("openai", "gpt-4o")  # or "anthropic", "google", etc.
+response = model.chat_complete(messages, tools=tools)
+
+# Tool calls in response
+if response.choices[0].message.tool_calls:
+    for tc in response.choices[0].message.tool_calls:
+        print(f"{tc.function.name}: {tc.function.arguments}")
+```
+
+See [docs/features/tool-calling.md](docs/features/tool-calling.md) for full documentation.
 
 ### Providers ↔ Utils
 

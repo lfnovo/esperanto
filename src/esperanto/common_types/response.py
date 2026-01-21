@@ -18,8 +18,8 @@ _THINK_PATTERN = re.compile(r"<think>(.*?)</think>", re.DOTALL)
 class FunctionCall(BaseModel):
     """A function call within a tool call."""
 
-    name: str = Field(description="Name of the function to call")
-    arguments: str = Field(description="JSON-encoded arguments for the function")
+    name: str = Field(default="", description="Name of the function to call")
+    arguments: str = Field(default="", description="JSON-encoded arguments for the function")
 
     model_config = ConfigDict(frozen=True)
 
@@ -27,7 +27,7 @@ class FunctionCall(BaseModel):
 class ToolCall(BaseModel):
     """A tool call from the model."""
 
-    id: str = Field(description="Unique identifier for this tool call")
+    id: str = Field(default="", description="Unique identifier for this tool call")
     type: str = Field(default="function", description="Type of tool call")
     function: FunctionCall = Field(description="The function call details")
     index: Optional[int] = Field(

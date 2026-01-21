@@ -141,6 +141,66 @@ class OllamaLanguageModel(LanguageModel):
             result.append(tool_dict)
         return result
 
+    def _convert_messages_for_ollama(
+        self, messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Convert messages to Ollama's expected format.
+
+        Ollama expects tool-related messages in a specific format:
+        - Assistant messages with tool_calls need the tool_calls converted
+        - Tool result messages need proper formatting
+
+        Args:
+            messages: List of messages in OpenAI-style format.
+
+        Returns:
+            List of messages in Ollama format.
+        """
+        converted = []
+        for msg in messages:
+            role = msg.get("role")
+
+            if role == "assistant" and msg.get("tool_calls"):
+                # Convert assistant message with tool_calls
+                tool_calls = []
+                for tc in msg["tool_calls"]:
+                    # Parse arguments from JSON string back to dict for Ollama
+                    func = tc.get("function", {})
+                    args = func.get("arguments", "{}")
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args)
+                        except json.JSONDecodeError:
+                            args = {}
+
+                    tool_calls.append({
+                        "function": {
+                            "name": func.get("name", ""),
+                            "arguments": args,  # Ollama expects dict, not string
+                        }
+                    })
+
+                converted.append({
+                    "role": "assistant",
+                    "content": msg.get("content", ""),
+                    "tool_calls": tool_calls,
+                })
+
+            elif role == "tool":
+                # Convert tool result message
+                # Ollama expects the content as a string (can be JSON string)
+                content = msg.get("content", "")
+                converted.append({
+                    "role": "tool",
+                    "content": content,
+                })
+
+            else:
+                # Pass through other messages as-is
+                converted.append(msg)
+
+        return converted
+
     def _parse_stream(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
         """Parse streaming response from Ollama."""
         for line in response.iter_lines():
@@ -217,10 +277,13 @@ class OllamaLanguageModel(LanguageModel):
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
+        # Convert messages to Ollama format (handles tool-related message conversions)
+        converted_messages = self._convert_messages_for_ollama(messages)
+
         # Prepare request payload
         payload: Dict[str, Any] = {
             "model": self.get_model_name(),
-            "messages": messages,
+            "messages": converted_messages,
             "stream": should_stream,
             **self._get_api_kwargs(),
         }
@@ -299,10 +362,13 @@ class OllamaLanguageModel(LanguageModel):
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
+        # Convert messages to Ollama format (handles tool-related message conversions)
+        converted_messages = self._convert_messages_for_ollama(messages)
+
         # Prepare request payload
         payload: Dict[str, Any] = {
             "model": self.get_model_name(),
-            "messages": messages,
+            "messages": converted_messages,
             "stream": should_stream,
             **self._get_api_kwargs(),
         }
