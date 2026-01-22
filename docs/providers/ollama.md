@@ -111,10 +111,64 @@ model = AIFactory.create_language(
         "num_predict": 1000,                    # Max tokens to generate
         "top_p": 0.9,                           # Nucleus sampling
         "streaming": True,                      # Enable streaming
-        "keep_alive": "5m"                      # Keep model loaded
+        "keep_alive": "5m",                     # Keep model loaded
+        "num_ctx": 32768                        # Context window size (tokens)
     }
 )
 ```
+
+**Context Window (`num_ctx`):**
+
+Esperanto uses a default context window of **128,000 tokens** for Ollama models, which is much larger than Ollama's built-in default of 2,048 tokens. This ensures that large documents and long conversations work out of the box.
+
+You can customize this value if needed:
+
+```python
+# Use a smaller context window for memory efficiency
+model = AIFactory.create_language(
+    "ollama",
+    "llama3.1",
+    config={"num_ctx": 8192}
+)
+
+# Use a larger context window for very long documents
+model = AIFactory.create_language(
+    "ollama",
+    "llama3.1",
+    config={"num_ctx": 131072}  # 128K tokens
+)
+```
+
+> **Note:** Larger context windows require more RAM/VRAM. Models like Llama 3.1 support up to 128K tokens, while some models (e.g., llama3-gradient) can go higher with sufficient hardware (64GB+ RAM/VRAM).
+
+**Keep Alive (`keep_alive`):**
+
+The `keep_alive` parameter controls how long Ollama keeps the model loaded in memory after a request. By default, Esperanto does **not** set this value, leaving it to Ollama's default behavior.
+
+```python
+# Keep model loaded for 10 minutes (faster subsequent calls)
+model = AIFactory.create_language(
+    "ollama",
+    "llama3.1",
+    config={"keep_alive": "10m"}
+)
+
+# Unload immediately after use (free memory)
+model = AIFactory.create_language(
+    "ollama",
+    "llama3.1",
+    config={"keep_alive": "0"}
+)
+
+# Keep loaded indefinitely
+model = AIFactory.create_language(
+    "ollama",
+    "llama3.1",
+    config={"keep_alive": "-1"}
+)
+```
+
+> **Tip:** Use `keep_alive: "0"` when running batch jobs to free memory between requests, or use longer durations like `"30m"` for interactive applications where low latency matters.
 
 **Example - Basic Chat:**
 
@@ -363,6 +417,18 @@ from langchain.chains import ConversationChain
 chain = ConversationChain(llm=langchain_model)
 ```
 
+The `num_ctx` configuration is automatically passed to the LangChain model:
+
+```python
+# Custom context window is preserved in LangChain conversion
+model = AIFactory.create_language(
+    "ollama",
+    "llama3.1",
+    config={"num_ctx": 65536}
+)
+langchain_model = model.to_langchain()  # num_ctx=65536 is passed
+```
+
 ### Performance Optimization
 
 **Keep Model Loaded:**
@@ -416,6 +482,21 @@ Error: Out of memory
 2. Use quantized models (q4_K_M is most memory-efficient)
 3. Close other applications to free RAM
 4. Unload models after use with `keep_alive: "0"`
+5. Reduce context window size with `config={"num_ctx": 8192}`
+
+**Model Ignores Context / Wrong Answers:**
+```
+Issue: Model gives generic answers ignoring provided context
+```
+**Solution:**
+This usually means the context window is too small and your input is being truncated. Esperanto defaults to 128K tokens, but if you're overriding `num_ctx` with a smaller value, increase it:
+```python
+model = AIFactory.create_language(
+    "ollama",
+    "llama3.1",
+    config={"num_ctx": 32768}  # Increase context window
+)
+```
 
 **Slow Performance:**
 **Solution:**

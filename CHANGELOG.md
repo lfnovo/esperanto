@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.16.0] - 2026-01-21
+
+### Added
+
+- **Ollama Context Window Configuration** - Added `num_ctx` support for Ollama provider
+  - Default context window increased to 128,000 tokens (Ollama's default of 2,048 was causing context truncation)
+  - Configurable via `config={"num_ctx": 32768}`
+  - Passed to LangChain's ChatOllama via `to_langchain()`
+
+- **Ollama Keep Alive Configuration** - Added `keep_alive` support for Ollama provider
+  - Controls how long models stay loaded in memory
+  - No default set (doesn't force memory usage on users)
+  - Examples: `"5m"` (5 minutes), `"0"` (unload immediately), `"-1"` (keep indefinitely)
+  - Configurable via `config={"keep_alive": "10m"}`
+
 ## [2.15.0] - 2026-01-16
 
 ### Added

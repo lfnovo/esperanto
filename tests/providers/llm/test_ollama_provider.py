@@ -543,3 +543,78 @@ class TestToolCallValidation:
         )
 
         assert response.choices[0].message.tool_calls is not None
+
+
+def test_ollama_default_num_ctx():
+    """Test that default num_ctx (128000) is applied when not specified."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    api_kwargs = model._get_api_kwargs()
+
+    assert "options" in api_kwargs
+    assert api_kwargs["options"]["num_ctx"] == 128000
+
+
+def test_ollama_custom_num_ctx():
+    """Test that custom num_ctx is passed correctly via config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"num_ctx": 32768})
+    api_kwargs = model._get_api_kwargs()
+
+    assert "options" in api_kwargs
+    assert api_kwargs["options"]["num_ctx"] == 32768
+
+
+def test_ollama_to_langchain_default_num_ctx():
+    """Test that to_langchain uses default num_ctx (128000) when not specified."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    langchain_model = model.to_langchain()
+
+    assert langchain_model.num_ctx == 128000
+
+
+def test_ollama_to_langchain_custom_num_ctx():
+    """Test that to_langchain passes custom num_ctx from config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"num_ctx": 65536})
+    langchain_model = model.to_langchain()
+
+    assert langchain_model.num_ctx == 65536
+
+
+def test_ollama_keep_alive_not_set_by_default():
+    """Test that keep_alive is not set when not specified (no forced memory usage)."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    api_kwargs = model._get_api_kwargs()
+
+    assert "keep_alive" not in api_kwargs
+
+
+def test_ollama_keep_alive_custom():
+    """Test that custom keep_alive is passed correctly via config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"keep_alive": "10m"})
+    api_kwargs = model._get_api_kwargs()
+
+    assert api_kwargs["keep_alive"] == "10m"
+
+
+def test_ollama_keep_alive_zero():
+    """Test that keep_alive can be set to 0 to unload immediately."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"keep_alive": "0"})
+    api_kwargs = model._get_api_kwargs()
+
+    assert api_kwargs["keep_alive"] == "0"
+
+
+def test_ollama_to_langchain_no_keep_alive_by_default():
+    """Test that to_langchain does not set keep_alive when not specified."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    langchain_model = model.to_langchain()
+
+    # LangChain's ChatOllama should not have keep_alive set
+    assert langchain_model.keep_alive is None
+
+
+def test_ollama_to_langchain_custom_keep_alive():
+    """Test that to_langchain passes custom keep_alive from config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"keep_alive": "30m"})
+    langchain_model = model.to_langchain()
+
+    assert langchain_model.keep_alive == "30m"
