@@ -82,6 +82,16 @@ class OllamaLanguageModel(LanguageModel):
                 else:
                     kwargs[key] = value
 
+        # Handle Ollama-specific options from _config (num_ctx for context window)
+        # Default to 128000 tokens if not specified (Ollama's default of 2048 is too small)
+        options["num_ctx"] = self._config.get("num_ctx", 128000)
+
+        # Handle keep_alive (top-level parameter, not in options)
+        # Only set if explicitly provided - don't force memory usage on users
+        keep_alive = self._config.get("keep_alive")
+        if keep_alive is not None:
+            kwargs["keep_alive"] = keep_alive
+
         # Handle JSON format if structured output is requested
         if self.structured:
             if not isinstance(self.structured, dict):
@@ -286,8 +296,14 @@ class OllamaLanguageModel(LanguageModel):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "num_predict": self.max_tokens,
+            "num_ctx": self._config.get("num_ctx", 128000),
             "base_url": self.base_url,
         }
+
+        # Handle keep_alive - only set if explicitly provided
+        keep_alive = self._config.get("keep_alive")
+        if keep_alive is not None:
+            langchain_kwargs["keep_alive"] = keep_alive
 
         # Handle JSON format if structured output is requested
         if self.structured and isinstance(self.structured, dict):
