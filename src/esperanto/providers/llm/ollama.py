@@ -82,6 +82,18 @@ class OllamaLanguageModel(LanguageModel):
                 else:
                     kwargs[key] = value
 
+        # Handle Ollama-specific options from _config (num_ctx for context window)
+        # Default to 128000 tokens if not specified (Ollama's default of 2048 is too small)
+        if hasattr(self, "_config") and self._config and "num_ctx" in self._config:
+            options["num_ctx"] = self._config["num_ctx"]
+        else:
+            options["num_ctx"] = 128000
+
+        # Handle keep_alive (top-level parameter, not in options)
+        # Only set if explicitly provided - don't force memory usage on users
+        if hasattr(self, "_config") and self._config and "keep_alive" in self._config:
+            kwargs["keep_alive"] = self._config["keep_alive"]
+
         # Handle JSON format if structured output is requested
         if self.structured:
             if not isinstance(self.structured, dict):
@@ -281,13 +293,23 @@ class OllamaLanguageModel(LanguageModel):
         if not model_name:
             raise ValueError("Model name is required for Langchain integration.")
 
+        # Get num_ctx from config or use default of 128000
+        num_ctx = 128000
+        if hasattr(self, "_config") and self._config and "num_ctx" in self._config:
+            num_ctx = self._config["num_ctx"]
+
         langchain_kwargs = {
             "model": model_name,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "num_predict": self.max_tokens,
+            "num_ctx": num_ctx,
             "base_url": self.base_url,
         }
+
+        # Handle keep_alive - only set if explicitly provided
+        if hasattr(self, "_config") and self._config and "keep_alive" in self._config:
+            langchain_kwargs["keep_alive"] = self._config["keep_alive"]
 
         # Handle JSON format if structured output is requested
         if self.structured and isinstance(self.structured, dict):
