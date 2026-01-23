@@ -2,13 +2,17 @@
 
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
+    Tool,
+    ToolFunction,
+    ToolCall,
+    ToolCallValidationError,
 )
 from esperanto.providers.llm.azure import AzureLanguageModel
 
@@ -298,7 +302,7 @@ def test_to_langchain_json_mode(MockAzureChatOpenAI, azure_model, mock_env_vars)
 @patch.dict(sys.modules, {"langchain_openai": None})
 def test_to_langchain_import_error(azure_model):
     # Simulate langchain_openai not being installed by patching sys.modules
-    
+
     # Ensure necessary attributes are set on azure_model if __post_init_post_parse__ relies on them
     # However, the import error should be raised before these are deeply checked by LangChain
     azure_model.api_key = "temp_key"
@@ -307,3 +311,208 @@ def test_to_langchain_import_error(azure_model):
 
     with pytest.raises(ImportError, match="LangChain or langchain-openai not installed"):
         azure_model.to_langchain()
+
+
+# =============================================================================
+# Tool Calling Tests
+# =============================================================================
+
+
+@pytest.fixture
+def sample_tools():
+    """Sample tools for testing."""
+    return [
+        Tool(
+            function=ToolFunction(
+                name="get_weather",
+                description="Get the current weather for a location",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "The city name"},
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+                    },
+                    "required": ["location"]
+                }
+            )
+        ),
+        Tool(
+            function=ToolFunction(
+                name="get_time",
+                description="Get the current time for a timezone",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "timezone": {"type": "string", "description": "The timezone"}
+                    }
+                }
+            )
+        )
+    ]
+
+
+@pytest.fixture
+def mock_azure_tool_call_response():
+    """Mock HTTP response for Azure OpenAI chat completions with tool calls."""
+    return {
+        "id": "chatcmpl-tool-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-35-turbo",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_abc123",
+                            "type": "function",
+                            "function": {
+                                "name": "get_weather",
+                                "arguments": '{"location": "San Francisco", "unit": "celsius"}'
+                            }
+                        }
+                    ]
+                },
+                "finish_reason": "tool_calls"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 50,
+            "completion_tokens": 20,
+            "total_tokens": 70
+        }
+    }
+
+
+@pytest.fixture
+def azure_model_with_tool_response(mock_env_vars, mock_azure_tool_call_response):
+    """Create an Azure model with tool call response mocked."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_azure_tool_call_response
+
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_response
+    mock_async_client = MagicMock()
+    mock_async_client.post = AsyncMock(return_value=mock_response)
+
+    with patch('httpx.Client', return_value=mock_client), \
+         patch('httpx.AsyncClient', return_value=mock_async_client):
+        model = AzureLanguageModel(model_name="test-deployment")
+
+    return model
+
+
+class TestToolConversion:
+    """Tests for tool conversion to OpenAI format."""
+
+    def test_convert_single_tool(self, azure_model, sample_tools):
+        """Test converting a single tool to OpenAI format."""
+        result = azure_model._convert_tools_to_openai([sample_tools[0]])
+
+        assert len(result) == 1
+        assert result[0]["type"] == "function"
+        assert result[0]["function"]["name"] == "get_weather"
+        assert result[0]["function"]["description"] == "Get the current weather for a location"
+        assert result[0]["function"]["parameters"]["type"] == "object"
+        assert "location" in result[0]["function"]["parameters"]["properties"]
+
+    def test_convert_multiple_tools(self, azure_model, sample_tools):
+        """Test converting multiple tools to OpenAI format."""
+        result = azure_model._convert_tools_to_openai(sample_tools)
+
+        assert len(result) == 2
+        assert result[0]["function"]["name"] == "get_weather"
+        assert result[1]["function"]["name"] == "get_time"
+
+    def test_convert_none_tools(self, azure_model):
+        """Test converting None returns None."""
+        result = azure_model._convert_tools_to_openai(None)
+        assert result is None
+
+    def test_convert_empty_tools(self, azure_model):
+        """Test converting empty list returns None."""
+        result = azure_model._convert_tools_to_openai([])
+        assert result is None
+
+
+class TestToolCallResponse:
+    """Tests for handling tool call responses."""
+
+    def test_chat_complete_with_tools(self, azure_model_with_tool_response, sample_tools):
+        """Test chat_complete with tools returns tool calls."""
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        response = azure_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools, stream=False
+        )
+
+        # Check payload included tools
+        call_args = azure_model_with_tool_response.client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert "tools" in json_payload
+        assert len(json_payload["tools"]) == 2
+
+        # Check response has tool calls
+        assert len(response.choices) == 1
+        assert response.choices[0].message.tool_calls is not None
+        assert len(response.choices[0].message.tool_calls) == 1
+
+        tool_call = response.choices[0].message.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
+        assert tool_call.id == "call_abc123"
+        assert tool_call.function.name == "get_weather"
+        assert '"location": "San Francisco"' in tool_call.function.arguments
+
+    def test_chat_complete_with_tool_choice(self, azure_model_with_tool_response, sample_tools):
+        """Test chat_complete with tool_choice parameter."""
+        messages = [{"role": "user", "content": "What's the weather?"}]
+
+        azure_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools, tool_choice="required", stream=False
+        )
+
+        call_args = azure_model_with_tool_response.client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert json_payload["tool_choice"] == "required"
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_with_tools(self, azure_model_with_tool_response, sample_tools):
+        """Test async chat_complete with tools returns tool calls."""
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        response = await azure_model_with_tool_response.achat_complete(
+            messages, tools=sample_tools
+        )
+
+        # Check payload included tools
+        call_args = azure_model_with_tool_response.async_client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert "tools" in json_payload
+
+        # Check response has tool calls
+        assert response.choices[0].message.tool_calls is not None
+        tool_call = response.choices[0].message.tool_calls[0]
+        assert tool_call.function.name == "get_weather"
+
+
+class TestToolCallValidation:
+    """Tests for tool call validation."""
+
+    def test_validation_passes_for_valid_tool_call(
+        self, azure_model_with_tool_response, sample_tools
+    ):
+        """Test that validation passes for valid tool calls."""
+        pytest.importorskip("jsonschema")
+
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        # Should not raise
+        response = azure_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools, validate_tool_calls=True, stream=False
+        )
+
+        assert response.choices[0].message.tool_calls is not None

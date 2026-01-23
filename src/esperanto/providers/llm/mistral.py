@@ -23,10 +23,16 @@ from esperanto.common_types import (
     ChatCompletionChunk,
     Choice,
     DeltaMessage,
+    FunctionCall,
     Message,
     Model,
     StreamChoice,
+    Tool,
+    ToolCall,
     Usage,
+)
+from esperanto.common_types.validation import (
+    validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
 
@@ -107,21 +113,68 @@ class MistralLanguageModel(LanguageModel):
                 for m in known_models
             ]
 
+    def _convert_tools_to_openai(
+        self, tools: Optional[List[Tool]]
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Convert Esperanto tools to OpenAI/Mistral format.
+
+        Args:
+            tools: List of Esperanto Tool objects.
+
+        Returns:
+            List of tools in OpenAI/Mistral API format, or None if no tools provided.
+        """
+        if not tools:
+            return None
+        result = []
+        for tool in tools:
+            tool_dict: Dict[str, Any] = {
+                "type": tool.type,
+                "function": {
+                    "name": tool.function.name,
+                    "description": tool.function.description,
+                    "parameters": tool.function.parameters,
+                },
+            }
+            result.append(tool_dict)
+        return result
+
     def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
         """Normalize Mistral response to our format."""
-        return ChatCompletion(
-            id=response_data["id"],
-            choices=[
+        choices = []
+        for choice in response_data["choices"]:
+            message_data = choice.get("message", {})
+
+            # Extract tool_calls if present
+            tool_calls = None
+            if "tool_calls" in message_data and message_data["tool_calls"]:
+                tool_calls = [
+                    ToolCall(
+                        id=tc["id"],
+                        type=tc.get("type", "function"),
+                        function=FunctionCall(
+                            name=tc["function"]["name"],
+                            arguments=tc["function"]["arguments"],
+                        ),
+                    )
+                    for tc in message_data["tool_calls"]
+                ]
+
+            choices.append(
                 Choice(
                     index=choice["index"],
                     message=Message(
-                        content=choice["message"]["content"] or "",
-                        role=choice["message"]["role"],
+                        content=message_data.get("content") or "",
+                        role=message_data.get("role", "assistant"),
+                        tool_calls=tool_calls,
                     ),
-                    finish_reason=choice["finish_reason"],
+                    finish_reason=choice.get("finish_reason"),
                 )
-                for choice in response_data["choices"]
-            ],
+            )
+
+        return ChatCompletion(
+            id=response_data["id"],
+            choices=choices,
             created=response_data["created"],
             model=response_data["model"],
             provider=self.provider,
@@ -188,40 +241,83 @@ class MistralLanguageModel(LanguageModel):
     def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
         """Get kwargs for Mistral API calls."""
         kwargs = {}
-        config = self.get_completion_kwargs() 
-        
+        config = self.get_completion_kwargs()
+
         supported_params = ["temperature", "top_p", "max_tokens", "safe_prompt", "random_seed"]
 
         for key, value in config.items():
             if key in supported_params and value is not None:
                 kwargs[key] = value
-        
+
         # Handle streaming parameter
         if exclude_stream:
             kwargs.pop("streaming", None)
         elif "streaming" in config:
             kwargs["stream"] = config["streaming"]
-        
+
         if self.structured and isinstance(self.structured, dict):
             if self.structured.get("type") == "json_object" or self.structured.get("type") == "json":
-                 kwargs["response_format"] = {"type": "json_object"}
+                kwargs["response_format"] = {"type": "json_object"}
 
         return kwargs
 
 
     def chat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
-        """Send a chat completion request."""
+        """Send a chat completion request.
+
+        Args:
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
+
+        Returns:
+            Either a ChatCompletion or a Generator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
+        """
         should_stream = stream if stream is not None else self.streaming
-        
+
+        # Resolve tool configuration
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
         # Prepare request payload
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.get_model_name(),
             "messages": messages,
             "stream": should_stream,
             **self._get_api_kwargs(exclude_stream=True),
         }
+
+        # Add tool-related parameters if configured
+        if resolved_tools:
+            payload["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            payload["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            payload["parallel_tool_calls"] = resolved_parallel
 
         # Make HTTP request
         response = self.client.post(
@@ -233,23 +329,74 @@ class MistralLanguageModel(LanguageModel):
 
         if should_stream:
             return (self._normalize_chunk(chunk_data) for chunk_data in self._parse_sse_stream(response))
-        
+
         response_data = response.json()
-        return self._normalize_response(response_data)
+        result = self._normalize_response(response_data)
+
+        # Validate tool calls if requested
+        if validate_tool_calls and resolved_tools:
+            for choice in result.choices:
+                if choice.message.tool_calls:
+                    _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        return result
 
     async def achat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
-        """Send an async chat completion request."""
+        """Send an async chat completion request.
+
+        Args:
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
+
+        Returns:
+            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
+        """
         should_stream = stream if stream is not None else self.streaming
-        
+
+        # Resolve tool configuration
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
         # Prepare request payload
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.get_model_name(),
             "messages": messages,
             "stream": should_stream,
             **self._get_api_kwargs(exclude_stream=True),
         }
+
+        # Add tool-related parameters if configured
+        if resolved_tools:
+            payload["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            payload["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            payload["parallel_tool_calls"] = resolved_parallel
 
         # Make async HTTP request
         response = await self.async_client.post(
@@ -265,9 +412,17 @@ class MistralLanguageModel(LanguageModel):
                     yield self._normalize_chunk(chunk_data)
 
             return generate()
-        
+
         response_data = response.json()
-        return self._normalize_response(response_data)
+        result = self._normalize_response(response_data)
+
+        # Validate tool calls if requested
+        if validate_tool_calls and resolved_tools:
+            for choice in result.choices:
+                if choice.message.tool_calls:
+                    _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        return result
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
