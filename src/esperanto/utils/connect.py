@@ -49,6 +49,24 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
         self.client = httpx.Client(timeout=timeout, verify=verify, proxy=proxy)
         self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify, proxy=proxy)
 
+    def _create_langchain_http_clients(self) -> tuple[httpx.Client, httpx.AsyncClient]:
+        """Create new HTTP clients for LangChain integration.
+
+        Creates fresh httpx clients with the same configuration (timeout, SSL, proxy)
+        as the provider's clients. This ensures LangChain has its own clients that
+        won't be closed when the Esperanto model is garbage collected.
+
+        Returns:
+            Tuple of (sync_client, async_client) for use with LangChain.
+        """
+        timeout = self._get_timeout()
+        verify = self._get_ssl_verify()
+        proxy = self._get_proxy()
+        return (
+            httpx.Client(timeout=timeout, verify=verify, proxy=proxy),
+            httpx.AsyncClient(timeout=timeout, verify=verify, proxy=proxy),
+        )
+
     def close(self):
         """Explicitly close HTTP clients."""
         try:
