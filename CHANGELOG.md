@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.0] - 2026-01-23
+
+### Added
+
+- **Unified Tool Calling** - Added tool/function calling support across all LLM providers (#67)
+  - Define tools once using `Tool` and `ToolFunction` types, use with any provider
+  - Consistent interface: `chat_complete(messages, tools=tools)`
+  - Support for `tool_choice` parameter: `"auto"`, `"required"`, `"none"`, or specific tool
+  - Support for `parallel_tool_calls` parameter
+  - Multi-turn conversations with tool results (`role="tool"` messages)
+  - Tool call validation with `validate_tool_calls=True` parameter
+  - New types: `Tool`, `ToolFunction`, `ToolCall`, `FunctionCall`, `ToolCallValidationError`
+  - Validation utilities: `validate_tool_call()`, `validate_tool_calls()`, `find_tool_by_name()`
+  - Tested providers: OpenAI, Anthropic, Google, Groq, Mistral, DeepSeek, xAI, OpenRouter, Azure, Ollama
+  - Full documentation at `docs/features/tool-calling.md`
+  - Examples at `examples/tool_calling/`
+
+- **Real Integration Tests for Tool Calling** - Added tests that call actual APIs (#71)
+  - Validates tool calling works correctly across 10 providers
+  - Tests both basic tool calls and multi-turn conversations
+  - Perplexity skipped (doesn't support tool calling)
+
+### Fixed
+
+- **Streaming Validation Warning** - Added warning when `validate_tool_calls=True` is used with streaming (#71)
+  - Tool call validation requires the complete response
+  - Now emits `UserWarning` instead of silently ignoring the parameter
+  - Affects all providers consistently
+
+### Changed
+
+- Moved mocked tool calling tests from `tests/integration/` to `tests/unit/`
+
 ## [2.16.0] - 2026-01-21
 
 ### Added
