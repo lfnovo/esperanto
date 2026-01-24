@@ -543,15 +543,15 @@ class AzureLanguageModel(LanguageModel):
             "model_kwargs": model_kwargs,
         }
 
-        # Pass SSL-configured httpx clients to LangChain
-        # This ensures SSL verification settings are respected
-        # Only pass if they are real httpx clients (not mocks from tests)
+        # Create new HTTP clients for LangChain with same SSL/timeout/proxy config
+        # We create fresh clients instead of sharing ours because when this Esperanto
+        # model is garbage collected, __del__ closes our clients - which would break
+        # LangChain if it was sharing them. Fresh clients give LangChain ownership.
         try:
-            if hasattr(self, "client") and isinstance(self.client, httpx.Client):
-                langchain_kwargs["http_client"] = self.client
-            if hasattr(self, "async_client") and isinstance(self.async_client, httpx.AsyncClient):
-                langchain_kwargs["http_async_client"] = self.async_client
-        except TypeError:
+            sync_client, async_client = self._create_langchain_http_clients()
+            langchain_kwargs["http_client"] = sync_client
+            langchain_kwargs["http_async_client"] = async_client
+        except (TypeError, AttributeError):
             # httpx types might be mocked in tests, skip passing clients
             pass
 
