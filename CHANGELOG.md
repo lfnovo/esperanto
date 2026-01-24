@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.1] - 2026-01-24
+
+### Fixed
+
+- **Config Dict API Key Not Unpacked** - Fixed providers ignoring `api_key` passed via config dict (#68)
+  - Affected providers: OpenRouter, DeepSeek, xAI (LLM), Groq (STT)
+  - These providers inherit from OpenAI-compatible parent classes and were checking for `api_key` before the config dict was unpacked
+  - Now correctly extracts `api_key` and `base_url` from config dict before setting provider defaults
+  - Example that now works:
+    ```python
+    model = AIFactory.create_language(
+        "openrouter",
+        "anthropic/claude-3.5-sonnet",
+        config={"api_key": "sk-or-v1-xxxxx"}
+    )
+    ```
+
 ## [2.17.0] - 2026-01-23
 
 ### Added

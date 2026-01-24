@@ -14,15 +14,22 @@ class GroqSpeechToTextModel(OpenAISpeechToTextModel):
 
     def __post_init__(self):
         """Initialize HTTP clients with Groq configuration."""
-        # Set Groq-specific API key and base URL before calling parent
+        # Extract api_key and base_url from config dict first (before parent sets OpenAI defaults)
+        if hasattr(self, "config") and self.config:
+            if "api_key" in self.config:
+                self.api_key = self.config["api_key"]
+            if "base_url" in self.config:
+                self.base_url = self.config["base_url"]
+
+        # Set Groq-specific API key and base URL
         self.api_key = self.api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("Groq API key not found")
-        
+
         # Set Groq's OpenAI-compatible base URL
         self.base_url = self.base_url or "https://api.groq.com/openai/v1"
-        
-        # Call parent's post_init which will initialize HTTP clients
+
+        # Call parent's post_init (won't overwrite since values are already set)
         super().__post_init__()
 
     def _get_default_model(self) -> str:
