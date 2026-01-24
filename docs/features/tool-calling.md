@@ -419,6 +419,8 @@ for chunk in model.chat_complete(messages, tools=tools, stream=True):
 
 **Note**: When streaming, tool calls arrive incrementally. You'll need to accumulate the chunks to get complete tool call data. The `index` field on tool calls helps track which chunks belong to which tool call.
 
+**Important**: The `validate_tool_calls` parameter is **not supported with streaming**. Tool call validation requires the complete response to validate arguments against the tool schema. If you pass `validate_tool_calls=True` with `stream=True`, a warning will be emitted and validation will be skipped. To validate tool calls when streaming, collect all chunks first, then use the manual validation utilities.
+
 ## Provider Support
 
 | Provider | Tools | tool_choice | Streaming | Parallel Calls |

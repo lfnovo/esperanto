@@ -146,6 +146,31 @@ class LanguageModel(HttpConnectionMixin, ABC):
             return parallel_tool_calls
         return self.parallel_tool_calls
 
+    def _warn_if_validate_with_streaming(
+        self,
+        validate_tool_calls: bool,
+        stream: Optional[bool],
+    ) -> None:
+        """Emit a warning if validate_tool_calls is used with streaming.
+
+        Tool call validation requires the complete response to validate arguments
+        against the tool schema. With streaming, we receive partial chunks and
+        cannot validate until all chunks are collected. This method warns users
+        that their validate_tool_calls flag will be ignored.
+
+        Args:
+            validate_tool_calls: Whether validation was requested.
+            stream: The stream parameter passed to chat_complete.
+        """
+        should_stream = stream if stream is not None else self.streaming
+        if validate_tool_calls and should_stream:
+            warnings.warn(
+                "validate_tool_calls=True is ignored when streaming is enabled. "
+                "Tool call validation requires the complete response.",
+                UserWarning,
+                stacklevel=3,
+            )
+
     @abstractmethod
     def chat_complete(
         self,

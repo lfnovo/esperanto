@@ -365,6 +365,9 @@ class AzureLanguageModel(LanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        # Warn if validate_tool_calls is used with streaming
+        self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+
         call_override_kwargs: Dict[str, Any] = {}
         if stream is not None:
             call_override_kwargs["stream"] = stream
@@ -456,6 +459,9 @@ class AzureLanguageModel(LanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        # Warn if validate_tool_calls is used with streaming
+        self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+
         call_override_kwargs: Dict[str, Any] = {}
         if stream is not None:
             call_override_kwargs["stream"] = stream

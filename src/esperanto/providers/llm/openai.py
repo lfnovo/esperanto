@@ -323,6 +323,9 @@ class OpenAILanguageModel(LanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        # Warn if validate_tool_calls is used with streaming
+        self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
@@ -413,6 +416,9 @@ class OpenAILanguageModel(LanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        # Warn if validate_tool_calls is used with streaming
+        self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
