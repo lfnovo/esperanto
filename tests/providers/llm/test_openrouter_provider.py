@@ -39,6 +39,34 @@ def test_custom_base_url():
     assert model.base_url == "https://custom.openrouter.ai/v1"
 
 
+def test_initialization_with_api_key_in_config():
+    """Test that api_key can be passed via config dict (GitHub issue #68)."""
+    model = OpenRouterLanguageModel(config={"api_key": "config-test-key"})
+    assert model.api_key == "config-test-key"
+    assert model.base_url == "https://openrouter.ai/api/v1"
+
+
+def test_initialization_with_base_url_in_config():
+    """Test that base_url can be passed via config dict."""
+    model = OpenRouterLanguageModel(
+        api_key="test-key",
+        config={"base_url": "https://custom.openrouter.ai/v1"}
+    )
+    assert model.base_url == "https://custom.openrouter.ai/v1"
+
+
+def test_initialization_with_api_key_and_base_url_in_config():
+    """Test that both api_key and base_url can be passed via config dict."""
+    model = OpenRouterLanguageModel(
+        config={
+            "api_key": "config-test-key",
+            "base_url": "https://custom.openrouter.ai/v1"
+        }
+    )
+    assert model.api_key == "config-test-key"
+    assert model.base_url == "https://custom.openrouter.ai/v1"
+
+
 # =============================================================================
 # Tool Calling Tests
 # =============================================================================
