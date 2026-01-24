@@ -2,13 +2,14 @@
 
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional  # Added Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from esperanto.common_types import Model
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
+    from langchain_xai import ChatXAI
     from langchain_openai import ChatOpenAI
 
 
@@ -82,36 +83,63 @@ class XAILanguageModel(OpenAILanguageModel):
         """Get the provider name."""
         return "xai"
 
-    def to_langchain(self) -> "ChatOpenAI":
+    def to_langchain(self) -> Union["ChatXAI", "ChatOpenAI"]:
         """Convert to a LangChain chat model.
 
-        Raises:
-            ImportError: If langchain_openai is not installed.
-        """
-        try:
-            from langchain_openai import ChatOpenAI
-        except ImportError as e:
-            raise ImportError(
-                "Langchain integration requires langchain_openai. "
-                "Install with: uv add langchain_openai or pip install langchain_openai"
-            ) from e
+        Prefers the dedicated langchain-xai package if installed,
+        falls back to langchain-openai with a deprecation warning.
 
-        langchain_kwargs = {
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "streaming": self.streaming,
-            "api_key": self.api_key,  # Pass raw string
-            "base_url": self.base_url,
-            "organization": self.organization,
-            "model": self.get_model_name(),
-            "model_kwargs": {},  # XAI doesn't support response_format
-        }
+        Raises:
+            ImportError: If neither langchain_xai nor langchain_openai is installed.
+        """
+        import warnings
 
         # Ensure model name is set
         model_name = self.get_model_name()
         if not model_name:
             raise ValueError("Model name is required for Langchain integration.")
-        langchain_kwargs["model"] = model_name  # Update model name in kwargs
 
-        return ChatOpenAI(**self._clean_config(langchain_kwargs))
+        # Try dedicated xAI package first
+        try:
+            from langchain_xai import ChatXAI
+
+            langchain_kwargs = {
+                "model": model_name,
+                "temperature": self.temperature,
+                "max_tokens": self.max_tokens,
+                "xai_api_key": self.api_key,
+            }
+            return ChatXAI(**self._clean_config(langchain_kwargs))
+
+        except ImportError:
+            pass
+
+        # Fall back to langchain-openai with deprecation warning
+        try:
+            from langchain_openai import ChatOpenAI
+
+            warnings.warn(
+                "Using langchain-openai for xAI is deprecated and will be removed in Esperanto 3.0. "
+                "Install langchain-xai for better support: pip install langchain-xai",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            langchain_kwargs = {
+                "model": model_name,
+                "temperature": self.temperature,
+                "max_tokens": self.max_tokens,
+                "top_p": self.top_p,
+                "streaming": self.streaming,
+                "api_key": self.api_key,
+                "base_url": self.base_url,
+                "organization": self.organization,
+                "model_kwargs": {},
+            }
+            return ChatOpenAI(**self._clean_config(langchain_kwargs))
+
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain-xai (recommended) or langchain-openai. "
+                "Install with: pip install langchain-xai"
+            ) from e

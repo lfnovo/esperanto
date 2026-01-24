@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.3] - 2026-01-24
+
+### Changed
+
+- **Use Dedicated LangChain Packages for xAI and Perplexity** - Updated `to_langchain()` to prefer dedicated packages
+  - xAI: Now uses `langchain-xai` (`ChatXAI`) instead of `langchain-openai`
+  - Perplexity: Now uses `langchain-perplexity` (`ChatPerplexity`) instead of `langchain-openai`
+  - Falls back to `langchain-openai` with deprecation warning for backward compatibility
+  - Fallback will be removed in Esperanto 3.0
+
 ## [2.17.2] - 2026-01-24
 
 ### Fixed

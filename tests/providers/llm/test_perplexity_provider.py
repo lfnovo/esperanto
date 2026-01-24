@@ -4,7 +4,6 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from langchain_openai import ChatOpenAI
 
 from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 from esperanto.common_types import (
@@ -180,29 +179,41 @@ def test_perplexity_call_with_extra_params(perplexity_provider):
 
 def test_perplexity_to_langchain(perplexity_provider):
     """Test conversion to LangChain model."""
+    from unittest.mock import MagicMock
+
     perplexity_provider.temperature = 0.7
-    perplexity_provider.max_tokens = 100
     perplexity_provider.search_domain_filter = ["test.dev"]
     perplexity_provider.return_related_questions = True
 
-    langchain_model = perplexity_provider.to_langchain()
+    # Mock the langchain_perplexity import
+    mock_chat_perplexity = MagicMock()
+    with patch.dict("sys.modules", {"langchain_perplexity": MagicMock(ChatPerplexity=mock_chat_perplexity)}):
+        perplexity_provider.to_langchain()
 
-    assert isinstance(langchain_model, ChatOpenAI)
-    assert langchain_model.model_name == perplexity_provider.get_model_name()
-    # Skip API key and base_url checks since they may be private attributes in LangChain
-    assert langchain_model.temperature == 0.7
-    assert langchain_model.max_tokens == 100
-    assert langchain_model.model_kwargs["search_domain_filter"] == ["test.dev"]
-    assert langchain_model.model_kwargs["return_related_questions"] is True
-    assert "return_images" not in langchain_model.model_kwargs  # Not set
+        # Check that ChatPerplexity was called with correct params
+        mock_chat_perplexity.assert_called_once()
+        call_kwargs = mock_chat_perplexity.call_args[1]
+        assert call_kwargs["model"] == perplexity_provider.get_model_name()
+        assert call_kwargs["temperature"] == 0.7
+        assert call_kwargs["pplx_api_key"] == "test_api_key"
+        assert call_kwargs["extra_body"]["search_domain_filter"] == ["test.dev"]
+        assert call_kwargs["extra_body"]["return_related_questions"] is True
+        assert "return_images" not in call_kwargs.get("extra_body", {})
 
 
 def test_perplexity_to_langchain_structured(perplexity_provider):
-    """Test conversion to LangChain model with structured output."""
-    perplexity_provider.structured = {"type": "json_object"}
-    langchain_model = perplexity_provider.to_langchain()
+    """Test conversion to LangChain model with structured output (no special handling needed)."""
+    from unittest.mock import MagicMock
 
-    assert langchain_model.model_kwargs["response_format"] == {"type": "text"}
+    perplexity_provider.structured = {"type": "json_object"}
+
+    # Mock the langchain_perplexity import
+    mock_chat_perplexity = MagicMock()
+    with patch.dict("sys.modules", {"langchain_perplexity": MagicMock(ChatPerplexity=mock_chat_perplexity)}):
+        perplexity_provider.to_langchain()
+
+        # ChatPerplexity handles structured output internally, no response_format needed
+        mock_chat_perplexity.assert_called_once()
 
 
 def test_perplexity_models_property(perplexity_provider):

@@ -37,6 +37,7 @@ from esperanto.providers.llm.base import LanguageModel
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
+    from langchain_perplexity import ChatPerplexity
     from langchain_openai import ChatOpenAI
 
 
@@ -489,66 +490,106 @@ class PerplexityLanguageModel(LanguageModel):
         """Get the provider name."""
         return "perplexity"
 
-    def to_langchain(self) -> "ChatOpenAI":
+    def to_langchain(self) -> Union["ChatPerplexity", "ChatOpenAI"]:
         """Convert to a LangChain chat model.
 
+        Prefers the dedicated langchain-perplexity package if installed,
+        falls back to langchain-openai with a deprecation warning.
+
         Raises:
-            ImportError: If langchain_openai is not installed.
+            ImportError: If neither langchain_perplexity nor langchain_openai is installed.
         """
-        try:
-            from langchain_openai import ChatOpenAI
-        except ImportError as e:
-            raise ImportError(
-                "Langchain integration requires langchain_openai. "
-                "Install with: uv add langchain_openai or pip install langchain_openai"
-            ) from e
-
-        model_kwargs: Dict[str, Any] = {}
-        if self.structured and isinstance(self.structured, dict):
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
-                model_kwargs["response_format"] = {"type": "text"}
-
-        # Add Perplexity-specific parameters to model_kwargs
-        if self.search_domain_filter is not None:
-            model_kwargs["search_domain_filter"] = self.search_domain_filter
-        if self.return_images is not None:
-            model_kwargs["return_images"] = self.return_images
-        if self.return_related_questions is not None:
-            model_kwargs["return_related_questions"] = self.return_related_questions
-        if self.search_recency_filter is not None:
-            model_kwargs["search_recency_filter"] = self.search_recency_filter
-        if self.web_search_options is not None:
-            model_kwargs["web_search_options"] = self.web_search_options
-
-        langchain_kwargs = {
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "streaming": self.streaming,
-            "api_key": self.api_key,  # Pass raw string
-            "base_url": self.base_url,
-            "organization": self.organization,
-            "model": self.get_model_name(),
-            "model_kwargs": model_kwargs,
-        }
-
-        # Create new HTTP clients for LangChain with same SSL/timeout/proxy config
-        # We create fresh clients instead of sharing ours because when this Esperanto
-        # model is garbage collected, __del__ closes our clients - which would break
-        # LangChain if it was sharing them. Fresh clients give LangChain ownership.
-        try:
-            sync_client, async_client = self._create_langchain_http_clients()
-            langchain_kwargs["http_client"] = sync_client
-            langchain_kwargs["http_async_client"] = async_client
-        except (TypeError, AttributeError):
-            # httpx types might be mocked in tests, skip passing clients
-            pass
+        import warnings
 
         # Ensure model name is set
         model_name = self.get_model_name()
         if not model_name:
             raise ValueError("Model name is required for Langchain integration.")
-        langchain_kwargs["model"] = model_name  # Update model name in kwargs
 
-        return ChatOpenAI(**self._clean_config(langchain_kwargs))
+        # Try dedicated Perplexity package first
+        try:
+            from langchain_perplexity import ChatPerplexity
+
+            langchain_kwargs = {
+                "model": model_name,
+                "temperature": self.temperature,
+                "pplx_api_key": self.api_key,
+            }
+
+            # Add Perplexity-specific parameters via extra_body
+            extra_body: Dict[str, Any] = {}
+            if self.search_domain_filter is not None:
+                extra_body["search_domain_filter"] = self.search_domain_filter
+            if self.return_images is not None:
+                extra_body["return_images"] = self.return_images
+            if self.return_related_questions is not None:
+                extra_body["return_related_questions"] = self.return_related_questions
+            if self.search_recency_filter is not None:
+                extra_body["search_recency_filter"] = self.search_recency_filter
+            if self.web_search_options is not None:
+                extra_body["web_search_options"] = self.web_search_options
+
+            if extra_body:
+                langchain_kwargs["extra_body"] = extra_body
+
+            return ChatPerplexity(**self._clean_config(langchain_kwargs))
+
+        except ImportError:
+            pass
+
+        # Fall back to langchain-openai with deprecation warning
+        try:
+            from langchain_openai import ChatOpenAI
+
+            warnings.warn(
+                "Using langchain-openai for Perplexity is deprecated and will be removed in Esperanto 3.0. "
+                "Install langchain-perplexity for better support: pip install langchain-perplexity",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            model_kwargs: Dict[str, Any] = {}
+            if self.structured and isinstance(self.structured, dict):
+                structured_type = self.structured.get("type")
+                if structured_type in ["json", "json_object"]:
+                    model_kwargs["response_format"] = {"type": "text"}
+
+            # Add Perplexity-specific parameters to model_kwargs
+            if self.search_domain_filter is not None:
+                model_kwargs["search_domain_filter"] = self.search_domain_filter
+            if self.return_images is not None:
+                model_kwargs["return_images"] = self.return_images
+            if self.return_related_questions is not None:
+                model_kwargs["return_related_questions"] = self.return_related_questions
+            if self.search_recency_filter is not None:
+                model_kwargs["search_recency_filter"] = self.search_recency_filter
+            if self.web_search_options is not None:
+                model_kwargs["web_search_options"] = self.web_search_options
+
+            langchain_kwargs = {
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "streaming": self.streaming,
+                "api_key": self.api_key,
+                "base_url": self.base_url,
+                "organization": self.organization,
+                "model": model_name,
+                "model_kwargs": model_kwargs,
+            }
+
+            # Create new HTTP clients for LangChain with same SSL/timeout/proxy config
+            try:
+                sync_client, async_client = self._create_langchain_http_clients()
+                langchain_kwargs["http_client"] = sync_client
+                langchain_kwargs["http_async_client"] = async_client
+            except (TypeError, AttributeError):
+                pass
+
+            return ChatOpenAI(**self._clean_config(langchain_kwargs))
+
+        except ImportError as e:
+            raise ImportError(
+                "Langchain integration requires langchain-perplexity (recommended) or langchain-openai. "
+                "Install with: pip install langchain-perplexity"
+            ) from e
