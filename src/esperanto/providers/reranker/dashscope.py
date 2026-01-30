@@ -309,11 +309,3 @@ class DashScopeRerankerModel(RerankerModel):
 
         return LangChainDashScopeReranker(self)
 
-    def __del__(self):
-        """Clean up HTTP clients on destruction."""
-        try:
-            if not self.client.is_closed:
-                self.client.close()
-        except Exception:
-            pass
-
