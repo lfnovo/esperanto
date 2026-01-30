@@ -5,7 +5,10 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from esperanto.common_types import ChatCompletion, ChatCompletionChunk
+from esperanto.common_types import (
+    ChatCompletion, ChatCompletionChunk,
+    Tool, ToolFunction, ToolCall, ToolCallValidationError
+)
 from esperanto.providers.llm.ollama import OllamaLanguageModel
 
 
@@ -339,3 +342,279 @@ def test_ollama_model_parameters():
     assert model.top_p == 0.9
     assert model.max_tokens == 100
     assert model.streaming is True
+
+
+# =============================================================================
+# Tool Calling Tests
+# =============================================================================
+
+
+@pytest.fixture
+def sample_tools():
+    """Sample tools for testing."""
+    return [
+        Tool(
+            function=ToolFunction(
+                name="get_weather",
+                description="Get the current weather for a location",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "The city name"},
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+                    },
+                    "required": ["location"]
+                }
+            )
+        ),
+        Tool(
+            function=ToolFunction(
+                name="get_time",
+                description="Get the current time for a timezone",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "timezone": {"type": "string", "description": "The timezone"}
+                    }
+                }
+            )
+        )
+    ]
+
+
+@pytest.fixture
+def mock_ollama_tool_call_response():
+    """Mock HTTP response for Ollama chat completions with tool calls."""
+    return {
+        "model": "llama3.2",
+        "created_at": "2024-01-01T00:00:00Z",
+        "message": {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_abc123",
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": {"location": "San Francisco", "unit": "celsius"}
+                    }
+                }
+            ]
+        },
+        "done": True,
+        "done_reason": "tool_call"
+    }
+
+
+@pytest.fixture
+def ollama_model_with_tool_response(mock_ollama_tool_call_response):
+    """Create an Ollama model with tool call response mocked."""
+    model = OllamaLanguageModel(model_name="llama3.2")
+
+    mock_client = Mock()
+    mock_async_client = AsyncMock()
+
+    def make_response(status_code, json_data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = json_data
+        return response
+
+    mock_client.post.return_value = make_response(200, mock_ollama_tool_call_response)
+    mock_async_client.post.return_value = make_response(200, mock_ollama_tool_call_response)
+
+    model.client = mock_client
+    model.async_client = mock_async_client
+    return model
+
+
+class TestToolConversion:
+    """Tests for tool conversion to Ollama format."""
+
+    def test_convert_single_tool(self, sample_tools):
+        """Test converting a single tool to Ollama format."""
+        model = OllamaLanguageModel(model_name="llama3.2")
+        result = model._convert_tools_to_ollama([sample_tools[0]])
+
+        assert len(result) == 1
+        assert result[0]["type"] == "function"
+        assert result[0]["function"]["name"] == "get_weather"
+        assert result[0]["function"]["description"] == "Get the current weather for a location"
+        assert result[0]["function"]["parameters"]["type"] == "object"
+        assert "location" in result[0]["function"]["parameters"]["properties"]
+
+    def test_convert_multiple_tools(self, sample_tools):
+        """Test converting multiple tools to Ollama format."""
+        model = OllamaLanguageModel(model_name="llama3.2")
+        result = model._convert_tools_to_ollama(sample_tools)
+
+        assert len(result) == 2
+        assert result[0]["function"]["name"] == "get_weather"
+        assert result[1]["function"]["name"] == "get_time"
+
+    def test_convert_none_tools(self):
+        """Test converting None returns None."""
+        model = OllamaLanguageModel(model_name="llama3.2")
+        result = model._convert_tools_to_ollama(None)
+        assert result is None
+
+    def test_convert_empty_tools(self):
+        """Test converting empty list returns None."""
+        model = OllamaLanguageModel(model_name="llama3.2")
+        result = model._convert_tools_to_ollama([])
+        assert result is None
+
+
+class TestToolCallResponse:
+    """Tests for handling tool call responses."""
+
+    def test_chat_complete_with_tools(self, ollama_model_with_tool_response, sample_tools):
+        """Test chat_complete with tools returns tool calls."""
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        response = ollama_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools
+        )
+
+        # Check payload included tools
+        call_args = ollama_model_with_tool_response.client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert "tools" in json_payload
+        assert len(json_payload["tools"]) == 2
+
+        # Check response has tool calls
+        assert len(response.choices) == 1
+        assert response.choices[0].message.tool_calls is not None
+        assert len(response.choices[0].message.tool_calls) == 1
+
+        tool_call = response.choices[0].message.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
+        assert tool_call.id == "call_abc123"
+        assert tool_call.function.name == "get_weather"
+
+    def test_chat_complete_with_tool_choice(self, ollama_model_with_tool_response, sample_tools):
+        """Test chat_complete with tool_choice parameter."""
+        messages = [{"role": "user", "content": "What's the weather?"}]
+
+        ollama_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools, tool_choice="required"
+        )
+
+        call_args = ollama_model_with_tool_response.client.post.call_args
+        json_payload = call_args[1]["json"]
+        # Ollama may or may not support tool_choice - just verify it's passed
+        assert "tools" in json_payload
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_with_tools(self, ollama_model_with_tool_response, sample_tools):
+        """Test async chat_complete with tools returns tool calls."""
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        response = await ollama_model_with_tool_response.achat_complete(
+            messages, tools=sample_tools
+        )
+
+        # Check payload included tools
+        call_args = ollama_model_with_tool_response.async_client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert "tools" in json_payload
+
+        # Check response has tool calls
+        assert response.choices[0].message.tool_calls is not None
+        tool_call = response.choices[0].message.tool_calls[0]
+        assert tool_call.function.name == "get_weather"
+
+
+class TestToolCallValidation:
+    """Tests for tool call validation."""
+
+    def test_validation_passes_for_valid_tool_call(
+        self, ollama_model_with_tool_response, sample_tools
+    ):
+        """Test that validation passes for valid tool calls."""
+        pytest.importorskip("jsonschema")
+
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        # Should not raise
+        response = ollama_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools, validate_tool_calls=True
+        )
+
+        assert response.choices[0].message.tool_calls is not None
+
+
+def test_ollama_default_num_ctx():
+    """Test that default num_ctx (128000) is applied when not specified."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    api_kwargs = model._get_api_kwargs()
+
+    assert "options" in api_kwargs
+    assert api_kwargs["options"]["num_ctx"] == 128000
+
+
+def test_ollama_custom_num_ctx():
+    """Test that custom num_ctx is passed correctly via config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"num_ctx": 32768})
+    api_kwargs = model._get_api_kwargs()
+
+    assert "options" in api_kwargs
+    assert api_kwargs["options"]["num_ctx"] == 32768
+
+
+def test_ollama_to_langchain_default_num_ctx():
+    """Test that to_langchain uses default num_ctx (128000) when not specified."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    langchain_model = model.to_langchain()
+
+    assert langchain_model.num_ctx == 128000
+
+
+def test_ollama_to_langchain_custom_num_ctx():
+    """Test that to_langchain passes custom num_ctx from config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"num_ctx": 65536})
+    langchain_model = model.to_langchain()
+
+    assert langchain_model.num_ctx == 65536
+
+
+def test_ollama_keep_alive_not_set_by_default():
+    """Test that keep_alive is not set when not specified (no forced memory usage)."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    api_kwargs = model._get_api_kwargs()
+
+    assert "keep_alive" not in api_kwargs
+
+
+def test_ollama_keep_alive_custom():
+    """Test that custom keep_alive is passed correctly via config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"keep_alive": "10m"})
+    api_kwargs = model._get_api_kwargs()
+
+    assert api_kwargs["keep_alive"] == "10m"
+
+
+def test_ollama_keep_alive_zero():
+    """Test that keep_alive can be set to 0 to unload immediately."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"keep_alive": "0"})
+    api_kwargs = model._get_api_kwargs()
+
+    assert api_kwargs["keep_alive"] == "0"
+
+
+def test_ollama_to_langchain_no_keep_alive_by_default():
+    """Test that to_langchain does not set keep_alive when not specified."""
+    model = OllamaLanguageModel(model_name="gemma2")
+    langchain_model = model.to_langchain()
+
+    # LangChain's ChatOllama should not have keep_alive set
+    assert langchain_model.keep_alive is None
+
+
+def test_ollama_to_langchain_custom_keep_alive():
+    """Test that to_langchain passes custom keep_alive from config."""
+    model = OllamaLanguageModel(model_name="gemma2", config={"keep_alive": "30m"})
+    langchain_model = model.to_langchain()
+
+    assert langchain_model.keep_alive == "30m"

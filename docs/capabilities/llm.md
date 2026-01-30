@@ -189,6 +189,7 @@ response = model.chat_complete(messages)
 
 ## Advanced Topics
 
+- **Tool/Function Calling**: [docs/features/tool-calling.md](../features/tool-calling.md) - Let models call functions
 - **Timeout Configuration**: [docs/advanced/timeout-configuration.md](../advanced/timeout-configuration.md)
 - **LangChain Integration**: [docs/advanced/langchain-integration.md](../advanced/langchain-integration.md)
 - **Model Discovery**: [docs/advanced/model-discovery.md](../advanced/model-discovery.md)
@@ -305,9 +306,47 @@ if msg.thinking:
     print(f"Model's reasoning: {msg.thinking}")
 ```
 
+### Tool Calling
+
+```python
+from esperanto import AIFactory
+from esperanto.common_types import Tool, ToolFunction
+
+# Define a tool
+tools = [
+    Tool(
+        type="function",
+        function=ToolFunction(
+            name="get_weather",
+            description="Get weather for a location",
+            parameters={
+                "type": "object",
+                "properties": {"city": {"type": "string"}},
+                "required": ["city"]
+            }
+        )
+    )
+]
+
+# Use tools with any provider
+model = AIFactory.create_language("openai", "gpt-4o")
+response = model.chat_complete(
+    [{"role": "user", "content": "What's the weather in Tokyo?"}],
+    tools=tools
+)
+
+# Check for tool calls
+if response.choices[0].message.tool_calls:
+    for tc in response.choices[0].message.tool_calls:
+        print(f"Tool: {tc.function.name}, Args: {tc.function.arguments}")
+```
+
+See [Tool Calling Guide](../features/tool-calling.md) for complete documentation.
+
 ## See Also
 
 - [Provider Setup Guides](../providers/README.md)
+- [Tool Calling](../features/tool-calling.md)
 - [Embedding Models](./embedding.md)
 - [Speech-to-Text](./speech-to-text.md)
 - [Text-to-Speech](./text-to-speech.md)

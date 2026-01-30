@@ -7,7 +7,10 @@ import pytest
 from langchain_openai import ChatOpenAI
 
 from esperanto.providers.llm.perplexity import PerplexityLanguageModel
-from esperanto.common_types import ChatCompletion, Choice, Message, Usage
+from esperanto.common_types import (
+    ChatCompletion, Choice, Message, Usage,
+    Tool, ToolFunction, ToolCall, ToolCallValidationError
+)
 
 
 @pytest.fixture
@@ -212,3 +215,213 @@ def test_perplexity_models_property(perplexity_provider):
     model_ids = [m.id for m in models]
     assert "sonar-pro" in model_ids
     assert "sonar" in model_ids
+
+
+# =============================================================================
+# Tool Calling Tests
+# =============================================================================
+
+
+@pytest.fixture
+def sample_tools():
+    """Sample tools for testing."""
+    return [
+        Tool(
+            function=ToolFunction(
+                name="get_weather",
+                description="Get the current weather for a location",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "The city name"},
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+                    },
+                    "required": ["location"]
+                }
+            )
+        ),
+        Tool(
+            function=ToolFunction(
+                name="get_time",
+                description="Get the current time for a timezone",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "timezone": {"type": "string", "description": "The timezone"}
+                    }
+                }
+            )
+        )
+    ]
+
+
+@pytest.fixture
+def mock_perplexity_tool_call_response():
+    """Mock HTTP response for Perplexity chat completions with tool calls."""
+    return {
+        "id": "chatcmpl-tool-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "llama-3-sonar-large-32k-online",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_abc123",
+                            "type": "function",
+                            "function": {
+                                "name": "get_weather",
+                                "arguments": '{"location": "San Francisco", "unit": "celsius"}'
+                            }
+                        }
+                    ]
+                },
+                "finish_reason": "tool_calls"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 50,
+            "completion_tokens": 20,
+            "total_tokens": 70
+        }
+    }
+
+
+@pytest.fixture
+def perplexity_model_with_tool_response(mock_perplexity_tool_call_response):
+    """Create a Perplexity model with tool call response mocked."""
+    os.environ["PERPLEXITY_API_KEY"] = "test_api_key"
+    model = PerplexityLanguageModel(model_name="llama-3-sonar-large-32k-online")
+
+    mock_client = Mock()
+    mock_async_client = AsyncMock()
+
+    def make_response(status_code, json_data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = json_data
+        return response
+
+    mock_client.post = Mock(return_value=make_response(200, mock_perplexity_tool_call_response))
+    mock_async_client.post = AsyncMock(return_value=make_response(200, mock_perplexity_tool_call_response))
+
+    model.client = mock_client
+    model.async_client = mock_async_client
+    yield model
+    del os.environ["PERPLEXITY_API_KEY"]
+
+
+class TestToolConversion:
+    """Tests for tool conversion to OpenAI format (Perplexity uses OpenAI-compatible format)."""
+
+    def test_convert_single_tool(self, perplexity_provider, sample_tools):
+        """Test converting a single tool to OpenAI format."""
+        result = perplexity_provider._convert_tools_to_openai([sample_tools[0]])
+
+        assert len(result) == 1
+        assert result[0]["type"] == "function"
+        assert result[0]["function"]["name"] == "get_weather"
+        assert result[0]["function"]["description"] == "Get the current weather for a location"
+        assert result[0]["function"]["parameters"]["type"] == "object"
+        assert "location" in result[0]["function"]["parameters"]["properties"]
+
+    def test_convert_multiple_tools(self, perplexity_provider, sample_tools):
+        """Test converting multiple tools to OpenAI format."""
+        result = perplexity_provider._convert_tools_to_openai(sample_tools)
+
+        assert len(result) == 2
+        assert result[0]["function"]["name"] == "get_weather"
+        assert result[1]["function"]["name"] == "get_time"
+
+    def test_convert_none_tools(self, perplexity_provider):
+        """Test converting None returns None."""
+        result = perplexity_provider._convert_tools_to_openai(None)
+        assert result is None
+
+    def test_convert_empty_tools(self, perplexity_provider):
+        """Test converting empty list returns None."""
+        result = perplexity_provider._convert_tools_to_openai([])
+        assert result is None
+
+
+class TestToolCallResponse:
+    """Tests for handling tool call responses."""
+
+    def test_chat_complete_with_tools(self, perplexity_model_with_tool_response, sample_tools):
+        """Test chat_complete with tools returns tool calls."""
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        response = perplexity_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools
+        )
+
+        # Check payload included tools
+        call_args = perplexity_model_with_tool_response.client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert "tools" in json_payload
+        assert len(json_payload["tools"]) == 2
+
+        # Check response has tool calls
+        assert len(response.choices) == 1
+        assert response.choices[0].message.tool_calls is not None
+        assert len(response.choices[0].message.tool_calls) == 1
+
+        tool_call = response.choices[0].message.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
+        assert tool_call.id == "call_abc123"
+        assert tool_call.function.name == "get_weather"
+        assert '"location": "San Francisco"' in tool_call.function.arguments
+
+    def test_chat_complete_with_tool_choice(self, perplexity_model_with_tool_response, sample_tools):
+        """Test chat_complete with tool_choice parameter."""
+        messages = [{"role": "user", "content": "What's the weather?"}]
+
+        perplexity_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools, tool_choice="required"
+        )
+
+        call_args = perplexity_model_with_tool_response.client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert json_payload["tool_choice"] == "required"
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_with_tools(self, perplexity_model_with_tool_response, sample_tools):
+        """Test async chat_complete with tools returns tool calls."""
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        response = await perplexity_model_with_tool_response.achat_complete(
+            messages, tools=sample_tools
+        )
+
+        # Check payload included tools
+        call_args = perplexity_model_with_tool_response.async_client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert "tools" in json_payload
+
+        # Check response has tool calls
+        assert response.choices[0].message.tool_calls is not None
+        tool_call = response.choices[0].message.tool_calls[0]
+        assert tool_call.function.name == "get_weather"
+
+
+class TestToolCallValidation:
+    """Tests for tool call validation."""
+
+    def test_validation_passes_for_valid_tool_call(
+        self, perplexity_model_with_tool_response, sample_tools
+    ):
+        """Test that validation passes for valid tool calls."""
+        pytest.importorskip("jsonschema")
+
+        messages = [{"role": "user", "content": "What's the weather in SF?"}]
+
+        # Should not raise
+        response = perplexity_model_with_tool_response.chat_complete(
+            messages, tools=sample_tools, validate_tool_calls=True
+        )
+
+        assert response.choices[0].message.tool_calls is not None

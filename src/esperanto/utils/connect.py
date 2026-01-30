@@ -1,6 +1,5 @@
 """Connection utilities for Esperanto providers."""
 
-import os
 from abc import ABC
 
 import httpx
@@ -16,38 +15,46 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
 
     This mixin already provides timeout and SSL configuration functionality as httpx client relies on `_get_timeout` and `_get_ssl_verify` methods.
 
+    Proxy configuration is handled automatically by httpx via the standard environment variables:
+    HTTP_PROXY, HTTPS_PROXY, and NO_PROXY.
+
     The `_create_http_clients` method should be used with classes that have:
     - client: httpx.Client and async_client: httpx.AsyncClient attributes
     - Provider-specific __post_init__() that calls super().__post_init__()
     """
 
-    def _get_proxy(self) -> str | None:
-        """Get proxy URL from config or environment.
-
-        Priority order:
-        1. Config dict: config={"proxy": "http://proxy:8080"}
-        2. Environment variable: ESPERANTO_PROXY
-
-        Returns:
-            Proxy URL string or None if not configured.
-        """
-        if hasattr(self, "config") and self.config:
-            proxy = self.config.get("proxy")
-            if proxy:
-                return proxy
-        return os.getenv("ESPERANTO_PROXY")
-
     def _create_http_clients(self) -> None:
-        """Create HTTP clients with configured timeout, SSL, and proxy settings.
+        """Create HTTP clients with configured timeout and SSL settings.
+
+        Proxy configuration is handled automatically by httpx via
+        HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables.
 
         Call this method in provider's __post_init__ after setting up
         API keys and base URLs.
         """
         timeout = self._get_timeout()
         verify = self._get_ssl_verify()
-        proxy = self._get_proxy()
-        self.client = httpx.Client(timeout=timeout, verify=verify, proxy=proxy)
-        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify, proxy=proxy)
+        self.client = httpx.Client(timeout=timeout, verify=verify)
+        self.async_client = httpx.AsyncClient(timeout=timeout, verify=verify)
+
+    def _create_langchain_http_clients(self) -> tuple[httpx.Client, httpx.AsyncClient]:
+        """Create new HTTP clients for LangChain integration.
+
+        Creates fresh httpx clients with the same configuration (timeout, SSL)
+        as the provider's clients. This ensures LangChain has its own clients that
+        won't be closed when the Esperanto model is garbage collected.
+
+        Proxy configuration is handled automatically by httpx via environment variables.
+
+        Returns:
+            Tuple of (sync_client, async_client) for use with LangChain.
+        """
+        timeout = self._get_timeout()
+        verify = self._get_ssl_verify()
+        return (
+            httpx.Client(timeout=timeout, verify=verify),
+            httpx.AsyncClient(timeout=timeout, verify=verify),
+        )
 
     def close(self):
         """Explicitly close HTTP clients."""

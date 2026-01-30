@@ -23,11 +23,46 @@ def test_factory_creates_groq_stt():
     """Test that AIFactory creates Groq STT model."""
     from unittest.mock import patch
     import os
-    
+
     # Mock the environment variable to provide an API key
     with patch.dict(os.environ, {'GROQ_API_KEY': 'test-key'}):
         model = AIFactory.create_speech_to_text("groq")
         assert isinstance(model, GroqSpeechToTextModel)
+
+
+def test_initialization_with_api_key():
+    """Test initialization with api_key parameter."""
+    model = GroqSpeechToTextModel(api_key="test-key")
+    assert model.api_key == "test-key"
+    assert model.base_url == "https://api.groq.com/openai/v1"
+
+
+def test_initialization_with_api_key_in_config():
+    """Test that api_key can be passed via config dict (GitHub issue #68)."""
+    model = GroqSpeechToTextModel(config={"api_key": "config-test-key"})
+    assert model.api_key == "config-test-key"
+    assert model.base_url == "https://api.groq.com/openai/v1"
+
+
+def test_initialization_with_base_url_in_config():
+    """Test that base_url can be passed via config dict."""
+    model = GroqSpeechToTextModel(
+        api_key="test-key",
+        config={"base_url": "https://custom.groq.com/v1"}
+    )
+    assert model.base_url == "https://custom.groq.com/v1"
+
+
+def test_initialization_with_api_key_and_base_url_in_config():
+    """Test that both api_key and base_url can be passed via config dict."""
+    model = GroqSpeechToTextModel(
+        config={
+            "api_key": "config-test-key",
+            "base_url": "https://custom.groq.com/v1"
+        }
+    )
+    assert model.api_key == "config-test-key"
+    assert model.base_url == "https://custom.groq.com/v1"
 
 
 def test_groq_transcribe(audio_file):

@@ -124,48 +124,35 @@ UserWarning: SSL verification is disabled. This is insecure and should only be u
 
 ### HttpConnectionMixin (connect.py)
 
-Central mixin that combines `TimeoutMixin` and `SSLMixin`, adding proxy support and HTTP client lifecycle management.
+Central mixin that combines `TimeoutMixin` and `SSLMixin`, providing HTTP client lifecycle management.
 
 **Provides:**
 
-- `_get_proxy()`: Get proxy URL from config or environment
-- `_create_http_clients()`: Create httpx clients with timeout, SSL, and proxy settings
+- `_create_http_clients()`: Create httpx clients with timeout and SSL settings
+- `_create_langchain_http_clients()`: Create separate clients for LangChain integration
 - `close()` / `aclose()`: Explicit client cleanup
 - Context manager support (`with` / `async with`)
 - Destructor cleanup
 
 **Proxy Configuration:**
 
-Priority order:
-1. Config dict `proxy` (highest)
-2. Env var `ESPERANTO_PROXY`
-3. Default: `None` (no proxy)
+Proxy is handled automatically by httpx via standard environment variables:
+- `HTTP_PROXY` / `http_proxy`: Proxy for HTTP requests
+- `HTTPS_PROXY` / `https_proxy`: Proxy for HTTPS requests
+- `NO_PROXY` / `no_proxy`: Hosts to bypass proxy
+
+Esperanto does not manage proxy configuration directly - it delegates entirely to httpx.
 
 **Usage:**
 
 ```python
-# Via environment variable
-os.environ["ESPERANTO_PROXY"] = "http://proxy.example.com:8080"
+# Set proxy via standard environment variables
+os.environ["HTTP_PROXY"] = "http://proxy.example.com:8080"
+os.environ["HTTPS_PROXY"] = "http://proxy.example.com:8080"
+os.environ["NO_PROXY"] = "localhost,127.0.0.1"
+
+# All providers automatically use the proxy
 model = AIFactory.create_language("openai", "gpt-4")
-
-# Via config dict
-model = AIFactory.create_language(
-    "openai", "gpt-4",
-    config={"proxy": "http://proxy.example.com:8080"}
-)
-```
-
-**Proxy URL Formats:**
-
-```python
-# HTTP proxy
-"http://proxy.example.com:8080"
-
-# HTTPS proxy
-"https://secure-proxy.example.com:443"
-
-# With authentication
-"http://user:pass@proxy.example.com:8080"
 ```
 
 ### ModelCache
@@ -349,23 +336,21 @@ model = AIFactory.create_language("ollama", "llama3")
 
 ### Configuring Proxy
 
+Proxy is handled automatically by httpx via standard environment variables:
+
 ```python
-# Via environment variable (recommended)
 import os
-os.environ["ESPERANTO_PROXY"] = "http://proxy.example.com:8080"
+
+# Set standard proxy environment variables
+os.environ["HTTP_PROXY"] = "http://proxy.example.com:8080"
+os.environ["HTTPS_PROXY"] = "http://proxy.example.com:8080"
+os.environ["NO_PROXY"] = "localhost,127.0.0.1"
+
+# All providers automatically use the proxy
 model = AIFactory.create_language("openai", "gpt-4")
 
-# Via config dict
-model = AIFactory.create_language(
-    "openai", "gpt-4",
-    config={"proxy": "http://proxy.example.com:8080"}
-)
-
 # With authentication
-model = AIFactory.create_language(
-    "openai", "gpt-4",
-    config={"proxy": "http://user:pass@proxy.example.com:8080"}
-)
+os.environ["HTTP_PROXY"] = "http://user:pass@proxy.example.com:8080"
 ```
 
 ### Using Model Cache

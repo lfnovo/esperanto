@@ -5,11 +5,13 @@ Shared type definitions and response models used across all provider types.
 ## Files
 
 - **`model.py`**: `Model` dataclass representing AI model metadata (id, owner, context_window)
-- **`response.py`**: Chat completion response types (`ChatCompletion`, `ChatCompletionChunk`, `Message`, `Choice`, `Usage`, etc.)
+- **`response.py`**: Chat completion response types (`ChatCompletion`, `ChatCompletionChunk`, `Message`, `Choice`, `Usage`) and tool types (`Tool`, `ToolFunction`, `ToolCall`, `FunctionCall`)
 - **`task_type.py`**: `EmbeddingTaskType` enum for task-aware embeddings
 - **`stt.py`**: `TranscriptionResponse` for speech-to-text results
 - **`tts.py`**: `AudioResponse` and `Voice` for text-to-speech
 - **`reranker.py`**: `RerankResponse` and `RerankResult` for document reranking
+- **`exceptions.py`**: `ToolCallValidationError` for tool call validation failures
+- **`validation.py`**: Tool call validation utilities (`validate_tool_call`, `validate_tool_calls`, `find_tool_by_name`)
 
 ## Patterns
 
@@ -177,6 +179,105 @@ Each `RerankResult` contains:
 - **Choice vs StreamChoice**: Different types for non-streaming vs streaming (both in response.py)
 - **Content can be None**: Message.content is Optional - providers may return None for tool calls
 - **Function calls vs tool calls**: Both exist for backward compatibility - use tool_calls for new code
+
+## Tool Types
+
+Tool calling is supported across all major providers through unified types in `response.py`:
+
+### Tool Definition Types
+
+```python
+from esperanto.common_types import Tool, ToolFunction
+
+# ToolFunction defines the function signature
+function = ToolFunction(
+    name="get_weather",              # Function name (required)
+    description="Get weather",       # Description (required)
+    parameters={                     # JSON Schema (required)
+        "type": "object",
+        "properties": {"city": {"type": "string"}},
+        "required": ["city"]
+    },
+    strict=True                      # OpenAI-only: strict mode
+)
+
+# Tool wraps the function
+tool = Tool(
+    type="function",                 # Always "function"
+    function=function
+)
+```
+
+### Tool Call Response Types
+
+```python
+from esperanto.common_types import ToolCall, FunctionCall
+
+# FunctionCall contains the actual call data
+function_call = FunctionCall(
+    name="get_weather",
+    arguments='{"city": "Tokyo"}'    # Always a JSON string
+)
+
+# ToolCall wraps the function call
+tool_call = ToolCall(
+    id="call_abc123",                # Unique ID for this call
+    type="function",                 # Always "function"
+    function=function_call,
+    index=0                          # Optional: for streaming
+)
+```
+
+### Validation Utilities
+
+```python
+from esperanto.common_types import (
+    validate_tool_call,
+    validate_tool_calls,
+    find_tool_by_name,
+    ToolCallValidationError
+)
+
+# Validate a single tool call against its schema
+try:
+    validate_tool_call(tool_call, tool)
+except ToolCallValidationError as e:
+    print(f"Tool '{e.tool_name}' failed: {e.errors}")
+
+# Validate all tool calls in a response
+validate_tool_calls(message.tool_calls, tools)
+
+# Find a tool by function name
+tool = find_tool_by_name(tools, "get_weather")
+```
+
+### Tool Message Format
+
+When sending tool results back to the model:
+
+```python
+# Assistant message with tool calls
+{
+    "role": "assistant",
+    "tool_calls": [
+        {
+            "id": "call_abc123",
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "arguments": '{"city": "Tokyo"}'
+            }
+        }
+    ]
+}
+
+# Tool result message
+{
+    "role": "tool",
+    "tool_call_id": "call_abc123",
+    "content": '{"temperature": 22, "condition": "sunny"}'
+}
+```
 
 ## When Adding New Response Types
 

@@ -134,13 +134,64 @@ Implement `_convert_messages()` or similar to transform Esperanto's standard for
 
 ### Tool/Function Calling
 
-Providers with tool support (OpenAI, Anthropic, Google) handle it differently:
+Esperanto provides unified tool calling across all providers. The base class defines tool-related parameters:
 
-- OpenAI: `tools` parameter with JSON schema
-- Anthropic: `tools` parameter with custom schema
-- Google: `function_declarations` in config
+- `tools: Optional[List[Tool]]` - List of tools the model can call
+- `tool_choice: Optional[Union[str, Dict[str, Any]]]` - Controls tool usage ("auto", "required", "none", or specific tool)
+- `parallel_tool_calls: Optional[bool]` - Allow multiple tool calls per response
 
-Not all providers support tool calling - check capability before implementing.
+**Provider implementations must:**
+
+1. Add `tools`, `tool_choice`, `parallel_tool_calls` parameters to `chat_complete()` and `achat_complete()`
+2. Implement `_convert_tools_to_*()` to convert Esperanto's `Tool` format to provider-specific format
+3. Update `_normalize_response()` to extract `ToolCall` objects from responses
+4. Handle tool result messages (role="tool" with tool_call_id)
+
+**Format conversion examples:**
+
+```python
+# Esperanto unified format (input)
+Tool(
+    type="function",
+    function=ToolFunction(
+        name="get_weather",
+        description="Get weather",
+        parameters={"type": "object", "properties": {...}}
+    )
+)
+
+# OpenAI format
+{"type": "function", "function": {"name": "...", "description": "...", "parameters": {...}}}
+
+# Anthropic format
+{"name": "...", "description": "...", "input_schema": {...}}
+
+# Google format
+{"function_declarations": [{"name": "...", "description": "...", "parameters": {...}}]}
+```
+
+**Tool call response normalization:**
+
+```python
+# All providers normalize to ToolCall objects
+tool_calls = [
+    ToolCall(
+        id="call_abc123",
+        type="function",
+        function=FunctionCall(
+            name="get_weather",
+            arguments='{"location": "Tokyo"}'  # Always JSON string
+        )
+    )
+]
+```
+
+**Provider-specific notes:**
+
+- **OpenAI**: Native support, format matches closely
+- **Anthropic**: Tool calls in content blocks as `tool_use`, tool results as `tool_result` in user message
+- **Google**: No tool call IDs (Esperanto generates them), uses `functionCall` in parts
+- **Groq/Mistral/Azure/etc**: OpenAI-compatible format
 
 ### Reasoning Models
 

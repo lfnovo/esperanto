@@ -5,9 +5,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
-from httpx import Client, AsyncClient
+from httpx import AsyncClient, Client
 
-from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model
+from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.utils.connect import HttpConnectionMixin
 
 
@@ -25,6 +25,10 @@ class LanguageModel(HttpConnectionMixin, ABC):
     structured: Optional[Dict[str, Any]] = None
     organization: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
+    # Tool-related fields
+    tools: Optional[List[Tool]] = None
+    tool_choice: Optional[Union[str, Dict[str, Any]]] = None
+    parallel_tool_calls: Optional[bool] = None
     _config: Dict[str, Any] = field(default_factory=dict)
     client: Optional[Client] = None
     async_client: Optional[AsyncClient] = None
@@ -71,6 +75,10 @@ class LanguageModel(HttpConnectionMixin, ABC):
             "max_tokens": self.max_tokens,
             "streaming": self.streaming,
             "structured": self.structured,
+            # Tool-related config
+            "tools": self.tools,
+            "tool_choice": self.tool_choice,
+            "parallel_tool_calls": self.parallel_tool_calls,
         }
 
         # Update with any provided config
@@ -86,33 +94,154 @@ class LanguageModel(HttpConnectionMixin, ABC):
         """Remove None values from config dictionary."""
         return {k: v for k, v in config.items() if v is not None}
 
+    def _resolve_tools(
+        self, tools: Optional[List[Tool]] = None
+    ) -> Optional[List[Tool]]:
+        """Resolve tools from parameter or instance config.
+
+        Call-time tools take precedence over instance-level tools.
+
+        Args:
+            tools: Tools passed at call time, or None to use instance tools.
+
+        Returns:
+            The resolved list of tools, or None if no tools configured.
+        """
+        if tools is not None:
+            return tools
+        return self.tools
+
+    def _resolve_tool_choice(
+        self, tool_choice: Optional[Union[str, Dict[str, Any]]] = None
+    ) -> Optional[Union[str, Dict[str, Any]]]:
+        """Resolve tool_choice from parameter or instance config.
+
+        Call-time tool_choice takes precedence over instance-level tool_choice.
+
+        Args:
+            tool_choice: Tool choice passed at call time, or None to use instance setting.
+
+        Returns:
+            The resolved tool_choice, or None if not configured.
+        """
+        if tool_choice is not None:
+            return tool_choice
+        return self.tool_choice
+
+    def _resolve_parallel_tool_calls(
+        self, parallel_tool_calls: Optional[bool] = None
+    ) -> Optional[bool]:
+        """Resolve parallel_tool_calls from parameter or instance config.
+
+        Call-time parallel_tool_calls takes precedence over instance-level setting.
+
+        Args:
+            parallel_tool_calls: Parallel tool calls setting passed at call time,
+                or None to use instance setting.
+
+        Returns:
+            The resolved parallel_tool_calls setting, or None for provider default.
+        """
+        if parallel_tool_calls is not None:
+            return parallel_tool_calls
+        return self.parallel_tool_calls
+
+    def _warn_if_validate_with_streaming(
+        self,
+        validate_tool_calls: bool,
+        stream: Optional[bool],
+    ) -> None:
+        """Emit a warning if validate_tool_calls is used with streaming.
+
+        Tool call validation requires the complete response to validate arguments
+        against the tool schema. With streaming, we receive partial chunks and
+        cannot validate until all chunks are collected. This method warns users
+        that their validate_tool_calls flag will be ignored.
+
+        Args:
+            validate_tool_calls: Whether validation was requested.
+            stream: The stream parameter passed to chat_complete.
+        """
+        should_stream = stream if stream is not None else self.streaming
+        if validate_tool_calls and should_stream:
+            warnings.warn(
+                "validate_tool_calls=True is ignored when streaming is enabled. "
+                "Tool call validation requires the complete response.",
+                UserWarning,
+                stacklevel=3,
+            )
+
     @abstractmethod
     def chat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
         Args:
-            messages: List of messages in the conversation.
-            stream: Whether to stream the response. If None, uses the instance's streaming setting.
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
 
         Returns:
-            Either a ChatCompletion or a Generator yielding ChatCompletionChunks if streaming.
+            Either a ChatCompletion or a Generator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
         """
         pass
 
     @abstractmethod
     async def achat_complete(
-        self, messages: List[Dict[str, str]], stream: Optional[bool] = None
+        self,
+        messages: List[Dict[str, Any]],
+        stream: Optional[bool] = None,
+        tools: Optional[List[Tool]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        validate_tool_calls: bool = False,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
         Args:
-            messages: List of messages in the conversation.
-            stream: Whether to stream the response. If None, uses the instance's streaming setting.
+            messages: List of messages in the conversation. Messages can include
+                tool call results with role="tool" and tool_call_id.
+            stream: Whether to stream the response. If None, uses the instance's
+                streaming setting.
+            tools: List of tools the model can call. If None, uses instance tools.
+            tool_choice: Controls tool usage. Values:
+                - "auto": Model decides whether to call tools (default)
+                - "required": Model must call at least one tool
+                - "none": Model cannot call tools
+                - {"type": "function", "function": {"name": "..."}}: Force specific tool
+            parallel_tool_calls: Whether to allow multiple tool calls in one response.
+                None uses provider default (usually True). Set False to force single
+                tool call per response.
+            validate_tool_calls: If True, validate tool call arguments against the
+                tool's JSON schema. Raises ToolCallValidationError on validation
+                failure. Requires jsonschema package.
 
         Returns:
-            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks if streaming.
+            Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
+            if streaming. When the model calls tools, the response message will
+            have tool_calls populated.
         """
         pass
 

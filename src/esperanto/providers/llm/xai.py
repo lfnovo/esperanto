@@ -20,6 +20,13 @@ class XAILanguageModel(OpenAILanguageModel):
     api_key: Optional[str] = None  # Changed type hint
 
     def __post_init__(self):
+        # Extract api_key and base_url from config dict first (before parent sets OpenAI defaults)
+        if hasattr(self, "config") and self.config:
+            if "api_key" in self.config:
+                self.api_key = self.config["api_key"]
+            if "base_url" in self.config:
+                self.base_url = self.config["base_url"]
+
         # Initialize XAI-specific configuration
         self.base_url = self.base_url or os.getenv(
             "XAI_BASE_URL", "https://api.x.ai/v1"
@@ -31,7 +38,7 @@ class XAILanguageModel(OpenAILanguageModel):
                 "XAI API key not found. Set the XAI_API_KEY environment variable."
             )
 
-        # Call parent's post_init to set up HTTP clients
+        # Call parent's post_init (won't overwrite since values are already set)
         super().__post_init__()
 
 
