@@ -56,6 +56,7 @@ Whether you're building a quick prototype or a production application serving mi
 - **Streaming**: Support for streaming responses
 - **Structured Output**: JSON output formatting (where supported)
 - **LangChain Integration**: Easy conversion to LangChain chat models
+- **Pydantic AI Integration**: Use any provider with Pydantic AI agents
 
 ## 📚 Documentation
 
@@ -77,6 +78,7 @@ Whether you're building a quick prototype or a production application serving mi
 ### Advanced Topics
 - [Task-Aware Embeddings](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/task-aware-embeddings.md)
 - [LangChain Integration](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/langchain-integration.md)
+- [Pydantic AI Integration](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/pydantic-ai-integration.md)
 - [Timeout Configuration](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/timeout-configuration.md)
 - [SSL Configuration](https://github.com/lfnovo/esperanto/blob/main/docs/configuration.md#ssl-verification-configuration)
 - [Model Discovery](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/model-discovery.md)
@@ -109,6 +111,17 @@ This installs:
 - `sentence-transformers` - CrossEncoder support
 - `scikit-learn` - Advanced embedding features
 - `numpy` - Numerical computations
+
+**Pydantic AI Integration**
+
+If you plan to use the `.to_pydantic_ai()` method for Pydantic AI agents:
+
+```bash
+pip install "esperanto[pydantic-ai]"
+```
+
+This installs:
+- `pydantic-ai>=1.50.0` - Pydantic AI framework
 
 **LangChain Integration**
 
@@ -728,6 +741,34 @@ langchain_model = model.to_langchain()
 from langchain.chains import ConversationChain
 chain = ConversationChain(llm=langchain_model)
 ```
+
+## Pydantic AI Integration 🤖
+
+Use any Esperanto provider with Pydantic AI agents:
+
+```python
+from esperanto import AIFactory
+from pydantic_ai import Agent
+
+# Create Esperanto model and convert to Pydantic AI
+model = AIFactory.create_language("openai", "gpt-4o").to_pydantic_ai()
+
+# Use with Pydantic AI Agent
+agent = Agent(model)
+result = await agent.run("What is the capital of France?")
+print(result.output)
+
+# Switch providers without changing agent code
+anthropic_model = AIFactory.create_language("anthropic", "claude-sonnet-4-20250514").to_pydantic_ai()
+agent = Agent(anthropic_model)  # Same agent pattern, different provider
+```
+
+**Key Benefits:**
+- **Provider Flexibility**: Switch between 15+ providers by changing one parameter
+- **Single Configuration**: Configure models once through Esperanto's unified interface
+- **Full Feature Support**: Tool calling, streaming, structured output all work seamlessly
+
+See the [Pydantic AI Integration Guide](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/pydantic-ai-integration.md) for detailed documentation.
 
 ## Documentation 📚
 

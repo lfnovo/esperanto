@@ -184,10 +184,15 @@ class GoogleLanguageModel(LanguageModel):
                 # Convert tool result to Google's functionResponse format
                 tool_call_id = msg.get("tool_call_id", "")
                 # Try to parse content as JSON, otherwise use as string
+                # Google's response field MUST be a Struct (dict), not a primitive
                 try:
                     response_content = json.loads(content) if content else {}
                 except (json.JSONDecodeError, TypeError):
                     response_content = {"result": content}
+
+                # Ensure response is always a dict (Google requires Struct)
+                if not isinstance(response_content, dict):
+                    response_content = {"result": response_content}
 
                 formatted.append({
                     "role": "user",
@@ -267,6 +272,47 @@ class GoogleLanguageModel(LanguageModel):
 
         return config
 
+    def _clean_schema_for_google(self, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove fields from JSON schema that Google doesn't support.
+
+        Google's API doesn't support certain JSON Schema fields like
+        'additionalProperties', 'title', '$schema', etc.
+
+        Args:
+            schema: JSON Schema dict.
+
+        Returns:
+            Cleaned schema dict with unsupported fields removed.
+        """
+        if not isinstance(schema, dict):
+            return schema
+
+        # Fields Google doesn't support in tool parameters
+        unsupported_fields = {
+            "additionalProperties",
+            "title",
+            "$schema",
+            "default",
+        }
+
+        cleaned = {}
+        for key, value in schema.items():
+            if key in unsupported_fields:
+                continue
+            elif key == "properties" and isinstance(value, dict):
+                # Recursively clean nested properties
+                cleaned[key] = {
+                    k: self._clean_schema_for_google(v)
+                    for k, v in value.items()
+                }
+            elif key == "items" and isinstance(value, dict):
+                # Clean array item schemas
+                cleaned[key] = self._clean_schema_for_google(value)
+            else:
+                cleaned[key] = value
+
+        return cleaned
+
     def _convert_tools_to_google(
         self, tools: Optional[List[Tool]]
     ) -> Optional[List[Dict[str, Any]]]:
@@ -288,7 +334,9 @@ class GoogleLanguageModel(LanguageModel):
                 {
                     "name": tool.function.name,
                     "description": tool.function.description,
-                    "parameters": tool.function.parameters,
+                    "parameters": self._clean_schema_for_google(
+                        tool.function.parameters or {}
+                    ),
                 }
                 for tool in tools
             ]

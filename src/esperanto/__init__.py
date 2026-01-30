@@ -110,6 +110,12 @@ try:
 except ImportError:
     VertexTextToSpeechModel = None
 
+# Pydantic AI integration
+try:
+    from esperanto.integrations.pydantic_ai import EsperantoPydanticModel
+except ImportError:
+    EsperantoPydanticModel = None
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
@@ -129,7 +135,8 @@ __provider_classes = {
     "GroqLanguageModel": GroqLanguageModel,
     "VertexLanguageModel": VertexLanguageModel,
     "VertexEmbeddingModel": VertexEmbeddingModel,
-    "VertexTextToSpeechModel": VertexTextToSpeechModel
+    "VertexTextToSpeechModel": VertexTextToSpeechModel,
+    "EsperantoPydanticModel": EsperantoPydanticModel,
 }
 
 # Get list of available provider classes (excluding None values)

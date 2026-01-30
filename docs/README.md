@@ -57,6 +57,7 @@ Deep dives into specialized features:
 - **[Task-Aware Embeddings](./advanced/task-aware-embeddings.md)** - Optimize embeddings for specific tasks
 - **[Transformers Advanced Features](./advanced/transformers-features.md)** - Local model optimizations
 - **[LangChain Integration](./advanced/langchain-integration.md)** - Use with LangChain
+- **[Pydantic AI Integration](./advanced/pydantic-ai-integration.md)** - Use with Pydantic AI agents
 - **[Timeout Configuration](./advanced/timeout-configuration.md)** - Request timeout management
 - **[Model Discovery](./advanced/model-discovery.md)** - Discover available models
 
@@ -106,6 +107,9 @@ Deep dives into specialized features:
 
 **"How do I integrate with LangChain?"**
 → [LangChain Integration](./advanced/langchain-integration.md)
+
+**"How do I integrate with Pydantic AI?"**
+→ [Pydantic AI Integration](./advanced/pydantic-ai-integration.md)
 
 **"How do I configure timeouts?"**
 → [Timeout Configuration](./advanced/timeout-configuration.md)
@@ -246,6 +250,9 @@ The documentation has been restructured for better navigation:
 
 **Q: What about LangChain integration?**
 → See [LangChain Integration](./advanced/langchain-integration.md)
+
+**Q: What about Pydantic AI integration?**
+→ See [Pydantic AI Integration](./advanced/pydantic-ai-integration.md)
 
 ### External Resources
 

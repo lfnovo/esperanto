@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.19.0] - 2026-01-30
+
+### Added
+
+- **Pydantic AI Integration** - Use any Esperanto provider with Pydantic AI agents
+  - New `to_pydantic_ai()` method on all language models
+  - Full support for tool calling, streaming, and structured output
+  - Provider flexibility: switch between 15+ providers without changing agent code
+  - New `EsperantoPydanticModel` adapter implementing Pydantic AI's `Model` interface
+  - New `EsperantoStreamedResponse` for streaming support
+  - Requires `pydantic-ai>=1.50.0` (optional dependency)
+  - Full documentation at `docs/advanced/pydantic-ai-integration.md`
+  - Example at `examples/pydantic_ai_example.py`
+  - Tested providers: OpenAI, Anthropic, Google, Groq, Mistral, Azure, xAI, Ollama, DeepSeek
 
 ### Changed
 
