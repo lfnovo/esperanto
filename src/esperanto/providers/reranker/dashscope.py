@@ -44,7 +44,6 @@ class DashScopeRerankerModel(RerankerModel):
         # instruct
         self.__instruct_avail: bool = _model_name in self.__INSTRUCT_AVAIL
 
-
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers for DashScope API."""
         return {
@@ -131,7 +130,9 @@ class DashScopeRerankerModel(RerankerModel):
                 f"DashScope API error: {response.status_code} - {response.text}"
             )
 
-    def _parse_response(self, response_data: Dict[str, Any], documents: List[str]) -> RerankResponse:
+    def _parse_response(
+        self, response_data: Dict[str, Any], documents: List[str]
+    ) -> RerankResponse:
         """Parse DashScope API response into standardized format.
 
         Args:
@@ -274,7 +275,6 @@ class DashScopeRerankerModel(RerankerModel):
                 "LangChain not installed. Install with: pip install langchain."
             )
 
-
         class LangChainDashScopeReranker:
             def __init__(self, dashscope_reranker: "DashScopeRerankerModel"):
                 self.reranker = dashscope_reranker
@@ -307,7 +307,6 @@ class DashScopeRerankerModel(RerankerModel):
 
                 return reranked_docs
 
-
         return LangChainDashScopeReranker(self)
 
     def __del__(self):
@@ -317,3 +316,4 @@ class DashScopeRerankerModel(RerankerModel):
                 self.client.close()
         except Exception:
             pass
+
