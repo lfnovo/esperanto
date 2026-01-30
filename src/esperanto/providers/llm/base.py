@@ -321,3 +321,35 @@ class LanguageModel(HttpConnectionMixin, ABC):
             ImportError: If langchain_core is not installed.
         """
         pass
+
+    def to_pydantic_ai(self) -> Any:
+        """Convert to a Pydantic AI compatible model.
+
+        Returns a model that can be used with Pydantic AI agents. This works
+        for all Esperanto providers - no provider-specific implementation needed.
+
+        Example:
+            ```python
+            from esperanto import AIFactory
+            from pydantic_ai import Agent
+
+            model = AIFactory.create_language("openai", "gpt-4o")
+            agent = Agent(model.to_pydantic_ai())
+            result = await agent.run("Hello!")
+            ```
+
+        Returns:
+            EsperantoPydanticModel: A Pydantic AI Model instance wrapping this provider.
+
+        Raises:
+            ImportError: If pydantic-ai is not installed.
+        """
+        try:
+            from esperanto.integrations.pydantic_ai import EsperantoPydanticModel
+        except ImportError as e:
+            raise ImportError(
+                "Pydantic AI integration requires pydantic-ai. "
+                "Install with: uv add pydantic-ai or pip install pydantic-ai"
+            ) from e
+
+        return EsperantoPydanticModel(self)

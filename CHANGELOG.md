@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Pydantic AI Integration** - Use any Esperanto provider with Pydantic AI agents
+  - New `to_pydantic_ai()` method on all language models
+  - Full support for tool calling, streaming, and structured output
+  - Provider flexibility: switch between 15+ providers without changing agent code
+  - New `EsperantoPydanticModel` adapter implementing Pydantic AI's `Model` interface
+  - New `EsperantoStreamedResponse` for streaming support
+  - Requires `pydantic-ai>=1.50.0` (optional dependency)
+  - Full documentation at `docs/advanced/pydantic-ai-integration.md`
+  - Example at `examples/pydantic_ai_example.py`
+  - Tested providers: OpenAI, Anthropic, Google, Groq, Mistral, Azure, xAI, Ollama, DeepSeek
+
 ### Changed
 
 - **Proxy Configuration** - Simplified proxy handling by delegating entirely to httpx
