@@ -78,6 +78,65 @@ def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _dereference_schema(schema: dict[str, Any], defs: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    Dereference $ref values in a JSON schema by inlining definitions.
+
+    This is needed for providers like Google that don't support $defs/$ref.
+
+    Args:
+        schema: JSON schema that may contain $ref values
+        defs: Dictionary of definitions (from $defs at root level)
+
+    Returns:
+        Schema with all $ref values replaced by their definitions
+    """
+    if not isinstance(schema, dict):
+        return schema
+
+    # Extract $defs from root level if present
+    if defs is None and "$defs" in schema:
+        defs = schema.get("$defs", {})
+        # Remove $defs from the result
+        schema = {k: v for k, v in schema.items() if k != "$defs"}
+
+    defs = defs or {}
+
+    # Handle $ref
+    if "$ref" in schema:
+        ref_path = schema["$ref"]
+        # Extract definition name from "#/$defs/DefinitionName"
+        if ref_path.startswith("#/$defs/"):
+            def_name = ref_path[8:]  # Remove "#/$defs/" prefix
+            if def_name in defs:
+                # Recursively dereference the definition
+                return _dereference_schema(defs[def_name].copy(), defs)
+        # If we can't resolve, just remove the $ref
+        return {}
+
+    # Recursively process nested schemas
+    result: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key == "$defs":
+            # Skip $defs in the result
+            continue
+        elif key == "properties" and isinstance(value, dict):
+            result[key] = {
+                prop_name: _dereference_schema(prop_schema, defs)
+                for prop_name, prop_schema in value.items()
+            }
+        elif key == "items" and isinstance(value, dict):
+            result[key] = _dereference_schema(value, defs)
+        elif key in ("anyOf", "oneOf", "allOf") and isinstance(value, list):
+            result[key] = [_dereference_schema(item, defs) for item in value]
+        elif key == "additionalProperties" and isinstance(value, dict):
+            result[key] = _dereference_schema(value, defs)
+        else:
+            result[key] = value
+
+    return result
+
+
 # Finish reason mapping from Esperanto to Pydantic AI
 _FINISH_REASON_MAP = {
     "stop": "stop",
@@ -264,15 +323,24 @@ class EsperantoPydanticModel(Model):  # type: ignore[misc]
         if not tools:
             return None
 
+        # Check if we need to dereference schemas (for Google provider)
+        needs_dereference = self._system == "google"
+
         esperanto_tools: list[Tool] = []
         for tool_def in tools:
+            parameters = tool_def.parameters_json_schema
+
+            # Dereference $ref values for providers that don't support them
+            if needs_dereference and parameters:
+                parameters = _dereference_schema(parameters)
+
             esperanto_tools.append(
                 Tool(
                     type="function",
                     function=ToolFunction(
                         name=tool_def.name,
                         description=tool_def.description or "",
-                        parameters=tool_def.parameters_json_schema,
+                        parameters=parameters,
                     ),
                 )
             )
@@ -428,6 +496,7 @@ class EsperantoPydanticModel(Model):  # type: ignore[misc]
         messages: list[ModelMessage],
         model_settings: ModelSettings | None,
         model_request_parameters: "ModelRequestParameters",
+        run_context: Any = None,  # Added in pydantic-ai for run context
     ) -> AsyncIterator["EsperantoStreamedResponse"]:
         """
         Make a streaming request to the model.
