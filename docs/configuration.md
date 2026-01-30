@@ -418,43 +418,38 @@ All provider types that use HTTP clients:
 
 ## Proxy Configuration
 
-Configure HTTP proxy for all provider connections. Useful for corporate networks, VPNs, or routing traffic through specific endpoints.
+Esperanto uses the standard HTTP proxy environment variables supported by most tools and libraries. Proxy configuration is handled automatically by the underlying httpx library.
 
-### Setting a Proxy
-
-**Via environment variable (recommended):**
+### Environment Variables
 
 ```bash
-ESPERANTO_PROXY=http://proxy.example.com:8080
+# HTTP proxy (for http:// requests)
+HTTP_PROXY=http://proxy.example.com:8080
+http_proxy=http://proxy.example.com:8080
+
+# HTTPS proxy (for https:// requests)
+HTTPS_PROXY=http://proxy.example.com:8080
+https_proxy=http://proxy.example.com:8080
+
+# Hosts to bypass proxy (comma-separated)
+NO_PROXY=localhost,127.0.0.1,.internal.com
+no_proxy=localhost,127.0.0.1,.internal.com
 ```
 
-**Via config parameter:**
-
-```python
-model = AIFactory.create_language(
-    "openai", "gpt-4",
-    config={"proxy": "http://proxy.example.com:8080"}
-)
-```
+Both uppercase and lowercase versions are supported.
 
 ### Proxy URL Formats
 
 ```bash
 # HTTP proxy
-ESPERANTO_PROXY=http://proxy.example.com:8080
+HTTP_PROXY=http://proxy.example.com:8080
 
-# HTTPS proxy
-ESPERANTO_PROXY=https://secure-proxy.example.com:443
+# HTTPS proxy (note: proxy URL is usually http://, not https://)
+HTTPS_PROXY=http://proxy.example.com:8080
 
 # Proxy with authentication
-ESPERANTO_PROXY=http://username:password@proxy.example.com:8080
+HTTP_PROXY=http://username:password@proxy.example.com:8080
 ```
-
-### Priority Order
-
-1. **Config parameter** `proxy` (highest priority)
-2. **Environment variable** `ESPERANTO_PROXY`
-3. **Default** `None` (no proxy)
 
 ### Common Use Cases
 
@@ -462,7 +457,9 @@ ESPERANTO_PROXY=http://username:password@proxy.example.com:8080
 
 ```bash
 # In .env
-ESPERANTO_PROXY=http://corporate-proxy.internal:3128
+HTTP_PROXY=http://corporate-proxy.internal:3128
+HTTPS_PROXY=http://corporate-proxy.internal:3128
+NO_PROXY=localhost,127.0.0.1,.internal.com
 ```
 
 ```python
@@ -471,17 +468,21 @@ model = AIFactory.create_language("openai", "gpt-4")
 embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")
 ```
 
-**Different proxy per instance:**
+**Bypass proxy for local services:**
+
+```bash
+# In .env
+HTTP_PROXY=http://proxy.example.com:8080
+HTTPS_PROXY=http://proxy.example.com:8080
+NO_PROXY=localhost,127.0.0.1,ollama.local
+```
 
 ```python
-# Use specific proxy for this instance
-model = AIFactory.create_language(
-    "openai", "gpt-4",
-    config={"proxy": "http://special-proxy.example.com:8080"}
-)
+# External APIs go through proxy
+model = AIFactory.create_language("openai", "gpt-4")
 
-# Another instance without proxy (if ESPERANTO_PROXY is not set)
-model_no_proxy = AIFactory.create_language("ollama", "llama3")
+# Local Ollama bypasses proxy (if in NO_PROXY)
+local_model = AIFactory.create_language("ollama", "llama3")
 ```
 
 ### Proxy Configuration Applies To
