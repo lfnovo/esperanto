@@ -16,6 +16,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Ollama](./ollama.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | [Mistral](./mistral.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | [DeepSeek](./deepseek.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [DashScope](./dashscope.md) | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | [Perplexity](./perplexity.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -304,6 +305,7 @@ Require API keys, pay-per-use:
 - [Groq](./groq.md)
 - [Mistral](./mistral.md)
 - [DeepSeek](./deepseek.md)
+- [DashScope](./dashscope.md)
 - [Perplexity](./perplexity.md)
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
