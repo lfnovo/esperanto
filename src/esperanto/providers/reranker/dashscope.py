@@ -116,8 +116,9 @@ class DashScopeRerankerModel(RerankerModel):
     def _validate_inputs(
         self,
         query: str,
-        documents: List[str],
-        top_k: Optional[int]
+        documents: List[str | Dict[str, str]],
+        top_k: Optional[int] = None,
+        fps: Optional[float] = None
     ) -> Tuple[str, List[str], int]:
         """Validate and normalize inputs.
 
@@ -199,6 +200,9 @@ class DashScopeRerankerModel(RerankerModel):
                 top_k = len(documents)
         else:
             top_k = len(documents)
+
+        if fps is not None and not (0.0 <= fps <= 1.0):
+            raise ValueError("fps must be positive")
 
         return query.strip(), documents, top_k
 
@@ -334,6 +338,7 @@ class DashScopeRerankerModel(RerankerModel):
         documents: List[str | Dict[str, str]],
         top_k: Optional[int] = None,
         instruct: Optional[str] = None,
+        fps: Optional[float] = None,
         **kwargs
     ) -> RerankResponse:
         """Rerank documents using DashScope API.
@@ -350,12 +355,12 @@ class DashScopeRerankerModel(RerankerModel):
 
         # Validate inputs
         query, documents, top_k = self._validate_inputs(
-            query, documents, top_k
+            query, documents, top_k, fps
         )
 
         # Build request
         payload = self._build_request_payload(
-            query, documents, top_k, instruct=instruct
+            query, documents, top_k, instruct=instruct, fps=fps
         )
 
         try:
@@ -382,6 +387,7 @@ class DashScopeRerankerModel(RerankerModel):
         documents: List[str | Dict[str, str]],
         top_k: Optional[int] = None,
         instruct: Optional[str] = None,
+        fps: Optional[str] = None,
         **kwargs
     ) -> RerankResponse:
         """Async rerank documents using DashScope API.
@@ -397,12 +403,12 @@ class DashScopeRerankerModel(RerankerModel):
         """
         # Validate inputs
         query, documents, top_k = self._validate_inputs(
-            query, documents, top_k
+            query, documents, top_k, fps
         )
 
         # Build request
         payload = self._build_request_payload(
-            query, documents, top_k, instruct=instruct
+            query, documents, top_k, instruct=instruct, fps=fps
         )
 
         try:
