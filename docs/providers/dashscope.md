@@ -172,6 +172,37 @@ compressed = langchain_reranker.compress_documents(docs, query)
 
 
 
+### Multi-modal Reranker
+
+Aliyun platform provides `qwen3-vl-rerank` as rerank model accepting multi-modal inputs (**text, image and video**).
+
+This model shares almost the same interface as other rerankers.
+
+```python
+from esperanto.factory import AIFactory
+
+reranker = AIFactory.create_reranker("dashscope", "qwen3-vl-rerank")
+query = "What is reranking model?"
+documents = [
+    {"text": "Text ranking models are widely used in search engines and recommendation systems, which rank candidate texts based on their relevance"},
+    {"image": "https://img.alicdn.com/imgextra/i3/O1CN01rdstgY1uiZWt8gqSL_!!6000000006071-0-tps-1970-356.jpg"},
+    {"video": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250107/lbcemt/new+video.mp4"}
+]
+
+responses = reranker.rerank(
+	query=query,
+    documents=documents,
+    top_k=2,
+    instruct="Given a web search query, retrieve relevant passages that answer the query.",
+    fps=0.5  # Control rate of frame extracted from the uploaded video. Between [0, 1] and default to 1.0
+)
+```
+
+- The image and video inputs can be given by any public-accessible URL. Image inputs can also be encoded as base-64 format.
+- Refer to [Aliyun Reranker Models](https://help.aliyun.com/zh/model-studio/text-rerank-api) for more details.
+
+
+
 ## Troubleshooting
 
 ### Common Errors
