@@ -61,7 +61,10 @@ class TestDashScopeReranker:
         assert reranker._get_default_model() == "qwen3-rerank"
 
     def test_validation_errors(self):
-        """Test input validation"""
+        """Test input validation.
+        DashScopeRerankerModel includes vl models, thus containing external
+        validation logic.
+        """
         reranker = DashScopeRerankerModel(
             model_name="qwen3-rerank",
             api_key="test-api-key",
@@ -80,6 +83,72 @@ class TestDashScopeReranker:
         with pytest.raises(ValueError, match="top_k must be positive"):
             reranker.rerank("query", ["doc1"], top_k=0)
 
+        # Test input format for non-vl models
+        with pytest.raises(
+            ValueError, match="inputs must be formatted as list of strings"
+        ):
+            reranker.rerank("test-query", [{"text": "test-doc"}])
+
+        reranker_vl = DashScopeRerankerModel(
+            model_name="qwen3-vl-rerank",
+            api_key="test-api-key",
+            config={}
+        )
+        # Test input format for vl models
+        with pytest.raises(
+            ValueError, match="inputs must be formatted as list of dict"
+        ):
+            reranker_vl.rerank("test-query", ["doc1", "doc2"])
+
+        # Check image input format for vl models
+        # Invalid URL
+        with pytest.raises(
+            ValueError,
+            match="only accepts image as either public URL or base64 data"
+        ):
+            reranker_vl.rerank(
+                "test-query",
+                [
+                    {"image": "ftp://test/image.png"}
+                ]
+            )
+
+        # Invalid base64 encoding
+        with pytest.raises(
+            ValueError,
+            match="only accepts image as either public URL or base64 data"
+        ):
+            reranker_vl.rerank(
+                "test-query",
+                [
+                    {"image": "data:video/JPEG;base64,122987974"}
+                ]
+            )
+
+        # Correct base64 format but invalid image format
+        with pytest.raises(
+            ValueError,
+            match="Unsupported image format: gif"
+        ):
+            reranker_vl.rerank(
+                "test-query",
+                [
+                    {"image": "data:image/gif;base64,correct/base64/format==="}
+                ]
+            )
+
+        # Check video input format for vl models
+        with pytest.raises(
+            ValueError,
+            match="only accepts video as public URL"
+        ):
+            reranker_vl.rerank(
+                "test-query",
+                [
+                    {"video": "ftp://test/video.mp4"}
+                ]
+            )
+
     def test_model_listings(self):
         """Test available models are properly listed."""
         reranker = DashScopeRerankerModel(
@@ -93,6 +162,7 @@ class TestDashScopeReranker:
 
         assert "qwen3-rerank" in model_names
         assert "gte-rerank-v2" in model_names
+        assert "qwen3-vl-rerank" in model_names
 
     def test_headers_generation(self):
         """Test request headers are properly generated."""
@@ -106,7 +176,7 @@ class TestDashScopeReranker:
         assert headers["Authorization"] == "Bearer test-secret-key"
         assert headers["Content-Type"] == "application/json"
 
-    def test_request_payload_building(self):
+    def test_non_vl_request_payload_building(self):
         query = "test query"
         documents = ["doc1", "doc2"]
         top_k = 1
@@ -118,13 +188,21 @@ class TestDashScopeReranker:
             config={}
         )
 
-        payload = reranker._build_request_payload(query, documents, top_k, instruct)
+        payload = reranker._build_request_payload(
+            query, documents, top_k, instruct
+        )
 
-        assert payload["query"] == query
-        assert payload["documents"] == documents
+        # Check nested structure
+        assert "input" in payload
+        assert "parameters" in payload
+
+        assert payload["input"]["query"] == query
+        assert payload["input"]["documents"] == documents
         assert payload["model"] == "gte-rerank-v2"
-        assert payload["top_n"] == top_k
-        assert "instruct" not in payload
+        assert payload["parameters"]["top_n"] == top_k
+
+        # Check ignored instruct for gte
+        assert "instruct" not in payload["parameters"]
 
         reranker = DashScopeRerankerModel(
             model_name="qwen3-rerank",
@@ -132,26 +210,66 @@ class TestDashScopeReranker:
             config={}
         )
 
-        payload = reranker._build_request_payload(query, documents, top_k, instruct)
+        payload = reranker._build_request_payload(
+            query, documents, top_k, instruct
+        )
 
-        assert payload["query"] == query
-        assert payload["documents"] == documents
+        # Check nested structure
+        assert "input" in payload
+        assert "parameters" in payload
+
+        assert payload["input"]["query"] == query
+        assert payload["input"]["documents"] == documents
         assert payload["model"] == "qwen3-rerank"
-        assert payload["top_n"] == top_k
-        assert payload["instruct"] == instruct
+        assert payload["parameters"]["top_n"] == top_k
+
+        # Check impl instruct for qwen rerankers
+        assert payload["parameters"]["instruct"] == instruct
+
+    def test_vl_request_payload_building(self):
+        query = "test query"
+        documents = [
+            {"text": "doc"},
+            {"image": "https://test/image1.png"},
+            {"video": "https://test/video1.mp4"}
+        ]
+        top_k = 2
+        instruct = 'test instruct'
+
+        reranker = DashScopeRerankerModel(
+            model_name="qwen3-vl-rerank",
+            api_key="test-key",
+            config={}
+        )
+
+        vl_payload = reranker._build_request_payload(
+            query, documents, top_k, instruct
+        )
+
+        # Check nested structure
+        assert "input" in vl_payload
+        assert "parameters" in vl_payload
+
+        assert vl_payload["input"]["query"] == query
+        assert vl_payload["input"]["documents"] == documents
+        assert vl_payload["model"] == "qwen3-vl-rerank"
+        assert vl_payload["parameters"]["top_n"] == top_k
+
+        # Check impl instruct for qwen rerankers
+        assert vl_payload["parameters"]["instruct"] == instruct
 
     def test_custom_config_in_payload(self):
         """Test custom config is included in request payload."""
         custom_config = {"return_documents": True, "custom_param": "value"}
         reranker = DashScopeRerankerModel(
-            model_name="qwen3-rerank",
+            model_name="gte-rerank-v2",
             api_key="test-key",
             config=custom_config
         )
 
         payload = reranker._build_request_payload("query", ["doc1"], 1)
         # Hardcoded because some dashscope models don't support 'return_documents'
-        assert payload["return_documents"] is False
+        assert payload["parameters"]["return_documents"] is False
         # In current implementation custom params not directly added.
 
     def test_response_processing_with_no_documents_returned(self):
