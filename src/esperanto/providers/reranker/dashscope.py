@@ -83,7 +83,7 @@ class DashScopeRerankerModel(RerankerModel):
                 context_window=30_000
             ),
             Model(
-                id="qwen3-rerank",
+                id="qwen3-vl-rerank",
                 owned_by="dashscope",
                 context_window=800_000
             )
@@ -139,16 +139,16 @@ class DashScopeRerankerModel(RerankerModel):
             raise ValueError("Documents list cannot be empty")
 
         if self.__vl_avail:
-            is_valid_dict = all(
+            is_valid_vl_input = all(
                 isinstance(item, dict) for item in documents
-            ) and all(len(item) == 1 for item in documents)
-
-            is_valid_key = all(
+            ) and all(
+                len(item) == 1 for item in documents
+            ) and all(
                 next(iter(item.keys())) in ("text", "image", "video")
                 for item in documents
             )
 
-            if not (is_valid_dict and is_valid_key):
+            if not is_valid_vl_input:
                 raise ValueError(
                     "For dashscope multimodal rerankers, "
                     "inputs must be formatted as list of dict: "
@@ -250,7 +250,7 @@ class DashScopeRerankerModel(RerankerModel):
 
         # instruct
         if instruct is not None and self.__instruct_avail:
-            payload.update({"instruct": instruct})
+            param_body.update({"instruct": instruct})
 
         # Build model-specific request body
         payload["input"] = input_body
