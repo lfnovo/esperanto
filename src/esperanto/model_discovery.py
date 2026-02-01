@@ -510,8 +510,15 @@ def get_dashscope_models(
     # Hardcoded list of known Jina models
     models = [
         # Reranker Models
-        Model(id="qwen3-rerank", owned_by="dashscope", context_window=30_000),
-        Model(id="gte-rerank-v2", owned_by="dashscope", context_window=30_000)
+        Model(
+            id="qwen3-rerank", owned_by="dashscope", context_window=30_000
+        ),
+        Model(
+            id="gte-rerank-v2", owned_by="dashscope", context_window=30_000
+        ),
+        Model(
+            id="qwen3-vl-rerank", owned_by="dashscope", context_window=800_000
+        )
     ]
 
     # Cache results
