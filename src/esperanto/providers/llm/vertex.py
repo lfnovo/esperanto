@@ -43,6 +43,7 @@ class VertexLanguageModel(LanguageModel):
 
     vertex_project: Optional[str] = None
     vertex_location: Optional[str] = None
+    credentials_file: Optional[str] = None
 
     def __post_init__(self):
         """Initialize HTTP clients and authentication."""
@@ -51,7 +52,7 @@ class VertexLanguageModel(LanguageModel):
         # Get project and location
         self.project_id = self.vertex_project or os.getenv("VERTEX_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT")
         self.location = self.vertex_location or os.getenv("VERTEX_LOCATION", "us-central1")
-        
+
         if not self.project_id:
             raise ValueError(
                 "Google Cloud project ID not found. Please set VERTEX_PROJECT or GOOGLE_CLOUD_PROJECT environment variable."
@@ -60,23 +61,82 @@ class VertexLanguageModel(LanguageModel):
         # Set base URL for Vertex AI
         self.base_url = f"https://{self.location}-aiplatform.googleapis.com/v1"
 
+        # Load credentials (service account file, ADC, or None for gcloud fallback)
+        self._load_credentials()
+
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
 
-        # Cache for access token
+        # Cache for access token (used when no google-auth credentials)
         self._access_token = None
         self._token_expiry = 0
 
+        # Cache for LangChain model
+        self._langchain_model = None
+
+    def _load_credentials(self):
+        """Load Google Cloud credentials.
+
+        Priority:
+        1. Explicit credentials_file parameter
+        2. GOOGLE_APPLICATION_CREDENTIALS environment variable
+        3. Application Default Credentials (google.auth.default)
+        4. None (falls back to gcloud CLI in _get_access_token)
+        """
+        self._credentials = None
+        creds_path = self.credentials_file or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+        if creds_path:
+            # Explicit credentials file — errors must propagate so the user
+            # doesn't silently fall back to a different identity.
+            try:
+                from google.oauth2 import service_account
+            except ImportError:
+                raise ImportError(
+                    f"credentials_file requires the google-auth package. "
+                    f"Install with: uv add google-auth or pip install google-auth"
+                )
+
+            scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+            self._credentials = service_account.Credentials.from_service_account_file(
+                creds_path, scopes=scopes
+            )
+        else:
+            # ADC — best-effort; fall back to gcloud CLI if unavailable.
+            try:
+                import google.auth
+
+                self._credentials, _ = google.auth.default(
+                    scopes=["https://www.googleapis.com/auth/cloud-platform"]
+                )
+            except ImportError:
+                self._credentials = None
+            except Exception:
+                self._credentials = None
+
     def _get_access_token(self) -> str:
         """Get OAuth 2.0 access token for Google Cloud APIs."""
+        # Use google-auth credentials if available
+        if self._credentials is not None:
+            try:
+                from google.auth.transport.requests import Request
+
+                if not self._credentials.valid:
+                    self._credentials.refresh(Request())
+                return self._credentials.token
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to refresh credentials: {e}"
+                )
+
         current_time = time.time()
-        
-        # Check if token is still valid (with 5-minute buffer)
+
+        # Check if cached token is still valid (with 5-minute buffer)
         if self._access_token and current_time < (self._token_expiry - 300):
             return self._access_token
-            
+
         try:
-            # Use gcloud to get access token
+            # Fall back to gcloud CLI
             result = subprocess.run(
                 ["gcloud", "auth", "application-default", "print-access-token"],
                 capture_output=True,
@@ -89,7 +149,9 @@ class VertexLanguageModel(LanguageModel):
             return self._access_token
         except subprocess.CalledProcessError as e:
             raise RuntimeError(
-                f"Failed to get access token. Make sure you're authenticated with 'gcloud auth application-default login': {e}"
+                "Failed to get access token. Either set credentials_file / "
+                "GOOGLE_APPLICATION_CREDENTIALS, install google-auth for ADC, "
+                f"or authenticate with 'gcloud auth application-default login': {e}"
             )
 
     def _get_headers(self) -> Dict[str, str]:
@@ -712,23 +774,28 @@ class VertexLanguageModel(LanguageModel):
     def to_langchain(self):
         """Convert to a LangChain chat model."""
         try:
-            from langchain_google_vertexai import ChatVertexAI
+            from langchain_google_genai import ChatGoogleGenerativeAI
         except ImportError as e:
             raise ImportError(
-                "Langchain integration requires langchain_google_vertexai. "
-                "Install with: uv add langchain_google_vertexai or pip install langchain_google_vertexai"
+                "Langchain integration requires langchain_google_genai. "
+                "Install with: uv add langchain_google_genai or pip install langchain_google_genai"
             ) from e
 
-        # Ensure model name is set
-        model_name = self.get_model_name()
-        if not model_name:
-            raise ValueError("Model name must be set to use Langchain integration.")
+        if not self._langchain_model:
+            model_name = self.get_model_name()
+            if not model_name:
+                raise ValueError("Model name must be set to use Langchain integration.")
 
-        return ChatVertexAI(
-            model_name=model_name,
-            project=self.project_id,
-            location=self.location,
-            temperature=self.temperature,
-            max_output_tokens=self.max_tokens,
-            top_p=self.top_p,
-        )
+            kwargs = dict(
+                model=model_name,
+                project=self.project_id,
+                location=self.location,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                top_p=self.top_p,
+            )
+            if self._credentials is not None:
+                kwargs["credentials"] = self._credentials
+
+            self._langchain_model = ChatGoogleGenerativeAI(**kwargs)
+        return self._langchain_model

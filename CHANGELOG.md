@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-02-07
+
+### Added
+
+- **Vertex AI Credentials Support** - Added `credentials_file` parameter and full credentials priority chain
+  - Supports explicit service account JSON file via `credentials_file` parameter
+  - Supports `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+  - Supports Application Default Credentials (ADC) via `google.auth.default()`
+  - Falls back to `gcloud` CLI when `google-auth` is not installed
+
 ### Changed
+
+- **Vertex AI LangChain Migration** - Migrated from deprecated `ChatVertexAI` to `ChatGoogleGenerativeAI`
+  - Uses `langchain-google-genai` (already a dependency) instead of `langchain-google-vertexai`
+  - Removed `langchain-google-vertexai` from dev dependencies
+  - LangChain model instances are now cached (matching Google provider pattern)
 
 - **Proxy Configuration** - Simplified proxy handling by delegating entirely to httpx
   - Esperanto now uses standard environment variables: `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`
