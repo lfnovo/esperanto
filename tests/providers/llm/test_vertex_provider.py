@@ -1,7 +1,7 @@
 """Tests for the Vertex AI LLM provider."""
 import json
 import os
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 import pytest
 
@@ -94,8 +94,18 @@ def mock_vertex_tool_call_with_text_response():
 
 
 @pytest.fixture
-def mock_gcloud_auth():
-    """Mock gcloud authentication."""
+def mock_google_auth():
+    """Mock google.auth.default to prevent real ADC pickup in tests."""
+    mock_creds = MagicMock()
+    mock_creds.valid = True
+    mock_creds.token = "mock-adc-token"
+    with patch("google.auth.default", return_value=(mock_creds, "test-project")) as mock_default:
+        yield mock_default, mock_creds
+
+
+@pytest.fixture
+def mock_gcloud_auth(mock_google_auth):
+    """Mock gcloud authentication (also mocks google.auth.default)."""
     with patch("subprocess.run") as mock_run:
         mock_result = Mock()
         mock_result.stdout = "mock-access-token"
@@ -727,3 +737,264 @@ class TestErrorHandling:
         messages = [{"role": "user", "content": "Hello"}]
         with pytest.raises(RuntimeError, match="Vertex AI API error"):
             vertex_model.chat_complete(messages)
+
+
+class TestCredentials:
+    """Tests for credential loading and token management."""
+
+    def test_credentials_file_loading(self):
+        """Test loading credentials from an explicit credentials_file parameter."""
+        mock_creds = MagicMock()
+        mock_creds.valid = True
+        mock_creds.token = "sa-token"
+
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            with patch(
+                "google.oauth2.service_account.Credentials.from_service_account_file",
+                return_value=mock_creds,
+            ) as mock_from_file:
+                model = VertexLanguageModel(
+                    model_name="gemini-2.0-flash",
+                    credentials_file="/path/to/sa.json",
+                )
+                mock_from_file.assert_called_once_with(
+                    "/path/to/sa.json",
+                    scopes=["https://www.googleapis.com/auth/cloud-platform"],
+                )
+                assert model._credentials is mock_creds
+
+    def test_google_application_credentials_env_var(self):
+        """Test loading credentials from GOOGLE_APPLICATION_CREDENTIALS env var."""
+        mock_creds = MagicMock()
+        mock_creds.valid = True
+        mock_creds.token = "env-sa-token"
+
+        env = {
+            "VERTEX_PROJECT": "test-project",
+            "GOOGLE_APPLICATION_CREDENTIALS": "/env/path/sa.json",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            with patch(
+                "google.oauth2.service_account.Credentials.from_service_account_file",
+                return_value=mock_creds,
+            ) as mock_from_file:
+                model = VertexLanguageModel(model_name="gemini-2.0-flash")
+                mock_from_file.assert_called_once_with(
+                    "/env/path/sa.json",
+                    scopes=["https://www.googleapis.com/auth/cloud-platform"],
+                )
+                assert model._credentials is mock_creds
+
+    def test_credentials_file_takes_priority_over_env_var(self):
+        """Test that explicit credentials_file takes priority over env var."""
+        mock_creds = MagicMock()
+        mock_creds.valid = True
+        mock_creds.token = "explicit-token"
+
+        env = {
+            "VERTEX_PROJECT": "test-project",
+            "GOOGLE_APPLICATION_CREDENTIALS": "/env/path/sa.json",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            with patch(
+                "google.oauth2.service_account.Credentials.from_service_account_file",
+                return_value=mock_creds,
+            ) as mock_from_file:
+                model = VertexLanguageModel(
+                    model_name="gemini-2.0-flash",
+                    credentials_file="/explicit/sa.json",
+                )
+                mock_from_file.assert_called_once_with(
+                    "/explicit/sa.json",
+                    scopes=["https://www.googleapis.com/auth/cloud-platform"],
+                )
+
+    def test_adc_fallback_when_no_credentials_file(self, mock_google_auth):
+        """Test that ADC is used when no credentials file is provided."""
+        mock_default, mock_creds = mock_google_auth
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            # Remove GOOGLE_APPLICATION_CREDENTIALS if set
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+            mock_default.assert_called_once()
+            assert model._credentials is mock_creds
+
+    def test_gcloud_fallback_when_no_google_auth_installed(self):
+        """Test that gcloud CLI fallback works when google-auth is not installed."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+
+            # Mock _load_credentials to simulate google-auth not being installed
+            with patch.object(
+                VertexLanguageModel,
+                "_load_credentials",
+                lambda self: setattr(self, "_credentials", None),
+            ):
+                model = VertexLanguageModel(model_name="gemini-2.0-flash")
+                assert model._credentials is None
+
+    def test_token_from_credentials(self, mock_google_auth):
+        """Test that _get_access_token uses credentials when available."""
+        _, mock_creds = mock_google_auth
+        mock_creds.valid = True
+        mock_creds.token = "creds-token"
+
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+            with patch("google.auth.transport.requests.Request"):
+                token = model._get_access_token()
+                assert token == "creds-token"
+
+    def test_token_refresh_when_expired(self, mock_google_auth):
+        """Test that expired credentials are refreshed."""
+        _, mock_creds = mock_google_auth
+        mock_creds.valid = False
+        mock_creds.token = "refreshed-token"
+
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+            with patch("google.auth.transport.requests.Request") as mock_request:
+                token = model._get_access_token()
+                mock_creds.refresh.assert_called_once_with(mock_request())
+                assert token == "refreshed-token"
+
+    def test_gcloud_cli_fallback_for_token(self):
+        """Test gcloud CLI fallback when _credentials is None."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            with patch("google.auth.default", side_effect=Exception("no ADC")):
+                model = VertexLanguageModel(model_name="gemini-2.0-flash")
+                assert model._credentials is None
+
+                with patch("subprocess.run") as mock_run:
+                    mock_result = Mock()
+                    mock_result.stdout = "gcloud-token"
+                    mock_run.return_value = mock_result
+                    token = model._get_access_token()
+                    assert token == "gcloud-token"
+
+    def test_credentials_file_raises_on_invalid_file(self):
+        """Test that an invalid credentials_file raises instead of silently falling back."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            with patch(
+                "google.oauth2.service_account.Credentials.from_service_account_file",
+                side_effect=FileNotFoundError("No such file"),
+            ):
+                with pytest.raises(FileNotFoundError, match="No such file"):
+                    VertexLanguageModel(
+                        model_name="gemini-2.0-flash",
+                        credentials_file="/nonexistent/sa.json",
+                    )
+
+    def test_credentials_file_raises_on_missing_google_auth(self):
+        """Test that credentials_file raises ImportError when google-auth is not installed."""
+        import builtins
+
+        original_import = builtins.__import__
+
+        def selective_import(name, *args, **kwargs):
+            if name == "google.oauth2.service_account" or (
+                name == "google.oauth2" and args and "service_account" in (args[2] or ())
+            ):
+                raise ImportError("no google-auth")
+            return original_import(name, *args, **kwargs)
+
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            with patch("builtins.__import__", side_effect=selective_import):
+                with pytest.raises(ImportError, match="google-auth"):
+                    VertexLanguageModel(
+                        model_name="gemini-2.0-flash",
+                        credentials_file="/path/sa.json",
+                    )
+
+    def test_env_var_credentials_raises_on_invalid_file(self):
+        """Test that GOOGLE_APPLICATION_CREDENTIALS raises on invalid file instead of falling back."""
+        env = {
+            "VERTEX_PROJECT": "test-project",
+            "GOOGLE_APPLICATION_CREDENTIALS": "/bad/path/sa.json",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            with patch(
+                "google.oauth2.service_account.Credentials.from_service_account_file",
+                side_effect=ValueError("Invalid service account info"),
+            ):
+                with pytest.raises(ValueError, match="Invalid service account"):
+                    VertexLanguageModel(model_name="gemini-2.0-flash")
+
+
+class TestLangChainIntegration:
+    """Tests for LangChain integration using ChatGoogleGenerativeAI."""
+
+    def test_to_langchain_uses_chat_google_generative_ai(self, mock_google_auth):
+        """Test that to_langchain creates ChatGoogleGenerativeAI."""
+        _, mock_creds = mock_google_auth
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+
+            mock_lc_class = MagicMock()
+            with patch.dict(
+                "sys.modules",
+                {"langchain_google_genai": MagicMock(ChatGoogleGenerativeAI=mock_lc_class)},
+            ):
+                with patch(
+                    "esperanto.providers.llm.vertex.ChatGoogleGenerativeAI",
+                    mock_lc_class,
+                    create=True,
+                ):
+                    # Patch the import inside to_langchain
+                    import importlib
+                    lc_module = MagicMock()
+                    lc_module.ChatGoogleGenerativeAI = mock_lc_class
+                    with patch.dict("sys.modules", {"langchain_google_genai": lc_module}):
+                        result = model.to_langchain()
+                        mock_lc_class.assert_called_once()
+                        call_kwargs = mock_lc_class.call_args[1]
+                        assert call_kwargs["model"] == "gemini-2.0-flash"
+                        assert call_kwargs["project"] == "test-project"
+                        assert call_kwargs["location"] == "us-central1"
+                        assert call_kwargs["credentials"] is mock_creds
+
+    def test_to_langchain_caches_model(self, mock_google_auth):
+        """Test that to_langchain caches the LangChain model instance."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+
+            mock_lc_class = MagicMock()
+            lc_module = MagicMock()
+            lc_module.ChatGoogleGenerativeAI = mock_lc_class
+            with patch.dict("sys.modules", {"langchain_google_genai": lc_module}):
+                first = model.to_langchain()
+                second = model.to_langchain()
+                # Should only instantiate once
+                assert mock_lc_class.call_count == 1
+                assert first is second
+
+    def test_to_langchain_without_credentials(self):
+        """Test that to_langchain omits credentials when None."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            with patch("google.auth.default", side_effect=Exception("no ADC")):
+                model = VertexLanguageModel(model_name="gemini-2.0-flash")
+                assert model._credentials is None
+
+                mock_lc_class = MagicMock()
+                lc_module = MagicMock()
+                lc_module.ChatGoogleGenerativeAI = mock_lc_class
+                with patch.dict("sys.modules", {"langchain_google_genai": lc_module}):
+                    model.to_langchain()
+                    call_kwargs = mock_lc_class.call_args[1]
+                    assert "credentials" not in call_kwargs
+
+    def test_to_langchain_import_error(self, mock_google_auth):
+        """Test that to_langchain raises ImportError when langchain_google_genai is missing."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+
+            with patch.dict("sys.modules", {"langchain_google_genai": None}):
+                with pytest.raises(ImportError, match="langchain_google_genai"):
+                    model.to_langchain()

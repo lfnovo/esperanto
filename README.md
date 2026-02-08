@@ -127,7 +127,6 @@ pip install "langchain-ollama>=0.2.0"
 pip install "langchain-groq>=0.2.1"
 pip install "langchain_mistralai>=0.2.1"
 pip install "langchain_deepseek>=0.1.3"
-pip install "langchain-google-vertexai>=2.0.24"
 ```
 
 ## Provider Support Matrix

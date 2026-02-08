@@ -134,7 +134,6 @@ XAI_API_KEY=...
 #### OpenRouter
 ```bash
 OPENROUTER_API_KEY=...
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 ```
 
 → **[Full OpenRouter Setup Guide](./providers/openrouter.md)**

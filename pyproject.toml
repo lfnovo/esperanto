@@ -1,6 +1,6 @@
 [project]
 name = "esperanto"
-version = "2.18.0"
+version = "2.19.0"
 description = "A light-weight, production-ready, unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
@@ -85,5 +85,4 @@ dev = [
     "langchain-groq>=1.1.1,<2.0.0",
     "langchain-mistralai>=1.1.1,<2.0.0",
     "langchain-deepseek>=1.0.1,<2.0.0",
-    "langchain-google-vertexai>=3.2.1,<4.0.0",
 ]

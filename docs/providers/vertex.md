@@ -75,7 +75,7 @@ llm = VertexLanguageModel(
     config={
         "project": "your-project-id",
         "location": "us-east5",
-        "credentials_path": "/path/to/service-account-key.json"
+        "credentials_file": "/path/to/service-account-key.json"
     }
 )
 
@@ -383,7 +383,7 @@ model = AIFactory.create_language(
     config={
         "project": "production-project",
         "location": "us-central1",
-        "credentials_path": "/secure/path/service-account.json"
+        "credentials_file": "/secure/path/service-account.json"
     }
 )
 
@@ -439,7 +439,7 @@ embedder = AIFactory.create_embedding(
 
 ### LangChain Integration
 
-Convert to LangChain models:
+Convert to LangChain models. Uses `ChatGoogleGenerativeAI` from `langchain-google-genai` with Vertex AI project/location routing:
 
 ```python
 from esperanto.factory import AIFactory
