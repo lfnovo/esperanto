@@ -138,6 +138,7 @@ results = reranker.rerank(
 **Example - Async Reranking:**
 
 ```python
+from esperanto.factory import AIFactory
 import asyncio
 
 async def rerank_async():
