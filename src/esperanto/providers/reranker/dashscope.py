@@ -125,7 +125,7 @@ class DashScopeRerankerModel(RerankerModel):
         documents: List[str | Dict[str, str]],
         top_k: Optional[int] = None,
         fps: Optional[float] = None
-    ) -> Tuple[str, List[str], int]:
+    ) -> Tuple[str, List[str] | List[Dict[str, str]], int]:
         """Validate and normalize inputs.
 
         Args:
