@@ -397,7 +397,7 @@ class DashScopeRerankerModel(RerankerModel):
         documents: List[str | Dict[str, str]],
         top_k: Optional[int] = None,
         instruct: Optional[str] = None,
-        fps: Optional[str] = None,
+        fps: Optional[float] = None,
         **kwargs
     ) -> RerankResponse:
         """Async rerank documents using DashScope API.
