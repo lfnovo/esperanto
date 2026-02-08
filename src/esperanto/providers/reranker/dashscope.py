@@ -272,7 +272,7 @@ class DashScopeRerankerModel(RerankerModel):
         """Handle error responses from DashScope API.
 
         Args:
-            responses: HTTP response object.
+            response: HTTP response object.
 
         Raises:
             RuntimeError: With details from the error response.
