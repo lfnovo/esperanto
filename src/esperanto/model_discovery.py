@@ -490,8 +490,7 @@ def get_jina_models(
 def get_dashscope_models(
     api_key: Optional[str] = None,
 ) -> List[Model]:
-    """
-    Get available models from Aliyun DashScope AI.
+    """Get available models from Aliyun DashScope AI.
 
     NOTE: Currently only part of Aliyun models are supported, so this returns a hardcoded list of known models.
 
@@ -1019,4 +1018,5 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "voyage": get_voyage_models,
     "azure": get_azure_models,
     "transformers": get_transformers_models,
+    "dashscope": get_dashscope_models,
 }
