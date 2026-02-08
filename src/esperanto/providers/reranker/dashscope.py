@@ -24,7 +24,11 @@ class DashScopeRerankerModel(RerankerModel):
     __MULTI_MODAL = ["qwen3-vl-rerank"]
 
     def __post_init__(self):
-        """Initialize Jina reranker after dataclass initialization."""
+        """Initialize Jina reranker after dataclass initialization.
+
+        Raises:
+            ValueError: DASHSCOPE_API_KEY not given by argument or env.
+        """
         super().__post_init__()
 
         # Authentication
@@ -63,10 +67,12 @@ class DashScopeRerankerModel(RerankerModel):
 
     @property
     def provider(self) -> str:
+        """Provider this reranker suppports."""
         return "dashscope"
 
     @property
     def is_vl_model(self) -> bool:
+        """If this model is a multi-modal LLM."""
         return self.__vl_avail
 
     def _get_models(self) -> List[Model]:
@@ -348,11 +354,15 @@ class DashScopeRerankerModel(RerankerModel):
             documents: List of documents to rerank.
             top_k: Maximum number of results to return.
             instruct: System instruct passed to reranker.
+            fps: FPS for model processing video inputs.
+            kwargs: other possible model parameters (not used)
 
         Returns:
             RerankResponse with ranked results.
-        """
 
+        Raises:
+            RuntimeError: Given inputs are invalid or errors occur during model calling.
+        """
         # Validate inputs
         query, documents, top_k = self._validate_inputs(
             query, documents, top_k, fps
@@ -397,9 +407,14 @@ class DashScopeRerankerModel(RerankerModel):
             documents: List of documents to rerank.
             top_k: Maximum number of results to return.
             instruct: System instruct passed to reranker.
+            fps: FPS for model processing video inputs.
+            kwargs: other possible model parameters (not used).
 
         Returns:
             RerankResponse with ranked results.
+
+        Raises:
+            RuntimeError: Given inputs are invalid or errors occur during model calling.
         """
         # Validate inputs
         query, documents, top_k = self._validate_inputs(
@@ -430,7 +445,14 @@ class DashScopeRerankerModel(RerankerModel):
             raise RuntimeError(f"Network error calling DashScope API: {str(e)}")
 
     def to_langchain(self):
-        """Convert to LangChain-compatible reranker."""
+        """Convert to LangChain-compatible reranker.
+
+        Returns:
+            A reranker class with method 'compress_documents'.
+
+        Raises:
+            ImportError: Langchain not installed.
+        """
         try:
             from langchain_core.documents import Document
             from langchain_core.callbacks.manager import Callbacks
@@ -449,7 +471,11 @@ class DashScopeRerankerModel(RerankerModel):
                 query: str,
                 callbacks: Optional[Callbacks] = None
             ) -> List[Document]:
-                """Compress documents using DashScope reranker."""
+                """Compress documents using DashScope reranker.
+
+                Returns:
+                    List of Document object sorted by ranking result.
+                """
                 texts = [doc.page_content for doc in documents]
 
                 if self.reranker.is_vl_model:
@@ -475,4 +501,3 @@ class DashScopeRerankerModel(RerankerModel):
                 return reranked_docs
 
         return LangChainDashScopeReranker(self)
-
