@@ -323,6 +323,11 @@ def test_openai_initialization_with_api_key():
     assert model.api_key == "test-key"
 
 
+def test_openai_initialization_with_config_api_key():
+    model = OpenAIEmbeddingModel(config={"api_key": "config-test-key"})
+    assert model.api_key == "config-test-key"
+
+
 def test_openai_initialization_with_env_var():
     with patch.dict(os.environ, {"OPENAI_API_KEY": "env-test-key"}):
         model = OpenAIEmbeddingModel()
@@ -538,6 +543,11 @@ def test_google_provider_name():
 def test_google_initialization_with_api_key():
     model = GoogleEmbeddingModel(api_key="test-key")
     assert model.api_key == "test-key"
+
+
+def test_google_initialization_with_config_api_key():
+    model = GoogleEmbeddingModel(config={"api_key": "config-test-key"})
+    assert model.api_key == "config-test-key"
 
 
 def test_google_initialization_with_env_var():

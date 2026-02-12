@@ -26,6 +26,11 @@ class TestJinaEmbeddingModel:
             model = JinaEmbeddingModel()
             assert model.api_key == "env-key"
 
+    def test_init_with_config_api_key(self):
+        """Test initialization with API key from config."""
+        model = JinaEmbeddingModel(config={"api_key": "config-key"})
+        assert model.api_key == "config-key"
+
     def test_init_without_api_key(self):
         """Test initialization without API key raises error."""
         with patch.dict(os.environ, {}, clear=True):

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.1] - 2026-02-12
+
+### Fixed
+
+- **Config Dict API Key Resolution in Embedding Providers** - Fixed embedding providers ignoring `api_key` passed via config dict
+  - Affected providers: OpenAI, Google, Jina, Voyage (embedding)
+  - Providers now correctly honor API keys resolved from config before env fallback
+  - Added regression tests to ensure `config={"api_key": "..."}` works consistently
+
 ## [2.19.0] - 2026-02-07
 
 ### Added

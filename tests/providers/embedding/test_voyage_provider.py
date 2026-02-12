@@ -65,6 +65,11 @@ def test_init_with_env_api_key():
         model = VoyageEmbeddingModel()
         assert model.api_key == "test-key"
 
+def test_init_with_config_api_key():
+    """Test initialization with API key from config."""
+    model = VoyageEmbeddingModel(config={"api_key": "config-test-key"})
+    assert model.api_key == "config-test-key"
+
 
 def test_init_without_api_key():
     """Test initialization without API key raises error."""
