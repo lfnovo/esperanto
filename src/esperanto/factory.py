@@ -300,6 +300,7 @@ class AIFactory:
         cls,
         provider: str,
         model_name: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         **kwargs,
@@ -309,8 +310,9 @@ class AIFactory:
         Args:
             provider: Provider name (openai, elevenlabs, google)
             model_name: Name of the model to use
-            api_key: API key for the provider
-            base_url: Optional base URL for the API
+            config: Optional configuration dict for the model
+            api_key: Deprecated. Use config={"api_key": "..."} instead.
+            base_url: Deprecated. Use config={"base_url": "..."} instead.
             **kwargs: Additional provider-specific configuration
 
         Returns:
@@ -320,9 +322,28 @@ class AIFactory:
             ValueError: If provider is not supported
             ImportError: If provider module is not installed
         """
-        provider_class = cls._import_provider_class("text_to_speech", provider)
-        return provider_class(
-            model_name=model_name, api_key=api_key, base_url=base_url, **kwargs
+        config = config or {}
+
+        if api_key is not None:
+            warnings.warn(
+                "Passing api_key directly to create_text_to_speech() is deprecated. "
+                'Use config={"api_key": "..."} instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            config["api_key"] = api_key
+
+        if base_url is not None:
+            warnings.warn(
+                "Passing base_url directly to create_text_to_speech() is deprecated. "
+                'Use config={"base_url": "..."} instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            config["base_url"] = base_url
+
+        return cls._create_instance(
+            "text_to_speech", provider, model_name=model_name, **config, **kwargs
         )
 
     @classmethod
@@ -356,7 +377,6 @@ class AIFactory:
         provider: str,
         model_name: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
-        api_key: Optional[str] = None,
     ) -> TextToSpeechModel:
         """Create a text-to-speech model instance (alias for create_text_to_speech).
 
@@ -364,7 +384,6 @@ class AIFactory:
             provider: Provider name
             model_name: Optional name of the model to use
             config: Optional configuration for the model
-            api_key: Optional API key for authentication
 
         Returns:
             Text-to-speech model instance
@@ -376,7 +395,7 @@ class AIFactory:
             stacklevel=2,
         )
         return cls.create_text_to_speech(
-            provider, model_name=model_name, config=config, api_key=api_key
+            provider, model_name=model_name, config=config
         )
 
     @classmethod
