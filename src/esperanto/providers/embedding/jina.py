@@ -39,13 +39,23 @@ class JinaEmbeddingModel(EmbeddingModel):
                 - config: Dict with task_type, late_chunking, output_dimensions, etc.
         """
         super().__init__(**kwargs)
-        self.api_key = kwargs.get("api_key") or os.getenv("JINA_API_KEY")
+        self.api_key = (
+            self.api_key
+            or kwargs.get("api_key")
+            or (self.config or {}).get("api_key")
+            or os.getenv("JINA_API_KEY")
+        )
         if not self.api_key:
             raise ValueError(
                 "Jina API key not found. Please set the JINA_API_KEY environment "
                 "variable or pass it as 'api_key' parameter."
             )
-        self.base_url = kwargs.get("base_url", "https://api.jina.ai/v1/embeddings")
+        self.base_url = (
+            self.base_url
+            or kwargs.get("base_url")
+            or (self.config or {}).get("base_url")
+            or "https://api.jina.ai/v1/embeddings"
+        )
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

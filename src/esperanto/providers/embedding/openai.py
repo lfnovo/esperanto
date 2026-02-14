@@ -12,19 +12,24 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        
+
         # Get API key
-        self.api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
+        self.api_key = (
+            self.api_key
+            or kwargs.get("api_key")
+            or (self.config or {}).get("api_key")
+            or os.getenv("OPENAI_API_KEY")
+        )
         if not self.api_key:
             raise ValueError("OpenAI API key not found")
-        
+
         # Set base URL
         self.base_url = self.base_url or "https://api.openai.com/v1"
-        
+
         # Update config with model_name if provided
         if "model_name" in kwargs:
             self._config["model_name"] = kwargs["model_name"]
-        
+
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
 
