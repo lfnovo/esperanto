@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.1] - 2026-02-14
+
+### Fixed
+
+- **TTS Factory Config Support** - Aligned `create_text_to_speech()` signature with other factory methods by adding `config` dict parameter. Previously, `config={"api_key": "..."}` was silently ignored, causing authentication failures for callers using the standard config pattern.
+
+### Deprecated
+
+- Direct `api_key` and `base_url` parameters on `create_text_to_speech()` — use `config={"api_key": "...", "base_url": "..."}` instead.
+- Removed `api_key` parameter from `create_tts()` deprecated alias.
+
 ## [2.19.0] - 2026-02-07
 
 ### Added
