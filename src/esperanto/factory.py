@@ -86,7 +86,7 @@ class AIFactory:
         if service_type not in cls._provider_modules:
             raise ValueError(f"Invalid service type: {service_type}")
 
-        provider = provider.lower()
+        provider = provider.lower().replace("_", "-")
         if provider not in cls._provider_modules[service_type]:
             raise ValueError(
                 f"Provider '{provider}' not supported for {service_type}. "
@@ -178,7 +178,7 @@ class AIFactory:
         from esperanto.model_discovery import PROVIDER_MODELS_REGISTRY
 
         # Normalize provider name to lowercase
-        provider = provider.lower()
+        provider = provider.lower().replace("_", "-")
 
         # Check if provider is supported
         if provider not in PROVIDER_MODELS_REGISTRY:
