@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.4] - 2026-02-17
+
+### Fixed
+
+- **TTS `response_format` and `content_type` support** - OpenAI-compatible TTS providers now correctly pass `response_format` in the API request and map it to the appropriate MIME type in `AudioResponse.content_type`. Previously, `response_format` was never sent and `content_type` was always hardcoded to `"audio/mp3"`, causing failures when providers return non-MP3 audio (e.g., WAV from mlx-audio/Kokoro).
+  - Affected providers: OpenAI, OpenAI-compatible, Azure TTS
+  - Default behavior unchanged: omitting `response_format` still defaults to `"mp3"`
+
 ## [2.19.2] - 2026-02-14
 
 ### Fixed

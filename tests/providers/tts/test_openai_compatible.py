@@ -237,6 +237,57 @@ async def test_agenerate_speech(tts_model):
     assert response.provider == "openai-compatible"
 
 
+def test_generate_speech_with_response_format(tts_model):
+    """Test speech generation with explicit response_format."""
+    response = tts_model.generate_speech(
+        text="Hello world",
+        voice="default",
+        response_format="wav"
+    )
+
+    # Check payload includes response_format
+    call_args = tts_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["response_format"] == "wav"
+
+    # Check content_type is mapped correctly
+    assert response.content_type == "audio/wav"
+
+
+def test_generate_speech_default_response_format(tts_model):
+    """Test that default response_format is mp3."""
+    response = tts_model.generate_speech(
+        text="Hello world",
+        voice="default"
+    )
+
+    # Check payload defaults to mp3
+    call_args = tts_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["response_format"] == "mp3"
+
+    # Check content_type is audio/mp3
+    assert response.content_type == "audio/mp3"
+
+
+@pytest.mark.asyncio
+async def test_agenerate_speech_with_response_format(tts_model):
+    """Test async speech generation with explicit response_format."""
+    response = await tts_model.agenerate_speech(
+        text="Hello world",
+        voice="default",
+        response_format="opus"
+    )
+
+    # Check payload includes response_format
+    call_args = tts_model.async_client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["response_format"] == "opus"
+
+    # Check content_type is mapped correctly
+    assert response.content_type == "audio/opus"
+
+
 def test_available_voices(tts_model):
     """Test getting available voices."""
     voices = tts_model.available_voices

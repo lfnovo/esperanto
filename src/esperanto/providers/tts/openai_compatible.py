@@ -8,7 +8,7 @@ from esperanto.common_types import Model
 from esperanto.utils.logging import logger
 
 from .base import AudioResponse, Voice
-from .openai import OpenAITextToSpeechModel
+from .openai import OpenAITextToSpeechModel, RESPONSE_FORMAT_TO_CONTENT_TYPE
 
 
 class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
@@ -225,11 +225,14 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            response_format = kwargs.pop("response_format", "mp3")
+
             # Prepare request payload using OpenAI standard format
             payload = {
                 "model": self.model_name,
                 "voice": voice,
                 "input": text,  # OpenAI standard uses "input", not "text"
+                "response_format": response_format,
                 **kwargs
             }
 
@@ -250,9 +253,12 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(audio_data)
 
+            content_type = RESPONSE_FORMAT_TO_CONTENT_TYPE.get(
+                response_format, f"audio/{response_format}"
+            )
             return AudioResponse(
                 audio_data=audio_data,
-                content_type="audio/mp3",
+                content_type=content_type,
                 model=self.model_name,
                 voice=voice,
                 provider=self.provider,
@@ -284,11 +290,14 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            response_format = kwargs.pop("response_format", "mp3")
+
             # Prepare request payload using OpenAI standard format
             payload = {
                 "model": self.model_name,
                 "voice": voice,
                 "input": text,  # OpenAI standard uses "input", not "text"
+                "response_format": response_format,
                 **kwargs
             }
 
@@ -309,9 +318,12 @@ class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(audio_data)
 
+            content_type = RESPONSE_FORMAT_TO_CONTENT_TYPE.get(
+                response_format, f"audio/{response_format}"
+            )
             return AudioResponse(
                 audio_data=audio_data,
-                content_type="audio/mp3",
+                content_type=content_type,
                 model=self.model_name,
                 voice=voice,
                 provider=self.provider,
