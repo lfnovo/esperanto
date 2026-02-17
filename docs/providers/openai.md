@@ -517,6 +517,7 @@ Error: Request timed out
 
 **TTS Output Format:**
 - MP3 format by default
+- Configurable via `response_format` kwarg: `"mp3"`, `"opus"`, `"aac"`, `"flac"`, `"wav"`, `"pcm"`
 - Stereo output
 - 24kHz sample rate (tts-1) or 44.1kHz (tts-1-hd)
 
