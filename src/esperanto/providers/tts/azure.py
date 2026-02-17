@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 import httpx
 
 from .base import AudioResponse, Model, TextToSpeechModel, Voice
+from .openai import RESPONSE_FORMAT_TO_CONTENT_TYPE
 
 
 class AzureTextToSpeechModel(TextToSpeechModel):
@@ -203,6 +204,7 @@ class AzureTextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            response_format = kwargs.pop("response_format", "mp3")
             url = self._build_url("audio/speech")
 
             # Prepare request payload
@@ -210,6 +212,7 @@ class AzureTextToSpeechModel(TextToSpeechModel):
                 "model": self.deployment_name,
                 "voice": voice,
                 "input": text,
+                "response_format": response_format,
                 **kwargs
             }
 
@@ -230,9 +233,12 @@ class AzureTextToSpeechModel(TextToSpeechModel):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(audio_data)
 
+            content_type = RESPONSE_FORMAT_TO_CONTENT_TYPE.get(
+                response_format, f"audio/{response_format}"
+            )
             return AudioResponse(
                 audio_data=audio_data,
-                content_type="audio/mp3",
+                content_type=content_type,
                 model=self.deployment_name,
                 voice=voice,
                 provider=self.PROVIDER,
@@ -264,6 +270,7 @@ class AzureTextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            response_format = kwargs.pop("response_format", "mp3")
             url = self._build_url("audio/speech")
 
             # Prepare request payload
@@ -271,6 +278,7 @@ class AzureTextToSpeechModel(TextToSpeechModel):
                 "model": self.deployment_name,
                 "voice": voice,
                 "input": text,
+                "response_format": response_format,
                 **kwargs
             }
 
@@ -291,9 +299,12 @@ class AzureTextToSpeechModel(TextToSpeechModel):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(audio_data)
 
+            content_type = RESPONSE_FORMAT_TO_CONTENT_TYPE.get(
+                response_format, f"audio/{response_format}"
+            )
             return AudioResponse(
                 audio_data=audio_data,
-                content_type="audio/mp3",
+                content_type=content_type,
                 model=self.deployment_name,
                 voice=voice,
                 provider=self.PROVIDER,

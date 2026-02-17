@@ -8,6 +8,15 @@ import httpx
 
 from .base import TextToSpeechModel, AudioResponse, Voice, Model
 
+RESPONSE_FORMAT_TO_CONTENT_TYPE = {
+    "mp3": "audio/mp3",
+    "opus": "audio/opus",
+    "aac": "audio/aac",
+    "flac": "audio/flac",
+    "wav": "audio/wav",
+    "pcm": "audio/pcm",
+}
+
 
 class OpenAITextToSpeechModel(TextToSpeechModel):
     """OpenAI Text-to-Speech provider implementation.
@@ -173,11 +182,14 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            response_format = kwargs.pop("response_format", "mp3")
+
             # Prepare request payload
             payload = {
                 "model": self.model_name,
                 "voice": voice,
                 "input": text,
+                "response_format": response_format,
                 **kwargs
             }
 
@@ -191,16 +203,19 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
 
             # Get audio data (binary content)
             audio_data = response.content
-            
+
             # Save to file if specified
             if output_file:
                 output_file = Path(output_file)
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(audio_data)
 
+            content_type = RESPONSE_FORMAT_TO_CONTENT_TYPE.get(
+                response_format, f"audio/{response_format}"
+            )
             return AudioResponse(
                 audio_data=audio_data,
-                content_type="audio/mp3",
+                content_type=content_type,
                 model=self.model_name,
                 voice=voice,
                 provider=self.PROVIDER,
@@ -232,11 +247,14 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
             RuntimeError: If speech generation fails
         """
         try:
+            response_format = kwargs.pop("response_format", "mp3")
+
             # Prepare request payload
             payload = {
                 "model": self.model_name,
                 "voice": voice,
                 "input": text,
+                "response_format": response_format,
                 **kwargs
             }
 
@@ -250,16 +268,19 @@ class OpenAITextToSpeechModel(TextToSpeechModel):
 
             # Get audio data (binary content)
             audio_data = response.content
-            
+
             # Save to file if specified
             if output_file:
                 output_file = Path(output_file)
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(audio_data)
 
+            content_type = RESPONSE_FORMAT_TO_CONTENT_TYPE.get(
+                response_format, f"audio/{response_format}"
+            )
             return AudioResponse(
                 audio_data=audio_data,
-                content_type="audio/mp3",
+                content_type=content_type,
                 model=self.model_name,
                 voice=voice,
                 provider=self.PROVIDER,

@@ -489,9 +489,9 @@ async def generate_speech_async():
 response = tts.generate_speech(
     text="Custom speech generation",
     voice="en_US-amy-medium",
-    speed=1.2,      # Custom parameter
-    format="wav",   # Custom parameter
-    quality="high"  # Custom parameter
+    speed=1.2,              # Custom parameter
+    response_format="wav",  # Audio format: mp3, opus, aac, flac, wav, pcm
+    quality="high"          # Custom parameter
 )
 ```
 
