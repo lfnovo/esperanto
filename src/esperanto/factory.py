@@ -64,6 +64,7 @@ class AIFactory:
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
             "voyage": "esperanto.providers.reranker.voyage:VoyageRerankerModel",
+            "dashscope": "esperanto.providers.reranker.dashscope:DashScopeRerankerModel",
             "transformers": "esperanto.providers.reranker.transformers:TransformersRerankerModel",
         },
     }

@@ -46,6 +46,7 @@ Whether you're building a quick prototype or a production application serving mi
   - Azure OpenAI (Chat, Embedding, Whisper, TTS)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
+  - DashScope (Alibaba Cloud Qwen & GTE reranking)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
 - **Embedding Support**: Multiple embedding providers for vector representations
@@ -149,6 +150,7 @@ pip install "langchain_deepseek>=0.1.3"
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| DashScope | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
 
@@ -170,7 +172,7 @@ print(providers)
 # {
 #     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
-#     'reranker': ['jina', 'voyage', 'transformers'],
+#     'reranker': ['jina', 'voyage', 'transformers', 'dashscope'],
 #     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure'],
 #     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure']
 # }

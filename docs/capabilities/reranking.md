@@ -115,6 +115,7 @@ for result in response.results:
 
 - **Jina**: Strong multilingual support, API-based, good performance
 - **Voyage**: Specialized for retrieval, excellent accuracy
+- **DashScope**: Alibaba Cloud Qwen & GTE models, good for Chinese/Multilingual
 - **Transformers**: Local deployment, privacy-focused, various model choices
 
 ## Examples

@@ -487,6 +487,45 @@ def get_jina_models(
     return models
 
 
+def get_dashscope_models(
+    api_key: Optional[str] = None,
+) -> List[Model]:
+    """Get available models from Aliyun DashScope AI.
+
+    NOTE: Currently only part of Aliyun models are supported, so this returns a hardcoded list of known models.
+
+    Args:
+        api_key: DashScope API key (not used, kept for consistency)
+
+    Returns:
+        List of known DashScope models
+    """
+    # Check cache
+    cache_key = _create_cache_key("dashscope")
+    cached_models = _model_cache.get(cache_key)
+    if cached_models is not None:
+        return cached_models
+
+    # Hardcoded list of known Jina models
+    models = [
+        # Reranker Models
+        Model(
+            id="qwen3-rerank", owned_by="dashscope", context_window=30_000
+        ),
+        Model(
+            id="gte-rerank-v2", owned_by="dashscope", context_window=30_000
+        ),
+        Model(
+            id="qwen3-vl-rerank", owned_by="dashscope", context_window=800_000
+        )
+    ]
+
+    # Cache results
+    _model_cache.set(cache_key, models)
+
+    return models
+
+
 def get_voyage_models(
     api_key: Optional[str] = None,
 ) -> List[Model]:
@@ -979,4 +1018,5 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "voyage": get_voyage_models,
     "azure": get_azure_models,
     "transformers": get_transformers_models,
+    "dashscope": get_dashscope_models,
 }
