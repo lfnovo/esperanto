@@ -20,12 +20,17 @@ class VoyageEmbeddingModel(EmbeddingModel):
         super().__init__(**kwargs)
 
         # Get API key
-        self.api_key = kwargs.get("api_key") or os.getenv("VOYAGE_API_KEY")
+        self.api_key = (
+            self.api_key
+            or kwargs.get("api_key")
+            or (self.config or {}).get("api_key")
+            or os.getenv("VOYAGE_API_KEY")
+        )
         if not self.api_key:
             raise ValueError("Voyage API key not found")
 
         # Set base URL
-        self.base_url = "https://api.voyageai.com/v1"
+        self.base_url = self.base_url or "https://api.voyageai.com/v1"
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

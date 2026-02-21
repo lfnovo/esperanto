@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.4] - 2026-02-17
+
+### Fixed
+
+- **TTS `response_format` and `content_type` support** - OpenAI-compatible TTS providers now correctly pass `response_format` in the API request and map it to the appropriate MIME type in `AudioResponse.content_type`. Previously, `response_format` was never sent and `content_type` was always hardcoded to `"audio/mp3"`, causing failures when providers return non-MP3 audio (e.g., WAV from mlx-audio/Kokoro).
+  - Affected providers: OpenAI, OpenAI-compatible, Azure TTS
+  - Default behavior unchanged: omitting `response_format` still defaults to `"mp3"`
+
+## [2.19.2] - 2026-02-14
+
+### Fixed
+
+- **TTS Factory Config Support** - Aligned `create_text_to_speech()` signature with other factory methods by adding `config` dict parameter. Previously, `config={"api_key": "..."}` was silently ignored, causing authentication failures for callers using the standard config pattern.
+
+### Deprecated
+
+- Direct `api_key` and `base_url` parameters on `create_text_to_speech()` — use `config={"api_key": "...", "base_url": "..."}` instead.
+- Removed `api_key` parameter from `create_tts()` deprecated alias.
+
+## [2.19.1] - 2026-02-12
+
+### Fixed
+
+- **Config Dict API Key Resolution in Embedding Providers** - Fixed embedding providers ignoring `api_key` passed via config dict
+  - Affected providers: OpenAI, Google, Jina, Voyage (embedding)
+  - Providers now correctly honor API keys resolved from config before env fallback
+  - Added regression tests to ensure `config={"api_key": "..."}` works consistently
+
 ## [2.19.0] - 2026-02-07
 
 ### Added
