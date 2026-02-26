@@ -31,6 +31,7 @@ class AIFactory:
             "mistral": "esperanto.providers.llm.mistral:MistralLanguageModel",
             "deepseek": "esperanto.providers.llm.deepseek:DeepSeekLanguageModel",
             "vertex": "esperanto.providers.llm.vertex:VertexLanguageModel",
+            "zaps": "esperanto.providers.llm.zaps:ZapsLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
@@ -44,6 +45,7 @@ class AIFactory:
             "azure": "esperanto.providers.embedding.azure:AzureEmbeddingModel",
             "jina": "esperanto.providers.embedding.jina:JinaEmbeddingModel",
             "openrouter": "esperanto.providers.embedding.openrouter:OpenRouterEmbeddingModel",
+            "zaps": "esperanto.providers.embedding.zaps:ZapsEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
