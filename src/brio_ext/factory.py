@@ -220,6 +220,7 @@ def _wrap_language_model(
     setattr(model, "_brio_model_id", model_id)
     setattr(model, "_brio_provider", provider)
     setattr(model, "_brio_chat_format", chat_format)
+    model.to_langchain = lambda m=model: BrioLangChainWrapper(m)
     return model
 
 
@@ -254,17 +255,13 @@ def _ensure_fence(text: str, adapter=None) -> str:
     This ensures consistent fencing regardless of whether the LLM
     tried to add its own tags.
     """
-    import sys
-    print(f"[BRIO_DEBUG] _ensure_fence called, adapter={adapter}", file=sys.stderr)
     stripped = text.strip()
     if not stripped:
         return "<out>\n</out>"
 
     # Clean model-specific format markers if adapter available
     if adapter:
-        print(f"[BRIO_DEBUG] Before cleaning: {stripped[-100:]}", file=sys.stderr)
         stripped = adapter.clean_response(stripped)
-        print(f"[BRIO_DEBUG] After cleaning: {stripped[-100:]}", file=sys.stderr)
 
     # Generic cleanup: Strip trailing incomplete tokens that models generate when truncated
     # This catches any incomplete special token at the end (e.g., "[/", "<|", "<<", etc.)

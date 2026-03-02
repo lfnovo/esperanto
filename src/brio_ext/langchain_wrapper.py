@@ -188,19 +188,50 @@ class BrioLangChainWrapper:
         """
         Parse content from brio_ext's <out>...</out> fencing.
 
+        Handles the case where local models put all useful output inside
+        <think> tags, which downstream consumers strip away leaving empty
+        string.
+
         Args:
             raw_content: Content with <out>...</out> tags
 
         Returns:
             Clean content without fencing
         """
+        import re
+
+        # Step 1: Extract from <out> fencing (existing behavior)
+        content = raw_content
         if "<out>" in raw_content and "</out>" in raw_content:
             start = raw_content.find("<out>") + 5
             end = raw_content.find("</out>")
-            return raw_content[start:end].strip()
+            content = raw_content[start:end].strip()
 
-        # Fallback: return as-is if no fencing (shouldn't happen with brio_ext)
-        return raw_content
+        # Step 2: Remove <think> tags to separate "real" content from thinking
+        think_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
+        think_matches = think_pattern.findall(content)
+        cleaned = think_pattern.sub("", content).strip()
+
+        # Step 3: Determine the best content to return
+
+        # 3a: Cleaned content exists — return it (this is the normal path
+        # for models that don't use <think> tags, preserving existing behavior)
+        if cleaned:
+            return cleaned
+
+        # 3b: No content outside <think> tags — extract from thinking content.
+        # This is the fix for models that wrap ALL output in <think> tags.
+        if think_matches:
+            all_thinking = "\n".join(m.strip() for m in think_matches)
+            # Try to find a JSON object in the thinking content
+            json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', all_thinking)
+            if json_match:
+                return json_match.group(1)
+            # No JSON found — return raw thinking as fallback
+            return all_thinking
+
+        # Step 4: Return whatever we have
+        return content
 
     # LangChain compatibility methods
     def bind(self, **kwargs):

@@ -38,22 +38,15 @@ class LlamaAdapter(ChatAdapter):
     def clean_response(self, text: str) -> str:
         """Remove Llama format markers from response."""
         import re
-        import sys
-        print(f"[BRIO_DEBUG] LlamaAdapter.clean_response called", file=sys.stderr)
-        print(f"[BRIO_DEBUG] Input text ends with: {text[-100:]}", file=sys.stderr)
         cleaned = text
 
         # Strip Llama instruction format markers
         # Note: [/SYS] is not standard Llama format but models sometimes hallucinate it
         for marker in ["[INST]", "[/INST]", "<<SYS>>", "<</SYS>>", "[/SYS]", "[SYS]"]:
-            if marker in cleaned:
-                print(f"[BRIO_DEBUG] Found and removing marker: {marker}", file=sys.stderr)
             cleaned = cleaned.replace(marker, "")
 
         # Strip Llama 3.1 special tokens
         for marker in ["<|eot_id|>", "<|end_of_text|>", "<|start_header_id|>", "<|end_header_id|>"]:
-            if marker in cleaned:
-                print(f"[BRIO_DEBUG] Found and removing token: {marker}", file=sys.stderr)
             cleaned = cleaned.replace(marker, "")
 
         # Aggressive cleanup: Remove repeated whitespace
@@ -64,5 +57,4 @@ class LlamaAdapter(ChatAdapter):
         # Note: Incomplete tokens (e.g., "[/", "<|e") are handled by
         # _strip_trailing_incomplete_tokens() in factory.py for ALL adapters
 
-        print(f"[BRIO_DEBUG] Output text ends with: {cleaned[-100:]}", file=sys.stderr)
         return cleaned
