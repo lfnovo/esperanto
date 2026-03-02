@@ -267,11 +267,12 @@ def _ensure_fence(text: str, adapter=None) -> str:
     # This catches any incomplete special token at the end (e.g., "[/", "<|", "<<", etc.)
     stripped = _strip_trailing_incomplete_tokens(stripped)
 
-    # Strip any LLM-generated <out> tags before re-fencing
-    if stripped.startswith("<out>"):
-        stripped = stripped[5:].lstrip()  # Remove opening tag and whitespace
-    if stripped.endswith("</out>"):
-        stripped = stripped[:-6].rstrip()  # Remove closing tag and whitespace
+    # Strip any LLM-generated <out>/<output> tags before re-fencing
+    for open_tag, close_tag in [("<output>", "</output>"), ("<out>", "</out>")]:
+        if stripped.startswith(open_tag):
+            stripped = stripped[len(open_tag):].lstrip()
+        if stripped.endswith(close_tag):
+            stripped = stripped[:-len(close_tag)].rstrip()
 
     # Re-fence with clean tags
     return f"<out>\n{stripped}\n</out>"

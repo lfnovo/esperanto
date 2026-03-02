@@ -200,9 +200,13 @@ class BrioLangChainWrapper:
         """
         import re
 
-        # Step 1: Extract from <out> fencing (existing behavior)
+        # Step 1: Extract from <out> or <output> fencing
         content = raw_content
-        if "<out>" in raw_content and "</out>" in raw_content:
+        if "<output>" in raw_content and "</output>" in raw_content:
+            start = raw_content.find("<output>") + 8
+            end = raw_content.find("</output>")
+            content = raw_content[start:end].strip()
+        elif "<out>" in raw_content and "</out>" in raw_content:
             start = raw_content.find("<out>") + 5
             end = raw_content.find("</out>")
             content = raw_content[start:end].strip()
