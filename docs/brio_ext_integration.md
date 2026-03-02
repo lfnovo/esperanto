@@ -4,15 +4,13 @@ This guide explains how to adopt the `brio_ext` package from the Brio-Esperanto 
 
 ## 1. Install the Brio fork
 
-During development, install the fork directly from the `brio/providers` branch:
+Install from `main` (brio_ext is now merged):
 
 ```bash
 pip install -e ".[dev]"
-# or, to pin to a specific commit:
-# pip install "esperanto @ git+https://github.com/dcheline/esperanto.git@<commit>"
 ```
 
-If BrioDocs treats Esperanto as a submodule, update the pointer to the commit that contains `brio_ext` and run `pip install -e .` inside the Brio-Esperanto checkout.
+If BrioDocs treats Esperanto as a submodule, update the pointer to the latest `main` commit and run `pip install -e .` inside the Brio-Esperanto checkout.
 
 ## 2. Swap factory imports
 
@@ -75,7 +73,25 @@ model = AIFactory.create_language(
 
 Cloud providers (OpenAI, Anthropic, Grok, Ollama, etc.) continue to use chat payloads. The Brio factory injects the `<out>...</out>` stop sequence automatically, so BrioDocs payloads remain unchanged.
 
-## 5. Testing checklist
+## 5. LangChain / LangGraph integration
+
+Models created via `BrioAIFactory` have a built-in `.to_langchain()` method:
+
+```python
+model = AIFactory.create_language("llamacpp", "qwen2.5-7b-instruct", config={...})
+lc_model = model.to_langchain()
+result = lc_model.invoke("What is 2+2?")
+print(result.content)  # Clean text, no <out> tags or <think> content
+```
+
+The wrapper handles:
+- Stripping `<out>...</out>` fencing
+- Extracting content from `<think>` tags (for reasoning models that wrap all output in think tags)
+- Converting LangChain message types (HumanMessage, SystemMessage, etc.) to brio_ext format
+
+No need for custom wrappers or monkey-patching in consumer applications.
+
+## 6. Testing checklist
 
 Before merging updates in BrioDocs:
 
@@ -86,7 +102,7 @@ Before merging updates in BrioDocs:
    - Ollama or cloud provider path (should honour the same contract).
 4. Monitor for the `brio_ext not installed` warning. If it appears, double-check that the editable install succeeded.
 
-## 6. Environment defaults
+## 7. Environment defaults
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
@@ -95,7 +111,7 @@ Before merging updates in BrioDocs:
 
 Wrap the import with a try/except and guard factory usage with an environment flag if a phased rollout is needed.
 
-## 7. Provider smoke tests (optional)
+## 8. Provider smoke tests (optional)
 
 For quick end-to-end checks run the live-provider smokes in `src/brio_ext/tests/integration/test_provider_smoke.py`. They are skipped unless you supply environment variables:
 
@@ -126,7 +142,7 @@ Each smoke test asserts:
 
 Use these whenever you change adapters, provider shims, or stop-token handling.
 
-## 8. Rollback
+## 9. Rollback
 
 If issues arise, revert to the previous behaviour by:
 
@@ -134,9 +150,9 @@ If issues arise, revert to the previous behaviour by:
 2. Removing any `llamacpp` provider usage (fall back to `openai-compatible`).
 3. Keeping the existing llama.cpp server running—the fallback path still leverages it via the OpenAI-compatible API.
 
-## 9. llama.cpp test matrix & scenarios
+## 10. llama.cpp test matrix & scenarios
 
-**NOTE:** Section 9 has been updated for the new tier-based architecture. See **[brio_ext_integration_v2.md](./brio_ext_integration_v2.md)** for the latest server configuration, test scenarios, and troubleshooting guide.
+**NOTE:** Section 10 has been updated for the new tier-based architecture. See **[brio_ext_integration_v2.md](./brio_ext_integration_v2.md)** for the latest server configuration, test scenarios, and troubleshooting guide.
 
 **Quick Start:**
 ```bash
@@ -150,7 +166,7 @@ python scripts/test_with_llm.py reasoning 1
 
 To thoroughly validate local engines (Qwen, Mistral, Phi) we follow this matrix, adapted from the original llama.cpp specification.
 
-### 9.1 Server tiers (Legacy - See brio_ext_integration_v2.md for current)
+### 10.1 Server tiers (Legacy - See brio_ext_integration_v2.md for current)
 
 | Tier | Target hardware | Startup command |
 |------|-----------------|-----------------|
@@ -160,7 +176,7 @@ To thoroughly validate local engines (Qwen, Mistral, Phi) we follow this matrix,
 
 Reuse the same host/port (`127.0.0.1:8765`) while swapping models/flags between runs.
 
-### 9.2 Message payload
+### 10.2 Message payload
 
 BrioDocs sends a large system block plus a user turn:
 
@@ -257,7 +273,7 @@ Pirate sanity check (any chat-format model):
 }
 ```
 
-### 9.3 Harness expectations
+### 10.3 Harness expectations
 
 When we build the dedicated llama.cpp harness it will:
 
@@ -268,7 +284,7 @@ When we build the dedicated llama.cpp harness it will:
 
 Until that harness is automated, you can manually script each scenario with the helper smoke runner or curl commands documented above.
 
-### 9.4 Known issues
+### 10.4 Known issues
 
 - Qwen 2.5 via llama.cpp historically ignored system messages. Ensure the rendered prompt includes the `<|im_start|>system` block and that `chat_format` is `chatml`. After our adapter fix, responses should respect the system context.
 - `max_tokens` must be mapped to `n_predict` on the llama.cpp server. The provider shim now does this; if completions still truncate early, inspect server logs for overrides.
@@ -297,7 +313,7 @@ POST http://localhost:8765/v1/chat/completions
 Expected: `"The inventors are Richard H. Xu, Xiaolei Qin, Phillip C. Krasko, and Douglas A. Cheline."`  
 Legacy failure: `"I don't have information about which specific patent you're referring to."`
 
-### 9.5 Parameters & sampling defaults
+### 10.5 Parameters & sampling defaults
 
 ```json
 {
@@ -316,7 +332,7 @@ Legacy failure: `"I don't have information about which specific patent you're re
 - Tier 2 (balanced): three candidates.
 - Tier 3 (fast): single response, no reranking.
 
-### 9.6 Model status matrix
+### 10.6 Model status matrix
 
 | Model | Provider | Status | Notes |
 |-------|----------|--------|-------|
@@ -326,7 +342,7 @@ Legacy failure: `"I don't have information about which specific patent you're re
 | GPT‑4o‑mini | OpenAI | ✅ baseline comparison |
 | Claude 3.5 Sonnet | Anthropic | ✅ baseline comparison |
 
-### 9.7 Scenario checklist
+### 10.7 Scenario checklist
 
 1. **Simple system override** – Pirate payload above. Expect pirate-speak output.  
 2. **Large insight inventor lookup** – Medium context payload; expect inventor list.  
@@ -342,19 +358,19 @@ For each run capture:
 - Cleaned body between `<out>…</out>`.
 - Finish reason and completion token count.
 
-### 9.8 Deliverables for a test campaign
+### 10.8 Deliverables for a test campaign
 
 - Pass/fail matrix covering each scenario/model/tier.  
 - Logs or saved prompts/responses for any failure.  
 - Root-cause summary (e.g., template mismatch, server misconfiguration).  
 - Interim workarounds if a model cannot be fixed immediately.
 
-## 10. Roadmap for automation
+## 11. Roadmap for automation
 
 1. Expand `test_provider_smoke.py` to load JSON fixtures representing the scenarios above.
 2. Record golden outputs for the “inventor” and “pirate” tests per model.
 3. Integrate into CI once credential handling is solved (or run manually before releases).
 
-## 11. Support
+## 12. Support
 
-For questions or regressions, coordinate with the Brio-Esperanto maintainers on the `brio/providers` branch. The implementation plan at `Brio_Esperanto_implementation_Plan.md` tracks outstanding work (golden snapshots, release tags, etc.).
+For questions or regressions, coordinate with the Brio-Esperanto maintainers on `main`. The implementation plan at `Brio_Esperanto_implementation_Plan.md` tracks outstanding work (golden snapshots, release tags, etc.).

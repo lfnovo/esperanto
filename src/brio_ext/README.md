@@ -61,6 +61,36 @@ Supported `chat_format` values:
 
 If `chat_format` is not provided, brio_ext will automatically detect the format based on the model name.
 
+### LangChain / LangGraph Integration
+
+Every model created via `BrioAIFactory` has a built-in `.to_langchain()` method:
+
+```python
+model = BrioAIFactory.create_language(
+    provider="llamacpp",
+    model_name="qwen2.5-7b-instruct",
+    config={"base_url": "http://localhost:8080"},
+)
+
+# Get a LangChain-compatible wrapper
+lc_model = model.to_langchain()
+
+# Use with LangChain/LangGraph
+result = lc_model.invoke("What is 2+2?")
+print(result.content)  # Clean text, no <out> tags
+
+# Async support
+result = await lc_model.ainvoke([
+    SystemMessage(content="You are a helpful assistant."),
+    HumanMessage(content="Summarize this document."),
+])
+```
+
+The wrapper preserves the full brio_ext rendering pipeline (chat templates, stop tokens, response cleaning) and automatically:
+- Strips `<out>...</out>` fencing from responses
+- Handles `<think>` tags from reasoning models (extracts useful content instead of returning empty strings)
+- Converts LangChain message types to brio_ext format
+
 ## How It Works
 
 The factory wraps providers transparently:

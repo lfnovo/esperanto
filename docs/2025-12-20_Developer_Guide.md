@@ -131,6 +131,7 @@ src/
 │
 └── brio_ext/
     ├── factory.py                 # BrioAIFactory (extends AIFactory)
+    ├── langchain_wrapper.py       # LangChain/LangGraph compatibility wrapper
     ├── registry.py                # Adapter selection logic
     ├── renderer.py                # Prompt rendering dispatcher
     ├── adapters/                  # Chat template adapters (Qwen, Llama, etc.)
@@ -610,6 +611,34 @@ class Usage(BaseModel):
 
 ---
 
+## LangChain Integration
+
+Models created via `BrioAIFactory` automatically expose a `.to_langchain()` method:
+
+```python
+from brio_ext.factory import BrioAIFactory
+
+model = BrioAIFactory.create_language("llamacpp", "qwen2.5-7b-instruct", config={...})
+lc_model = model.to_langchain()
+
+# Sync
+result = lc_model.invoke("What is 2+2?")
+
+# Async
+result = await lc_model.ainvoke(messages)
+
+# result.content is clean text (no <out> tags, no <think> content)
+```
+
+The `BrioLangChainWrapper` (in `src/brio_ext/langchain_wrapper.py`):
+- Calls brio_ext's `chat_complete()` preserving the full rendering pipeline
+- Strips `<out>...</out>` fencing from responses
+- Handles `<think>` tags from reasoning models that wrap all output in think tags
+- Converts LangChain message types (HumanMessage, SystemMessage) to brio_ext format
+- Returns `_AIMessage` objects compatible with LangChain/LangGraph
+
+---
+
 ## Quick Reference
 
 | Task | Location |
@@ -618,6 +647,7 @@ class Usage(BaseModel):
 | Add embedding provider | `src/esperanto/providers/embedding/` + register in `factory.py` |
 | Add chat adapter | `src/brio_ext/adapters/` + register in `registry.py` |
 | Modify factory logic | `src/esperanto/factory.py` or `src/brio_ext/factory.py` |
+| Use LangChain wrapper | `model.to_langchain()` or `src/brio_ext/langchain_wrapper.py` |
 | Add common types | `src/esperanto/common_types/` |
 | Configure timeouts | `src/esperanto/utils/timeout.py` |
 | Add metrics | `src/brio_ext/metrics/logger.py` |

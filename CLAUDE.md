@@ -74,11 +74,25 @@ ADAPTERS = (
 |---------|----------|
 | Main factory | `src/esperanto/factory.py` |
 | BrioDocs factory | `src/brio_ext/factory.py` |
+| LangChain wrapper | `src/brio_ext/langchain_wrapper.py` |
 | Language base class | `src/esperanto/providers/llm/base.py` |
 | Embedding base class | `src/esperanto/providers/embedding/base.py` |
 | Response types | `src/esperanto/common_types/` |
 | Adapter registry | `src/brio_ext/registry.py` |
 | Metrics logger | `src/brio_ext/metrics/logger.py` |
+
+### LangChain Integration
+
+Every model created via `BrioAIFactory` exposes `.to_langchain()` which returns a `BrioLangChainWrapper`. This wrapper:
+- Calls brio_ext's `chat_complete()` (preserves rendering pipeline)
+- Strips `<out>` fencing and `<think>` tags from responses
+- Returns `_AIMessage` objects compatible with LangChain/LangGraph
+
+```python
+model = BrioAIFactory.create_language("llamacpp", "qwen2.5-7b-instruct", config={...})
+lc_model = model.to_langchain()
+result = lc_model.invoke("What is 2+2?")
+```
 
 ### Configuration Priority
 
