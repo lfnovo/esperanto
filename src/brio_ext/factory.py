@@ -12,7 +12,7 @@ from esperanto.common_types import ChatCompletion, Message
 from esperanto.factory import AIFactory
 from esperanto.providers.llm.base import LanguageModel
 
-from brio_ext.langchain_wrapper import BrioLangChainWrapper
+from brio_ext.langchain_wrapper import BrioBaseChatModel, BrioLangChainWrapper
 from brio_ext.metrics import MetricsLogger
 from brio_ext.renderer import DEFAULT_STOP, render_for_model
 
@@ -220,7 +220,7 @@ def _wrap_language_model(
     setattr(model, "_brio_model_id", model_id)
     setattr(model, "_brio_provider", provider)
     setattr(model, "_brio_chat_format", chat_format)
-    model.to_langchain = lambda m=model: BrioLangChainWrapper(m)
+    model.to_langchain = lambda m=model: BrioBaseChatModel(brio_model=m)
     return model
 
 
@@ -299,7 +299,7 @@ def _strip_trailing_incomplete_tokens(text: str) -> str:
     return text.strip()
 
 
-def create_langchain_wrapper(model: LanguageModel) -> BrioLangChainWrapper:
+def create_langchain_wrapper(model: LanguageModel) -> BrioBaseChatModel:
     """
     Create a LangChain-compatible wrapper for a brio_ext model.
 
@@ -311,7 +311,7 @@ def create_langchain_wrapper(model: LanguageModel) -> BrioLangChainWrapper:
         model: A LanguageModel instance from BrioAIFactory.create_language()
 
     Returns:
-        BrioLangChainWrapper that can be used with LangChain/LangGraph
+        BrioBaseChatModel that can be used with LangChain/LangGraph
 
     Example:
         >>> model = BrioAIFactory.create_language("llamacpp", "llama-3.1-8b-instruct")
@@ -319,7 +319,7 @@ def create_langchain_wrapper(model: LanguageModel) -> BrioLangChainWrapper:
         >>> result = await langchain_model.ainvoke("What is 2+2?")
         >>> print(result.content)  # Clean output, no <out> tags
     """
-    return BrioLangChainWrapper(model)
+    return BrioBaseChatModel(brio_model=model)
 
 
 class _stop_config_guard:

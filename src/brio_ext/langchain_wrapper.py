@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List, Optional
+import re
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
+
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForLLMRun,
+    CallbackManagerForLLMRun,
+)
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
+from pydantic import ConfigDict, Field
 
 from esperanto.common_types import ChatCompletion
 from esperanto.providers.llm.base import LanguageModel
@@ -260,3 +270,182 @@ class _AIMessage:
 
     def __repr__(self):
         return f"AIMessage(content={self.content[:50]}...)"
+
+
+class BrioBaseChatModel(BaseChatModel):
+    """
+    LangChain BaseChatModel wrapper for brio_ext models.
+
+    Extends BaseChatModel so that LangGraph's callback system
+    (on_chat_model_start, on_llm_new_token, on_llm_end) works correctly,
+    enabling stream_mode="messages" support.
+
+    Usage:
+        model = BrioAIFactory.create_language("llamacpp", "qwen2.5-7b-instruct", config={...})
+        lc_model = BrioBaseChatModel(brio_model=model)
+        result = lc_model.invoke("What is 2+2?")
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    brio_model: Any = Field(description="A LanguageModel instance from BrioAIFactory")
+
+    def __init__(self, brio_model: LanguageModel, **kwargs: Any):
+        super().__init__(brio_model=brio_model, **kwargs)
+        if not getattr(brio_model, "_brio_wrapped", False):
+            raise ValueError(
+                "Model must be created via BrioAIFactory to ensure proper wrapping. "
+                "Use: BrioAIFactory.create_language(provider='llamacpp', ...)"
+            )
+
+    @property
+    def _llm_type(self) -> str:
+        return "brio_langchain_wrapper"
+
+    @property
+    def _identifying_params(self) -> Dict[str, Any]:
+        return {
+            "model_name": self.brio_model.model_name,
+            "provider": getattr(self.brio_model, "_brio_provider", "unknown"),
+            "model_id": getattr(self.brio_model, "_brio_model_id", "unknown"),
+            "temperature": self.brio_model.temperature,
+            "max_tokens": self.brio_model.max_tokens,
+        }
+
+    def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        converted = self._convert_messages(messages)
+        response: ChatCompletion = self.brio_model.chat_complete(
+            converted, stream=False
+        )
+        return self._build_chat_result(response)
+
+    async def _agenerate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        converted = self._convert_messages(messages)
+        response: ChatCompletion = await self.brio_model.achat_complete(
+            converted, stream=False
+        )
+        return self._build_chat_result(response)
+
+    def _build_chat_result(self, response: ChatCompletion) -> ChatResult:
+        raw_content = response.choices[0].message.content
+        content = _parse_fenced_content(raw_content)
+
+        usage = response.usage
+        response_metadata = {
+            "model": response.model,
+            "finish_reason": response.choices[0].finish_reason,
+        }
+        if usage:
+            response_metadata["usage"] = {
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens,
+            }
+
+        message = AIMessage(
+            content=content,
+            response_metadata=response_metadata,
+        )
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+    def _stream(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> Iterator[ChatGenerationChunk]:
+        converted = self._convert_messages(messages)
+        stream_response = self.brio_model.chat_complete(converted, stream=True)
+        for chunk in stream_response:
+            token = chunk.choices[0].delta.content if chunk.choices else ""
+            if token:
+                chat_chunk = ChatGenerationChunk(
+                    message=AIMessageChunk(content=token)
+                )
+                if run_manager:
+                    run_manager.on_llm_new_token(token, chunk=chat_chunk)
+                yield chat_chunk
+
+    async def _astream(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ChatGenerationChunk]:
+        converted = self._convert_messages(messages)
+        stream_response = await self.brio_model.achat_complete(
+            converted, stream=True
+        )
+        async for chunk in stream_response:
+            token = chunk.choices[0].delta.content if chunk.choices else ""
+            if token:
+                chat_chunk = ChatGenerationChunk(
+                    message=AIMessageChunk(content=token)
+                )
+                if run_manager:
+                    await run_manager.on_llm_new_token(token, chunk=chat_chunk)
+                yield chat_chunk
+
+    @staticmethod
+    def _convert_messages(messages: List[BaseMessage]) -> List[Dict[str, str]]:
+        """Convert LangChain BaseMessage objects to dicts for brio_model.chat_complete()."""
+        role_map = {
+            "human": "user",
+            "ai": "assistant",
+            "system": "system",
+            "user": "user",
+            "assistant": "assistant",
+        }
+        converted = []
+        for msg in messages:
+            role = role_map.get(msg.type, msg.type)
+            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            converted.append({"role": role, "content": content})
+        return converted
+
+
+def _parse_fenced_content(raw_content: str) -> str:
+    """
+    Parse content from brio_ext's <out>/<output> fencing and strip <think> tags.
+
+    Shared between BrioLangChainWrapper (legacy) and BrioBaseChatModel.
+    """
+    content = raw_content
+    if "<output>" in raw_content and "</output>" in raw_content:
+        start = raw_content.find("<output>") + 8
+        end = raw_content.find("</output>")
+        content = raw_content[start:end].strip()
+    elif "<out>" in raw_content and "</out>" in raw_content:
+        start = raw_content.find("<out>") + 5
+        end = raw_content.find("</out>")
+        content = raw_content[start:end].strip()
+
+    think_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
+    think_matches = think_pattern.findall(content)
+    cleaned = think_pattern.sub("", content).strip()
+
+    if cleaned:
+        return cleaned
+
+    if think_matches:
+        all_thinking = "\n".join(m.strip() for m in think_matches)
+        json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', all_thinking)
+        if json_match:
+            return json_match.group(1)
+        return all_thinking
+
+    return content
