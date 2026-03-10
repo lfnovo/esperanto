@@ -206,8 +206,33 @@ class OllamaLanguageModel(LanguageModel):
                 })
 
             else:
-                # Pass through other messages as-is
-                converted.append(msg)
+                content = msg.get("content")
+                if isinstance(content, list):
+                    # Multimodal content array — extract text and images
+                    text_parts = []
+                    images = []
+                    for part in content:
+                        part_type = part.get("type", "")
+                        if part_type == "text":
+                            text_parts.append(part.get("text", ""))
+                        elif part_type == "image_url":
+                            image_url_data = part.get("image_url", {})
+                            url = image_url_data.get("url", "")
+                            if url.startswith("data:"):
+                                # Extract just the base64 data
+                                _, _, b64_data = url.partition(",")
+                                images.append(b64_data)
+
+                    ollama_msg: Dict[str, Any] = {
+                        "role": msg.get("role", "user"),
+                        "content": " ".join(text_parts) if text_parts else "",
+                    }
+                    if images:
+                        ollama_msg["images"] = images
+                    converted.append(ollama_msg)
+                else:
+                    # Pass through other messages as-is
+                    converted.append(msg)
 
         return converted
 

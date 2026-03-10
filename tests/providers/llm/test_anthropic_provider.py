@@ -979,3 +979,91 @@ class TestStreamingToolCalls:
 
         assert chunk is not None
         assert chunk.choices[0].finish_reason == "tool_calls"
+
+
+# =============================================================================
+# Vision/Multimodal Content Tests
+# =============================================================================
+
+
+class TestConvertContentToAnthropic:
+    """Test _convert_content_to_anthropic for multimodal message conversion."""
+
+    def test_string_content_unchanged(self, anthropic_model):
+        result = anthropic_model._convert_content_to_anthropic("Hello world")
+        assert result == "Hello world"
+
+    def test_empty_string(self, anthropic_model):
+        result = anthropic_model._convert_content_to_anthropic("")
+        assert result == ""
+
+    def test_non_list_non_string(self, anthropic_model):
+        result = anthropic_model._convert_content_to_anthropic(42)
+        assert result == "42"
+
+    def test_none_content(self, anthropic_model):
+        result = anthropic_model._convert_content_to_anthropic(None)
+        assert result == ""
+
+    def test_text_content_part(self, anthropic_model):
+        content = [{"type": "text", "text": "Describe this image"}]
+        result = anthropic_model._convert_content_to_anthropic(content)
+        assert result == [{"type": "text", "text": "Describe this image"}]
+
+    def test_base64_image_conversion(self, anthropic_model):
+        content = [
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo="}}
+        ]
+        result = anthropic_model._convert_content_to_anthropic(content)
+        assert len(result) == 1
+        assert result[0]["type"] == "image"
+        assert result[0]["source"]["type"] == "base64"
+        assert result[0]["source"]["media_type"] == "image/png"
+        assert result[0]["source"]["data"] == "iVBORw0KGgo="
+
+    def test_url_image_conversion(self, anthropic_model):
+        content = [
+            {"type": "image_url", "image_url": {"url": "https://example.com/img.jpg"}}
+        ]
+        result = anthropic_model._convert_content_to_anthropic(content)
+        assert len(result) == 1
+        assert result[0]["type"] == "image"
+        assert result[0]["source"]["type"] == "url"
+        assert result[0]["source"]["url"] == "https://example.com/img.jpg"
+
+    def test_mixed_text_and_image(self, anthropic_model):
+        content = [
+            {"type": "text", "text": "What is in this image?"},
+            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQ"}},
+        ]
+        result = anthropic_model._convert_content_to_anthropic(content)
+        assert len(result) == 2
+        assert result[0]["type"] == "text"
+        assert result[1]["type"] == "image"
+        assert result[1]["source"]["media_type"] == "image/jpeg"
+
+
+def test_prepare_messages_with_image_content(anthropic_model):
+    """Test that _prepare_messages handles multimodal content arrays."""
+    messages = [
+        {"role": "user", "content": [
+            {"type": "text", "text": "Describe this"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc123"}},
+        ]}
+    ]
+    system, msgs = anthropic_model._prepare_messages(messages)
+    assert system is None
+    assert len(msgs) == 1
+    assert msgs[0]["role"] == "user"
+    content = msgs[0]["content"]
+    assert isinstance(content, list)
+    assert content[0]["type"] == "text"
+    assert content[1]["type"] == "image"
+    assert content[1]["source"]["data"] == "abc123"
+
+
+def test_prepare_messages_string_content_still_works(anthropic_model):
+    """Backward compatibility: string content should still work."""
+    messages = [{"role": "user", "content": "Hello!"}]
+    system, msgs = anthropic_model._prepare_messages(messages)
+    assert msgs[0]["content"] == "Hello!"

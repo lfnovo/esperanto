@@ -760,3 +760,82 @@ class TestErrorHandling:
         messages = [{"role": "user", "content": "Hello"}]
         with pytest.raises(RuntimeError, match="Google API error"):
             google_model.chat_complete(messages)
+
+
+# =============================================================================
+# Vision/Multimodal Content Tests
+# =============================================================================
+
+
+class TestConvertContentPartsToGoogle:
+    """Test _convert_content_parts_to_google for multimodal message conversion."""
+
+    def test_string_content(self, google_model):
+        result = google_model._convert_content_parts_to_google("Hello")
+        assert result == [{"text": "Hello"}]
+
+    def test_empty_string(self, google_model):
+        result = google_model._convert_content_parts_to_google("")
+        assert result == [{"text": ""}]
+
+    def test_none_content(self, google_model):
+        result = google_model._convert_content_parts_to_google(None)
+        assert result == [{"text": ""}]
+
+    def test_text_part(self, google_model):
+        content = [{"type": "text", "text": "Describe this"}]
+        result = google_model._convert_content_parts_to_google(content)
+        assert result == [{"text": "Describe this"}]
+
+    def test_base64_image_to_inline_data(self, google_model):
+        content = [
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo="}}
+        ]
+        result = google_model._convert_content_parts_to_google(content)
+        assert len(result) == 1
+        assert "inlineData" in result[0]
+        assert result[0]["inlineData"]["mimeType"] == "image/png"
+        assert result[0]["inlineData"]["data"] == "iVBORw0KGgo="
+
+    def test_url_image_to_file_data(self, google_model):
+        content = [
+            {"type": "image_url", "image_url": {"url": "https://example.com/img.jpg"}}
+        ]
+        result = google_model._convert_content_parts_to_google(content)
+        assert len(result) == 1
+        assert "fileData" in result[0]
+        assert result[0]["fileData"]["fileUri"] == "https://example.com/img.jpg"
+
+    def test_mixed_text_and_image(self, google_model):
+        content = [
+            {"type": "text", "text": "What is this?"},
+            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/"}},
+        ]
+        result = google_model._convert_content_parts_to_google(content)
+        assert len(result) == 2
+        assert result[0] == {"text": "What is this?"}
+        assert result[1]["inlineData"]["mimeType"] == "image/jpeg"
+
+
+def test_format_messages_with_image_content(google_model):
+    """Test that _format_messages handles multimodal content arrays."""
+    messages = [
+        {"role": "user", "content": [
+            {"type": "text", "text": "Describe this"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc123"}},
+        ]}
+    ]
+    formatted, system = google_model._format_messages(messages)
+    assert system is None
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    parts = formatted[0]["parts"]
+    assert parts[0] == {"text": "Describe this"}
+    assert parts[1]["inlineData"]["data"] == "abc123"
+
+
+def test_format_messages_string_content_still_works(google_model):
+    """Backward compatibility: string content should still work."""
+    messages = [{"role": "user", "content": "Hello!"}]
+    formatted, system = google_model._format_messages(messages)
+    assert formatted[0]["parts"] == [{"text": "Hello!"}]
