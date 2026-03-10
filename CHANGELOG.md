@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.5] - 2026-03-10
+
+### Fixed
+
+- **OpenAI-compatible embeddings return base64 instead of float** - Added `encoding_format: "float"` to OpenAI-compatible embedding payloads (both sync and async). Some providers (e.g., OpenRouter) return base64-encoded embeddings when `encoding_format` is not explicitly set, causing `"could not convert string to float"` errors at parse time.
+
+### Changed
+
+- **Azure documentation: recommend latest API version** - Updated all Azure provider documentation examples to recommend `2024-10-21` (latest stable) instead of the outdated `2024-02-01`.
+
 ## [2.19.4] - 2026-02-17
 
 ### Fixed
