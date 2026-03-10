@@ -202,6 +202,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             payload = {
                 "input": texts,
                 "model": self.get_model_name(),
+                "encoding_format": "float",
                 **{**self._get_api_kwargs(), **kwargs},
             }
 
@@ -242,6 +243,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             payload = {
                 "input": texts,
                 "model": self.get_model_name(),
+                "encoding_format": "float",
                 **{**self._get_api_kwargs(), **kwargs},
             }
 
