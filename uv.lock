@@ -497,7 +497,7 @@ wheels = [
 
 [[package]]
 name = "esperanto"
-version = "2.19.3"
+version = "2.19.5"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
