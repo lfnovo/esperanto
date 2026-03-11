@@ -32,8 +32,8 @@ class AzureEmbeddingModel(EmbeddingModel):
         )
 
         self.azure_endpoint = (
-            self.base_url or
             azure_endpoint or
+            self.base_url or
             self._config.get("azure_endpoint") or
             os.getenv("AZURE_OPENAI_ENDPOINT_EMBEDDING") or
             os.getenv("AZURE_OPENAI_ENDPOINT")
