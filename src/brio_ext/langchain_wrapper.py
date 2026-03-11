@@ -16,6 +16,7 @@ from pydantic import ConfigDict, Field
 
 from esperanto.common_types import ChatCompletion
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.utils.streaming import StreamingThinkTagFilter
 
 
 class BrioLangChainWrapper:
@@ -369,15 +370,26 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> Iterator[ChatGenerationChunk]:
         converted = self._convert_messages(messages)
         stream_response = self.brio_model.chat_complete(converted, stream=True)
+        tag_filter = StreamingThinkTagFilter()
         for chunk in stream_response:
             token = chunk.choices[0].delta.content if chunk.choices else ""
             if token:
-                chat_chunk = ChatGenerationChunk(
-                    message=AIMessageChunk(content=token)
-                )
-                if run_manager:
-                    run_manager.on_llm_new_token(token, chunk=chat_chunk)
-                yield chat_chunk
+                filtered = tag_filter.process(token)
+                if filtered:
+                    chat_chunk = ChatGenerationChunk(
+                        message=AIMessageChunk(content=filtered)
+                    )
+                    if run_manager:
+                        run_manager.on_llm_new_token(filtered, chunk=chat_chunk)
+                    yield chat_chunk
+        remaining = tag_filter.flush()
+        if remaining:
+            chat_chunk = ChatGenerationChunk(
+                message=AIMessageChunk(content=remaining)
+            )
+            if run_manager:
+                run_manager.on_llm_new_token(remaining, chunk=chat_chunk)
+            yield chat_chunk
 
     async def _astream(
         self,
@@ -390,15 +402,26 @@ class BrioBaseChatModel(BaseChatModel):
         stream_response = await self.brio_model.achat_complete(
             converted, stream=True
         )
+        tag_filter = StreamingThinkTagFilter()
         async for chunk in stream_response:
             token = chunk.choices[0].delta.content if chunk.choices else ""
             if token:
-                chat_chunk = ChatGenerationChunk(
-                    message=AIMessageChunk(content=token)
-                )
-                if run_manager:
-                    await run_manager.on_llm_new_token(token, chunk=chat_chunk)
-                yield chat_chunk
+                filtered = tag_filter.process(token)
+                if filtered:
+                    chat_chunk = ChatGenerationChunk(
+                        message=AIMessageChunk(content=filtered)
+                    )
+                    if run_manager:
+                        await run_manager.on_llm_new_token(filtered, chunk=chat_chunk)
+                    yield chat_chunk
+        remaining = tag_filter.flush()
+        if remaining:
+            chat_chunk = ChatGenerationChunk(
+                message=AIMessageChunk(content=remaining)
+            )
+            if run_manager:
+                await run_manager.on_llm_new_token(remaining, chunk=chat_chunk)
+            yield chat_chunk
 
     @staticmethod
     def _convert_messages(messages: List[BaseMessage]) -> List[Dict[str, str]]:
