@@ -23,16 +23,16 @@ class AzureEmbeddingModel(EmbeddingModel):
 
         super().__init__(**kwargs)
 
-        # Resolve configuration with priority: kwargs → config dict → modality env var → generic env var
+        # Resolve configuration with priority: self (set by super) → config dict → modality env var → generic env var
         self.api_key = (
-            kwargs.get("api_key") or
+            self.api_key or
             self._config.get("api_key") or
             os.getenv("AZURE_OPENAI_API_KEY_EMBEDDING") or
             os.getenv("AZURE_OPENAI_API_KEY")
         )
 
         self.azure_endpoint = (
-            kwargs.get("base_url") or
+            self.base_url or
             azure_endpoint or
             self._config.get("azure_endpoint") or
             os.getenv("AZURE_OPENAI_ENDPOINT_EMBEDDING") or

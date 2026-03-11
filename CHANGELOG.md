@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.7] - 2026-03-11
+
+### Fixed
+
+- **Azure embedding provider ignores `api_key` and `base_url` from config** - Fixed `AzureEmbeddingModel` reading `api_key` and `base_url` from `kwargs` instead of `self.*`, causing config-provided values to be silently ignored.
+- **Embedding providers have redundant `kwargs.get()` fallbacks** - Cleaned up dead code in OpenAI, Voyage, Google, and Jina embedding providers that redundantly read `api_key`/`base_url` from `kwargs` after the base class already set them on `self.*`.
+
 ## [2.19.6] - 2026-03-11
 
 ### Fixed

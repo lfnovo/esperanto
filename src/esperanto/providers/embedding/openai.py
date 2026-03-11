@@ -16,8 +16,6 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         # Get API key
         self.api_key = (
             self.api_key
-            or kwargs.get("api_key")
-            or (self.config or {}).get("api_key")
             or os.getenv("OPENAI_API_KEY")
         )
         if not self.api_key:

@@ -34,8 +34,6 @@ class GoogleEmbeddingModel(EmbeddingModel):
         # Get API key
         self.api_key = (
             self.api_key
-            or kwargs.get("api_key")
-            or (self.config or {}).get("api_key")
             or os.getenv("GOOGLE_API_KEY")
             or os.getenv("GEMINI_API_KEY")
         )
