@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.6] - 2026-03-11
+
+### Fixed
+
+- **OllamaEmbeddingModel ignores `base_url` from config** - Fixed `OllamaEmbeddingModel.__post_init__` reading `base_url` from `kwargs` instead of `self.base_url`, causing config-provided and factory-provided base URLs to be silently overwritten by the environment variable fallback or localhost default.
+
 ## [2.19.5] - 2026-03-10
 
 ### Fixed
