@@ -41,8 +41,6 @@ class JinaEmbeddingModel(EmbeddingModel):
         super().__init__(**kwargs)
         self.api_key = (
             self.api_key
-            or kwargs.get("api_key")
-            or (self.config or {}).get("api_key")
             or os.getenv("JINA_API_KEY")
         )
         if not self.api_key:
@@ -52,8 +50,6 @@ class JinaEmbeddingModel(EmbeddingModel):
             )
         self.base_url = (
             self.base_url
-            or kwargs.get("base_url")
-            or (self.config or {}).get("base_url")
             or "https://api.jina.ai/v1/embeddings"
         )
 
