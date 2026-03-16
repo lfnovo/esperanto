@@ -100,10 +100,13 @@ class LlamaCppLanguageModel(LanguageModel):
     def _handle_error(self, response: httpx.Response) -> None:
         if response.status_code >= 400:
             try:
+                # For streaming responses, body may not be read yet
+                if not response.is_stream_consumed:
+                    response.read()
                 payload = response.json()
                 message = payload.get("error") or payload.get("message") or response.text
             except Exception:
-                message = response.text
+                message = getattr(response, "text", str(response.status_code))
             raise RuntimeError(f"llama.cpp error ({response.status_code}): {message}")
 
     def _get_api_kwargs(self) -> Dict[str, Any]:
@@ -176,16 +179,27 @@ class LlamaCppLanguageModel(LanguageModel):
             print(f"[LlamaCppProvider] max_tokens={payload.get('max_tokens', 'default')}")
 
         start_time = time.perf_counter()
+
+        if should_stream:
+            def _stream_gen() -> Generator[ChatCompletionChunk, None, None]:
+                with self.client.stream(
+                    "POST",
+                    f"{self.base_url}/v1/completions",
+                    headers=self._get_headers(),
+                    json=payload,
+                ) as response:
+                    self._handle_error(response)
+                    for chunk in self._parse_stream(response):
+                        yield self._normalize_chunk(chunk)
+
+            return StreamingResponse(_stream_gen(), start_time)
+
         response = self.client.post(
             f"{self.base_url}/v1/completions",
             headers=self._get_headers(),
             json=payload,
         )
         self._handle_error(response)
-
-        if should_stream:
-            generator = (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
-            return StreamingResponse(generator, start_time)
         return self._normalize_response(response.json())
 
     async def aprompt_complete(
@@ -205,19 +219,27 @@ class LlamaCppLanguageModel(LanguageModel):
             payload["stop"] = stop
 
         start_time = time.perf_counter()
+
+        if should_stream:
+            async def _stream() -> AsyncGenerator[ChatCompletionChunk, None]:
+                async with self.async_client.stream(
+                    "POST",
+                    f"{self.base_url}/v1/completions",
+                    headers=self._get_headers(),
+                    json=payload,
+                ) as response:
+                    self._handle_error(response)
+                    async for chunk in self._parse_stream_async(response):
+                        yield self._normalize_chunk(chunk)
+
+            return AsyncStreamingResponse(_stream(), start_time)
+
         response = await self.async_client.post(
             f"{self.base_url}/v1/completions",
             headers=self._get_headers(),
             json=payload,
         )
         self._handle_error(response)
-
-        if should_stream:
-            async def _stream() -> AsyncGenerator[ChatCompletionChunk, None]:
-                async for chunk in self._parse_stream_async(response):
-                    yield self._normalize_chunk(chunk)
-
-            return AsyncStreamingResponse(_stream(), start_time)
         return self._normalize_response(response.json())
 
     def chat_complete(
@@ -250,16 +272,27 @@ class LlamaCppLanguageModel(LanguageModel):
             print(f"[LlamaCppProvider] max_tokens={payload.get('max_tokens', 'default')}")
 
         start_time = time.perf_counter()
+
+        if should_stream:
+            def _stream_gen() -> Generator[ChatCompletionChunk, None, None]:
+                with self.client.stream(
+                    "POST",
+                    f"{self.base_url}/v1/chat/completions",
+                    headers=self._get_headers(),
+                    json=payload,
+                ) as response:
+                    self._handle_error(response)
+                    for chunk in self._parse_stream(response):
+                        yield self._normalize_chunk(chunk)
+
+            return StreamingResponse(_stream_gen(), start_time)
+
         response = self.client.post(
             f"{self.base_url}/v1/chat/completions",
             headers=self._get_headers(),
             json=payload,
         )
         self._handle_error(response)
-
-        if should_stream:
-            generator = (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
-            return StreamingResponse(generator, start_time)
         return self._normalize_chat_response(response.json())
 
     async def achat_complete(
@@ -274,30 +307,37 @@ class LlamaCppLanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         payload: Dict[str, Any] = {
             "model": self.get_model_name(),
-            "messages": messages,  # Pass messages directly for chat template rendering
+            "messages": messages,
             "stream": should_stream,
             **self._get_api_kwargs(),
         }
 
-        # Override stop tokens from config if provided
         stop = getattr(self, "_config", {}).get("stop")
         if stop:
             payload["stop"] = stop
 
         start_time = time.perf_counter()
+
+        if should_stream:
+            async def _stream() -> AsyncGenerator[ChatCompletionChunk, None]:
+                async with self.async_client.stream(
+                    "POST",
+                    f"{self.base_url}/v1/chat/completions",
+                    headers=self._get_headers(),
+                    json=payload,
+                ) as response:
+                    self._handle_error(response)
+                    async for chunk in self._parse_stream_async(response):
+                        yield self._normalize_chunk(chunk)
+
+            return AsyncStreamingResponse(_stream(), start_time)
+
         response = await self.async_client.post(
             f"{self.base_url}/v1/chat/completions",
             headers=self._get_headers(),
             json=payload,
         )
         self._handle_error(response)
-
-        if should_stream:
-            async def _stream() -> AsyncGenerator[ChatCompletionChunk, None]:
-                async for chunk in self._parse_stream_async(response):
-                    yield self._normalize_chunk(chunk)
-
-            return AsyncStreamingResponse(_stream(), start_time)
         return self._normalize_chat_response(response.json())
 
     def _extract_timings(self, data: Dict[str, Any]) -> Optional[Timings]:
@@ -378,12 +418,21 @@ class LlamaCppLanguageModel(LanguageModel):
         choices = chunk.get("choices", [])
         normalized_choices: List[StreamChoice] = []
         for choice in choices:
+            # Chat completions: content is in delta.content
+            # Text completions: content is in text or content at choice level
+            delta = choice.get("delta", {})
+            content = (
+                delta.get("content")
+                or choice.get("text")
+                or choice.get("content")
+                or ""
+            )
             normalized_choices.append(
                 StreamChoice(
                     index=choice.get("index", 0),
                     delta=DeltaMessage(
-                        role="assistant",
-                        content=choice.get("text") or choice.get("content") or "",
+                        role=delta.get("role", "assistant"),
+                        content=content,
                     ),
                     finish_reason=choice.get("finish_reason"),
                 )
@@ -397,7 +446,8 @@ class LlamaCppLanguageModel(LanguageModel):
 
     def _parse_stream(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
         for line in response.iter_lines():
-            if not line:
+            line = line.removeprefix("data: ").strip()
+            if not line or line == "[DONE]":
                 continue
             try:
                 yield json.loads(line)
@@ -406,7 +456,8 @@ class LlamaCppLanguageModel(LanguageModel):
 
     async def _parse_stream_async(self, response: httpx.Response) -> AsyncGenerator[Dict[str, Any], None]:
         async for line in response.aiter_lines():
-            if not line:
+            line = line.removeprefix("data: ").strip()
+            if not line or line == "[DONE]":
                 continue
             try:
                 yield json.loads(line)
