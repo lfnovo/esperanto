@@ -5,10 +5,12 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
+    StructuredOutputValidationError,
     Tool,
     ToolFunction,
     ToolCall,
@@ -63,6 +65,10 @@ def azure_model(mock_env_vars):
         model = AzureLanguageModel(model_name="test-deployment")
 
     return model
+
+
+class AzureCapitalResponse(BaseModel):
+    capital: str
 
 # --- Test Cases ---
 
@@ -269,6 +275,74 @@ def test_get_api_kwargs_json_mode(azure_model):
     with pytest.raises(TypeError):
         azure_model.structured = "not_a_dict"
         azure_model._get_api_kwargs()
+
+
+def test_get_api_kwargs_json_schema_mode(azure_model):
+    azure_model.structured = {"type": "json_schema", "schema": AzureCapitalResponse}
+    kwargs = azure_model._get_api_kwargs()
+    assert kwargs["response_format"]["type"] == "json_schema"
+    assert kwargs["response_format"]["json_schema"]["name"] == "AzureCapitalResponse"
+    assert kwargs["response_format"]["json_schema"]["strict"] is True
+
+
+def test_chat_complete_json_schema_populates_structured(azure_model):
+    azure_model.structured = {"type": "json_schema", "schema": AzureCapitalResponse}
+    azure_model.client.post.return_value.json.return_value = {
+        "id": "chatcmpl-test123",
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": '{"capital":"Paris"}',
+                    "role": "assistant"
+                }
+            }
+        ],
+        "created": 1677652288,
+        "model": "gpt-35-turbo",
+        "usage": {"completion_tokens": 5, "prompt_tokens": 10, "total_tokens": 15}
+    }
+
+    response = azure_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
+    assert isinstance(response.structured, AzureCapitalResponse)
+    assert response.structured.capital == "Paris"
+
+
+def test_chat_complete_json_schema_invalid_json_raises(azure_model):
+    azure_model.structured = {"type": "json_schema", "schema": AzureCapitalResponse}
+    azure_model.client.post.return_value.json.return_value = {
+        "id": "chatcmpl-test123",
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": "not-json",
+                    "role": "assistant"
+                }
+            }
+        ],
+        "created": 1677652288,
+        "model": "gpt-35-turbo",
+        "usage": {"completion_tokens": 5, "prompt_tokens": 10, "total_tokens": 15}
+    }
+
+    with pytest.raises(StructuredOutputValidationError):
+        azure_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
+
+
+def test_chat_complete_json_schema_streaming_not_supported(azure_model):
+    azure_model.structured = {"type": "json_schema", "schema": AzureCapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        azure_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+@pytest.mark.asyncio
+async def test_achat_complete_json_schema_streaming_not_supported(azure_model):
+    azure_model.structured = {"type": "json_schema", "schema": AzureCapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await azure_model.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
 
 
 @patch("langchain_openai.AzureChatOpenAI")

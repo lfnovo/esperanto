@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from esperanto.providers.llm.openai_compatible import OpenAICompatibleLanguageModel
+from esperanto.providers.llm.openai import OpenAILanguageModel
 
 
 class TestOpenAICompatibleLanguageModel:
@@ -447,6 +448,42 @@ class TestOpenAICompatibleLanguageModel:
         assert "response_format" in kwargs
         assert kwargs["response_format"] == {"type": "json_object"}
 
+    def test_response_format_included_for_lmstudio_in_json_schema_mode(self):
+        """Schema mode should not be skipped for LM Studio so it can fail fast."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:1234/v1",
+            structured={
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": {"capital": {"type": "string"}},
+                    "required": ["capital"],
+                },
+            },
+        )
+        kwargs = model._get_api_kwargs()
+        assert "response_format" in kwargs
+        assert kwargs["response_format"]["type"] == "json_schema"
+
+    def test_response_format_unsupported_flag_does_not_skip_json_schema(self):
+        """Schema mode should not silently downgrade even after unsupported flag."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1",
+            structured={
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": {"capital": {"type": "string"}},
+                },
+            },
+        )
+        model._response_format_unsupported = True
+        kwargs = model._get_api_kwargs()
+        assert "response_format" in kwargs
+        assert kwargs["response_format"]["type"] == "json_schema"
+
     def test_is_response_format_error(self):
         """Test detection of response_format error message."""
         model = OpenAICompatibleLanguageModel(
@@ -475,3 +512,60 @@ class TestOpenAICompatibleLanguageModel:
         model._response_format_unsupported = True
         kwargs = model._get_api_kwargs()
         assert "response_format" not in kwargs
+
+    def test_chat_complete_json_schema_fails_fast_no_retry(self):
+        """Schema mode should not retry without response_format."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1",
+            structured={
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": {"capital": {"type": "string"}},
+                    "required": ["capital"],
+                },
+            },
+        )
+        with patch.object(
+            OpenAILanguageModel,
+            "chat_complete",
+            side_effect=RuntimeError("'response_format.type' must be 'json_schema' or 'text'"),
+        ) as mock_super_chat:
+            with pytest.raises(
+                RuntimeError,
+                match="does not support schema-driven structured output",
+            ):
+                model.chat_complete([{"role": "user", "content": "Capital?"}])
+
+        assert mock_super_chat.call_count == 1
+        assert model._response_format_unsupported is False
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_json_schema_fails_fast_no_retry(self):
+        """Async schema mode should not retry without response_format."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1",
+            structured={
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": {"capital": {"type": "string"}},
+                    "required": ["capital"],
+                },
+            },
+        )
+        with patch.object(
+            OpenAILanguageModel,
+            "achat_complete",
+            side_effect=RuntimeError("'response_format.type' must be 'json_schema' or 'text'"),
+        ) as mock_super_achat:
+            with pytest.raises(
+                RuntimeError,
+                match="does not support schema-driven structured output",
+            ):
+                await model.achat_complete([{"role": "user", "content": "Capital?"}])
+
+        assert mock_super_achat.call_count == 1
+        assert model._response_format_unsupported is False
