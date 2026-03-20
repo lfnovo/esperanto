@@ -1,6 +1,7 @@
 """Helpers for schema-driven structured outputs."""
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Type, Union
 
@@ -31,9 +32,20 @@ def _is_pydantic_model_class(value: Any) -> bool:
 
 def _validate_schema_name(name: Any) -> str:
     """Validate schema name and return normalized value."""
-    if not isinstance(name, str) or not name.strip():
+    if not isinstance(name, str):
         raise ValueError("structured['name'] must be a non-empty string")
-    return name.strip()
+    normalized = name.strip()
+    if not normalized:
+        raise ValueError("structured['name'] must be a non-empty string")
+
+    # OpenAI-compatible schema name constraints.
+    if len(normalized) > 64:
+        raise ValueError("structured['name'] must be at most 64 characters")
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", normalized):
+        raise ValueError(
+            "structured['name'] may only contain letters, digits, underscores, and dashes"
+        )
+    return normalized
 
 
 def _validate_strict(strict: Any) -> bool:
@@ -171,7 +183,26 @@ def _validate_against_minimal_json_schema(
     if isinstance(enum_values, list) and data not in enum_values:
         errors.append(f"{path}: value is not one of the allowed enum values")
 
+    # Validate array traversal at any level.
+    if isinstance(data, list):
+        if "properties" in schema or "required" in schema:
+            errors.append(f"{path}: expected type 'object', got '{type(data).__name__}'")
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for idx, item in enumerate(data):
+                errors.extend(
+                    _validate_against_minimal_json_schema(item, item_schema, f"{path}[{idx}]")
+                )
+        return errors
+
     if not isinstance(data, dict):
+        # If object keywords are present without explicit "type": "object",
+        # still enforce object shape.
+        if "properties" in schema or "required" in schema:
+            errors.append(f"{path}: expected type 'object', got '{type(data).__name__}'")
+        # Same for array keywords without explicit "type": "array".
+        if "items" in schema:
+            errors.append(f"{path}: expected type 'array', got '{type(data).__name__}'")
         return errors
 
     required = schema.get("required", [])

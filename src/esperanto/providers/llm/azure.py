@@ -535,14 +535,12 @@ class AzureLanguageModel(LanguageModel):
             ) from e
 
         model_kwargs = {}
-        if self.structured is not None:
-            # Handle different structured formats
-            if isinstance(self.structured, dict):
-                struct_type = self.structured.get("type")
-                if struct_type == "json_object" or struct_type == "json":
-                    model_kwargs["response_format"] = {"type": "json_object"}
-            elif self.structured == "json":
-                model_kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            model_kwargs["response_format"] = resolved_structured.response_format
 
         is_reasoning_model = self._is_reasoning_model()
 

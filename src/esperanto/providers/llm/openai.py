@@ -523,8 +523,12 @@ class OpenAILanguageModel(LanguageModel):
             ) from e
 
         model_kwargs = {}
-        if self.structured == "json":
-            model_kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            model_kwargs["response_format"] = resolved_structured.response_format
 
         langchain_kwargs = {
             "max_tokens": self.max_tokens,
