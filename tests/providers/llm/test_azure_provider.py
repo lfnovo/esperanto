@@ -372,6 +372,17 @@ def test_to_langchain_json_mode(MockAzureChatOpenAI, azure_model, mock_env_vars)
     call_kwargs = MockAzureChatOpenAI.call_args[1]
     assert call_kwargs["model_kwargs"] == {"response_format": {"type": "json_object"}}
 
+
+@patch("langchain_openai.AzureChatOpenAI")
+def test_to_langchain_json_schema_mode(MockAzureChatOpenAI, azure_model, mock_env_vars):
+    azure_model.structured = {"type": "json_schema", "schema": AzureCapitalResponse}
+    azure_model.to_langchain()
+
+    MockAzureChatOpenAI.assert_called_once()
+    call_kwargs = MockAzureChatOpenAI.call_args[1]
+    assert call_kwargs["model_kwargs"]["response_format"]["type"] == "json_schema"
+    assert call_kwargs["model_kwargs"]["response_format"]["json_schema"]["name"] == "AzureCapitalResponse"
+
 @patch.dict(os.environ, {}, clear=True)
 @patch.dict(sys.modules, {"langchain_openai": None})
 def test_to_langchain_import_error(azure_model):

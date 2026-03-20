@@ -437,7 +437,9 @@ def test_json_schema_structured_output_invalid_json_raises(openai_model):
     openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
     messages = [{"role": "user", "content": "List capitals"}]
 
-    openai_model.client.post.return_value.json.return_value = {
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
         "id": "chatcmpl-structured-bad",
         "object": "chat.completion",
         "created": 1677652288,
@@ -455,6 +457,8 @@ def test_json_schema_structured_output_invalid_json_raises(openai_model):
             "total_tokens": 30,
         },
     }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
 
     with pytest.raises(StructuredOutputValidationError):
         openai_model.chat_complete(messages)
@@ -472,6 +476,84 @@ def test_json_schema_structured_output_requires_schema(openai_model):
     openai_model.structured = {"type": "json_schema"}
     with pytest.raises(ValueError, match="structured\\['schema'\\] is required"):
         openai_model._get_api_kwargs()
+
+
+def test_json_schema_structured_output_validates_schema_name(openai_model):
+    openai_model.structured = {
+        "type": "json_schema",
+        "schema": CapitalsResponse,
+        "name": "invalid schema name!",
+    }
+    with pytest.raises(ValueError, match="may only contain"):
+        openai_model._get_api_kwargs()
+
+
+def test_json_schema_structured_output_validates_root_array_items(openai_model):
+    openai_model.structured = {
+        "type": "json_schema",
+        "schema": {"items": {"type": "integer"}},
+    }
+    messages = [{"role": "user", "content": "Return a list"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-array",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '["1", 2]'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError, match="expected type 'integer'"):
+        openai_model.chat_complete(messages)
+
+
+def test_json_schema_structured_output_enforces_object_keywords_without_type(openai_model):
+    openai_model.structured = {
+        "type": "json_schema",
+        "schema": {"required": ["capital"], "properties": {"capital": {"type": "string"}}},
+    }
+    messages = [{"role": "user", "content": "Return data"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-object",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '["Paris"]'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError, match="expected type 'object'"):
+        openai_model.chat_complete(messages)
 
 
 @pytest.mark.asyncio
@@ -562,6 +644,19 @@ def test_to_langchain(openai_model):
     assert langchain_model.model_name == "gpt-4"
     assert langchain_model.temperature == 1.0
     # Skip API key check since it's masked in SecretStr
+
+
+def test_to_langchain_with_dict_json_structured(openai_model):
+    openai_model.structured = {"type": "json_object"}
+    langchain_model = openai_model.to_langchain()
+    assert langchain_model.model_kwargs == {"response_format": {"type": "json_object"}}
+
+
+def test_to_langchain_with_json_schema(openai_model):
+    openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
+    langchain_model = openai_model.to_langchain()
+    assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"
+    assert langchain_model.model_kwargs["response_format"]["json_schema"]["name"] == "CapitalsResponse"
 
 
 def test_to_langchain_with_base_url(openai_model):

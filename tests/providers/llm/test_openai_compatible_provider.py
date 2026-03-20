@@ -530,7 +530,7 @@ class TestOpenAICompatibleLanguageModel:
         with patch.object(
             OpenAILanguageModel,
             "chat_complete",
-            side_effect=RuntimeError("'response_format.type' must be 'json_schema' or 'text'"),
+            side_effect=RuntimeError("response_format type 'json_schema' is not supported"),
         ) as mock_super_chat:
             with pytest.raises(
                 RuntimeError,
@@ -559,7 +559,7 @@ class TestOpenAICompatibleLanguageModel:
         with patch.object(
             OpenAILanguageModel,
             "achat_complete",
-            side_effect=RuntimeError("'response_format.type' must be 'json_schema' or 'text'"),
+            side_effect=RuntimeError("response_format type 'json_schema' is not supported"),
         ) as mock_super_achat:
             with pytest.raises(
                 RuntimeError,
@@ -568,4 +568,28 @@ class TestOpenAICompatibleLanguageModel:
                 await model.achat_complete([{"role": "user", "content": "Capital?"}])
 
         assert mock_super_achat.call_count == 1
+        assert model._response_format_unsupported is False
+
+    def test_chat_complete_json_schema_preserves_non_support_errors(self):
+        """Schema mode should not misclassify unrelated errors as unsupported."""
+        model = OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080/v1",
+            structured={
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": {"capital": {"type": "string"}},
+                },
+            },
+        )
+        with patch.object(
+            OpenAILanguageModel,
+            "chat_complete",
+            side_effect=RuntimeError("HTTP 500: Internal Server Error"),
+        ) as mock_super_chat:
+            with pytest.raises(RuntimeError, match="HTTP 500: Internal Server Error"):
+                model.chat_complete([{"role": "user", "content": "Capital?"}])
+
+        assert mock_super_chat.call_count == 1
         assert model._response_format_unsupported is False
