@@ -33,6 +33,10 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    parse_structured_output_content,
+    resolve_structured_output,
+)
 
 if TYPE_CHECKING:
     from langchain_openai import AzureChatOpenAI
@@ -286,30 +290,12 @@ class AzureLanguageModel(LanguageModel):
 
         effective_kwargs["stream"] = self.streaming
 
-        if self.structured is not None:
-            is_json_mode = False
-            if isinstance(self.structured, dict):
-                struct_type = self.structured.get("type")
-                if struct_type == "json_object" or struct_type == "json":
-                    is_json_mode = True
-                else:
-                    raise TypeError(
-                        f"Invalid 'type' in structured_output dictionary: {struct_type}. Expected 'json' or 'json_object'."
-                    )
-            elif isinstance(self.structured, str):
-                if self.structured == "json":
-                    is_json_mode = True
-                else:
-                    raise TypeError(
-                        f"Invalid string for structured_output: '{self.structured}'. Expected 'json'."
-                    )
-            else:
-                raise TypeError(
-                    f"Invalid type for structured_output: {type(self.structured)}. Expected dict or str 'json'."
-                )
-
-            if is_json_mode:
-                effective_kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            effective_kwargs["response_format"] = resolved_structured.response_format
 
         if override_kwargs:
             effective_kwargs.update(override_kwargs)
@@ -367,6 +353,16 @@ class AzureLanguageModel(LanguageModel):
         """
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        effective_stream_setting = stream if stream is not None else self.streaming
+        if resolved_structured and resolved_structured.is_schema_mode and effective_stream_setting:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         call_override_kwargs: Dict[str, Any] = {}
         if stream is not None:
@@ -407,6 +403,10 @@ class AzureLanguageModel(LanguageModel):
                 for choice in result.choices:
                     if choice.message.tool_calls:
                         _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+            if resolved_structured and resolved_structured.is_schema_mode:
+                parsed = parse_structured_output_content(result.content, resolved_structured)
+                result = result.model_copy(update={"structured": parsed})
 
             return result
 
@@ -461,6 +461,16 @@ class AzureLanguageModel(LanguageModel):
         """
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        effective_stream_setting = stream if stream is not None else self.streaming
+        if resolved_structured and resolved_structured.is_schema_mode and effective_stream_setting:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         call_override_kwargs: Dict[str, Any] = {}
         if stream is not None:
@@ -502,6 +512,10 @@ class AzureLanguageModel(LanguageModel):
                     if choice.message.tool_calls:
                         _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
+            if resolved_structured and resolved_structured.is_schema_mode:
+                parsed = parse_structured_output_content(result.content, resolved_structured)
+                result = result.model_copy(update={"structured": parsed})
+
             return result
 
     def to_langchain(
@@ -521,14 +535,12 @@ class AzureLanguageModel(LanguageModel):
             ) from e
 
         model_kwargs = {}
-        if self.structured is not None:
-            # Handle different structured formats
-            if isinstance(self.structured, dict):
-                struct_type = self.structured.get("type")
-                if struct_type == "json_object" or struct_type == "json":
-                    model_kwargs["response_format"] = {"type": "json_object"}
-            elif self.structured == "json":
-                model_kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            model_kwargs["response_format"] = resolved_structured.response_format
 
         is_reasoning_model = self._is_reasoning_model()
 

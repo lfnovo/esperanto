@@ -16,3 +16,18 @@ class ToolCallValidationError(Exception):
         self.errors = errors
         error_msg = "; ".join(errors)
         super().__init__(f"Tool '{tool_name}' validation failed: {error_msg}")
+
+
+class StructuredOutputValidationError(Exception):
+    """Raised when schema-driven structured output validation fails.
+
+    Attributes:
+        schema_name: Name of the schema that failed validation.
+        errors: List of validation error messages.
+    """
+
+    def __init__(self, schema_name: str, errors: List[str]):
+        self.schema_name = schema_name
+        self.errors = errors
+        error_msg = "; ".join(errors)
+        super().__init__(f"Structured output '{schema_name}' validation failed: {error_msg}")

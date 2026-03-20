@@ -282,6 +282,10 @@ class ChatCompletion(BaseModel):
     usage: Optional[Usage] = Field(
         default=None, description="Usage statistics for this completion"
     )
+    structured: Optional[Any] = Field(
+        default=None,
+        description="Parsed structured output when schema-driven mode is enabled.",
+    )
     object: str = Field(
         default="chat.completion", description="Object type, always 'chat.completion'"
     )

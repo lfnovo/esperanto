@@ -32,6 +32,10 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    parse_structured_output_content,
+    resolve_structured_output,
+)
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
@@ -277,12 +281,9 @@ class OpenAILanguageModel(LanguageModel):
             kwargs["stream"] = kwargs.pop("streaming")
 
         # Handle structured output
-        if self.structured:
-            if not isinstance(self.structured, dict):
-                raise TypeError("structured parameter must be a dictionary")
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
-                kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(self.structured)
+        if resolved_structured:
+            kwargs["response_format"] = resolved_structured.response_format
 
         return kwargs
 
@@ -329,6 +330,13 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
+        resolved_structured = resolve_structured_output(self.structured)
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -380,6 +388,10 @@ class OpenAILanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
+        if resolved_structured and resolved_structured.is_schema_mode:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
+
         return result
 
     async def achat_complete(
@@ -422,6 +434,13 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
+        resolved_structured = resolve_structured_output(self.structured)
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -474,6 +493,10 @@ class OpenAILanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
+        if resolved_structured and resolved_structured.is_schema_mode:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
+
         return result
 
     def _get_default_model(self) -> str:
@@ -500,8 +523,12 @@ class OpenAILanguageModel(LanguageModel):
             ) from e
 
         model_kwargs = {}
-        if self.structured == "json":
-            model_kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            model_kwargs["response_format"] = resolved_structured.response_format
 
         langchain_kwargs = {
             "max_tokens": self.max_tokens,

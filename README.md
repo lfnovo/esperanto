@@ -54,7 +54,7 @@ Whether you're building a quick prototype or a production application serving mi
 - **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
-- **Structured Output**: JSON output formatting (where supported)
+- **Structured Output**: JSON mode + schema-driven outputs (OpenAI, Azure, OpenAI-compatible)
 - **LangChain Integration**: Easy conversion to LangChain chat models
 
 ## 📚 Documentation
@@ -714,6 +714,37 @@ messages = [
 response = model.chat_complete(messages)
 # Response will be in JSON format
 ```
+
+Schema-driven structured output is also supported for OpenAI, Azure OpenAI, and OpenAI-compatible providers:
+
+```python
+from pydantic import BaseModel
+
+class Capitals(BaseModel):
+    capitals: list[str]
+
+model = OpenAILanguageModel(
+    api_key="your-api-key",
+    structured={
+        "type": "json_schema",
+        "schema": Capitals,      # or a JSON Schema dict
+        "name": "capitals",      # optional, defaults to class name
+        "strict": True,          # optional, defaults to True
+    }
+)
+
+response = model.chat_complete(
+    [{"role": "user", "content": "List three European capitals"}]
+)
+
+print(response.content)      # Raw JSON string from model
+print(response.structured)   # Parsed/validated Capitals instance
+```
+
+Notes:
+- Schema mode is config-driven (`config["structured"]` or provider constructor `structured=...`).
+- Schema mode is non-streaming only (`stream=True` raises `ValueError`).
+- OpenAI-compatible endpoints fail fast if `json_schema` response format is unsupported.
 
 ## LangChain Integration 🔗
 

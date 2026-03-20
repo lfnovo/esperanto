@@ -15,13 +15,14 @@ from typing import (
 
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.providers.llm.structured_output import resolve_structured_output
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
 
-# Error message indicating the endpoint doesn't support json_object response format
-_RESPONSE_FORMAT_ERROR = "'response_format.type' must be 'json_schema'"
+# Error message indicating json_object mode isn't accepted and endpoint expects json_schema.
+_JSON_OBJECT_RESPONSE_FORMAT_ERROR = "'response_format.type' must be 'json_schema'"
 
 
 @dataclass
@@ -218,10 +219,14 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         # 1. Explicitly requested (for retry logic)
         # 2. Endpoint is likely LM Studio (port 1234 heuristic)
         # 3. We've previously detected this endpoint doesn't support it
+        resolved_structured = resolve_structured_output(self.structured)
+        schema_mode = bool(resolved_structured and resolved_structured.is_schema_mode)
         should_skip_response_format = (
             exclude_response_format
-            or self._is_likely_lmstudio()
-            or self._response_format_unsupported
+            or (
+                not schema_mode
+                and (self._is_likely_lmstudio() or self._response_format_unsupported)
+            )
         )
 
         if should_skip_response_format and "response_format" in kwargs:
@@ -233,9 +238,23 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         return kwargs
 
     def _is_response_format_error(self, error: Exception) -> bool:
-        """Check if the error is due to unsupported response_format."""
+        """Check if the error indicates json_object response_format mismatch."""
         error_str = str(error)
-        return _RESPONSE_FORMAT_ERROR in error_str
+        return _JSON_OBJECT_RESPONSE_FORMAT_ERROR in error_str
+
+    def _is_json_schema_unsupported_error(self, error: Exception) -> bool:
+        """Check whether an error clearly indicates json_schema is unsupported."""
+        error_str = str(error).lower()
+        if "json_schema" not in error_str:
+            return False
+        unsupported_patterns = [
+            "not support",
+            "unsupported",
+            "must be 'text'",
+            'must be "text"',
+            "not implemented",
+        ]
+        return any(pattern in error_str for pattern in unsupported_patterns)
 
     def chat_complete(
         self,
@@ -272,11 +291,21 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        resolved_structured = resolve_structured_output(self.structured)
+        schema_mode = bool(resolved_structured and resolved_structured.is_schema_mode)
         try:
             return super().chat_complete(
                 messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
             )
         except RuntimeError as e:
+            if schema_mode:
+                if self._is_json_schema_unsupported_error(e):
+                    raise RuntimeError(
+                        "OpenAI-compatible endpoint does not support "
+                        "schema-driven structured output (response_format=json_schema). "
+                        f"Original error: {e}"
+                    ) from e
+                raise
             # Check if it's a response_format error and we haven't already disabled it
             if self._is_response_format_error(e) and not self._response_format_unsupported:
                 logger.debug(
@@ -325,11 +354,21 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        resolved_structured = resolve_structured_output(self.structured)
+        schema_mode = bool(resolved_structured and resolved_structured.is_schema_mode)
         try:
             return await super().achat_complete(
                 messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
             )
         except RuntimeError as e:
+            if schema_mode:
+                if self._is_json_schema_unsupported_error(e):
+                    raise RuntimeError(
+                        "OpenAI-compatible endpoint does not support "
+                        "schema-driven structured output (response_format=json_schema). "
+                        f"Original error: {e}"
+                    ) from e
+                raise
             # Check if it's a response_format error and we haven't already disabled it
             if self._is_response_format_error(e) and not self._response_format_unsupported:
                 logger.debug(
