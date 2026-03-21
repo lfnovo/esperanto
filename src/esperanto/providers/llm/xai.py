@@ -28,5 +28,5 @@ class XAILanguageModel(OpenAICompatibleLanguageModel):
         )
         if not self.config:
             self.config = {}
-        self.config.setdefault("_profile_name", "xai")
+        self.config["_profile_name"] = "xai"
         super().__post_init__()

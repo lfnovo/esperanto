@@ -110,7 +110,8 @@ def register_profile(profile: OpenAICompatibleProfile) -> None:
         raise TypeError("profile must be an OpenAICompatibleProfile instance")
     if not profile.name:
         raise ValueError("profile.name must be a non-empty string")
-    _USER_PROFILES[profile.name] = profile
+    normalized_name = profile.name.lower().replace("_", "-")
+    _USER_PROFILES[normalized_name] = profile
 
 
 def get_all_profile_names() -> Set[str]:

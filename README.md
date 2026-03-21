@@ -172,10 +172,10 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
-#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
+#     'language': ['anthropic', 'azure', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai'],
+#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
-#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure'],
+#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure', 'google'],
 #     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure']
 # }
 

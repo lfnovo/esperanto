@@ -64,8 +64,13 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 self._config.get("api_key") or
                 os.getenv(self._profile.api_key_env)
             )
+            display = self._profile.display_name or self._profile.name.title()
+            if not self.base_url:
+                raise ValueError(
+                    f"{display} base URL is not configured. "
+                    f"Provide base_url in config or check the profile configuration."
+                )
             if not self.api_key:
-                display = self._profile.display_name or self._profile.name.title()
                 raise ValueError(
                     f"{display} API key not found. "
                     f"Set {self._profile.api_key_env} environment variable "

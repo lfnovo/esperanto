@@ -30,5 +30,5 @@ class DeepSeekLanguageModel(OpenAICompatibleLanguageModel):
         )
         if not self.config:
             self.config = {}
-        self.config.setdefault("_profile_name", "deepseek")
+        self.config["_profile_name"] = "deepseek"
         super().__post_init__()
