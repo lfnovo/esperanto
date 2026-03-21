@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-03-21
+
+### Added
+
+- **OpenAI-compatible provider profiles** — config-driven virtual providers that eliminate the need for separate Python classes for each OpenAI-compatible endpoint. Add a new provider with 6 lines of config instead of a new file. Users can also register custom profiles at runtime via `AIFactory.register_openai_compatible_profile()`.
+- **DashScope (Qwen) provider** — Alibaba Cloud's Qwen models via OpenAI-compatible profile (`qwen-turbo`, `qwen-plus`, `qwen-max`).
+- **MiniMax provider** — MiniMax models via OpenAI-compatible profile (`MiniMax-M2.5`, `MiniMax-M2.5-highspeed` with 204K context).
+- **`OpenAICompatibleProfile`** exported from `esperanto` for custom provider registration.
+- **`ARCHITECTURE.md`** — design principles and contributor guide for the project.
+- **`CONTRIBUTING.md`** — rewritten with practical guidance, provider addition checklist, and link to ARCHITECTURE.md.
+
+### Changed
+
+- **DeepSeek and xAI providers migrated to profiles** — both now use `OpenAICompatibleLanguageModel` configured by profile data instead of dedicated provider classes. The factory API is unchanged: `AIFactory.create_language("deepseek", ...)` works exactly as before.
+- **`OpenAICompatibleLanguageModel._normalize_response` now extracts tool calls** — previously tool_calls in API responses were silently dropped. This was a pre-existing bug that surfaced during the migration.
+
+### Deprecated
+
+- **`DeepSeekLanguageModel` direct instantiation** — use `AIFactory.create_language("deepseek", ...)` instead. Direct import still works but emits `DeprecationWarning`.
+- **`XAILanguageModel` direct instantiation** — use `AIFactory.create_language("xai", ...)` instead. Direct import still works but emits `DeprecationWarning`.
+
 ## [2.19.7] - 2026-03-11
 
 ### Fixed

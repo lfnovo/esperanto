@@ -73,6 +73,30 @@ OPENAI_COMPATIBLE_API_KEY_TTS="your-key"
 
 This allows you to use different OpenAI-compatible endpoints for different AI capabilities (LLM, Embedding, STT, TTS) without code changes.
 
+## Custom Provider Profiles
+
+If you frequently use an OpenAI-compatible endpoint, you can register it as a named provider profile instead of specifying `base_url` every time:
+
+```python
+from esperanto import AIFactory, OpenAICompatibleProfile
+
+# Register your endpoint once
+AIFactory.register_openai_compatible_profile(
+    OpenAICompatibleProfile(
+        name="my-company",
+        base_url="https://llm.internal.company.com/v1",
+        api_key_env="MY_COMPANY_LLM_KEY",
+        default_model="llama-3-70b",
+    )
+)
+
+# Then use it like any built-in provider
+model = AIFactory.create_language("my-company", "llama-3-70b")
+response = model.chat_complete(messages)
+```
+
+Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), and **MiniMax**. See their individual provider docs for details.
+
 ## Quick Start
 
 ### Via Factory (Recommended)

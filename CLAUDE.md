@@ -247,8 +247,11 @@ All providers use utility mixins:
 
 ## Critical Principles
 
-1. **Consistency > Features**: If a feature can't be consistent across providers, reconsider
-2. **Interface First**: Design interfaces before implementing providers
-3. **Test Driven**: Write tests as you implement, run frequently
-4. **Documentation**: Keep both human and AI docs in sync with code
-5. **Provider Parity**: New features should work across multiple providers when possible
+See @ARCHITECTURE.md for the full design principles. The key rules:
+
+1. **Provider Parity**: New features MUST work across all (or most) providers. Partial implementations are not acceptable — they break the core promise of a provider-agnostic interface.
+2. **Consistency > Features**: If a feature can't be consistent across providers, reconsider. We'd rather ship later with full support than early with partial support.
+3. **Interface First**: Design interfaces before implementing providers.
+4. **Provider Tiers**: Not every provider needs its own class. OpenAI-compatible providers should use `OpenAICompatibleLanguageModel` unless they have fundamentally different APIs. See ARCHITECTURE.md for tier definitions.
+5. **Test Driven**: Write tests as you implement, run frequently. Every feature must be tested across all affected providers.
+6. **Documentation**: Keep both human and AI docs in sync with code.

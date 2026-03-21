@@ -46,6 +46,8 @@ Whether you're building a quick prototype or a production application serving mi
   - Azure OpenAI (Chat, Embedding, Whisper, TTS)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
+  - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
+  - MiniMax (MiniMax-M2.5)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
 - **Embedding Support**: Multiple embedding providers for vector representations
@@ -147,7 +149,9 @@ pip install "langchain_deepseek>=0.1.3"
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
-| xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
+| DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation

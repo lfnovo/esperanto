@@ -1,10 +1,14 @@
 import os
+import warnings
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
 from esperanto.providers.llm.xai import XAILanguageModel
+
+# Suppress deprecation warnings from XAILanguageModel throughout this module
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 
 
 def test_provider_name():
