@@ -187,8 +187,13 @@ def parse_structured_output_content(
         try:
             import jsonschema
         except ImportError:
-            # Optional validation dependency is not installed.
-            return parsed
+            raise StructuredOutputValidationError(
+                schema_name=schema_name,
+                errors=[
+                    "jsonschema is required to validate dict-based structured output schemas. "
+                    "Install it with: pip install esperanto[validation]"
+                ],
+            )
 
         try:
             validator_cls = jsonschema.validators.validator_for(schema_source)

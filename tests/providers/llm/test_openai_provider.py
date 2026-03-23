@@ -475,6 +475,50 @@ def test_json_schema_structured_output_invalid_json_raises(openai_model):
         openai_model.chat_complete(messages)
 
 
+def test_json_schema_structured_output_dict_schema_requires_jsonschema(openai_model):
+    schema = {
+        "type": "object",
+        "properties": {"capital": {"type": "string"}},
+        "required": ["capital"],
+    }
+    openai_model.structured = {"type": "json_schema", "schema": schema}
+    messages = [{"role": "user", "content": "Give one capital"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-789",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '{"capital": "Lisbon"}'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    original_import = __import__
+
+    def selective_import(name, *args, **kwargs):
+        if name == "jsonschema":
+            raise ImportError("jsonschema not installed")
+        return original_import(name, *args, **kwargs)
+
+    with patch("builtins.__import__", side_effect=selective_import):
+        with pytest.raises(StructuredOutputValidationError, match="jsonschema is required"):
+            openai_model.chat_complete(messages)
+
+
 def test_json_schema_structured_output_streaming_not_supported(openai_model):
     openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
     messages = [{"role": "user", "content": "List capitals"}]
@@ -502,7 +546,8 @@ def test_json_schema_structured_output_validates_schema_name(openai_model):
 def test_json_schema_structured_output_validates_root_array_items(openai_model):
     openai_model.structured = {
         "type": "json_schema",
-        "schema": {"type": "array", "items": {"type": "integer"}},
+        # Root type intentionally omitted; item keywords should still be enforced.
+        "schema": {"items": {"type": "integer"}},
     }
     messages = [{"role": "user", "content": "Return a list"}]
 
