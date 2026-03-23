@@ -33,6 +33,7 @@ from esperanto.common_types.validation import (
 )
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
     parse_structured_output_content,
     resolve_structured_output,
 )
@@ -238,11 +239,16 @@ class OpenAILanguageModel(LanguageModel):
             for msg in messages
         ]
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
 
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
+            resolved_structured: Pre-resolved structured output configuration.
         """
         kwargs = {}
         config = self.get_completion_kwargs()
@@ -281,7 +287,11 @@ class OpenAILanguageModel(LanguageModel):
             kwargs["stream"] = kwargs.pop("streaming")
 
         # Handle structured output
-        resolved_structured = resolve_structured_output(self.structured)
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
         if resolved_structured:
             kwargs["response_format"] = resolved_structured.response_format
 
@@ -330,7 +340,10 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
-        resolved_structured = resolve_structured_output(self.structured)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
 
         if resolved_structured and resolved_structured.is_schema_mode and should_stream:
             raise ValueError(
@@ -354,7 +367,10 @@ class OpenAILanguageModel(LanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                resolved_structured=resolved_structured,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -434,7 +450,10 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
-        resolved_structured = resolve_structured_output(self.structured)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
 
         if resolved_structured and resolved_structured.is_schema_mode and should_stream:
             raise ValueError(
@@ -458,7 +477,10 @@ class OpenAILanguageModel(LanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                resolved_structured=resolved_structured,
+            ),
         }
 
         # Add tool-related parameters if configured

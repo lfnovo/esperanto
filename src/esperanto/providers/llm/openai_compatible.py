@@ -15,7 +15,10 @@ from typing import (
 
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.providers.llm.openai import OpenAILanguageModel
-from esperanto.providers.llm.structured_output import resolve_structured_output
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    resolve_structured_output,
+)
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
@@ -201,7 +204,10 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         )
 
     def _get_api_kwargs(
-        self, exclude_stream: bool = False, exclude_response_format: bool = False
+        self,
+        exclude_stream: bool = False,
+        exclude_response_format: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
     ) -> Dict[str, Any]:
         """Get API kwargs with graceful feature fallback.
 
@@ -213,13 +219,20 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             Dict containing API parameters for the request.
         """
         # Get base kwargs from parent
-        kwargs = super()._get_api_kwargs(exclude_stream)
+        kwargs = super()._get_api_kwargs(
+            exclude_stream,
+            resolved_structured=resolved_structured,
+        )
 
         # Remove response_format if:
         # 1. Explicitly requested (for retry logic)
         # 2. Endpoint is likely LM Studio (port 1234 heuristic)
         # 3. We've previously detected this endpoint doesn't support it
-        resolved_structured = resolve_structured_output(self.structured)
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
         schema_mode = bool(resolved_structured and resolved_structured.is_schema_mode)
         should_skip_response_format = (
             exclude_response_format
@@ -291,7 +304,10 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
-        resolved_structured = resolve_structured_output(self.structured)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
         schema_mode = bool(resolved_structured and resolved_structured.is_schema_mode)
         try:
             return super().chat_complete(
@@ -354,7 +370,10 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
-        resolved_structured = resolve_structured_output(self.structured)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
         schema_mode = bool(resolved_structured and resolved_structured.is_schema_mode)
         try:
             return await super().achat_complete(

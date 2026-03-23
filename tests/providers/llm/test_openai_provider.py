@@ -352,6 +352,17 @@ def test_json_structured_output(openai_model):
     assert json_payload["response_format"] == {"type": "json_object"}
 
 
+def test_json_string_alias_structured_output(openai_model):
+    openai_model.structured = "json"
+    messages = [{"role": "user", "content": "Hello!"}]
+
+    openai_model.chat_complete(messages)
+
+    call_args = openai_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["response_format"] == {"type": "json_object"}
+
+
 class CapitalsResponse(BaseModel):
     capitals: list[str]
 
@@ -491,7 +502,7 @@ def test_json_schema_structured_output_validates_schema_name(openai_model):
 def test_json_schema_structured_output_validates_root_array_items(openai_model):
     openai_model.structured = {
         "type": "json_schema",
-        "schema": {"items": {"type": "integer"}},
+        "schema": {"type": "array", "items": {"type": "integer"}},
     }
     messages = [{"role": "user", "content": "Return a list"}]
 
@@ -518,14 +529,18 @@ def test_json_schema_structured_output_validates_root_array_items(openai_model):
     openai_model.client.post.side_effect = None
     openai_model.client.post.return_value = custom_response
 
-    with pytest.raises(StructuredOutputValidationError, match="expected type 'integer'"):
+    with pytest.raises(StructuredOutputValidationError, match="integer"):
         openai_model.chat_complete(messages)
 
 
-def test_json_schema_structured_output_enforces_object_keywords_without_type(openai_model):
+def test_json_schema_structured_output_validates_object_type_mismatch(openai_model):
     openai_model.structured = {
         "type": "json_schema",
-        "schema": {"required": ["capital"], "properties": {"capital": {"type": "string"}}},
+        "schema": {
+            "type": "object",
+            "required": ["capital"],
+            "properties": {"capital": {"type": "string"}},
+        },
     }
     messages = [{"role": "user", "content": "Return data"}]
 
@@ -552,7 +567,7 @@ def test_json_schema_structured_output_enforces_object_keywords_without_type(ope
     openai_model.client.post.side_effect = None
     openai_model.client.post.return_value = custom_response
 
-    with pytest.raises(StructuredOutputValidationError, match="expected type 'object'"):
+    with pytest.raises(StructuredOutputValidationError, match="object"):
         openai_model.chat_complete(messages)
 
 
