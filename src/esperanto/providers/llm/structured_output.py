@@ -140,109 +140,17 @@ def resolve_structured_output(
     )
 
 
-def _check_json_type(value: Any, expected_type: str) -> bool:
-    """Check primitive JSON types using Python runtime types."""
-    if expected_type == "string":
-        return isinstance(value, str)
-    if expected_type == "number":
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
-    if expected_type == "integer":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if expected_type == "boolean":
-        return isinstance(value, bool)
-    if expected_type == "array":
-        return isinstance(value, list)
-    if expected_type == "object":
-        return isinstance(value, dict)
-    if expected_type == "null":
-        return value is None
-    return True
-
-
-def _validate_against_minimal_json_schema(
-    data: Any, schema: Dict[str, Any], path: str = "$"
-) -> List[str]:
-    """Perform minimal built-in JSON schema checks.
-
-    This intentionally validates a practical subset:
-      - top-level and property-level `type`
-      - `required`
-      - nested `object`/`array` traversal
-      - simple `enum`
-    """
-    errors: List[str] = []
-
-    expected_type = schema.get("type")
-    if isinstance(expected_type, str) and not _check_json_type(data, expected_type):
-        errors.append(
-            f"{path}: expected type '{expected_type}', got '{type(data).__name__}'"
-        )
-        return errors
-
-    enum_values = schema.get("enum")
-    if isinstance(enum_values, list) and data not in enum_values:
-        errors.append(f"{path}: value is not one of the allowed enum values")
-
-    # Validate array traversal at any level.
-    if isinstance(data, list):
-        if "properties" in schema or "required" in schema:
-            errors.append(f"{path}: expected type 'object', got '{type(data).__name__}'")
-        item_schema = schema.get("items")
-        if isinstance(item_schema, dict):
-            for idx, item in enumerate(data):
-                errors.extend(
-                    _validate_against_minimal_json_schema(item, item_schema, f"{path}[{idx}]")
-                )
-        return errors
-
-    if not isinstance(data, dict):
-        # If object keywords are present without explicit "type": "object",
-        # still enforce object shape.
-        if "properties" in schema or "required" in schema:
-            errors.append(f"{path}: expected type 'object', got '{type(data).__name__}'")
-        # Same for array keywords without explicit "type": "array".
-        if "items" in schema:
-            errors.append(f"{path}: expected type 'array', got '{type(data).__name__}'")
-        return errors
-
-    required = schema.get("required", [])
-    if isinstance(required, list):
-        for key in required:
-            if isinstance(key, str) and key not in data:
-                errors.append(f"{path}.{key}: required property is missing")
-
-    properties = schema.get("properties", {})
-    if not isinstance(properties, dict):
-        return errors
-
-    for key, value in data.items():
-        prop_schema = properties.get(key)
-        if not isinstance(prop_schema, dict):
-            continue
-
-        key_path = f"{path}.{key}"
-        prop_type = prop_schema.get("type")
-        if isinstance(prop_type, str) and not _check_json_type(value, prop_type):
-            errors.append(
-                f"{key_path}: expected type '{prop_type}', got '{type(value).__name__}'"
-            )
-            continue
-
-        if isinstance(value, dict):
-            errors.extend(_validate_against_minimal_json_schema(value, prop_schema, key_path))
-        elif isinstance(value, list):
-            item_schema = prop_schema.get("items")
-            if isinstance(item_schema, dict):
-                for idx, item in enumerate(value):
-                    errors.extend(
-                        _validate_against_minimal_json_schema(
-                            item,
-                            item_schema,
-                            f"{key_path}[{idx}]",
-                        )
-                    )
-
-    return errors
+def _format_jsonschema_path(path: Any) -> str:
+    """Format a jsonschema error path into a readable JSON path."""
+    if not path:
+        return "$"
+    parts = ["$"]
+    for segment in path:
+        if isinstance(segment, int):
+            parts.append(f"[{segment}]")
+        else:
+            parts.append(f".{segment}")
+    return "".join(parts)
 
 
 def parse_structured_output_content(
@@ -276,12 +184,33 @@ def parse_structured_output_content(
             ) from exc
 
     if isinstance(schema_source, dict):
-        errors = _validate_against_minimal_json_schema(parsed, schema_source)
-        if errors:
+        try:
+            import jsonschema
+        except ImportError:
+            # Optional validation dependency is not installed.
+            return parsed
+
+        try:
+            validator_cls = jsonschema.validators.validator_for(schema_source)
+            validator_cls.check_schema(schema_source)
+            validator = validator_cls(schema_source)
+            validation_errors = sorted(
+                validator.iter_errors(parsed),
+                key=lambda err: list(err.absolute_path),
+            )
+        except jsonschema.exceptions.SchemaError as exc:
             raise StructuredOutputValidationError(
                 schema_name=schema_name,
-                errors=errors,
-            )
+                errors=[f"Invalid JSON schema configuration: {exc.message}"],
+            ) from exc
+
+        if validation_errors:
+            errors = [
+                f"{_format_jsonschema_path(err.absolute_path)}: {err.message}"
+                for err in validation_errors
+            ]
+            raise StructuredOutputValidationError(schema_name=schema_name, errors=errors)
+
         return parsed
 
     raise StructuredOutputValidationError(
