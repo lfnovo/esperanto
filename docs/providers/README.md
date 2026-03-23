@@ -10,7 +10,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [OpenAI-Compatible](./openai-compatible.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ⚠️* |
 | [Anthropic](./anthropic.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Google (GenAI)](./google.md) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
-| [Vertex AI](./vertex.md) | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| [Vertex AI](./vertex.md) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
 | [Azure OpenAI](./azure.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [Groq](./groq.md) | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ |
 | [Ollama](./ollama.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |

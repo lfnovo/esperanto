@@ -4,6 +4,7 @@ import os
 from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 import pytest
+from pydantic import BaseModel
 
 from esperanto.common_types import (
     FunctionCall,
@@ -11,7 +12,10 @@ from esperanto.common_types import (
     ToolCall,
     ToolFunction,
 )
-from esperanto.common_types.exceptions import ToolCallValidationError
+from esperanto.common_types.exceptions import (
+    StructuredOutputValidationError,
+    ToolCallValidationError,
+)
 from esperanto.providers.llm.vertex import VertexLanguageModel
 
 
@@ -405,6 +409,92 @@ class TestToolCallResponse:
         tool_call = response.choices[0].message.tool_calls[0]
         assert tool_call.function.name == "get_weather"
 
+
+class VertexCapitalResponse(BaseModel):
+    capital: str
+
+
+class TestStructuredOutput:
+    """Tests for schema-driven structured output."""
+
+    def test_chat_complete_json_schema_payload_and_structured_pydantic(self, vertex_model):
+        vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
+        custom_response = Mock()
+        custom_response.status_code = 200
+        custom_response.json.return_value = {
+            "candidates": [
+                {
+                    "content": {"parts": [{"text": '{"capital":"Paris"}'}], "role": "model"},
+                    "finishReason": "STOP",
+                }
+            ],
+            "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5, "totalTokenCount": 15},
+        }
+        vertex_model.client.post.side_effect = None
+        vertex_model.client.post.return_value = custom_response
+
+        response = vertex_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
+
+        call_args = vertex_model.client.post.call_args
+        json_payload = call_args[1]["json"]
+        assert json_payload["generationConfig"]["responseMimeType"] == "application/json"
+        assert "responseJsonSchema" in json_payload["generationConfig"]
+        assert isinstance(response.structured, VertexCapitalResponse)
+        assert response.structured.capital == "Paris"
+
+    def test_chat_complete_json_schema_payload_and_structured_dict(self, vertex_model):
+        schema = {
+            "type": "object",
+            "properties": {"capital": {"type": "string"}},
+            "required": ["capital"],
+        }
+        vertex_model.structured = {"type": "json_schema", "schema": schema}
+        custom_response = Mock()
+        custom_response.status_code = 200
+        custom_response.json.return_value = {
+            "candidates": [
+                {
+                    "content": {"parts": [{"text": '{"capital":"Rome"}'}], "role": "model"},
+                    "finishReason": "STOP",
+                }
+            ],
+            "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5, "totalTokenCount": 15},
+        }
+        vertex_model.client.post.side_effect = None
+        vertex_model.client.post.return_value = custom_response
+
+        response = vertex_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
+        assert response.structured == {"capital": "Rome"}
+
+    def test_chat_complete_json_schema_invalid_json_raises(self, vertex_model):
+        vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
+        custom_response = Mock()
+        custom_response.status_code = 200
+        custom_response.json.return_value = {
+            "candidates": [
+                {
+                    "content": {"parts": [{"text": "not-json"}], "role": "model"},
+                    "finishReason": "STOP",
+                }
+            ],
+            "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5, "totalTokenCount": 15},
+        }
+        vertex_model.client.post.side_effect = None
+        vertex_model.client.post.return_value = custom_response
+
+        with pytest.raises(StructuredOutputValidationError):
+            vertex_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
+
+    def test_chat_complete_json_schema_streaming_not_supported(self, vertex_model):
+        vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
+        with pytest.raises(ValueError, match="not supported with streaming"):
+            vertex_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_json_schema_streaming_not_supported(self, vertex_model):
+        vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
+        with pytest.raises(ValueError, match="not supported with streaming"):
+            await vertex_model.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
 
 class TestInstanceLevelTools:
     """Tests for instance-level tool configuration."""
@@ -998,3 +1088,36 @@ class TestLangChainIntegration:
             with patch.dict("sys.modules", {"langchain_google_genai": None}):
                 with pytest.raises(ImportError, match="langchain_google_genai"):
                     model.to_langchain()
+
+    def test_to_langchain_json_mode_sets_response_mime_type(self, mock_google_auth):
+        """Test that JSON mode is passed to LangChain Gemini params."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+            model.structured = {"type": "json"}
+
+            mock_lc_class = MagicMock()
+            lc_module = MagicMock()
+            lc_module.ChatGoogleGenerativeAI = mock_lc_class
+            with patch.dict("sys.modules", {"langchain_google_genai": lc_module}):
+                model.to_langchain()
+                call_kwargs = mock_lc_class.call_args[1]
+                assert call_kwargs["response_mime_type"] == "application/json"
+                assert "response_schema" not in call_kwargs
+
+    def test_to_langchain_json_schema_sets_response_schema(self, mock_google_auth):
+        """Test that schema mode is passed to LangChain Gemini params."""
+        with patch.dict(os.environ, {"VERTEX_PROJECT": "test-project"}, clear=False):
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            model = VertexLanguageModel(model_name="gemini-2.0-flash")
+            model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
+
+            mock_lc_class = MagicMock()
+            lc_module = MagicMock()
+            lc_module.ChatGoogleGenerativeAI = mock_lc_class
+            with patch.dict("sys.modules", {"langchain_google_genai": lc_module}):
+                model.to_langchain()
+                call_kwargs = mock_lc_class.call_args[1]
+                assert call_kwargs["response_mime_type"] == "application/json"
+                assert call_kwargs["response_schema"]["type"] == "object"
+                assert "capital" in call_kwargs["response_schema"]["properties"]

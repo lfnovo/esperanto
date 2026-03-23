@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from google.genai import types
+from pydantic import BaseModel
 
 from esperanto.providers.llm.google import GoogleLanguageModel
 
@@ -279,3 +280,38 @@ def test_to_langchain():
     assert langchain_model.temperature == 1.0
     assert langchain_model.top_p == 0.9
     # Skip API key check since it's masked
+
+
+def test_to_langchain_json_mode_sets_response_mime_type():
+    """Test LangChain conversion passes JSON mode settings."""
+    mock_chat_google = MagicMock()
+    with patch('langchain_google_genai.ChatGoogleGenerativeAI') as mock_chat_class:
+        mock_chat_class.return_value = mock_chat_google
+
+        model = GoogleLanguageModel(api_key="test-key")
+        model.structured = {"type": "json"}
+        model.to_langchain()
+
+        call_kwargs = mock_chat_class.call_args[1]
+        assert call_kwargs["response_mime_type"] == "application/json"
+        assert "response_schema" not in call_kwargs
+
+
+class _GeminiCapitalSchema(BaseModel):
+    capital: str
+
+
+def test_to_langchain_json_schema_sets_response_schema():
+    """Test LangChain conversion passes schema mode settings."""
+    mock_chat_google = MagicMock()
+    with patch('langchain_google_genai.ChatGoogleGenerativeAI') as mock_chat_class:
+        mock_chat_class.return_value = mock_chat_google
+
+        model = GoogleLanguageModel(api_key="test-key")
+        model.structured = {"type": "json_schema", "schema": _GeminiCapitalSchema}
+        model.to_langchain()
+
+        call_kwargs = mock_chat_class.call_args[1]
+        assert call_kwargs["response_mime_type"] == "application/json"
+        assert call_kwargs["response_schema"]["type"] == "object"
+        assert "capital" in call_kwargs["response_schema"]["properties"]

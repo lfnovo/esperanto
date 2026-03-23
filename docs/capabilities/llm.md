@@ -171,7 +171,7 @@ response = model.chat_complete(messages)
 # Response content will be valid JSON
 ```
 
-Schema-driven structured outputs (OpenAI-family providers):
+Schema-driven structured outputs:
 
 ```python
 from pydantic import BaseModel
@@ -202,11 +202,11 @@ print(response.structured)   # parsed/validated CountryList
 ```
 
 Notes:
-- Schema mode is config-driven and non-streaming only (`stream=True` raises `ValueError`).
+- Schema mode is config-driven and currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
 - OpenAI-compatible endpoints fail fast when `json_schema` response format is unsupported.
 
 **JSON Mode Supported Providers**: OpenAI, Anthropic, Google, Groq, OpenAI-Compatible (varies), Mistral, DeepSeek, xAI, OpenRouter, Azure, Perplexity  
-**Schema Mode Supported Providers (v1)**: OpenAI, Azure, OpenAI-Compatible
+**Schema Mode Supported Providers (v1)**: OpenAI, Azure, OpenAI-Compatible, Google (Gemini), Vertex AI
 
 ## Provider Selection
 

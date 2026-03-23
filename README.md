@@ -54,7 +54,7 @@ Whether you're building a quick prototype or a production application serving mi
 - **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
-- **Structured Output**: JSON mode + schema-driven outputs (OpenAI, Azure, OpenAI-compatible)
+- **Structured Output**: JSON mode + schema-driven outputs (OpenAI, Azure, OpenAI-compatible, Google, Vertex)
 - **LangChain Integration**: Easy conversion to LangChain chat models
 
 ## 📚 Documentation
@@ -137,7 +137,7 @@ pip install "langchain_deepseek>=0.1.3"
 | Anthropic    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Groq         | ✅          | ❌               | ❌                | ✅             | ❌             | ✅        |
 | Google (GenAI) | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
-| Vertex AI    | ✅          | ✅               | ❌                | ❌             | ✅             | ❌        |
+| Vertex AI    | ✅          | ✅               | ❌                | ❌             | ✅             | ✅        |
 | Ollama       | ✅          | ✅               | ❌                | ❌             | ❌             | ❌        |
 | Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
@@ -715,7 +715,7 @@ response = model.chat_complete(messages)
 # Response will be in JSON format
 ```
 
-Schema-driven structured output is also supported for OpenAI, Azure OpenAI, and OpenAI-compatible providers:
+Schema-driven structured output is also supported for OpenAI, Azure OpenAI, OpenAI-compatible, Google (Gemini), and Vertex AI providers:
 
 ```python
 from pydantic import BaseModel
@@ -743,7 +743,7 @@ print(response.structured)   # Parsed/validated Capitals instance
 
 Notes:
 - Schema mode is config-driven (`config["structured"]` or provider constructor `structured=...`).
-- Schema mode is non-streaming only (`stream=True` raises `ValueError`).
+- Schema mode is currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`); this is a temporary Esperanto limitation.
 - OpenAI-compatible endpoints fail fast if `json_schema` response format is unsupported.
 
 ## LangChain Integration 🔗
