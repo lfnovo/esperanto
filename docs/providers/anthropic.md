@@ -254,6 +254,42 @@ messages = [{
 response = model.chat_complete(messages)
 ```
 
+### Schema-Driven Structured Output (v1)
+Anthropic also supports schema-constrained outputs via `structured={"type": "json_schema", ...}`:
+
+```python
+from pydantic import BaseModel
+from esperanto.factory import AIFactory
+
+class TravelPlan(BaseModel):
+    summary: str
+    next_steps: list[str]
+
+model = AIFactory.create_language(
+    "anthropic",
+    "claude-3-5-sonnet-20241022",
+    config={
+        "structured": {
+            "type": "json_schema",
+            "schema": TravelPlan,      # or a JSON schema dict
+            "name": "travel_plan",     # optional
+            "strict": True             # optional
+        }
+    }
+)
+
+response = model.chat_complete(
+    [{"role": "user", "content": "Plan a 3-day trip to Paris"}]
+)
+
+print(response.content)      # Raw JSON string
+print(response.structured)   # Parsed/validated TravelPlan instance
+```
+
+Notes:
+- Schema mode is currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
+- Anthropic strict tool-use schema enforcement (`tools[].strict`) is a separate feature and is not part of this v1 schema-output path.
+
 ### Temperature and Top-P Priority
 Claude prioritizes temperature over top_p when both are specified:
 

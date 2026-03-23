@@ -715,7 +715,7 @@ response = model.chat_complete(messages)
 # Response will be in JSON format
 ```
 
-Schema-driven structured output is also supported for OpenAI, Azure OpenAI, OpenAI-compatible, Google (Gemini), and Vertex AI providers:
+Schema-driven structured output is also supported for OpenAI, Azure OpenAI, OpenAI-compatible, Google (Gemini), Vertex AI, and Anthropic providers:
 
 ```python
 from pydantic import BaseModel
@@ -745,6 +745,7 @@ Notes:
 - Schema mode is config-driven (`config["structured"]` or provider constructor `structured=...`).
 - Schema mode is currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`); this is a temporary Esperanto limitation.
 - OpenAI-compatible endpoints fail fast if `json_schema` response format is unsupported.
+- Anthropic schema mode uses `output_config.format` under the hood; strict tool-use schema enforcement is a separate feature and is not part of this v1 rollout.
 
 ## LangChain Integration 🔗
 

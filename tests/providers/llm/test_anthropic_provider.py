@@ -3,9 +3,16 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
+from esperanto.common_types import StructuredOutputValidationError
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 from esperanto.utils.logging import logger
+
+
+class TripPlan(BaseModel):
+    summary: str
+    next_steps: list[str]
 
 
 def test_provider_name(anthropic_model):
@@ -132,6 +139,177 @@ def test_to_langchain_with_base_url(anthropic_model):
     langchain_model = anthropic_model.to_langchain()
     # Check that base URL configuration is preserved
     assert anthropic_model.base_url == "https://custom.anthropic.com"
+
+
+def test_json_schema_structured_output_payload_and_parsed_result(anthropic_model):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    messages = [{"role": "user", "content": "Plan a trip"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "msg_structured_123",
+        "content": [
+            {
+                "type": "text",
+                "text": '{"summary":"Visit museums","next_steps":["Book flight","Reserve hotel"]}',
+            }
+        ],
+        "model": "claude-3-opus-20240229",
+        "role": "assistant",
+        "stop_reason": "end_turn",
+        "type": "message",
+        "usage": {"input_tokens": 10, "output_tokens": 10},
+    }
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = custom_response
+
+    response = anthropic_model.chat_complete(messages)
+    json_payload = anthropic_model.client.post.call_args[1]["json"]
+    assert json_payload["output_config"]["format"]["type"] == "json_schema"
+    assert json_payload["output_config"]["format"]["schema"]["type"] == "object"
+    assert isinstance(response.structured, TripPlan)
+    assert response.structured.summary == "Visit museums"
+    assert response.structured.next_steps == ["Book flight", "Reserve hotel"]
+
+
+def test_json_schema_structured_output_with_tools_payload(anthropic_model, sample_tools):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    messages = [{"role": "user", "content": "Plan a trip"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "msg_structured_tools",
+        "content": [
+            {
+                "type": "text",
+                "text": '{"summary":"Visit museums","next_steps":["Book flight","Reserve hotel"]}',
+            }
+        ],
+        "model": "claude-3-opus-20240229",
+        "role": "assistant",
+        "stop_reason": "end_turn",
+        "type": "message",
+        "usage": {"input_tokens": 10, "output_tokens": 10},
+    }
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = custom_response
+
+    anthropic_model.chat_complete(messages, tools=sample_tools)
+    json_payload = anthropic_model.client.post.call_args[1]["json"]
+    assert "tools" in json_payload
+    assert json_payload["output_config"]["format"]["type"] == "json_schema"
+
+
+def test_json_schema_structured_output_dict_schema_result(anthropic_model):
+    anthropic_model.structured = {
+        "type": "json_schema",
+        "schema": {
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+            "required": ["name"],
+            "additionalProperties": False,
+        },
+    }
+    messages = [{"role": "user", "content": "Extract"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "msg_structured_456",
+        "content": [{"type": "text", "text": '{"name":"John"}'}],
+        "model": "claude-3-opus-20240229",
+        "role": "assistant",
+        "stop_reason": "end_turn",
+        "type": "message",
+        "usage": {"input_tokens": 10, "output_tokens": 10},
+    }
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = custom_response
+
+    response = anthropic_model.chat_complete(messages)
+    assert response.structured == {"name": "John"}
+
+
+def test_json_schema_structured_output_invalid_json_raises(anthropic_model):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    messages = [{"role": "user", "content": "Plan a trip"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "msg_structured_bad",
+        "content": [{"type": "text", "text": "not-json"}],
+        "model": "claude-3-opus-20240229",
+        "role": "assistant",
+        "stop_reason": "end_turn",
+        "type": "message",
+        "usage": {"input_tokens": 10, "output_tokens": 10},
+    }
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError):
+        anthropic_model.chat_complete(messages)
+
+
+def test_json_schema_structured_output_streaming_not_supported(anthropic_model):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    messages = [{"role": "user", "content": "Plan a trip"}]
+
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        anthropic_model.chat_complete(messages, stream=True)
+
+
+@pytest.mark.asyncio
+async def test_json_schema_structured_output_async_parsed_result(anthropic_model):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    messages = [{"role": "user", "content": "Plan a trip"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "msg_structured_async",
+        "content": [
+            {
+                "type": "text",
+                "text": '{"summary":"Visit museums","next_steps":["Book flight","Reserve hotel"]}',
+            }
+        ],
+        "model": "claude-3-opus-20240229",
+        "role": "assistant",
+        "stop_reason": "end_turn",
+        "type": "message",
+        "usage": {"input_tokens": 10, "output_tokens": 10},
+    }
+    anthropic_model.async_client.post.side_effect = None
+    anthropic_model.async_client.post.return_value = custom_response
+
+    response = await anthropic_model.achat_complete(messages)
+    assert isinstance(response.structured, TripPlan)
+
+
+@pytest.mark.asyncio
+async def test_json_schema_structured_output_streaming_not_supported_async(
+    anthropic_model,
+):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    messages = [{"role": "user", "content": "Plan a trip"}]
+
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await anthropic_model.achat_complete(messages, stream=True)
+
+
+def test_to_langchain_json_schema_structured_output(anthropic_model):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    langchain_model = anthropic_model.to_langchain()
+    output_config = (
+        langchain_model.model_kwargs.get("output_config", {})
+        if hasattr(langchain_model, "model_kwargs")
+        else {}
+    )
+    assert output_config.get("format", {}).get("type") == "json_schema"
 
 
 @pytest.fixture
