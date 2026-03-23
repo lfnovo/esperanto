@@ -34,6 +34,7 @@ from esperanto.common_types.validation import (
 )
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
     parse_structured_output_content,
     resolve_structured_output,
 )
@@ -266,7 +267,9 @@ class AzureLanguageModel(LanguageModel):
                 model_name.startswith("gpt-5"))
 
     def _get_api_kwargs(
-        self, override_kwargs: Optional[Dict[str, Any]] = None
+        self,
+        override_kwargs: Optional[Dict[str, Any]] = None,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
     ) -> Dict[str, Any]:
         """Get kwargs for Azure API calls, using current instance attributes and overrides."""
         is_reasoning_model = self._is_reasoning_model()
@@ -290,10 +293,11 @@ class AzureLanguageModel(LanguageModel):
 
         effective_kwargs["stream"] = self.streaming
 
-        resolved_structured = resolve_structured_output(
-            self.structured,
-            allow_string_json_alias=True,
-        )
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
         if resolved_structured:
             effective_kwargs["response_format"] = resolved_structured.response_format
 
@@ -373,7 +377,10 @@ class AzureLanguageModel(LanguageModel):
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
         resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
-        api_kwargs = self._get_api_kwargs(override_kwargs=call_override_kwargs)
+        api_kwargs = self._get_api_kwargs(
+            override_kwargs=call_override_kwargs,
+            resolved_structured=resolved_structured,
+        )
         effective_stream_setting = api_kwargs.pop("stream", False)
 
         # Add tool-related parameters if configured
@@ -481,7 +488,10 @@ class AzureLanguageModel(LanguageModel):
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
         resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
-        api_kwargs = self._get_api_kwargs(override_kwargs=call_override_kwargs)
+        api_kwargs = self._get_api_kwargs(
+            override_kwargs=call_override_kwargs,
+            resolved_structured=resolved_structured,
+        )
         effective_stream_setting = api_kwargs.pop("stream", False)
 
         # Add tool-related parameters if configured
