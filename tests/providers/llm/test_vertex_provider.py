@@ -466,6 +466,24 @@ class TestStructuredOutput:
         response = vertex_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
         assert response.structured == {"capital": "Rome"}
 
+    def test_chat_complete_json_schema_with_tool_calls_skips_structured_parse(
+        self, vertex_model, mock_vertex_tool_call_response
+    ):
+        vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
+        custom_response = Mock()
+        custom_response.status_code = 200
+        custom_response.json.return_value = mock_vertex_tool_call_response
+        vertex_model.client.post.side_effect = None
+        vertex_model.client.post.return_value = custom_response
+
+        response = vertex_model.chat_complete(
+            [{"role": "user", "content": "Use tools to answer"}],
+            stream=False,
+        )
+
+        assert response.choices[0].message.tool_calls is not None
+        assert response.structured is None
+
     def test_chat_complete_json_schema_invalid_json_raises(self, vertex_model):
         vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
         custom_response = Mock()
@@ -495,6 +513,25 @@ class TestStructuredOutput:
         vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
         with pytest.raises(ValueError, match="not supported with streaming"):
             await vertex_model.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_json_schema_with_tool_calls_skips_structured_parse(
+        self, vertex_model, mock_vertex_tool_call_response
+    ):
+        vertex_model.structured = {"type": "json_schema", "schema": VertexCapitalResponse}
+        custom_response = Mock()
+        custom_response.status_code = 200
+        custom_response.json.return_value = mock_vertex_tool_call_response
+        vertex_model.async_client.post.side_effect = None
+        vertex_model.async_client.post.return_value = custom_response
+
+        response = await vertex_model.achat_complete(
+            [{"role": "user", "content": "Use tools to answer"}],
+            stream=False,
+        )
+
+        assert response.choices[0].message.tool_calls is not None
+        assert response.structured is None
 
 class TestInstanceLevelTools:
     """Tests for instance-level tool configuration."""

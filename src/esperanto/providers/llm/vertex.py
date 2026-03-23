@@ -614,7 +614,14 @@ class VertexLanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
-        if resolved_structured and resolved_structured.is_schema_mode:
+        has_tool_calls = any(
+            choice.message.tool_calls for choice in result.choices
+        )
+        if (
+            resolved_structured
+            and resolved_structured.is_schema_mode
+            and not has_tool_calls
+        ):
             parsed = parse_structured_output_content(result.content, resolved_structured)
             result = result.model_copy(update={"structured": parsed})
 
@@ -810,7 +817,14 @@ class VertexLanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
-        if resolved_structured and resolved_structured.is_schema_mode:
+        has_tool_calls = any(
+            choice.message.tool_calls for choice in result.choices
+        )
+        if (
+            resolved_structured
+            and resolved_structured.is_schema_mode
+            and not has_tool_calls
+        ):
             parsed = parse_structured_output_content(result.content, resolved_structured)
             result = result.model_copy(update={"structured": parsed})
 
