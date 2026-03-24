@@ -2,8 +2,15 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
-from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
+from esperanto.common_types import (
+    StructuredOutputValidationError,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
+)
 from esperanto.providers.llm.xai import XAILanguageModel
 
 
@@ -64,6 +71,81 @@ def test_initialization_with_api_key_and_base_url_in_config():
     )
     assert model.api_key == "config-test-key"
     assert model.base_url == "https://custom.x.ai/v1"
+
+
+class XAICapitalResponse(BaseModel):
+    capital: str
+
+
+def test_json_schema_structured_output_payload_and_parsed_result(xai_model):
+    xai_model.structured = {"type": "json_schema", "schema": XAICapitalResponse}
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "grok-beta",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '{"capital":"Paris"}'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    xai_model.client.post.side_effect = None
+    xai_model.client.post.return_value = custom_response
+
+    response = xai_model.chat_complete([{"role": "user", "content": "Capital?"}])
+    payload = xai_model.client.post.call_args[1]["json"]
+    assert payload["response_format"]["type"] == "json_schema"
+    assert isinstance(response.structured, XAICapitalResponse)
+
+
+def test_json_schema_streaming_not_supported(xai_model):
+    xai_model.structured = {"type": "json_schema", "schema": XAICapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        xai_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+@pytest.mark.asyncio
+async def test_json_schema_streaming_not_supported_async(xai_model):
+    xai_model.structured = {"type": "json_schema", "schema": XAICapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await xai_model.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+def test_json_schema_invalid_json_raises(xai_model):
+    xai_model.structured = {"type": "json_schema", "schema": XAICapitalResponse}
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-bad",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "grok-beta",
+        "choices": [
+            {"index": 0, "message": {"role": "assistant", "content": "not-json"}, "finish_reason": "stop"}
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    xai_model.client.post.side_effect = None
+    xai_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError):
+        xai_model.chat_complete([{"role": "user", "content": "Capital?"}])
+
+
+def test_to_langchain_json_schema():
+    model = XAILanguageModel(
+        api_key="test-key",
+        model_name="grok-beta",
+        structured={"type": "json_schema", "schema": XAICapitalResponse},
+    )
+    langchain_model = model.to_langchain()
+    assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"
 
 
 # =============================================================================

@@ -4,10 +4,11 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from esperanto.common_types import (
     ChatCompletion, ChatCompletionChunk,
-    Tool, ToolFunction, ToolCall, ToolCallValidationError
+    StructuredOutputValidationError, Tool, ToolFunction, ToolCall, ToolCallValidationError
 )
 from esperanto.providers.llm.ollama import OllamaLanguageModel
 
@@ -274,6 +275,86 @@ def test_ollama_to_langchain_without_structured():
     model = OllamaLanguageModel(model_name="gemma2")
     langchain_model = model.to_langchain()
     assert langchain_model.format is None
+
+
+class OllamaCapitalResponse(BaseModel):
+    capital: str
+
+
+def test_ollama_json_schema_structured_output_payload_and_parsed_result():
+    model = OllamaLanguageModel(
+        model_name="gemma2",
+        structured={"type": "json_schema", "schema": OllamaCapitalResponse},
+    )
+    messages = [{"role": "user", "content": "Capital?"}]
+
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "model": "gemma2",
+        "message": {"role": "assistant", "content": '{"capital":"Paris"}'},
+        "done": True,
+    }
+
+    mock_client = Mock()
+    mock_client.post.return_value = mock_response
+    model.client = mock_client
+
+    response = model.chat_complete(messages, stream=False)
+    payload = model.client.post.call_args[1]["json"]
+    assert isinstance(payload["format"], dict)
+    assert payload["format"]["type"] == "object"
+    assert isinstance(response.structured, OllamaCapitalResponse)
+
+
+def test_ollama_json_schema_streaming_not_supported():
+    model = OllamaLanguageModel(
+        model_name="gemma2",
+        structured={"type": "json_schema", "schema": OllamaCapitalResponse},
+    )
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        model.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+@pytest.mark.asyncio
+async def test_ollama_json_schema_streaming_not_supported_async():
+    model = OllamaLanguageModel(
+        model_name="gemma2",
+        structured={"type": "json_schema", "schema": OllamaCapitalResponse},
+    )
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await model.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+def test_ollama_json_schema_invalid_json_raises():
+    model = OllamaLanguageModel(
+        model_name="gemma2",
+        structured={"type": "json_schema", "schema": OllamaCapitalResponse},
+    )
+    messages = [{"role": "user", "content": "Capital?"}]
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "model": "gemma2",
+        "message": {"role": "assistant", "content": "not-json"},
+        "done": True,
+    }
+    mock_client = Mock()
+    mock_client.post.return_value = mock_response
+    model.client = mock_client
+
+    with pytest.raises(StructuredOutputValidationError):
+        model.chat_complete(messages, stream=False)
+
+
+def test_ollama_to_langchain_with_json_schema():
+    model = OllamaLanguageModel(
+        model_name="gemma2",
+        structured={"type": "json_schema", "schema": OllamaCapitalResponse},
+    )
+    langchain_model = model.to_langchain()
+    assert isinstance(langchain_model.format, dict)
+    assert langchain_model.format["type"] == "object"
 
 
 def test_ollama_chat_complete_with_system_message():

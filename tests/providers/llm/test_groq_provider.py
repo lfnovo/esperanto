@@ -2,8 +2,15 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
-from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
+from esperanto.common_types import (
+    StructuredOutputValidationError,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
+)
 
 try:
     from langchain_groq import ChatGroq
@@ -123,6 +130,13 @@ def test_to_langchain(groq_model):
 
 
 @pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
+def test_to_langchain_json_schema(groq_model):
+    groq_model.structured = {"type": "json_schema", "schema": GroqCapitalResponse}
+    langchain_model = groq_model.to_langchain()
+    assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"
+
+
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
 def test_response_normalization(groq_model):
     messages = [{"role": "user", "content": "Hello!"}]
     response = groq_model.chat_complete(messages)
@@ -142,6 +156,75 @@ def test_response_normalization(groq_model):
     assert response.usage.completion_tokens == 10
     assert response.usage.prompt_tokens == 8
     assert response.usage.total_tokens == 18
+
+
+class GroqCapitalResponse(BaseModel):
+    capital: str
+
+
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
+def test_json_schema_structured_output_payload_and_parsed_result(groq_model):
+    groq_model.structured = {"type": "json_schema", "schema": GroqCapitalResponse}
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "mixtral-8x7b-32768",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '{"capital":"Paris"}'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    groq_model.client.post.side_effect = None
+    groq_model.client.post.return_value = custom_response
+
+    response = groq_model.chat_complete([{"role": "user", "content": "Capital?"}])
+    payload = groq_model.client.post.call_args[1]["json"]
+    assert payload["response_format"]["type"] == "json_schema"
+    assert isinstance(response.structured, GroqCapitalResponse)
+
+
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
+def test_json_schema_streaming_not_supported(groq_model):
+    groq_model.structured = {"type": "json_schema", "schema": GroqCapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        groq_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
+@pytest.mark.asyncio
+async def test_json_schema_streaming_not_supported_async(groq_model):
+    groq_model.structured = {"type": "json_schema", "schema": GroqCapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await groq_model.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+@pytest.mark.skipif(not HAS_GROQ, reason="Groq not installed")
+def test_json_schema_invalid_json_raises(groq_model):
+    groq_model.structured = {"type": "json_schema", "schema": GroqCapitalResponse}
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-bad",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "mixtral-8x7b-32768",
+        "choices": [
+            {"index": 0, "message": {"role": "assistant", "content": "not-json"}, "finish_reason": "stop"}
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    groq_model.client.post.side_effect = None
+    groq_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError):
+        groq_model.chat_complete([{"role": "user", "content": "Capital?"}])
 
 
 # =============================================================================

@@ -5,11 +5,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 from esperanto.common_types import (
     ChatCompletion, Choice, Message, Usage,
-    Tool, ToolFunction, ToolCall, ToolCallValidationError
+    StructuredOutputValidationError, Tool, ToolFunction, ToolCall, ToolCallValidationError
 )
 
 
@@ -203,6 +204,90 @@ def test_perplexity_to_langchain_structured(perplexity_provider):
     langchain_model = perplexity_provider.to_langchain()
 
     assert langchain_model.model_kwargs["response_format"] == {"type": "text"}
+
+
+class PerplexityCapitalResponse(BaseModel):
+    capital: str
+
+
+def test_perplexity_json_schema_payload_and_parsed_result(perplexity_provider):
+    perplexity_provider.structured = {
+        "type": "json_schema",
+        "schema": PerplexityCapitalResponse,
+    }
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "llama-3-sonar-large-32k-online",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '{"capital":"Paris"}'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    perplexity_provider.client.post = Mock(return_value=custom_response)
+
+    response = perplexity_provider.chat_complete([{"role": "user", "content": "Capital?"}])
+    payload = perplexity_provider.client.post.call_args[1]["json"]
+    assert payload["response_format"]["type"] == "json_schema"
+    assert isinstance(response.structured, PerplexityCapitalResponse)
+
+
+def test_perplexity_json_schema_invalid_json_raises(perplexity_provider):
+    perplexity_provider.structured = {
+        "type": "json_schema",
+        "schema": PerplexityCapitalResponse,
+    }
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-bad",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "llama-3-sonar-large-32k-online",
+        "choices": [
+            {"index": 0, "message": {"role": "assistant", "content": "not-json"}, "finish_reason": "stop"}
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    perplexity_provider.client.post = Mock(return_value=custom_response)
+
+    with pytest.raises(StructuredOutputValidationError):
+        perplexity_provider.chat_complete([{"role": "user", "content": "Capital?"}])
+
+
+def test_perplexity_json_schema_streaming_not_supported(perplexity_provider):
+    perplexity_provider.structured = {
+        "type": "json_schema",
+        "schema": PerplexityCapitalResponse,
+    }
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        perplexity_provider.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+@pytest.mark.asyncio
+async def test_perplexity_json_schema_streaming_not_supported_async(perplexity_provider):
+    perplexity_provider.structured = {
+        "type": "json_schema",
+        "schema": PerplexityCapitalResponse,
+    }
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await perplexity_provider.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+def test_perplexity_to_langchain_json_schema(perplexity_provider):
+    perplexity_provider.structured = {
+        "type": "json_schema",
+        "schema": PerplexityCapitalResponse,
+    }
+    langchain_model = perplexity_provider.to_langchain()
+    assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"
 
 
 def test_perplexity_models_property(perplexity_provider):

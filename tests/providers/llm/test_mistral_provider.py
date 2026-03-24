@@ -1,10 +1,11 @@
 import os
 from unittest.mock import AsyncMock, Mock, patch
 import pytest
+from pydantic import BaseModel
 from esperanto.providers.llm.mistral import MistralLanguageModel
 from esperanto.common_types import (
     ChatCompletion, Choice, Message, Usage,
-    Tool, ToolFunction, ToolCall, ToolCallValidationError
+    StructuredOutputValidationError, Tool, ToolFunction, ToolCall, ToolCallValidationError
 )
 
 @pytest.fixture
@@ -106,6 +107,78 @@ def test_to_langchain(mistral_model):
         assert lc is not None
     except ImportError:
         pytest.skip("langchain_mistralai not installed")
+
+
+def test_to_langchain_json_schema(mistral_model):
+    try:
+        mistral_model.structured = {"type": "json_schema", "schema": MistralCapitalResponse}
+        lc = mistral_model.to_langchain()
+        assert lc.model_kwargs["response_format"]["type"] == "json_schema"
+    except ImportError:
+        pytest.skip("langchain_mistralai not installed")
+
+
+class MistralCapitalResponse(BaseModel):
+    capital: str
+
+
+def test_json_schema_structured_output_payload_and_parsed_result(mistral_model):
+    mistral_model.structured = {"type": "json_schema", "schema": MistralCapitalResponse}
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "mistral-large-latest",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '{"capital":"Paris"}'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    mistral_model.client.post = Mock(return_value=custom_response)
+
+    response = mistral_model.chat_complete([{"role": "user", "content": "Capital?"}])
+    payload = mistral_model.client.post.call_args[1]["json"]
+    assert payload["response_format"]["type"] == "json_schema"
+    assert isinstance(response.structured, MistralCapitalResponse)
+
+
+def test_json_schema_streaming_not_supported(mistral_model):
+    mistral_model.structured = {"type": "json_schema", "schema": MistralCapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        mistral_model.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+@pytest.mark.asyncio
+async def test_json_schema_streaming_not_supported_async(mistral_model):
+    mistral_model.structured = {"type": "json_schema", "schema": MistralCapitalResponse}
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await mistral_model.achat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+
+def test_json_schema_invalid_json_raises(mistral_model):
+    mistral_model.structured = {"type": "json_schema", "schema": MistralCapitalResponse}
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-bad",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "mistral-large-latest",
+        "choices": [
+            {"index": 0, "message": {"role": "assistant", "content": "not-json"}, "finish_reason": "stop"}
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+    mistral_model.client.post = Mock(return_value=custom_response)
+
+    with pytest.raises(StructuredOutputValidationError):
+        mistral_model.chat_complete([{"role": "user", "content": "Capital?"}])
 
 
 # =============================================================================
