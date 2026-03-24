@@ -34,6 +34,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    parse_structured_output_content,
+    resolve_structured_output,
+)
 
 if TYPE_CHECKING:
     from langchain_ollama import ChatOllama
@@ -71,7 +76,10 @@ class OllamaLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Ollama API error: {error_message}")
 
-    def _get_api_kwargs(self) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
@@ -106,12 +114,21 @@ class OllamaLanguageModel(LanguageModel):
         if keep_alive is not None:
             kwargs["keep_alive"] = keep_alive
 
-        # Handle JSON format if structured output is requested
-        if self.structured:
-            if not isinstance(self.structured, dict):
-                raise TypeError("structured parameter must be a dictionary")
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
+        if resolved_structured:
+            if resolved_structured.is_schema_mode:
+                schema_payload = (
+                    resolved_structured.response_format
+                    .get("json_schema", {})
+                    .get("schema")
+                )
+                if isinstance(schema_payload, dict):
+                    kwargs["format"] = schema_payload
+            else:
                 kwargs["format"] = "json"
 
         # Add options if any were set
@@ -270,6 +287,16 @@ class OllamaLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         if not messages:
             raise ValueError("Messages cannot be empty")
@@ -298,7 +325,7 @@ class OllamaLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": converted_messages,
             "stream": should_stream,
-            **self._get_api_kwargs(),
+            **self._get_api_kwargs(resolved_structured=resolved_structured),
         }
 
         # Add tool-related parameters if configured
@@ -324,6 +351,11 @@ class OllamaLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
+        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -368,6 +400,16 @@ class OllamaLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         if not messages:
             raise ValueError("Messages cannot be empty")
@@ -386,7 +428,7 @@ class OllamaLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": converted_messages,
             "stream": should_stream,
-            **self._get_api_kwargs(),
+            **self._get_api_kwargs(resolved_structured=resolved_structured),
         }
 
         # Add tool-related parameters if configured
@@ -416,6 +458,11 @@ class OllamaLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
+        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -585,10 +632,20 @@ class OllamaLanguageModel(LanguageModel):
         if keep_alive is not None:
             langchain_kwargs["keep_alive"] = keep_alive
 
-        # Handle JSON format if structured output is requested
-        if self.structured and isinstance(self.structured, dict):
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            if resolved_structured.is_schema_mode:
+                schema_payload = (
+                    resolved_structured.response_format
+                    .get("json_schema", {})
+                    .get("schema")
+                )
+                if isinstance(schema_payload, dict):
+                    langchain_kwargs["format"] = schema_payload
+            else:
                 langchain_kwargs["format"] = "json"
 
         # Pass SSL verification settings to LangChain via client_kwargs

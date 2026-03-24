@@ -32,6 +32,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    parse_structured_output_content,
+    resolve_structured_output,
+)
 
 if TYPE_CHECKING:
     from langchain_groq import ChatGroq
@@ -219,7 +224,11 @@ class GroqLanguageModel(LanguageModel):
                     except json.JSONDecodeError:
                         continue
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
@@ -249,12 +258,13 @@ class GroqLanguageModel(LanguageModel):
             kwargs["stream"] = kwargs.pop("streaming")
 
         # Handle structured output
-        if self.structured:
-            if not isinstance(self.structured, dict):
-                raise TypeError("structured parameter must be a dictionary")
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
-                kwargs["response_format"] = {"type": "json_object"}
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
+        if resolved_structured:
+            kwargs["response_format"] = resolved_structured.response_format
 
         return kwargs
 
@@ -296,6 +306,16 @@ class GroqLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -307,7 +327,10 @@ class GroqLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                resolved_structured=resolved_structured,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -337,6 +360,11 @@ class GroqLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
+        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -378,6 +406,16 @@ class GroqLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -389,7 +427,10 @@ class GroqLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                resolved_structured=resolved_structured,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -423,6 +464,11 @@ class GroqLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
+        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -463,7 +509,17 @@ class GroqLanguageModel(LanguageModel):
             # top_p=self.top_p, # Still not supported
             "streaming": self.streaming,
             "api_key": self.api_key,  # Pass the raw API key string
+            "model_kwargs": {},
         }
+
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            langchain_kwargs["model_kwargs"]["response_format"] = (
+                resolved_structured.response_format
+            )
 
         # Create new HTTP clients for LangChain with same SSL/timeout/proxy config
         # We create fresh clients instead of sharing ours because when this Esperanto

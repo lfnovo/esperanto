@@ -6,6 +6,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional  # Added Optional
 
 from esperanto.common_types import Model
 from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    resolve_structured_output,
+)
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
@@ -42,15 +46,34 @@ class XAILanguageModel(OpenAILanguageModel):
         super().__post_init__()
 
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
 
-        Note: XAI doesn't support response_format parameter.
+        For legacy json/json_object, keep previous behavior and avoid sending
+        response_format. For schema mode, pass through response_format and let
+        upstream support determine success/failure (fail-fast).
         """
-        kwargs = super()._get_api_kwargs(exclude_stream)
+        kwargs = super()._get_api_kwargs(
+            exclude_stream,
+            resolved_structured=resolved_structured,
+        )
 
-        # Remove response_format as XAI doesn't support it
-        kwargs.pop("response_format", None)
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
+
+        # Keep fail-fast pass-through for schema mode. Preserve legacy behavior
+        # of removing response_format for json/json_object.
+        if "response_format" in kwargs and not (
+            resolved_structured and resolved_structured.is_schema_mode
+        ):
+            kwargs.pop("response_format", None)
 
         return kwargs
 
@@ -105,8 +128,17 @@ class XAILanguageModel(OpenAILanguageModel):
             "base_url": self.base_url,
             "organization": self.organization,
             "model": self.get_model_name(),
-            "model_kwargs": {},  # XAI doesn't support response_format
+            "model_kwargs": {},
         }
+
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode:
+            langchain_kwargs["model_kwargs"]["response_format"] = (
+                resolved_structured.response_format
+            )
 
         # Ensure model name is set
         model_name = self.get_model_name()

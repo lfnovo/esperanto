@@ -34,6 +34,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    parse_structured_output_content,
+    resolve_structured_output,
+)
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
@@ -124,7 +129,11 @@ class PerplexityLanguageModel(LanguageModel):
                     except json.JSONDecodeError:
                         continue
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
@@ -153,12 +162,16 @@ class PerplexityLanguageModel(LanguageModel):
         elif "streaming" in kwargs:
             kwargs["stream"] = kwargs.pop("streaming")
 
-        # Handle structured output - Perplexity uses "text" for JSON
-        if self.structured:
-            if not isinstance(self.structured, dict):
-                raise TypeError("structured parameter must be a dictionary")
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
+        # Preserve legacy behavior for json/json_object, add schema mode support.
+        if resolved_structured:
+            if resolved_structured.is_schema_mode:
+                kwargs["response_format"] = resolved_structured.response_format
+            else:
                 kwargs["response_format"] = {"type": "text"}
 
         return kwargs
@@ -316,7 +329,20 @@ class PerplexityLanguageModel(LanguageModel):
 
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        api_kwargs = self._get_api_kwargs(exclude_stream=True)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
+
+        api_kwargs = self._get_api_kwargs(
+            exclude_stream=True,
+            resolved_structured=resolved_structured,
+        )
         perplexity_params = self._get_perplexity_params()
 
         # Resolve tool configuration
@@ -360,6 +386,11 @@ class PerplexityLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
+        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -405,7 +436,20 @@ class PerplexityLanguageModel(LanguageModel):
 
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
-        api_kwargs = self._get_api_kwargs(exclude_stream=True)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
+
+        api_kwargs = self._get_api_kwargs(
+            exclude_stream=True,
+            resolved_structured=resolved_structured,
+        )
         perplexity_params = self._get_perplexity_params()
 
         # Resolve tool configuration
@@ -453,6 +497,11 @@ class PerplexityLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
+        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -504,9 +553,14 @@ class PerplexityLanguageModel(LanguageModel):
             ) from e
 
         model_kwargs: Dict[str, Any] = {}
-        if self.structured and isinstance(self.structured, dict):
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            if resolved_structured.is_schema_mode:
+                model_kwargs["response_format"] = resolved_structured.response_format
+            else:
                 model_kwargs["response_format"] = {"type": "text"}
 
         # Add Perplexity-specific parameters to model_kwargs
