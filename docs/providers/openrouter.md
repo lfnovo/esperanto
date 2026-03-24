@@ -205,6 +205,40 @@ response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
+**Example - Schema-Driven Structured Output (Model-Dependent):**
+
+```python
+from pydantic import BaseModel
+
+class CapitalResponse(BaseModel):
+    capital: str
+
+model = AIFactory.create_language(
+    "openrouter",
+    "openai/gpt-4o",
+    config={
+        "structured": {
+            "type": "json_schema",
+            "schema": CapitalResponse,   # or JSON Schema dict
+            "name": "capital_response",  # optional
+            "strict": True               # optional
+        }
+    }
+)
+
+response = model.chat_complete(
+    [{"role": "user", "content": "Return one European capital"}]
+)
+
+print(response.content)      # Raw JSON string
+print(response.structured)   # Parsed/validated CapitalResponse
+```
+
+Notes:
+- Schema mode support depends on the selected OpenRouter model/provider.
+- Esperanto passes schema format through and surfaces upstream incompatibility errors directly (fail-fast, no silent downgrade).
+- Schema mode is non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
+
 **Example - Free Models:**
 
 ```python

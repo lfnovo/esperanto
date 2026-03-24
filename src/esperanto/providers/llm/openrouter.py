@@ -24,6 +24,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    parse_structured_output_content,
+    resolve_structured_output,
+)
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
@@ -102,16 +107,34 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         self._handle_error(response)
         return response
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
 
         Note: OpenRouter doesn't support JSON response format for non-OpenAI models.
         """
-        kwargs = super()._get_api_kwargs(exclude_stream)
+        kwargs = super()._get_api_kwargs(
+            exclude_stream,
+            resolved_structured=resolved_structured,
+        )
 
-        # Remove response_format for non-OpenAI models
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
+
+        # Keep fail-fast pass-through for schema mode. For legacy JSON mode,
+        # preserve existing behavior and strip response_format on non-OpenAI models.
         model = self.get_model_name().lower()
-        if "response_format" in kwargs and not model.startswith(("openai/", "gpt-")):
+        if (
+            "response_format" in kwargs
+            and not model.startswith(("openai/", "gpt-"))
+            and not (resolved_structured and resolved_structured.is_schema_mode)
+        ):
             kwargs.pop("response_format")
 
         return kwargs
@@ -157,6 +180,16 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -174,7 +207,10 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                resolved_structured=resolved_structured,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -199,6 +235,10 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        if resolved_structured and resolved_structured.is_schema_mode:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -243,6 +283,16 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -260,7 +310,10 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                resolved_structured=resolved_structured,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -289,6 +342,10 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        if resolved_structured and resolved_structured.is_schema_mode:
+            parsed = parse_structured_output_content(result.content, resolved_structured)
+            result = result.model_copy(update={"structured": parsed})
 
         return result
 
@@ -344,13 +401,15 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             ) from e
 
         model_kwargs = {}
-        if self.structured and isinstance(self.structured, dict):
-            structured_type = self.structured.get("type")
-            if structured_type in [
-                "json",
-                "json_object",
-            ] and self.get_model_name().lower().startswith(("openai/", "gpt-")):
-                model_kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            if resolved_structured.is_schema_mode:
+                model_kwargs["response_format"] = resolved_structured.response_format
+            elif self.get_model_name().lower().startswith(("openai/", "gpt-")):
+                model_kwargs["response_format"] = resolved_structured.response_format
 
         langchain_kwargs = {
             "max_tokens": self.max_tokens,

@@ -3,9 +3,20 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
-from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
+from esperanto.common_types import (
+    StructuredOutputValidationError,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
+)
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
+
+
+class OpenRouterCapitalResponse(BaseModel):
+    capital: str
 
 
 def test_provider_name():
@@ -317,3 +328,134 @@ class TestToolCallValidation:
         )
 
         assert response.choices[0].message.tool_calls is not None
+
+
+class TestStructuredOutput:
+    """Tests for schema-driven structured output."""
+
+    def test_chat_complete_json_schema_payload_and_structured_pydantic(self, openrouter_model):
+        openrouter_model.structured = {
+            "type": "json_schema",
+            "schema": OpenRouterCapitalResponse,
+        }
+        custom_response = Mock()
+        custom_response.status_code = 200
+        custom_response.json.return_value = {
+            "id": "chatcmpl-structured-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "openai/gpt-4",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": '{"capital":"Paris"}'},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        }
+        openrouter_model.client.post.side_effect = None
+        openrouter_model.client.post.return_value = custom_response
+
+        response = openrouter_model.chat_complete(
+            [{"role": "user", "content": "Capital?"}],
+            stream=False,
+        )
+
+        payload = json.loads(openrouter_model.client.post.call_args.kwargs["data"])
+        assert payload["response_format"]["type"] == "json_schema"
+        assert isinstance(response.structured, OpenRouterCapitalResponse)
+        assert response.structured.capital == "Paris"
+
+    def test_chat_complete_json_schema_not_stripped_for_non_openai_models(self):
+        model = OpenRouterLanguageModel(
+            api_key="test-key",
+            model_name="anthropic/claude-3.5-sonnet",
+            structured={"type": "json_schema", "schema": OpenRouterCapitalResponse},
+        )
+        client = Mock()
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            "id": "chatcmpl-structured-nonopenai",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "anthropic/claude-3.5-sonnet",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": '{"capital":"Rome"}'},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        }
+        client.post.return_value = response
+        model.client = client
+
+        model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
+        payload = json.loads(model.client.post.call_args.kwargs["data"])
+        assert payload["response_format"]["type"] == "json_schema"
+
+    def test_chat_complete_json_schema_invalid_json_raises(self, openrouter_model):
+        openrouter_model.structured = {
+            "type": "json_schema",
+            "schema": OpenRouterCapitalResponse,
+        }
+        custom_response = Mock()
+        custom_response.status_code = 200
+        custom_response.json.return_value = {
+            "id": "chatcmpl-structured-bad",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "openai/gpt-4",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "not-json"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        }
+        openrouter_model.client.post.side_effect = None
+        openrouter_model.client.post.return_value = custom_response
+
+        with pytest.raises(StructuredOutputValidationError):
+            openrouter_model.chat_complete(
+                [{"role": "user", "content": "Capital?"}],
+                stream=False,
+            )
+
+    def test_chat_complete_json_schema_streaming_not_supported(self, openrouter_model):
+        openrouter_model.structured = {
+            "type": "json_schema",
+            "schema": OpenRouterCapitalResponse,
+        }
+        with pytest.raises(ValueError, match="not supported with streaming"):
+            openrouter_model.chat_complete(
+                [{"role": "user", "content": "Capital?"}],
+                stream=True,
+            )
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_json_schema_streaming_not_supported(self, openrouter_model):
+        openrouter_model.structured = {
+            "type": "json_schema",
+            "schema": OpenRouterCapitalResponse,
+        }
+        with pytest.raises(ValueError, match="not supported with streaming"):
+            await openrouter_model.achat_complete(
+                [{"role": "user", "content": "Capital?"}],
+                stream=True,
+            )
+
+    def test_to_langchain_json_schema_response_format(self):
+        pytest.importorskip("langchain_openai")
+        model = OpenRouterLanguageModel(
+            api_key="test-key",
+            model_name="anthropic/claude-3.5-sonnet",
+            structured={"type": "json_schema", "schema": OpenRouterCapitalResponse},
+        )
+        langchain_model = model.to_langchain()
+        assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"

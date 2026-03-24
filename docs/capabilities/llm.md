@@ -204,10 +204,11 @@ print(response.structured)   # parsed/validated CountryList
 Notes:
 - Schema mode is config-driven and currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
 - OpenAI-compatible endpoints fail fast when `json_schema` response format is unsupported.
+- OpenRouter schema mode is model/provider-dependent and fail-fast (unsupported schema requests are surfaced directly).
 - Anthropic schema mode uses native `output_config.format`; Anthropic strict tool-use schema enforcement is separate and unchanged in v1.
 
 **JSON Mode Supported Providers**: OpenAI, Anthropic, Google, Groq, OpenAI-Compatible (varies), Mistral, DeepSeek, xAI, OpenRouter, Azure, Perplexity  
-**Schema Mode Supported Providers (v1)**: OpenAI, Azure, OpenAI-Compatible, Google (Gemini), Vertex AI, Anthropic
+**Schema Mode Supported Providers (v1)**: OpenAI, Azure, OpenAI-Compatible, Google (Gemini), Vertex AI, Anthropic, OpenRouter (model-dependent)
 
 ## Provider Selection
 
