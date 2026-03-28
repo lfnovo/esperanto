@@ -338,6 +338,42 @@ async def test_achat_complete_streaming(openai_model):
     assert first_chunk.choices[0].delta.content == "Hello"
 
 
+def test_normalize_chunk_null_content_is_none(openai_model):
+    """OpenAI sends content=null on first/last chunks — must be preserved as None, not coerced to ''."""
+    # First chunk: role set, content explicitly null (as OpenAI sends it)
+    chunk_data = {
+        "id": "chatcmpl-abc",
+        "object": "chat.completion.chunk",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [{"index": 0, "delta": {"role": "assistant", "content": None}, "finish_reason": None}],
+    }
+    chunk = openai_model._normalize_chunk(chunk_data)
+    assert chunk.choices[0].delta.content is None, "null content must be None, not empty string"
+
+    # Last chunk: empty delta, finish_reason set (no content key at all)
+    chunk_data_final = {
+        "id": "chatcmpl-abc",
+        "object": "chat.completion.chunk",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+    }
+    chunk_final = openai_model._normalize_chunk(chunk_data_final)
+    assert chunk_final.choices[0].delta.content is None, "missing content key must be None, not empty string"
+
+    # Middle chunk: actual content must be preserved as-is
+    chunk_data_mid = {
+        "id": "chatcmpl-abc",
+        "object": "chat.completion.chunk",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [{"index": 0, "delta": {"content": "Hello"}, "finish_reason": None}],
+    }
+    chunk_mid = openai_model._normalize_chunk(chunk_data_mid)
+    assert chunk_mid.choices[0].delta.content == "Hello"
+
+
 def test_json_structured_output(openai_model):
     openai_model.structured = {"type": "json_object"}
     messages = [{"role": "user", "content": "Hello!"}]
