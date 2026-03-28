@@ -2,6 +2,9 @@
 *.wav
 *.mp3
 
+# MCP config (contains API tokens, each developer creates their own)
+.mcp.json
+
 # Python
 __pycache__/
 *.py[cod]
