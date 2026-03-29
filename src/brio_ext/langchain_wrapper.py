@@ -32,14 +32,18 @@ class BrioLangChainWrapper:
     calls the brio_ext-wrapped chat_complete() method directly.
     """
 
-    def __init__(self, brio_model: LanguageModel):
+    def __init__(self, brio_model: LanguageModel, no_think: bool = False):
         """
         Initialize wrapper with a brio_ext model instance.
 
         Args:
             brio_model: A LanguageModel instance from BrioAIFactory.create_language()
+            no_think: If True, prepend /no_think to the first user message to disable
+                      thinking mode on models that support it (e.g. Qwen3/Qwen3.5).
+                      Has no effect on models without thinking mode.
         """
         self.brio_model = brio_model
+        self.no_think = no_think
         self._llm_type = "brio_langchain_wrapper"
 
         # Check if model has been wrapped by brio_ext
@@ -71,6 +75,7 @@ class BrioLangChainWrapper:
             List of dicts with 'role' and 'content' keys
         """
         converted = []
+        first_user_seen = False
 
         for msg in messages:
             # Handle LangChain message objects
@@ -97,6 +102,13 @@ class BrioLangChainWrapper:
                 "assistant": "assistant",
             }
             role = role_map.get(role, role)
+
+            # Prepend /no_think to the first user message when thinking is disabled.
+            # Qwen3/Qwen3.5 honours this token to skip the <think> reasoning block.
+            # For models without thinking mode it is ignored as harmless text.
+            if self.no_think and not first_user_seen and role == "user":
+                content = f"/no_think\n{content}"
+                first_user_seen = True
 
             converted.append({"role": role, "content": content})
 
@@ -224,19 +236,27 @@ class BrioLangChainWrapper:
             end = raw_content.find("</out>")
             content = raw_content[start:end].strip()
 
-        # Step 2: Remove <think> tags to separate "real" content from thinking
+        # Step 2: Remove complete <think>...</think> blocks
         think_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
         think_matches = think_pattern.findall(content)
         cleaned = think_pattern.sub("", content).strip()
 
+        # Step 2b: Handle unclosed <think> (model hit token limit mid-reasoning).
+        # When the completion budget is exhausted inside a <think> block,
+        # </think> is never generated.  Strip from the opening tag to end-of-string
+        # so thinking content is never returned to the user.
+        unclosed_think = re.compile(r"<think>.*", re.DOTALL)
+        if unclosed_think.search(cleaned):
+            cleaned = unclosed_think.sub("", cleaned).strip()
+
         # Step 3: Determine the best content to return
 
-        # 3a: Cleaned content exists — return it (this is the normal path
-        # for models that don't use <think> tags, preserving existing behavior)
+        # 3a: Cleaned content exists — return it (normal path for models without
+        # thinking mode, or thinking models whose reasoning fit within budget)
         if cleaned:
             return cleaned
 
-        # 3b: No content outside <think> tags — extract from thinking content.
+        # 3b: No content outside <think> tags — extract from complete thinking blocks.
         # This is the fix for models that wrap ALL output in <think> tags.
         if think_matches:
             all_thinking = "\n".join(m.strip() for m in think_matches)
@@ -247,7 +267,12 @@ class BrioLangChainWrapper:
             # No JSON found — return raw thinking as fallback
             return all_thinking
 
-        # Step 4: Return whatever we have
+        # Step 4: If content contained <think> but it was unclosed (model was cut
+        # off during reasoning with no actual answer), return empty rather than
+        # leaking internal reasoning to the user.
+        if "<think>" in content:
+            return ""
+
         return content
 
     # LangChain compatibility methods
