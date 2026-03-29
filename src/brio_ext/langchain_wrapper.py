@@ -243,6 +243,11 @@ class BrioLangChainWrapper:
         think_matches = think_pattern.findall(content)
         cleaned = think_pattern.sub("", content).strip()
 
+        # Step 2c: Strip stray </think> tags with no matching opener.
+        # Some models (e.g. Phi-4 Mini) emit a bare </think> at the end of their
+        # response as a format artefact even though they never opened a <think> block.
+        cleaned = cleaned.replace("</think>", "").strip()
+
         # Step 2b: Handle unclosed <think> (model hit token limit mid-reasoning).
         # When the completion budget is exhausted inside a <think> block,
         # </think> is never generated.  Strip from the opening tag to end-of-string
