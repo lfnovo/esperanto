@@ -193,8 +193,9 @@ class BrioLangChainWrapper:
         raise NotImplementedError("Streaming not yet implemented for BrioLangChainWrapper")
 
     async def astream(self, input: Any, config: Optional[Dict] = None, **kwargs):
-        """Async streaming not yet implemented."""
-        raise NotImplementedError("Async streaming not yet implemented for BrioLangChainWrapper")
+        """Async streaming: yields the full response as a single chunk (no token-by-token streaming)."""
+        result = await self.ainvoke(input, config, **kwargs)
+        yield result
 
     def _parse_fenced_content(self, raw_content: str) -> str:
         """
