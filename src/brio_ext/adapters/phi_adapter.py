@@ -32,9 +32,14 @@ class PhiAdapter(ChatAdapter):
         return {"prompt": prompt, "stop": ["<|im_end|>"]}
 
     def clean_response(self, text: str) -> str:
-        """Remove ChatML format markers from response."""
-        # Strip any ChatML markers that leaked through
+        """Remove ChatML and Phi format markers from response."""
         cleaned = text
-        for marker in ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]:
+        for marker in [
+            "<|im_start|>",
+            "<|im_end|>",
+            "<|endoftext|>",
+            "</assistant>",  # Phi-4 Mini emits this as a closing tag artefact
+            "<assistant>",
+        ]:
             cleaned = cleaned.replace(marker, "")
         return cleaned.strip()
