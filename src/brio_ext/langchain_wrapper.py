@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import ConfigDict, Field
 
+from langchain_core.messages import AIMessage
 from esperanto.common_types import ChatCompletion
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.utils.streaming import StreamingThinkTagFilter
@@ -258,19 +259,8 @@ class BrioLangChainWrapper:
         return self  # TODO: Implement if tool support is added
 
 
-class _AIMessage:
-    """Minimal AIMessage-like object for LangChain compatibility."""
-
-    def __init__(self, content: str, response_metadata: Optional[Dict] = None):
-        self.content = content
-        self.response_metadata = response_metadata or {}
-        self.type = "ai"
-
-    def __str__(self):
-        return self.content
-
-    def __repr__(self):
-        return f"AIMessage(content={self.content[:50]}...)"
+class _AIMessage(AIMessage):
+    """AIMessage subclass for LangChain/LangGraph compatibility (used by legacy BrioLangChainWrapper)."""
 
 
 class BrioBaseChatModel(BaseChatModel):
@@ -472,3 +462,4 @@ def _parse_fenced_content(raw_content: str) -> str:
         return all_thinking
 
     return content
+
