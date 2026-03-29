@@ -28,8 +28,10 @@ class PhiAdapter(ChatAdapter):
         prompt_parts.append("<|im_start|>assistant\n")
         prompt = "".join(prompt_parts)
 
-        # Stop at <|im_end|> to prevent model from continuing conversation
-        return {"prompt": prompt, "stop": ["<|im_end|>"]}
+        # Phi-4 Mini may respond in either ChatML (<|im_end|>) or its native format
+        # (</assistant>, <|end|>).  Include all variants so llama.cpp stops
+        # generation regardless of which format the model uses.
+        return {"prompt": prompt, "stop": ["<|im_end|>", "</assistant>", "<|end|>"]}
 
     def clean_response(self, text: str) -> str:
         """Remove ChatML and Phi format markers from response."""
