@@ -15,6 +15,7 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from pydantic import ConfigDict, Field
 
 from langchain_core.messages import AIMessage
+from loguru import logger
 from esperanto.common_types import ChatCompletion
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.utils.streaming import StreamingThinkTagFilter
@@ -109,6 +110,7 @@ class BrioLangChainWrapper:
             if self.no_think and not first_user_seen and role == "user":
                 content = f"/no_think\n{content}"
                 first_user_seen = True
+                logger.debug("Injected /no_think into first user message")
 
             converted.append({"role": role, "content": content})
 
@@ -260,6 +262,10 @@ class BrioLangChainWrapper:
         # This is the fix for models that wrap ALL output in <think> tags.
         if think_matches:
             all_thinking = "\n".join(m.strip() for m in think_matches)
+            logger.warning(
+                f"Model produced only <think> content ({len(all_thinking)} chars) with no "
+                f"answer outside tags. Token budget likely exhausted during reasoning."
+            )
             # Try to find a JSON object in the thinking content
             json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', all_thinking)
             if json_match:
@@ -271,6 +277,10 @@ class BrioLangChainWrapper:
         # off during reasoning with no actual answer), return empty rather than
         # leaking internal reasoning to the user.
         if "<think>" in content:
+            logger.warning(
+                "Unclosed <think> block detected — model hit token limit mid-reasoning. "
+                "Returning empty string to avoid leaking internal reasoning."
+            )
             return ""
 
         return content
