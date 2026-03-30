@@ -49,9 +49,10 @@ class LlamaAdapter(ChatAdapter):
         for marker in ["<|eot_id|>", "<|end_of_text|>", "<|start_header_id|>", "<|end_header_id|>"]:
             cleaned = cleaned.replace(marker, "")
 
-        # Aggressive cleanup: Remove repeated whitespace
-        # This catches cases where model generates "[/SYS]  [/SYS]  [/SYS]..." after JSON
-        cleaned = re.sub(r'\s+', ' ', cleaned)  # Normalize whitespace
+        # Collapse runs of spaces/tabs to a single space, but preserve newlines
+        # so that markdown formatting (headings, lists) survives intact.
+        # \s+ was previously used here but it flattened \n, breaking markdown rendering.
+        cleaned = re.sub(r'[ \t]+', ' ', cleaned)
         cleaned = cleaned.strip()
 
         # Note: Incomplete tokens (e.g., "[/", "<|e") are handled by

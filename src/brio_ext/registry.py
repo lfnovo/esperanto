@@ -35,16 +35,19 @@ def get_adapter(model_id: str, chat_format: Optional[str] = None) -> Optional[Ch
     if not model_id:
         return None
 
-    # If chat_format is provided, use it as the primary selector
+    # Model-id matching takes priority — a phi model should use PhiAdapter even
+    # if chat_format=chatml, not the more generic QwenAdapter.
+    for adapter in ADAPTERS:
+        if adapter.can_handle(model_id):
+            return adapter
+
+    # Fall back to format-based matching for models whose id doesn't match any
+    # known pattern (e.g. a custom chatml model with an unfamiliar name).
     if chat_format:
         adapter = _get_adapter_by_format(chat_format)
         if adapter:
             return adapter
 
-    # Fall back to model_id pattern matching
-    for adapter in ADAPTERS:
-        if adapter.can_handle(model_id):
-            return adapter
     return None
 
 
