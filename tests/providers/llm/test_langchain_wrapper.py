@@ -180,11 +180,11 @@ class TestStreamingFenceFilter:
 
 
 # ---------------------------------------------------------------------------
-# no_think flag — /no_think injection in _convert_messages
+# no_think flag — routing via chat_complete(), not sentinel injection
 # ---------------------------------------------------------------------------
 
-class TestNoThinkInjection:
-    """no_think=True prepends /no_think to the first user message only."""
+class TestNoThinkRouting:
+    """no_think=True is forwarded to chat_complete() as a kwarg, not injected into messages."""
 
     def _make_langchain_msg(self, role: str, content: str):
         msg = MagicMock()
@@ -192,47 +192,39 @@ class TestNoThinkInjection:
         msg.content = content
         return msg
 
-    def test_no_think_prepended_to_first_user_message(self):
+    def test_convert_messages_does_not_inject_sentinel(self):
+        """_convert_messages never injects /no_think into message content."""
         wrapper = _make_wrapper(no_think=True)
-        msgs = [self._make_langchain_msg("human", "What is a patent?")]
-        converted = wrapper._convert_messages(msgs)
-        assert converted[0]["content"].startswith("/no_think\n")
-
-    def test_no_think_only_on_first_user_message(self):
-        """Second user message must NOT get the /no_think prefix."""
-        wrapper = _make_wrapper(no_think=True)
-        msgs = [
-            self._make_langchain_msg("human", "First question"),
-            self._make_langchain_msg("ai", "Some answer"),
-            self._make_langchain_msg("human", "Follow-up question"),
-        ]
-        converted = wrapper._convert_messages(msgs)
-        assert converted[0]["content"].startswith("/no_think\n")
-        assert not converted[2]["content"].startswith("/no_think")
-
-    def test_no_think_false_does_not_modify_messages(self):
-        """no_think=False leaves messages untouched."""
-        wrapper = _make_wrapper(no_think=False)
         msgs = [self._make_langchain_msg("human", "What is a patent?")]
         converted = wrapper._convert_messages(msgs)
         assert not converted[0]["content"].startswith("/no_think")
         assert converted[0]["content"] == "What is a patent?"
 
-    def test_no_think_skips_system_message(self):
-        """System message is not prefixed; only the first user message gets it."""
-        wrapper = _make_wrapper(no_think=True)
+    def test_convert_messages_leaves_content_unchanged(self):
+        """Message content is preserved exactly as-is, regardless of no_think flag."""
+        for no_think in (True, False):
+            wrapper = _make_wrapper(no_think=no_think)
+            question = "Explain claim construction."
+            msgs = [self._make_langchain_msg("human", question)]
+            converted = wrapper._convert_messages(msgs)
+            assert converted[0]["content"] == question
+
+    def test_convert_messages_normalises_roles(self):
+        """LangChain role names are normalised to OpenAI format."""
+        wrapper = _make_wrapper()
         msgs = [
-            self._make_langchain_msg("system", "You are a helpful assistant."),
-            self._make_langchain_msg("human", "Tell me about patents."),
+            self._make_langchain_msg("system", "System prompt"),
+            self._make_langchain_msg("human", "User question"),
+            self._make_langchain_msg("ai", "AI answer"),
         ]
         converted = wrapper._convert_messages(msgs)
-        assert not converted[0]["content"].startswith("/no_think")
-        assert converted[1]["content"].startswith("/no_think\n")
+        assert converted[0]["role"] == "system"
+        assert converted[1]["role"] == "user"
+        assert converted[2]["role"] == "assistant"
 
-    def test_no_think_original_content_preserved(self):
-        """The original user message content follows the /no_think prefix."""
-        wrapper = _make_wrapper(no_think=True)
-        question = "Do they hear patent cases?"
-        msgs = [self._make_langchain_msg("human", question)]
-        converted = wrapper._convert_messages(msgs)
-        assert converted[0]["content"] == f"/no_think\n{question}"
+    def test_no_think_stored_on_wrapper(self):
+        """The no_think flag is stored so it can be forwarded at call time."""
+        wrapper_on = _make_wrapper(no_think=True)
+        wrapper_off = _make_wrapper(no_think=False)
+        assert wrapper_on.no_think is True
+        assert wrapper_off.no_think is False

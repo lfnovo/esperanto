@@ -31,22 +31,38 @@ def test_qwen_adapter_renders_chatml_prompt():
 
 
 def test_qwen_adapter_no_think_prefill():
-    """When /no_think sentinel is present, assistant turn is prefilled to skip reasoning."""
+    """When no_think=True, assistant turn is prefilled to skip reasoning."""
     adapter = QwenAdapter()
-    no_think_messages = [
+    messages = [
         {"role": "system", "content": "Be concise."},
-        {"role": "user", "content": "/no_think\nRewrite the clause."},
+        {"role": "user", "content": "Rewrite the clause."},
     ]
 
-    rendered = adapter.render(no_think_messages)
+    rendered = adapter.render(messages, no_think=True)
     prompt = rendered["prompt"]
 
-    # The /no_think sentinel must be stripped from the user turn
-    assert "/no_think" not in prompt
     # Assistant turn prefilled with empty think block to suppress reasoning
     assert "<think>\n\n</think>" in prompt
-    # The user content (after sentinel) must still appear
+    # The user content must be present unchanged (no sentinel stripping needed)
     assert "Rewrite the clause." in prompt
+    # No sentinel in the prompt
+    assert "/no_think" not in prompt
+
+
+def test_qwen_adapter_no_think_default_disabled():
+    """By default (no_think=False), assistant turn is NOT prefilled."""
+    adapter = QwenAdapter()
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "Rewrite the clause."},
+    ]
+
+    rendered = adapter.render(messages)
+    prompt = rendered["prompt"]
+
+    # Normal assistant start — no prefill
+    assert "<think>\n\n</think>" not in prompt
+    assert prompt.endswith("<|im_start|>assistant\n")
 
 
 def test_llama_adapter_passes_messages_for_native_template():

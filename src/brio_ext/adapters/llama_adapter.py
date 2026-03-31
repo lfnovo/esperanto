@@ -13,7 +13,7 @@ class LlamaAdapter(ChatAdapter):
     def can_handle(self, model_id: str) -> bool:
         return "llama" in (model_id or "").lower()
 
-    def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
+    def render(self, messages: List[Dict[str, str]], no_think: bool = False) -> RenderedPrompt:
         """
         Render messages for Llama models.
 

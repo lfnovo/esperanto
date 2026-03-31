@@ -134,8 +134,8 @@ def _wrap_language_model(
     from brio_ext.registry import get_adapter
     adapter = get_adapter(model_id, chat_format=chat_format)
 
-    def chat_complete(self, messages, stream=None):
-        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
+    def chat_complete(self, messages, stream=None, no_think=False):
+        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format, no_think=no_think)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
         # Extract tier info from config at call time (allows per-request updates)
@@ -168,8 +168,8 @@ def _wrap_language_model(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
             )
 
-    async def achat_complete(self, messages, stream=None):
-        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
+    async def achat_complete(self, messages, stream=None, no_think=False):
+        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format, no_think=no_think)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
         # Extract tier info from config at call time (allows per-request updates)

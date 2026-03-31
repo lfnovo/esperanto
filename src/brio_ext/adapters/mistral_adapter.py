@@ -13,7 +13,7 @@ class MistralAdapter(ChatAdapter):
     def can_handle(self, model_id: str) -> bool:
         return "mistral" in (model_id or "").lower()
 
-    def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
+    def render(self, messages: List[Dict[str, str]], no_think: bool = False) -> RenderedPrompt:
         system_messages = [m["content"] for m in messages if m["role"] == "system"]
         user_messages = [m["content"] for m in messages if m["role"] == "user"]
 

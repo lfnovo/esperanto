@@ -14,7 +14,7 @@ class PhiAdapter(ChatAdapter):
         mid = (model_id or "").lower()
         return "phi-4-mini" in mid or mid.startswith("phi")
 
-    def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
+    def render(self, messages: List[Dict[str, str]], no_think: bool = False) -> RenderedPrompt:
         # Phi models use ChatML format like Qwen
         def block(role: str, content: str) -> str:
             return f"<|im_start|>{role}\n{content}\n<|im_end|>\n"

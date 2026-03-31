@@ -76,7 +76,6 @@ class BrioLangChainWrapper:
             List of dicts with 'role' and 'content' keys
         """
         converted = []
-        first_user_seen = False
 
         for msg in messages:
             # Handle LangChain message objects
@@ -103,15 +102,6 @@ class BrioLangChainWrapper:
                 "assistant": "assistant",
             }
             role = role_map.get(role, role)
-
-            # Prepend /no_think to the first user message when thinking is disabled.
-            # Qwen3/Qwen3.5 honours this token to skip the <think> reasoning block.
-            # For models without thinking mode it is ignored as harmless text.
-            if self.no_think and not first_user_seen and role == "user":
-                content = f"/no_think\n{content}"
-                first_user_seen = True
-                logger.debug("Injected /no_think into first user message")
-
             converted.append({"role": role, "content": content})
 
         return converted
@@ -142,7 +132,7 @@ class BrioLangChainWrapper:
             raise ValueError(f"Unsupported input type: {type(input)}")
 
         # Call brio_ext's chat_complete (goes through rendering pipeline!)
-        response: ChatCompletion = self.brio_model.chat_complete(messages, stream=False)
+        response: ChatCompletion = self.brio_model.chat_complete(messages, stream=False, no_think=self.no_think)
 
         # Extract content and parse out <out>...</out> fencing
         raw_content = response.choices[0].message.content
@@ -185,7 +175,7 @@ class BrioLangChainWrapper:
             raise ValueError(f"Unsupported input type: {type(input)}")
 
         # Call brio_ext's achat_complete (goes through rendering pipeline!)
-        response: ChatCompletion = await self.brio_model.achat_complete(messages, stream=False)
+        response: ChatCompletion = await self.brio_model.achat_complete(messages, stream=False, no_think=self.no_think)
 
         # Extract content and parse out <out>...</out> fencing
         raw_content = response.choices[0].message.content
@@ -361,7 +351,7 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> ChatResult:
         converted = self._convert_messages(messages)
         response: ChatCompletion = self.brio_model.chat_complete(
-            converted, stream=False
+            converted, stream=False, no_think=self.no_think
         )
         return self._build_chat_result(response)
 
@@ -374,7 +364,7 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> ChatResult:
         converted = self._convert_messages(messages)
         response: ChatCompletion = await self.brio_model.achat_complete(
-            converted, stream=False
+            converted, stream=False, no_think=self.no_think
         )
         return self._build_chat_result(response)
 
@@ -408,7 +398,7 @@ class BrioBaseChatModel(BaseChatModel):
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         converted = self._convert_messages(messages)
-        stream_response = self.brio_model.chat_complete(converted, stream=True)
+        stream_response = self.brio_model.chat_complete(converted, stream=True, no_think=self.no_think)
         fence_filter = StreamingFenceFilter()
         think_filter = StreamingThinkTagFilter()
         for chunk in stream_response:
@@ -443,7 +433,7 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> AsyncIterator[ChatGenerationChunk]:
         converted = self._convert_messages(messages)
         stream_response = await self.brio_model.achat_complete(
-            converted, stream=True
+            converted, stream=True, no_think=self.no_think
         )
         fence_filter = StreamingFenceFilter()
         think_filter = StreamingThinkTagFilter()
@@ -471,13 +461,7 @@ class BrioBaseChatModel(BaseChatModel):
             yield chat_chunk
 
     def _convert_messages(self, messages: List[BaseMessage]) -> List[Dict[str, str]]:
-        """Convert LangChain BaseMessage objects to dicts for brio_model.chat_complete().
-
-        When no_think=True, prepends /no_think to the first user message so that
-        Qwen3/Qwen3.5 skips its <think> reasoning block.  The QwenAdapter detects
-        this sentinel and prefills the assistant turn with an empty <think></think>
-        block.  Has no effect on models without thinking mode.
-        """
+        """Convert LangChain BaseMessage objects to dicts for brio_model.chat_complete()."""
         role_map = {
             "human": "user",
             "ai": "assistant",
@@ -485,17 +469,13 @@ class BrioBaseChatModel(BaseChatModel):
             "user": "user",
             "assistant": "assistant",
         }
-        converted = []
-        first_user_injected = False
-        for msg in messages:
-            role = role_map.get(msg.type, msg.type)
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
-            if self.no_think and not first_user_injected and role == "user":
-                content = f"/no_think\n{content}"
-                first_user_injected = True
-                logger.debug("Injected /no_think into first user message")
-            converted.append({"role": role, "content": content})
-        return converted
+        return [
+            {
+                "role": role_map.get(msg.type, msg.type),
+                "content": msg.content if isinstance(msg.content, str) else str(msg.content),
+            }
+            for msg in messages
+        ]
 
 
 def _parse_fenced_content(raw_content: str) -> str:
