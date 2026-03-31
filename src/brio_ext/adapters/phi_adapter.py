@@ -14,7 +14,7 @@ class PhiAdapter(ChatAdapter):
         mid = (model_id or "").lower()
         return "phi-4-mini" in mid or mid.startswith("phi")
 
-    def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
+    def render(self, messages: List[Dict[str, str]], no_think: bool = False) -> RenderedPrompt:
         # Phi models use ChatML format like Qwen
         def block(role: str, content: str) -> str:
             return f"<|im_start|>{role}\n{content}\n<|im_end|>\n"
@@ -28,13 +28,21 @@ class PhiAdapter(ChatAdapter):
         prompt_parts.append("<|im_start|>assistant\n")
         prompt = "".join(prompt_parts)
 
-        # Stop at <|im_end|> to prevent model from continuing conversation
-        return {"prompt": prompt, "stop": ["<|im_end|>"]}
+        # Phi-4 Mini may respond in either ChatML (<|im_end|>) or with its
+        # legacy </assistant> closing tag.  Do NOT include <|end|> here — it is
+        # Phi-4's native EOS token and triggers immediately in ChatML context,
+        # producing a blank response.
+        return {"prompt": prompt, "stop": ["<|im_end|>", "</assistant>"]}
 
     def clean_response(self, text: str) -> str:
-        """Remove ChatML format markers from response."""
-        # Strip any ChatML markers that leaked through
+        """Remove ChatML and Phi format markers from response."""
         cleaned = text
-        for marker in ["<|im_start|>", "<|im_end|>", "<|endoftext|>"]:
+        for marker in [
+            "<|im_start|>",
+            "<|im_end|>",
+            "<|endoftext|>",
+            "</assistant>",  # Phi-4 Mini emits this as a closing tag artefact
+            "<assistant>",
+        ]:
             cleaned = cleaned.replace(marker, "")
         return cleaned.strip()

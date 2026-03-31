@@ -17,8 +17,16 @@ class ChatAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
-        """Render Esperanto messages into provider-specific payloads."""
+    def render(self, messages: List[Dict[str, str]], no_think: bool = False) -> RenderedPrompt:
+        """Render Esperanto messages into provider-specific payloads.
+
+        Args:
+            messages: Conversation messages with 'role' and 'content' keys.
+            no_think: When True, suppress the model's internal reasoning phase.
+                Only meaningful for models that support a thinking/reasoning mode
+                (e.g. Qwen3/Qwen3.5). Adapters for other model families should
+                accept the parameter and ignore it.
+        """
         raise NotImplementedError
 
     def clean_response(self, text: str) -> str:

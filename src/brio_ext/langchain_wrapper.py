@@ -14,9 +14,11 @@ from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import ConfigDict, Field
 
+from langchain_core.messages import AIMessage
+from loguru import logger
 from esperanto.common_types import ChatCompletion
 from esperanto.providers.llm.base import LanguageModel
-from esperanto.utils.streaming import StreamingThinkTagFilter
+from esperanto.utils.streaming import StreamingFenceFilter, StreamingThinkTagFilter
 
 
 class BrioLangChainWrapper:
@@ -31,14 +33,18 @@ class BrioLangChainWrapper:
     calls the brio_ext-wrapped chat_complete() method directly.
     """
 
-    def __init__(self, brio_model: LanguageModel):
+    def __init__(self, brio_model: LanguageModel, no_think: bool = False):
         """
         Initialize wrapper with a brio_ext model instance.
 
         Args:
             brio_model: A LanguageModel instance from BrioAIFactory.create_language()
+            no_think: If True, prepend /no_think to the first user message to disable
+                      thinking mode on models that support it (e.g. Qwen3/Qwen3.5).
+                      Has no effect on models without thinking mode.
         """
         self.brio_model = brio_model
+        self.no_think = no_think
         self._llm_type = "brio_langchain_wrapper"
 
         # Check if model has been wrapped by brio_ext
@@ -96,7 +102,6 @@ class BrioLangChainWrapper:
                 "assistant": "assistant",
             }
             role = role_map.get(role, role)
-
             converted.append({"role": role, "content": content})
 
         return converted
@@ -127,7 +132,7 @@ class BrioLangChainWrapper:
             raise ValueError(f"Unsupported input type: {type(input)}")
 
         # Call brio_ext's chat_complete (goes through rendering pipeline!)
-        response: ChatCompletion = self.brio_model.chat_complete(messages, stream=False)
+        response: ChatCompletion = self.brio_model.chat_complete(messages, stream=False, no_think=self.no_think)
 
         # Extract content and parse out <out>...</out> fencing
         raw_content = response.choices[0].message.content
@@ -170,7 +175,7 @@ class BrioLangChainWrapper:
             raise ValueError(f"Unsupported input type: {type(input)}")
 
         # Call brio_ext's achat_complete (goes through rendering pipeline!)
-        response: ChatCompletion = await self.brio_model.achat_complete(messages, stream=False)
+        response: ChatCompletion = await self.brio_model.achat_complete(messages, stream=False, no_think=self.no_think)
 
         # Extract content and parse out <out>...</out> fencing
         raw_content = response.choices[0].message.content
@@ -192,8 +197,9 @@ class BrioLangChainWrapper:
         raise NotImplementedError("Streaming not yet implemented for BrioLangChainWrapper")
 
     async def astream(self, input: Any, config: Optional[Dict] = None, **kwargs):
-        """Async streaming not yet implemented."""
-        raise NotImplementedError("Async streaming not yet implemented for BrioLangChainWrapper")
+        """Async streaming: yields the full response as a single chunk (no token-by-token streaming)."""
+        result = await self.ainvoke(input, config, **kwargs)
+        yield result
 
     def _parse_fenced_content(self, raw_content: str) -> str:
         """
@@ -222,22 +228,39 @@ class BrioLangChainWrapper:
             end = raw_content.find("</out>")
             content = raw_content[start:end].strip()
 
-        # Step 2: Remove <think> tags to separate "real" content from thinking
+        # Step 2: Remove complete <think>...</think> blocks
         think_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
         think_matches = think_pattern.findall(content)
         cleaned = think_pattern.sub("", content).strip()
 
+        # Step 2c: Strip stray closing tags that leak through from any model's
+        # native format (e.g. Phi-4 Mini emits </assistant>, </think> without openers).
+        for stray_tag in ("</think>", "</assistant>", "<|im_end|>", "<|end|>"):
+            cleaned = cleaned.replace(stray_tag, "").strip()
+
+        # Step 2b: Handle unclosed <think> (model hit token limit mid-reasoning).
+        # When the completion budget is exhausted inside a <think> block,
+        # </think> is never generated.  Strip from the opening tag to end-of-string
+        # so thinking content is never returned to the user.
+        unclosed_think = re.compile(r"<think>.*", re.DOTALL)
+        if unclosed_think.search(cleaned):
+            cleaned = unclosed_think.sub("", cleaned).strip()
+
         # Step 3: Determine the best content to return
 
-        # 3a: Cleaned content exists — return it (this is the normal path
-        # for models that don't use <think> tags, preserving existing behavior)
+        # 3a: Cleaned content exists — return it (normal path for models without
+        # thinking mode, or thinking models whose reasoning fit within budget)
         if cleaned:
             return cleaned
 
-        # 3b: No content outside <think> tags — extract from thinking content.
+        # 3b: No content outside <think> tags — extract from complete thinking blocks.
         # This is the fix for models that wrap ALL output in <think> tags.
         if think_matches:
             all_thinking = "\n".join(m.strip() for m in think_matches)
+            logger.warning(
+                f"Model produced only <think> content ({len(all_thinking)} chars) with no "
+                f"answer outside tags. Token budget likely exhausted during reasoning."
+            )
             # Try to find a JSON object in the thinking content
             json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', all_thinking)
             if json_match:
@@ -245,7 +268,16 @@ class BrioLangChainWrapper:
             # No JSON found — return raw thinking as fallback
             return all_thinking
 
-        # Step 4: Return whatever we have
+        # Step 4: If content contained <think> but it was unclosed (model was cut
+        # off during reasoning with no actual answer), return empty rather than
+        # leaking internal reasoning to the user.
+        if "<think>" in content:
+            logger.warning(
+                "Unclosed <think> block detected — model hit token limit mid-reasoning. "
+                "Returning empty string to avoid leaking internal reasoning."
+            )
+            return ""
+
         return content
 
     # LangChain compatibility methods
@@ -258,19 +290,8 @@ class BrioLangChainWrapper:
         return self  # TODO: Implement if tool support is added
 
 
-class _AIMessage:
-    """Minimal AIMessage-like object for LangChain compatibility."""
-
-    def __init__(self, content: str, response_metadata: Optional[Dict] = None):
-        self.content = content
-        self.response_metadata = response_metadata or {}
-        self.type = "ai"
-
-    def __str__(self):
-        return self.content
-
-    def __repr__(self):
-        return f"AIMessage(content={self.content[:50]}...)"
+class _AIMessage(AIMessage):
+    """AIMessage subclass for LangChain/LangGraph compatibility (used by legacy BrioLangChainWrapper)."""
 
 
 class BrioBaseChatModel(BaseChatModel):
@@ -290,9 +311,17 @@ class BrioBaseChatModel(BaseChatModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     brio_model: Any = Field(description="A LanguageModel instance from BrioAIFactory")
+    no_think: bool = Field(
+        default=False,
+        description=(
+            "If True, prepend /no_think to the first user message to disable "
+            "thinking mode on models that support it (e.g. Qwen3/Qwen3.5). "
+            "Has no effect on models without thinking mode."
+        ),
+    )
 
-    def __init__(self, brio_model: LanguageModel, **kwargs: Any):
-        super().__init__(brio_model=brio_model, **kwargs)
+    def __init__(self, brio_model: LanguageModel, no_think: bool = False, **kwargs: Any):
+        super().__init__(brio_model=brio_model, no_think=no_think, **kwargs)
         if not getattr(brio_model, "_brio_wrapped", False):
             raise ValueError(
                 "Model must be created via BrioAIFactory to ensure proper wrapping. "
@@ -322,7 +351,7 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> ChatResult:
         converted = self._convert_messages(messages)
         response: ChatCompletion = self.brio_model.chat_complete(
-            converted, stream=False
+            converted, stream=False, no_think=self.no_think
         )
         return self._build_chat_result(response)
 
@@ -335,7 +364,7 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> ChatResult:
         converted = self._convert_messages(messages)
         response: ChatCompletion = await self.brio_model.achat_complete(
-            converted, stream=False
+            converted, stream=False, no_think=self.no_think
         )
         return self._build_chat_result(response)
 
@@ -369,12 +398,14 @@ class BrioBaseChatModel(BaseChatModel):
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         converted = self._convert_messages(messages)
-        stream_response = self.brio_model.chat_complete(converted, stream=True)
-        tag_filter = StreamingThinkTagFilter()
+        stream_response = self.brio_model.chat_complete(converted, stream=True, no_think=self.no_think)
+        fence_filter = StreamingFenceFilter()
+        think_filter = StreamingThinkTagFilter()
         for chunk in stream_response:
             token = chunk.choices[0].delta.content if chunk.choices else ""
             if token:
-                filtered = tag_filter.process(token)
+                defenced = fence_filter.process(token)
+                filtered = think_filter.process(defenced) if defenced else ""
                 if filtered:
                     chat_chunk = ChatGenerationChunk(
                         message=AIMessageChunk(content=filtered)
@@ -382,7 +413,9 @@ class BrioBaseChatModel(BaseChatModel):
                     if run_manager:
                         run_manager.on_llm_new_token(filtered, chunk=chat_chunk)
                     yield chat_chunk
-        remaining = tag_filter.flush()
+        # Flush both filters in order
+        remaining = think_filter.process(fence_filter.flush())
+        remaining += think_filter.flush()
         if remaining:
             chat_chunk = ChatGenerationChunk(
                 message=AIMessageChunk(content=remaining)
@@ -400,13 +433,15 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> AsyncIterator[ChatGenerationChunk]:
         converted = self._convert_messages(messages)
         stream_response = await self.brio_model.achat_complete(
-            converted, stream=True
+            converted, stream=True, no_think=self.no_think
         )
-        tag_filter = StreamingThinkTagFilter()
+        fence_filter = StreamingFenceFilter()
+        think_filter = StreamingThinkTagFilter()
         async for chunk in stream_response:
             token = chunk.choices[0].delta.content if chunk.choices else ""
             if token:
-                filtered = tag_filter.process(token)
+                defenced = fence_filter.process(token)
+                filtered = think_filter.process(defenced) if defenced else ""
                 if filtered:
                     chat_chunk = ChatGenerationChunk(
                         message=AIMessageChunk(content=filtered)
@@ -414,7 +449,9 @@ class BrioBaseChatModel(BaseChatModel):
                     if run_manager:
                         await run_manager.on_llm_new_token(filtered, chunk=chat_chunk)
                     yield chat_chunk
-        remaining = tag_filter.flush()
+        # Flush both filters in order
+        remaining = think_filter.process(fence_filter.flush())
+        remaining += think_filter.flush()
         if remaining:
             chat_chunk = ChatGenerationChunk(
                 message=AIMessageChunk(content=remaining)
@@ -423,8 +460,7 @@ class BrioBaseChatModel(BaseChatModel):
                 await run_manager.on_llm_new_token(remaining, chunk=chat_chunk)
             yield chat_chunk
 
-    @staticmethod
-    def _convert_messages(messages: List[BaseMessage]) -> List[Dict[str, str]]:
+    def _convert_messages(self, messages: List[BaseMessage]) -> List[Dict[str, str]]:
         """Convert LangChain BaseMessage objects to dicts for brio_model.chat_complete()."""
         role_map = {
             "human": "user",
@@ -433,12 +469,13 @@ class BrioBaseChatModel(BaseChatModel):
             "user": "user",
             "assistant": "assistant",
         }
-        converted = []
-        for msg in messages:
-            role = role_map.get(msg.type, msg.type)
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
-            converted.append({"role": role, "content": content})
-        return converted
+        return [
+            {
+                "role": role_map.get(msg.type, msg.type),
+                "content": msg.content if isinstance(msg.content, str) else str(msg.content),
+            }
+            for msg in messages
+        ]
 
 
 def _parse_fenced_content(raw_content: str) -> str:
@@ -446,6 +483,14 @@ def _parse_fenced_content(raw_content: str) -> str:
     Parse content from brio_ext's <out>/<output> fencing and strip <think> tags.
 
     Shared between BrioLangChainWrapper (legacy) and BrioBaseChatModel.
+
+    Handles:
+    - <out>...</out> and <output>...</output> fencing extraction
+    - Complete <think>...</think> block removal
+    - Stray closing tags (</think>, </assistant>, <|im_end|>, <|end|>) without openers
+    - Unclosed <think> blocks when model hits token limit mid-reasoning — returns
+      empty string rather than leaking internal reasoning to the user
+    - Think-only content — returns the thinking content (or extracted JSON) as fallback
     """
     content = raw_content
     if "<output>" in raw_content and "</output>" in raw_content:
@@ -457,18 +502,46 @@ def _parse_fenced_content(raw_content: str) -> str:
         end = raw_content.find("</out>")
         content = raw_content[start:end].strip()
 
+    # Remove complete <think>...</think> blocks
     think_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
     think_matches = think_pattern.findall(content)
     cleaned = think_pattern.sub("", content).strip()
 
+    # Strip stray closing tags that leak through from model-native format
+    # (e.g. Phi-4 Mini emits </assistant>, models sometimes emit orphan </think>)
+    for stray_tag in ("</think>", "</assistant>", "<|im_end|>", "<|end|>"):
+        cleaned = cleaned.replace(stray_tag, "").strip()
+
+    # Handle unclosed <think> blocks: model hit token limit mid-reasoning.
+    # Strip everything from the opening tag onwards so we never return
+    # raw reasoning content to the user.
+    unclosed_think = re.compile(r"<think>.*", re.DOTALL)
+    if unclosed_think.search(cleaned):
+        pre_think = cleaned[: cleaned.find("<think>")].strip()
+        if pre_think:
+            return pre_think
+        logger.warning(
+            "Unclosed <think> block detected — model hit token limit mid-reasoning. "
+            "Returning empty string to avoid leaking internal reasoning."
+        )
+        return ""
+
+    # Normal path: content outside think blocks exists — return it
     if cleaned:
         return cleaned
 
+    # Think-only content: model produced reasoning but no answer outside tags.
     if think_matches:
         all_thinking = "\n".join(m.strip() for m in think_matches)
+        logger.warning(
+            f"Model produced only <think> content ({len(all_thinking)} chars) with no "
+            f"answer outside tags. Token budget likely exhausted during reasoning."
+        )
+        # Extract JSON object from thinking content if present
         json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', all_thinking)
         if json_match:
             return json_match.group(1)
         return all_thinking
 
     return content
+

@@ -126,7 +126,7 @@ class OpenAILanguageModel(LanguageModel):
                 StreamChoice(
                     index=choice["index"],
                     delta=DeltaMessage(
-                        content=choice.get("delta", {}).get("content", ""),
+                        content=choice.get("delta", {}).get("content"),
                         role=choice.get("delta", {}).get("role", "assistant"),
                         function_call=choice.get("delta", {}).get("function_call"),
                         tool_calls=choice.get("delta", {}).get("tool_calls"),

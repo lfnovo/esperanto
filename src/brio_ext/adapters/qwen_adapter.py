@@ -14,9 +14,9 @@ class QwenAdapter(ChatAdapter):
     def can_handle(self, model_id: str) -> bool:
         return "qwen" in (model_id or "").lower()
 
-    def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
+    def render(self, messages: List[Dict[str, str]], no_think: bool = False) -> RenderedPrompt:
         if os.getenv("BRIO_DEBUG"):
-            print(f"[QwenAdapter] Rendering {len(messages)} messages")
+            print(f"[QwenAdapter] Rendering {len(messages)} messages, no_think={no_think}")
 
         def block(role: str, content: str) -> str:
             return f"<|im_start|>{role}\n{content}\n<|im_end|>\n"
@@ -27,8 +27,18 @@ class QwenAdapter(ChatAdapter):
         system_text = "\n".join(system_messages) if system_messages else ""
         conversation = "".join(block(m["role"], m["content"]) for m in user_and_tool)
 
-        # Start assistant turn - model will generate content, brio_ext will fence it
-        prompt = f"{block('system', system_text)}{conversation}<|im_start|>assistant\n"
+        if no_think:
+            # Prefill assistant turn with an empty <think></think> block.
+            # This signals to Qwen3/Qwen3.5 that the reasoning phase is complete
+            # and the model should produce the answer directly, without generating
+            # a new <think> block.  This works via raw /completion because the
+            # model is conditioned on having "finished" thinking.
+            assistant_prefix = "<|im_start|>assistant\n<think>\n\n</think>\n"
+        else:
+            # Normal: model will generate <think>...</think> then the answer
+            assistant_prefix = "<|im_start|>assistant\n"
+
+        prompt = f"{block('system', system_text)}{conversation}{assistant_prefix}"
 
         if os.getenv("BRIO_DEBUG"):
             print(f"[QwenAdapter] Generated prompt: {len(prompt)} chars")

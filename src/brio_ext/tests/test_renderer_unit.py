@@ -24,9 +24,12 @@ def test_qwen_with_llamacpp_returns_prompt():
     prompt = rendered["prompt"]
 
     assert prompt.startswith("<|im_start|>system")
-    assert prompt.endswith("<out>\n")
-    assert "</out>" in rendered["stop"]
+    # Ends with open assistant turn (no <out> fencing — handled at factory level)
+    assert prompt.endswith("<|im_start|>assistant\n")
+    assert "<out>" not in prompt
+    # ChatML stop token; </out> is NOT a stop token (fencing at factory level)
     assert "<|im_end|>" in rendered["stop"]
+    assert "</out>" not in rendered["stop"]
 
 
 def test_unknown_model_with_llamacpp_falls_back_to_messages():
@@ -43,14 +46,20 @@ def test_qwen_with_template_provider_prefers_messages():
     assert "prompt" not in rendered
 
 
-@pytest.mark.parametrize(
-    "model_id,provider",
-    [
-        ("phi-4-mini", "openai"),
-        ("phi-4-mini", "hf_local"),
-    ],
-)
-def test_phi_adapter_keeps_messages(model_id, provider):
-    rendered = render_for_model(model_id, copy.deepcopy(MESSAGES), provider)
+def test_phi_with_template_provider_passes_through_messages():
+    """With a template provider (openai/anthropic), PhiAdapter prompt is ignored and messages pass through."""
+    rendered = render_for_model("phi-4-mini", copy.deepcopy(MESSAGES), "openai")
     assert rendered["messages"] == MESSAGES
-    assert "</out>" in rendered["stop"]
+    # No fencing stop tokens — factory-level fencing, not renderer-level
+    assert "</out>" not in rendered["stop"]
+
+
+def test_phi_with_local_provider_returns_chatml_prompt():
+    """With hf_local, PhiAdapter builds a ChatML prompt for raw completion."""
+    rendered = render_for_model("phi-4-mini", copy.deepcopy(MESSAGES), "hf_local")
+    assert "prompt" in rendered
+    assert rendered["prompt"].startswith("<|im_start|>")
+    assert rendered["prompt"].endswith("<|im_start|>assistant\n")
+    # ChatML stop tokens; </out> is NOT a stop token (fencing at factory level)
+    assert "<|im_end|>" in rendered["stop"]
+    assert "</out>" not in rendered["stop"]

@@ -13,7 +13,7 @@ class LlamaAdapter(ChatAdapter):
     def can_handle(self, model_id: str) -> bool:
         return "llama" in (model_id or "").lower()
 
-    def render(self, messages: List[Dict[str, str]]) -> RenderedPrompt:
+    def render(self, messages: List[Dict[str, str]], no_think: bool = False) -> RenderedPrompt:
         """
         Render messages for Llama models.
 
@@ -49,9 +49,10 @@ class LlamaAdapter(ChatAdapter):
         for marker in ["<|eot_id|>", "<|end_of_text|>", "<|start_header_id|>", "<|end_header_id|>"]:
             cleaned = cleaned.replace(marker, "")
 
-        # Aggressive cleanup: Remove repeated whitespace
-        # This catches cases where model generates "[/SYS]  [/SYS]  [/SYS]..." after JSON
-        cleaned = re.sub(r'\s+', ' ', cleaned)  # Normalize whitespace
+        # Collapse runs of spaces/tabs to a single space, but preserve newlines
+        # so that markdown formatting (headings, lists) survives intact.
+        # \s+ was previously used here but it flattened \n, breaking markdown rendering.
+        cleaned = re.sub(r'[ \t]+', ' ', cleaned)
         cleaned = cleaned.strip()
 
         # Note: Incomplete tokens (e.g., "[/", "<|e") are handled by

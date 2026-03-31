@@ -19,6 +19,7 @@ def render_for_model(
     messages: List[Dict[str, str]],
     provider: str,
     chat_format: str = None,
+    no_think: bool = False,
 ) -> RenderedPrompt:
     """
     Render Esperanto messages into provider/model specific payloads.
@@ -41,7 +42,7 @@ def render_for_model(
 
     if adapter:
         if provider_key in PROMPT_PROVIDERS:
-            payload = dict(adapter.render(messages))
+            payload = dict(adapter.render(messages, no_think=no_think))
             payload["stop"] = _merge_stops(payload.get("stop"), DEFAULT_STOP)
             if os.getenv("BRIO_DEBUG"):
                 print(f"[RENDERER] mode=PROMPT (completions)")
@@ -53,7 +54,7 @@ def render_for_model(
                 print("─" * 80)
             return payload
 
-        rendered = adapter.render(messages)
+        rendered = adapter.render(messages, no_think=no_think)
         if "messages" in rendered:
             payload = {
                 "messages": rendered["messages"],
@@ -74,7 +75,7 @@ def render_for_model(
         return {"messages": messages, "stop": DEFAULT_STOP.copy()}
 
     if adapter:
-        payload = dict(adapter.render(messages))
+        payload = dict(adapter.render(messages, no_think=no_think))
         payload["stop"] = _merge_stops(payload.get("stop"), DEFAULT_STOP)
         if os.getenv("BRIO_DEBUG"):
             print(f"[RENDERER] mode=FALLBACK (adapter without prompt provider)")

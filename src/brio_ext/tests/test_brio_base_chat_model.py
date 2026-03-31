@@ -156,6 +156,38 @@ class TestLangChainIntegration:
         assert call_args[0] == {"role": "system", "content": "You are helpful."}
         assert call_args[1] == {"role": "user", "content": "Hi"}
 
+    def test_no_think_injects_sentinel_into_first_user_message(self):
+        """no_think=True prepends /no_think to the first user message only."""
+        response = _make_fake_response("reply")
+        model = _make_brio_model(response)
+        wrapper = BrioBaseChatModel(brio_model=model, no_think=True)
+
+        messages = [
+            SystemMessage(content="Be concise."),
+            HumanMessage(content="What is 2+2?"),
+            HumanMessage(content="Follow-up question?"),
+        ]
+        wrapper.invoke(messages)
+
+        call_args = model.chat_complete.call_args[0][0]
+        assert call_args[0] == {"role": "system", "content": "Be concise."}
+        # /no_think injected into FIRST user message only
+        assert call_args[1] == {"role": "user", "content": "/no_think\nWhat is 2+2?"}
+        # Second user message is NOT modified
+        assert call_args[2] == {"role": "user", "content": "Follow-up question?"}
+
+    def test_no_think_false_leaves_messages_unchanged(self):
+        """no_think=False (default) does not modify any messages."""
+        response = _make_fake_response("reply")
+        model = _make_brio_model(response)
+        wrapper = BrioBaseChatModel(brio_model=model, no_think=False)
+
+        messages = [HumanMessage(content="What is 2+2?")]
+        wrapper.invoke(messages)
+
+        call_args = model.chat_complete.call_args[0][0]
+        assert call_args[0] == {"role": "user", "content": "What is 2+2?"}
+
 
 class TestStreaming:
     """Test _stream and _astream on BrioBaseChatModel."""
@@ -164,7 +196,9 @@ class TestStreaming:
         tokens = ["Hello", ", ", "world", "!"]
         model = _make_streaming_model(tokens)
         wrapper = BrioBaseChatModel(brio_model=model)
-        result_tokens = [msg.content for msg in wrapper.stream("hello")]
+        # Filter empty-content chunks: BaseChatModel.stream() may append a final
+        # aggregated chunk with empty content and only response_metadata.
+        result_tokens = [msg.content for msg in wrapper.stream("hello") if msg.content]
 
         assert result_tokens == tokens
         model.chat_complete.assert_called_once()

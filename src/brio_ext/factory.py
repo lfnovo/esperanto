@@ -134,8 +134,8 @@ def _wrap_language_model(
     from brio_ext.registry import get_adapter
     adapter = get_adapter(model_id, chat_format=chat_format)
 
-    def chat_complete(self, messages, stream=None):
-        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
+    def chat_complete(self, messages, stream=None, no_think=False):
+        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format, no_think=no_think)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
         # Extract tier info from config at call time (allows per-request updates)
@@ -168,8 +168,8 @@ def _wrap_language_model(
                 f"Provider '{provider}' cannot render prompts for model '{model_id}'."
             )
 
-    async def achat_complete(self, messages, stream=None):
-        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format)
+    async def achat_complete(self, messages, stream=None, no_think=False):
+        rendered = render_for_model(model_id, messages, provider, chat_format=chat_format, no_think=no_think)
         stops = list(rendered.get("stop") or DEFAULT_STOP)
 
         # Extract tier info from config at call time (allows per-request updates)
@@ -299,7 +299,7 @@ def _strip_trailing_incomplete_tokens(text: str) -> str:
     return text.strip()
 
 
-def create_langchain_wrapper(model: LanguageModel) -> BrioBaseChatModel:
+def create_langchain_wrapper(model: LanguageModel, no_think: bool = False) -> BrioBaseChatModel:
     """
     Create a LangChain-compatible wrapper for a brio_ext model.
 
@@ -309,17 +309,21 @@ def create_langchain_wrapper(model: LanguageModel) -> BrioBaseChatModel:
 
     Args:
         model: A LanguageModel instance from BrioAIFactory.create_language()
+        no_think: If True, prepend /no_think to the first user message to disable
+                  thinking mode on models that support it (e.g. Qwen3/Qwen3.5).
+                  Pass True for tier_2 and tier_3 where the token budget is too
+                  small to accommodate a full reasoning block plus an answer.
 
     Returns:
         BrioBaseChatModel that can be used with LangChain/LangGraph
 
     Example:
         >>> model = BrioAIFactory.create_language("llamacpp", "llama-3.1-8b-instruct")
-        >>> langchain_model = create_langchain_wrapper(model)
+        >>> langchain_model = create_langchain_wrapper(model, no_think=True)
         >>> result = await langchain_model.ainvoke("What is 2+2?")
-        >>> print(result.content)  # Clean output, no <out> tags
+        >>> print(result.content)  # Clean output, no <out> or <think> tags
     """
-    return BrioBaseChatModel(brio_model=model)
+    return BrioBaseChatModel(brio_model=model, no_think=no_think)
 
 
 class _stop_config_guard:
