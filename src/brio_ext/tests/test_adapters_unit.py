@@ -126,3 +126,120 @@ def test_phi_adapter_stop_tokens():
     assert "<|end|>" not in rendered["stop"]
     # No <out>/</ out> fencing — handled at factory level
     assert "</out>" not in rendered["stop"]
+
+
+# ---------------------------------------------------------------------------
+# clean_response() — adapter post-processing
+# ---------------------------------------------------------------------------
+
+class TestLlamaAdapterCleanResponse:
+    """LlamaAdapter.clean_response() strips Llama format markers."""
+
+    def setup_method(self):
+        self.adapter = LlamaAdapter()
+
+    def test_strips_inst_markers(self):
+        text = "[INST] What is a contract? [/INST] A contract is a legal agreement."
+        result = self.adapter.clean_response(text)
+        assert "[INST]" not in result
+        assert "[/INST]" not in result
+        assert "A contract is a legal agreement." in result
+
+    def test_strips_sys_markers(self):
+        text = "<<SYS>>You are helpful.<</SYS>>Here is my answer."
+        result = self.adapter.clean_response(text)
+        assert "<<SYS>>" not in result
+        assert "<</SYS>>" not in result
+        assert "Here is my answer." in result
+
+    def test_strips_llama3_special_tokens(self):
+        text = "<|start_header_id|>assistant<|end_header_id|>\n\nHere is the answer.<|eot_id|>"
+        result = self.adapter.clean_response(text)
+        assert "<|start_header_id|>" not in result
+        assert "<|end_header_id|>" not in result
+        assert "<|eot_id|>" not in result
+        assert "Here is the answer." in result
+
+    def test_preserves_newlines(self):
+        """Newlines must survive clean_response so markdown formatting is intact."""
+        text = "# Heading\n\nParagraph one.\n\n- Item 1\n- Item 2\n"
+        result = self.adapter.clean_response(text)
+        assert "\n" in result
+        assert "# Heading" in result
+        assert "- Item 1" in result
+
+    def test_collapses_spaces_not_newlines(self):
+        """Multiple spaces/tabs are collapsed; newlines are preserved."""
+        text = "Word1   \t  Word2\nWord3"
+        result = self.adapter.clean_response(text)
+        assert "\n" in result
+        assert "Word1 Word2" in result
+        assert "Word3" in result
+
+    def test_plain_text_passes_through(self):
+        text = "This is a normal response."
+        result = self.adapter.clean_response(text)
+        assert result == text
+
+
+class TestPhiAdapterCleanResponse:
+    """PhiAdapter.clean_response() strips ChatML and Phi-specific markers."""
+
+    def setup_method(self):
+        self.adapter = PhiAdapter()
+
+    def test_strips_chatml_im_end(self):
+        text = "Here is my answer.<|im_end|>"
+        result = self.adapter.clean_response(text)
+        assert "<|im_end|>" not in result
+        assert "Here is my answer." in result
+
+    def test_strips_assistant_closing_tag(self):
+        """Phi-4 Mini sometimes emits </assistant> as a closing artefact."""
+        text = "The answer is 42.</assistant>"
+        result = self.adapter.clean_response(text)
+        assert "</assistant>" not in result
+        assert "The answer is 42." in result
+
+    def test_strips_im_start(self):
+        text = "<|im_start|>This should not appear."
+        result = self.adapter.clean_response(text)
+        assert "<|im_start|>" not in result
+
+    def test_strips_endoftext(self):
+        text = "Done.<|endoftext|>"
+        result = self.adapter.clean_response(text)
+        assert "<|endoftext|>" not in result
+        assert "Done." in result
+
+    def test_plain_text_passes_through(self):
+        text = "A straightforward response."
+        assert self.adapter.clean_response(text) == text
+
+
+class TestQwenAdapterCleanResponse:
+    """QwenAdapter.clean_response() strips ChatML markers."""
+
+    def setup_method(self):
+        self.adapter = QwenAdapter()
+
+    def test_strips_im_end(self):
+        text = "Here is the answer.<|im_end|>"
+        result = self.adapter.clean_response(text)
+        assert "<|im_end|>" not in result
+        assert "Here is the answer." in result
+
+    def test_strips_im_start(self):
+        text = "<|im_start|>assistant\nSome response"
+        result = self.adapter.clean_response(text)
+        assert "<|im_start|>" not in result
+
+    def test_strips_endoftext(self):
+        text = "Final answer.<|endoftext|>"
+        result = self.adapter.clean_response(text)
+        assert "<|endoftext|>" not in result
+        assert "Final answer." in result
+
+    def test_plain_text_passes_through(self):
+        text = "Clean response with no markers."
+        assert self.adapter.clean_response(text) == text

@@ -1,18 +1,18 @@
 """
 Unit tests for BrioLangChainWrapper.
 
-Covers two fixes:
+Covers three areas:
 
-1. _parse_fenced_content — unclosed <think> handling
-   Thinking models (Qwen3/Qwen3.5, DeepSeek-R1) generate a <think>...</think>
-   block before answering.  When the completion budget is exhausted mid-reasoning
-   the closing </think> tag is never emitted.  The wrapper must strip the partial
-   thinking block rather than returning it to the user.
+1. _parse_fenced_content (standalone) — fencing extraction + <think> stripping
+   Callable directly as ``from brio_ext.langchain_wrapper import _parse_fenced_content``.
+   Tests verify it handles <out>/<output> fencing and complete/unclosed <think> blocks.
 
 2. no_think flag — /no_think injection
    When no_think=True the wrapper prepends "/no_think" to the first user message
-   so that Qwen3/Qwen3.5 skips the reasoning block entirely.  For models without
-   thinking mode the token is a harmless no-op.
+   so that Qwen3/Qwen3.5 skips the reasoning block entirely.
+
+3. StreamingFenceFilter — streaming-path <out>/<output> extraction
+   Verifies that fencing in a stream is correctly stripped token-by-token.
 
 Run with: pytest tests/providers/llm/test_langchain_wrapper.py -v
 """
@@ -20,6 +20,9 @@ Run with: pytest tests/providers/llm/test_langchain_wrapper.py -v
 from unittest.mock import MagicMock
 
 import pytest
+
+from brio_ext.langchain_wrapper import _parse_fenced_content
+from esperanto.utils.streaming import StreamingFenceFilter
 
 
 # ---------------------------------------------------------------------------
@@ -38,69 +41,142 @@ def _make_wrapper(no_think: bool = False):
     return BrioLangChainWrapper(mock_model, no_think=no_think)
 
 
+def _run_fence_filter(tokens):
+    """Helper: feed tokens through StreamingFenceFilter, return collected output."""
+    f = StreamingFenceFilter()
+    parts = []
+    for t in tokens:
+        out = f.process(t)
+        if out:
+            parts.append(out)
+    remaining = f.flush()
+    if remaining:
+        parts.append(remaining)
+    return "".join(parts)
+
+
 # ---------------------------------------------------------------------------
-# _parse_fenced_content — thinking content stripping
+# _parse_fenced_content — standalone function tests
 # ---------------------------------------------------------------------------
 
-class TestParseFencedContentThinking:
-    """_parse_fenced_content strips <think> blocks in all cases."""
+class TestParseFencedContent:
+    """_parse_fenced_content is a module-level function; test it directly."""
+
+    def test_plain_text_passes_through(self):
+        raw = "Plain answer with no thinking tags."
+        assert _parse_fenced_content(raw) == raw
+
+    def test_out_fencing_extracted(self):
+        raw = "<out>The actual answer.</out>"
+        assert _parse_fenced_content(raw) == "The actual answer."
+
+    def test_output_fencing_extracted(self):
+        raw = "<output>The actual answer.</output>"
+        assert _parse_fenced_content(raw) == "The actual answer."
+
+    def test_out_fencing_with_leading_whitespace(self):
+        raw = "<out>\n  Indented answer.\n</out>"
+        assert _parse_fenced_content(raw) == "Indented answer."
+
+    def test_no_fencing_when_only_open_tag(self):
+        """Only an open tag with no close — treated as plain text."""
+        raw = "<out>Some content without a close tag"
+        result = _parse_fenced_content(raw)
+        # Should not crash; returns something reasonable (content or empty)
+        assert isinstance(result, str)
 
     def test_closed_think_block_stripped(self):
-        """Complete <think>...</think> block removed; real answer returned."""
-        wrapper = _make_wrapper()
         raw = "<think>Let me reason about this...</think>Here is the answer."
-        assert wrapper._parse_fenced_content(raw) == "Here is the answer."
+        assert _parse_fenced_content(raw) == "Here is the answer."
 
     def test_unclosed_think_block_returns_empty(self):
-        """Unclosed <think> (token limit hit mid-reasoning) returns empty string."""
-        wrapper = _make_wrapper()
         raw = "<think>Reasoning step one...\nReasoning step two, still going..."
-        result = wrapper._parse_fenced_content(raw)
+        result = _parse_fenced_content(raw)
         assert result == "", f"Expected empty string, got: {result!r}"
 
     def test_unclosed_think_does_not_leak_content(self):
-        """<think> content is never returned to the user when unclosed."""
-        wrapper = _make_wrapper()
         raw = "<think>SYSTEM PROMPT DETAILS: You are BRIO, a private assistant..."
-        result = wrapper._parse_fenced_content(raw)
+        result = _parse_fenced_content(raw)
         assert "SYSTEM PROMPT DETAILS" not in result
         assert "<think>" not in result
 
     def test_content_before_unclosed_think_preserved(self):
-        """Any real content that appears before an unclosed <think> is kept."""
-        wrapper = _make_wrapper()
         raw = "Here is part of the answer.\n<think>Then I started reasoning..."
-        result = wrapper._parse_fenced_content(raw)
+        result = _parse_fenced_content(raw)
         assert "Here is part of the answer." in result
         assert "<think>" not in result
 
     def test_fenced_with_closed_think_inside(self):
-        """<think> inside <out> fencing is stripped; answer extracted cleanly."""
-        wrapper = _make_wrapper()
         raw = "<out>\n<think>internal reasoning</think>\nActual answer here.\n</out>"
-        assert wrapper._parse_fenced_content(raw) == "Actual answer here."
+        assert _parse_fenced_content(raw) == "Actual answer here."
 
     def test_fenced_with_unclosed_think_returns_empty(self):
-        """<out> content that is only an unclosed <think> block returns empty."""
-        wrapper = _make_wrapper()
         raw = "<out>\n<think>Reasoning that never ends...</out>"
-        result = wrapper._parse_fenced_content(raw)
+        result = _parse_fenced_content(raw)
         assert result == ""
 
-    def test_no_think_tags_passes_through(self):
-        """Content without any <think> tags is returned unchanged."""
-        wrapper = _make_wrapper()
-        raw = "Plain answer with no thinking tags."
-        assert wrapper._parse_fenced_content(raw) == raw
-
     def test_multiple_closed_think_blocks_all_stripped(self):
-        """Multiple complete <think> blocks are all removed."""
-        wrapper = _make_wrapper()
         raw = "<think>first thought</think>Answer start <think>second thought</think> answer end."
-        result = wrapper._parse_fenced_content(raw)
+        result = _parse_fenced_content(raw)
         assert "<think>" not in result
         assert "Answer start" in result
         assert "answer end." in result
+
+    def test_stray_closing_tags_stripped(self):
+        """Orphan </think>, </assistant>, <|im_end|> etc. are stripped."""
+        raw = "Good answer.</think>"
+        result = _parse_fenced_content(raw)
+        assert "</think>" not in result
+        assert "Good answer." in result
+
+
+# ---------------------------------------------------------------------------
+# StreamingFenceFilter — streaming-path fencing extraction
+# ---------------------------------------------------------------------------
+
+class TestStreamingFenceFilter:
+    """StreamingFenceFilter extracts <out>/<output> fenced content from a token stream."""
+
+    def test_plain_text_passes_through(self):
+        tokens = ["Hello ", "world"]
+        assert _run_fence_filter(tokens) == "Hello world"
+
+    def test_out_fencing_extracted(self):
+        tokens = ["<out>", "The actual answer.", "</out>"]
+        assert _run_fence_filter(tokens) == "The actual answer."
+
+    def test_output_fencing_extracted(self):
+        tokens = ["<output>", "The actual answer.", "</output>"]
+        assert _run_fence_filter(tokens) == "The actual answer."
+
+    def test_content_after_close_tag_discarded(self):
+        """Nothing after </out> should appear in output."""
+        tokens = ["<out>Answer</out>", "extra content"]
+        result = _run_fence_filter(tokens)
+        assert "extra content" not in result
+        assert "Answer" in result
+
+    def test_fencing_split_across_tokens(self):
+        """Open/close tags split across multiple tokens are still detected."""
+        tokens = ["<", "out>", "Inner content.", "</", "out>"]
+        result = _run_fence_filter(tokens)
+        assert "Inner content." in result
+        assert "<out>" not in result
+        assert "</out>" not in result
+
+    def test_no_fencing_passthrough(self):
+        """When no <out> tag appears, all content passes through unchanged."""
+        tokens = ["No", " fencing", " here."]
+        assert _run_fence_filter(tokens) == "No fencing here."
+
+    def test_empty_tokens_handled(self):
+        tokens = ["<out>", "", "content", "", "</out>"]
+        result = _run_fence_filter(tokens)
+        assert "content" in result
+
+    def test_output_tag_multipart(self):
+        tokens = ["<output>Result</output>"]
+        assert _run_fence_filter(tokens) == "Result"
 
 
 # ---------------------------------------------------------------------------

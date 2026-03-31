@@ -18,7 +18,7 @@ from langchain_core.messages import AIMessage
 from loguru import logger
 from esperanto.common_types import ChatCompletion
 from esperanto.providers.llm.base import LanguageModel
-from esperanto.utils.streaming import StreamingThinkTagFilter
+from esperanto.utils.streaming import StreamingFenceFilter, StreamingThinkTagFilter
 
 
 class BrioLangChainWrapper:
@@ -409,11 +409,13 @@ class BrioBaseChatModel(BaseChatModel):
     ) -> Iterator[ChatGenerationChunk]:
         converted = self._convert_messages(messages)
         stream_response = self.brio_model.chat_complete(converted, stream=True)
-        tag_filter = StreamingThinkTagFilter()
+        fence_filter = StreamingFenceFilter()
+        think_filter = StreamingThinkTagFilter()
         for chunk in stream_response:
             token = chunk.choices[0].delta.content if chunk.choices else ""
             if token:
-                filtered = tag_filter.process(token)
+                defenced = fence_filter.process(token)
+                filtered = think_filter.process(defenced) if defenced else ""
                 if filtered:
                     chat_chunk = ChatGenerationChunk(
                         message=AIMessageChunk(content=filtered)
@@ -421,7 +423,9 @@ class BrioBaseChatModel(BaseChatModel):
                     if run_manager:
                         run_manager.on_llm_new_token(filtered, chunk=chat_chunk)
                     yield chat_chunk
-        remaining = tag_filter.flush()
+        # Flush both filters in order
+        remaining = think_filter.process(fence_filter.flush())
+        remaining += think_filter.flush()
         if remaining:
             chat_chunk = ChatGenerationChunk(
                 message=AIMessageChunk(content=remaining)
@@ -441,11 +445,13 @@ class BrioBaseChatModel(BaseChatModel):
         stream_response = await self.brio_model.achat_complete(
             converted, stream=True
         )
-        tag_filter = StreamingThinkTagFilter()
+        fence_filter = StreamingFenceFilter()
+        think_filter = StreamingThinkTagFilter()
         async for chunk in stream_response:
             token = chunk.choices[0].delta.content if chunk.choices else ""
             if token:
-                filtered = tag_filter.process(token)
+                defenced = fence_filter.process(token)
+                filtered = think_filter.process(defenced) if defenced else ""
                 if filtered:
                     chat_chunk = ChatGenerationChunk(
                         message=AIMessageChunk(content=filtered)
@@ -453,7 +459,9 @@ class BrioBaseChatModel(BaseChatModel):
                     if run_manager:
                         await run_manager.on_llm_new_token(filtered, chunk=chat_chunk)
                     yield chat_chunk
-        remaining = tag_filter.flush()
+        # Flush both filters in order
+        remaining = think_filter.process(fence_filter.flush())
+        remaining += think_filter.flush()
         if remaining:
             chat_chunk = ChatGenerationChunk(
                 message=AIMessageChunk(content=remaining)
