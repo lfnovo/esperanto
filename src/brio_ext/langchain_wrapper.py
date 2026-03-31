@@ -495,6 +495,14 @@ def _parse_fenced_content(raw_content: str) -> str:
     Parse content from brio_ext's <out>/<output> fencing and strip <think> tags.
 
     Shared between BrioLangChainWrapper (legacy) and BrioBaseChatModel.
+
+    Handles:
+    - <out>...</out> and <output>...</output> fencing extraction
+    - Complete <think>...</think> block removal
+    - Stray closing tags (</think>, </assistant>, <|im_end|>, <|end|>) without openers
+    - Unclosed <think> blocks when model hits token limit mid-reasoning — returns
+      empty string rather than leaking internal reasoning to the user
+    - Think-only content — returns the thinking content (or extracted JSON) as fallback
     """
     content = raw_content
     if "<output>" in raw_content and "</output>" in raw_content:
@@ -506,15 +514,42 @@ def _parse_fenced_content(raw_content: str) -> str:
         end = raw_content.find("</out>")
         content = raw_content[start:end].strip()
 
+    # Remove complete <think>...</think> blocks
     think_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
     think_matches = think_pattern.findall(content)
     cleaned = think_pattern.sub("", content).strip()
 
+    # Strip stray closing tags that leak through from model-native format
+    # (e.g. Phi-4 Mini emits </assistant>, models sometimes emit orphan </think>)
+    for stray_tag in ("</think>", "</assistant>", "<|im_end|>", "<|end|>"):
+        cleaned = cleaned.replace(stray_tag, "").strip()
+
+    # Handle unclosed <think> blocks: model hit token limit mid-reasoning.
+    # Strip everything from the opening tag onwards so we never return
+    # raw reasoning content to the user.
+    unclosed_think = re.compile(r"<think>.*", re.DOTALL)
+    if unclosed_think.search(cleaned):
+        pre_think = cleaned[: cleaned.find("<think>")].strip()
+        if pre_think:
+            return pre_think
+        logger.warning(
+            "Unclosed <think> block detected — model hit token limit mid-reasoning. "
+            "Returning empty string to avoid leaking internal reasoning."
+        )
+        return ""
+
+    # Normal path: content outside think blocks exists — return it
     if cleaned:
         return cleaned
 
+    # Think-only content: model produced reasoning but no answer outside tags.
     if think_matches:
         all_thinking = "\n".join(m.strip() for m in think_matches)
+        logger.warning(
+            f"Model produced only <think> content ({len(all_thinking)} chars) with no "
+            f"answer outside tags. Token budget likely exhausted during reasoning."
+        )
+        # Extract JSON object from thinking content if present
         json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', all_thinking)
         if json_match:
             return json_match.group(1)
