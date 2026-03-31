@@ -191,14 +191,12 @@ def test_wrap_language_model_chat_format_mistral():
 
 def test_brio_factory_extracts_chat_format_from_config():
     """Test that BrioAIFactory.create_language() extracts chat_format from config."""
-    from unittest.mock import Mock, patch
+    from unittest.mock import patch
 
-    # Mock the parent factory's create_language to return our dummy model
-    with patch.object(
-        BrioAIFactory.__bases__[0],  # AIFactory
-        'create_language',
-        return_value=DummyLanguageModel(model_name="test-model", config={})
-    ):
+    # BrioAIFactory.create_language() calls _import_provider_class() to get the
+    # provider class, then instantiates it. Patch _import_provider_class to return
+    # DummyLanguageModel so no network connection is attempted.
+    with patch.object(BrioAIFactory, "_import_provider_class", return_value=DummyLanguageModel):
         # Create a model with chat_format in config
         model = BrioAIFactory.create_language(
             provider="llamacpp",

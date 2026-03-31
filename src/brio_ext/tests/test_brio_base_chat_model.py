@@ -164,7 +164,9 @@ class TestStreaming:
         tokens = ["Hello", ", ", "world", "!"]
         model = _make_streaming_model(tokens)
         wrapper = BrioBaseChatModel(brio_model=model)
-        result_tokens = [msg.content for msg in wrapper.stream("hello")]
+        # Filter empty-content chunks: BaseChatModel.stream() may append a final
+        # aggregated chunk with empty content and only response_metadata.
+        result_tokens = [msg.content for msg in wrapper.stream("hello") if msg.content]
 
         assert result_tokens == tokens
         model.chat_complete.assert_called_once()

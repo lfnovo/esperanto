@@ -20,24 +20,50 @@ def test_qwen_adapter_renders_chatml_prompt():
     rendered = adapter.render(MESSAGES)
     prompt = rendered["prompt"]
 
+    # Systems collapsed into first block, user turn follows, then open assistant turn
     assert prompt.startswith("<|im_start|>system")
-    assert "<|im_start|>assistant" in prompt
-    assert prompt.endswith("<out>\n")
-    assert "</out>" in rendered["stop"]
-    assert "<|im_end|>" in rendered["stop"]
+    assert "<|im_start|>user\n" in prompt
+    assert "<|im_start|>assistant\n" in prompt
+    # No <out> fencing — fencing is handled at the factory level
+    assert "<out>" not in prompt
+    # Only ChatML stop token; </out> is NOT a stop token (fencing moved to factory)
+    assert rendered["stop"] == ["<|im_end|>"]
 
 
-def test_llama_adapter_renders_inst_prompt():
+def test_qwen_adapter_no_think_prefill():
+    """When /no_think sentinel is present, assistant turn is prefilled to skip reasoning."""
+    adapter = QwenAdapter()
+    no_think_messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "/no_think\nRewrite the clause."},
+    ]
+
+    rendered = adapter.render(no_think_messages)
+    prompt = rendered["prompt"]
+
+    # The /no_think sentinel must be stripped from the user turn
+    assert "/no_think" not in prompt
+    # Assistant turn prefilled with empty think block to suppress reasoning
+    assert "<think>\n\n</think>" in prompt
+    # The user content (after sentinel) must still appear
+    assert "Rewrite the clause." in prompt
+
+
+def test_llama_adapter_passes_messages_for_native_template():
+    """LlamaAdapter returns messages in OpenAI format for llamacpp native chat template."""
     adapter = LlamaAdapter()
     assert adapter.can_handle("llama-3.1-8b")
 
     rendered = adapter.render(MESSAGES)
-    prompt = rendered["prompt"]
 
-    assert prompt.startswith("[INST] <<SYS>>")
-    assert "<</SYS>>" in prompt
-    assert prompt.rstrip().endswith("<out>")
-    assert rendered["stop"] == ["</out>"]
+    # Returns messages dict (not a raw prompt string) so llamacpp applies its template
+    assert "messages" in rendered
+    assert rendered["messages"] == MESSAGES
+    # Llama 3.1+ stop tokens
+    assert "<|eot_id|>" in rendered["stop"]
+    assert "<|end_of_text|>" in rendered["stop"]
+    # No <out> fencing — handled at factory level
+    assert "prompt" not in rendered
 
 
 def test_mistral_adapter_renders_inst_prompt():
@@ -48,8 +74,11 @@ def test_mistral_adapter_renders_inst_prompt():
     prompt = rendered["prompt"]
 
     assert prompt.startswith("[INST] ")
-    assert prompt.rstrip().endswith("<out>")
-    assert rendered["stop"] == ["</out>"]
+    assert "[/INST]" in prompt
+    # No <out> fencing — handled at factory level
+    assert "<out>" not in prompt
+    # Mistral adapter relies on the factory for stop tokens; adapter returns empty list
+    assert rendered["stop"] == []
 
 
 def test_gemma_adapter_renders_turns():
@@ -60,15 +89,40 @@ def test_gemma_adapter_renders_turns():
     prompt = rendered["prompt"]
 
     assert prompt.startswith("<start_of_turn>system\n")
-    assert "<start_of_turn>model\n<out>" in prompt
-    assert "</out>" in rendered["stop"]
+    # Open model turn at the end (no <out> prefix — fencing at factory level)
+    assert "<start_of_turn>model\n" in prompt
+    assert "<out>" not in prompt
+    # Gemma stop token
     assert "<end_of_turn>" in rendered["stop"]
+    # No </out> stop token — handled at factory level
+    assert "</out>" not in rendered["stop"]
 
 
-def test_phi_adapter_passes_through_messages():
+def test_phi_adapter_renders_chatml_prompt():
+    """PhiAdapter renders a ChatML prompt (not a passthrough messages dict)."""
     adapter = PhiAdapter()
     assert adapter.can_handle("phi-4-mini-instruct")
 
     rendered = adapter.render(MESSAGES)
-    assert rendered["messages"] == MESSAGES
-    assert rendered["stop"] == ["</out>"]
+    prompt = rendered["prompt"]
+
+    # ChatML format with all message turns
+    assert "<|im_start|>system\n" in prompt
+    assert "<|im_start|>user\n" in prompt
+    assert prompt.endswith("<|im_start|>assistant\n")
+    # No <out> fencing — handled at factory level
+    assert "<out>" not in prompt
+
+
+def test_phi_adapter_stop_tokens():
+    """PhiAdapter includes both ChatML and legacy Phi closing tags; NOT <|end|>."""
+    adapter = PhiAdapter()
+    rendered = adapter.render(MESSAGES)
+
+    # Phi-4 Mini may close with either token
+    assert "<|im_end|>" in rendered["stop"]
+    assert "</assistant>" in rendered["stop"]
+    # <|end|> is Phi-4's native EOS — triggers immediately in ChatML context → blank response
+    assert "<|end|>" not in rendered["stop"]
+    # No <out>/</ out> fencing — handled at factory level
+    assert "</out>" not in rendered["stop"]
