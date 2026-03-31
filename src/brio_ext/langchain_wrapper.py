@@ -321,9 +321,17 @@ class BrioBaseChatModel(BaseChatModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     brio_model: Any = Field(description="A LanguageModel instance from BrioAIFactory")
+    no_think: bool = Field(
+        default=False,
+        description=(
+            "If True, prepend /no_think to the first user message to disable "
+            "thinking mode on models that support it (e.g. Qwen3/Qwen3.5). "
+            "Has no effect on models without thinking mode."
+        ),
+    )
 
-    def __init__(self, brio_model: LanguageModel, **kwargs: Any):
-        super().__init__(brio_model=brio_model, **kwargs)
+    def __init__(self, brio_model: LanguageModel, no_think: bool = False, **kwargs: Any):
+        super().__init__(brio_model=brio_model, no_think=no_think, **kwargs)
         if not getattr(brio_model, "_brio_wrapped", False):
             raise ValueError(
                 "Model must be created via BrioAIFactory to ensure proper wrapping. "
@@ -454,9 +462,14 @@ class BrioBaseChatModel(BaseChatModel):
                 await run_manager.on_llm_new_token(remaining, chunk=chat_chunk)
             yield chat_chunk
 
-    @staticmethod
-    def _convert_messages(messages: List[BaseMessage]) -> List[Dict[str, str]]:
-        """Convert LangChain BaseMessage objects to dicts for brio_model.chat_complete()."""
+    def _convert_messages(self, messages: List[BaseMessage]) -> List[Dict[str, str]]:
+        """Convert LangChain BaseMessage objects to dicts for brio_model.chat_complete().
+
+        When no_think=True, prepends /no_think to the first user message so that
+        Qwen3/Qwen3.5 skips its <think> reasoning block.  The QwenAdapter detects
+        this sentinel and prefills the assistant turn with an empty <think></think>
+        block.  Has no effect on models without thinking mode.
+        """
         role_map = {
             "human": "user",
             "ai": "assistant",
@@ -465,9 +478,14 @@ class BrioBaseChatModel(BaseChatModel):
             "assistant": "assistant",
         }
         converted = []
+        first_user_injected = False
         for msg in messages:
             role = role_map.get(msg.type, msg.type)
             content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            if self.no_think and not first_user_injected and role == "user":
+                content = f"/no_think\n{content}"
+                first_user_injected = True
+                logger.debug("Injected /no_think into first user message")
             converted.append({"role": role, "content": content})
         return converted
 
