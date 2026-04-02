@@ -83,18 +83,97 @@ def test_llama_adapter_passes_messages_for_native_template():
 
 
 def test_mistral_adapter_renders_inst_prompt():
+    """MESSAGES has two system msgs — only messages[0] is extracted, second is silently dropped."""
     adapter = MistralAdapter()
     assert adapter.can_handle("mistral-7b-instruct")
 
     rendered = adapter.render(MESSAGES)
     prompt = rendered["prompt"]
 
-    assert prompt.startswith("[INST] ")
+    assert prompt.startswith("<s>")
     assert "[/INST]" in prompt
+    # Only first system message is extracted; second one is silently dropped
+    assert "System One" in prompt
+    assert "System Two" not in prompt
     # No <out> fencing — handled at factory level
     assert "<out>" not in prompt
-    # Mistral adapter relies on the factory for stop tokens; adapter returns empty list
-    assert rendered["stop"] == []
+    assert "</s>" in rendered["stop"]
+
+
+def test_mistral_adapter_single_user_message():
+    adapter = MistralAdapter()
+    rendered = adapter.render([{"role": "user", "content": "Hello"}])
+    assert rendered["prompt"] == "<s>[INST] Hello[/INST]"
+
+
+def test_mistral_adapter_multi_turn_with_assistant():
+    """Format: <s>[INST] user[/INST] assistant</s>[INST] user2[/INST]"""
+    adapter = MistralAdapter()
+    messages = [
+        {"role": "user", "content": "What is 2+2?"},
+        {"role": "assistant", "content": "4"},
+        {"role": "user", "content": "And 3+3?"},
+    ]
+    rendered = adapter.render(messages)
+    assert rendered["prompt"] == "<s>[INST] What is 2+2?[/INST] 4</s>[INST] And 3+3?[/INST]"
+
+
+def test_mistral_adapter_system_on_last_user_turn():
+    """System message is prepended to the LAST user turn per the Jinja template."""
+    adapter = MistralAdapter()
+    messages = [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "What is 2+2?"},
+        {"role": "assistant", "content": "4"},
+        {"role": "user", "content": "And 3+3?"},
+    ]
+    rendered = adapter.render(messages)
+    expected = "<s>[INST] What is 2+2?[/INST] 4</s>[INST] Be concise.\n\nAnd 3+3?[/INST]"
+    assert rendered["prompt"] == expected
+
+
+def test_mistral_adapter_system_single_turn():
+    """With only one user message, system is prepended to that (only) turn."""
+    adapter = MistralAdapter()
+    messages = [
+        {"role": "system", "content": "You are helpful."},
+        {"role": "user", "content": "Hello"},
+    ]
+    rendered = adapter.render(messages)
+    assert rendered["prompt"] == "<s>[INST] You are helpful.\n\nHello[/INST]"
+
+
+def test_mistral_adapter_many_turns():
+    adapter = MistralAdapter()
+    messages = [
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": "Hello!"},
+        {"role": "user", "content": "How are you?"},
+        {"role": "assistant", "content": "Good."},
+        {"role": "user", "content": "Great"},
+    ]
+    rendered = adapter.render(messages)
+    expected = (
+        "<s>[INST] Hi[/INST] Hello!</s>"
+        "[INST] How are you?[/INST] Good.</s>"
+        "[INST] Great[/INST]"
+    )
+    assert rendered["prompt"] == expected
+
+
+def test_mistral_adapter_system_appears_once():
+    """System text should only appear on the last user turn, exactly once."""
+    adapter = MistralAdapter()
+    messages = [
+        {"role": "system", "content": "System prompt."},
+        {"role": "user", "content": "First"},
+        {"role": "assistant", "content": "Reply"},
+        {"role": "user", "content": "Second"},
+    ]
+    rendered = adapter.render(messages)
+    assert rendered["prompt"].count("System prompt.") == 1
+    expected = "<s>[INST] First[/INST] Reply</s>[INST] System prompt.\n\nSecond[/INST]"
+    assert rendered["prompt"] == expected
 
 
 def test_gemma_adapter_renders_turns():
