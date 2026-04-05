@@ -209,6 +209,9 @@ class AzureLanguageModel(LanguageModel):
         response_id = ""
         response_model = ""
         created_at = 0
+        # Track function call metadata from output_item.added events
+        # Maps output_index -> {"name": str, "call_id": str}
+        function_calls: Dict[int, Dict[str, str]] = {}
 
         for chunk in response.iter_text():
             for line in chunk.split('\n'):
@@ -237,6 +240,17 @@ class AzureLanguageModel(LanguageModel):
                     created_at = resp.get("created_at", created_at)
                     continue
 
+                # Track function call identity from output_item.added
+                if event_type == "response.output_item.added":
+                    item = event_data.get("item", {})
+                    if item.get("type") == "function_call":
+                        idx = event_data.get("output_index", 0)
+                        function_calls[idx] = {
+                            "name": item.get("name", ""),
+                            "call_id": item.get("call_id", ""),
+                        }
+                    continue
+
                 if event_type == "response.output_text.delta":
                     yield ChatCompletionChunk(
                         id=response_id,
@@ -254,6 +268,17 @@ class AzureLanguageModel(LanguageModel):
                         model=response_model,
                     )
                 elif event_type == "response.function_call_arguments.delta":
+                    output_index = event_data.get("output_index", 0)
+                    fc_meta = function_calls.get(output_index, {})
+                    tool_call_dict: Dict[str, Any] = {
+                        "index": output_index,
+                        "id": fc_meta.get("call_id", event_data.get("item_id", "")),
+                        "type": "function",
+                        "function": {
+                            "name": fc_meta.get("name", ""),
+                            "arguments": event_data.get("delta", ""),
+                        },
+                    }
                     yield ChatCompletionChunk(
                         id=response_id,
                         choices=[
@@ -262,14 +287,7 @@ class AzureLanguageModel(LanguageModel):
                                 delta=DeltaMessage(
                                     content="",
                                     role="assistant",
-                                    tool_calls=[{
-                                        "index": event_data.get("output_index", 0),
-                                        "id": event_data.get("item_id", ""),
-                                        "type": "function",
-                                        "function": {
-                                            "arguments": event_data.get("delta", ""),
-                                        },
-                                    }],
+                                    tool_calls=[tool_call_dict],
                                 ),
                                 finish_reason=None,
                             )
@@ -300,6 +318,7 @@ class AzureLanguageModel(LanguageModel):
         response_id = ""
         response_model = ""
         created_at = 0
+        function_calls: Dict[int, Dict[str, str]] = {}
 
         async for chunk in response.aiter_text():
             for line in chunk.split('\n'):
@@ -325,6 +344,16 @@ class AzureLanguageModel(LanguageModel):
                     created_at = resp.get("created_at", created_at)
                     continue
 
+                if event_type == "response.output_item.added":
+                    item = event_data.get("item", {})
+                    if item.get("type") == "function_call":
+                        idx = event_data.get("output_index", 0)
+                        function_calls[idx] = {
+                            "name": item.get("name", ""),
+                            "call_id": item.get("call_id", ""),
+                        }
+                    continue
+
                 if event_type == "response.output_text.delta":
                     yield ChatCompletionChunk(
                         id=response_id,
@@ -342,6 +371,17 @@ class AzureLanguageModel(LanguageModel):
                         model=response_model,
                     )
                 elif event_type == "response.function_call_arguments.delta":
+                    output_index = event_data.get("output_index", 0)
+                    fc_meta = function_calls.get(output_index, {})
+                    tool_call_dict: Dict[str, Any] = {
+                        "index": output_index,
+                        "id": fc_meta.get("call_id", event_data.get("item_id", "")),
+                        "type": "function",
+                        "function": {
+                            "name": fc_meta.get("name", ""),
+                            "arguments": event_data.get("delta", ""),
+                        },
+                    }
                     yield ChatCompletionChunk(
                         id=response_id,
                         choices=[
@@ -350,14 +390,7 @@ class AzureLanguageModel(LanguageModel):
                                 delta=DeltaMessage(
                                     content="",
                                     role="assistant",
-                                    tool_calls=[{
-                                        "index": event_data.get("output_index", 0),
-                                        "id": event_data.get("item_id", ""),
-                                        "type": "function",
-                                        "function": {
-                                            "arguments": event_data.get("delta", ""),
-                                        },
-                                    }],
+                                    tool_calls=[tool_call_dict],
                                 ),
                                 finish_reason=None,
                             )

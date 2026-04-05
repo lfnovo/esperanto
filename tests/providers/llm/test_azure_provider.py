@@ -246,6 +246,41 @@ async def test_achat_complete_streaming(azure_model):
     assert chunk.choices[0].delta.content == "Async Hello "
     assert chunk.model == "gpt-35-turbo"
 
+def test_streaming_tool_call_includes_function_name(azure_model):
+    """Test that streaming tool call deltas include function name from output_item.added."""
+    messages = [{"role": "user", "content": "What's the weather?"}]
+
+    mock_stream_response = MagicMock()
+    mock_stream_response.status_code = 200
+    mock_stream_response.iter_text.return_value = [
+        'event: response.created\ndata: {"type":"response.created","response":{"id":"resp-tool-stream","model":"gpt-35-turbo","created_at":1677652290}}\n\n',
+        'event: response.output_item.added\ndata: {"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","id":"fc_123","call_id":"call_abc","name":"get_weather","arguments":""}}\n\n',
+        'event: response.function_call_arguments.delta\ndata: {"type":"response.function_call_arguments.delta","item_id":"fc_123","output_index":0,"delta":"{\\"location\\":"}\n\n',
+        'event: response.function_call_arguments.delta\ndata: {"type":"response.function_call_arguments.delta","item_id":"fc_123","output_index":0,"delta":"\\"Paris\\"}"}\n\n',
+        'event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp-tool-stream","model":"gpt-35-turbo","created_at":1677652290,"status":"completed"}}\n\n',
+    ]
+
+    mock_stream_context = MagicMock()
+    mock_stream_context.__enter__.return_value = mock_stream_response
+    mock_stream_context.__exit__.return_value = None
+    azure_model.client.stream.return_value = mock_stream_context
+
+    chunks = list(azure_model.chat_complete(messages, stream=True))
+
+    # 2 argument deltas + 1 completed
+    assert len(chunks) == 3
+
+    # First tool call delta should have function name and call_id
+    tc_delta = chunks[0].choices[0].delta.tool_calls[0]
+    assert tc_delta.function.name == "get_weather"
+    assert tc_delta.function.arguments == '{"location":'
+    assert tc_delta.id == "call_abc"
+
+    # Second delta also has name
+    tc_delta2 = chunks[1].choices[0].delta.tool_calls[0]
+    assert tc_delta2.function.name == "get_weather"
+    assert tc_delta2.function.arguments == '"Paris"}'
+
 def test_get_api_kwargs(azure_model):
     azure_model.temperature = 0.7
     azure_model.max_tokens = 100
