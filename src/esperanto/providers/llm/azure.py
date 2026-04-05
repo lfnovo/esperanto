@@ -113,16 +113,16 @@ class AzureLanguageModel(LanguageModel):
         """
         return []
 
-    def _convert_tools_to_openai(
+    def _convert_tools_to_responses(
         self, tools: Optional[List[Tool]]
     ) -> Optional[List[Dict[str, Any]]]:
-        """Convert Esperanto tools to OpenAI/Azure format.
+        """Convert Esperanto tools to OpenAI Responses API format.
 
         Args:
             tools: List of Esperanto Tool objects.
 
         Returns:
-            List of tools in OpenAI/Azure API format, or None if no tools provided.
+            List of tools in Responses API format (flattened), or None if no tools provided.
         """
         if not tools:
             return None
@@ -130,116 +130,257 @@ class AzureLanguageModel(LanguageModel):
         for tool in tools:
             tool_dict: Dict[str, Any] = {
                 "type": tool.type,
-                "function": {
-                    "name": tool.function.name,
-                    "description": tool.function.description,
-                    "parameters": tool.function.parameters,
-                },
+                "name": tool.function.name,
+                "description": tool.function.description,
+                "parameters": tool.function.parameters,
             }
             # Add strict mode if specified
             if tool.function.strict is not None:
-                tool_dict["function"]["strict"] = tool.function.strict
+                tool_dict["strict"] = tool.function.strict
             result.append(tool_dict)
         return result
 
-    def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
-        """Normalize Azure response to our format."""
-        choices = []
-        for choice in response_data["choices"]:
-            message_data = choice.get("message", {})
+    def _status_to_finish_reason(self, status: str) -> str:
+        """Convert Responses API status to chat completions finish_reason."""
+        mapping = {
+            "completed": "stop",
+            "incomplete": "length",
+            "failed": "error",
+        }
+        return mapping.get(status, status)
 
-            # Extract tool_calls if present
-            tool_calls = None
-            if "tool_calls" in message_data and message_data["tool_calls"]:
-                tool_calls = [
+    def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
+        """Normalize Responses API output to ChatCompletion format."""
+        # Extract content and tool calls from output items
+        content = ""
+        tool_calls = []
+
+        for item in response_data.get("output", []):
+            item_type = item.get("type")
+            if item_type == "message":
+                # Concatenate text from all content parts
+                for part in item.get("content", []):
+                    if part.get("type") == "output_text":
+                        content += part.get("text", "")
+            elif item_type == "function_call":
+                tool_calls.append(
                     ToolCall(
-                        id=tc["id"],
-                        type=tc.get("type", "function"),
+                        id=item.get("call_id", ""),
+                        type="function",
                         function=FunctionCall(
-                            name=tc["function"]["name"],
-                            arguments=tc["function"]["arguments"],
+                            name=item.get("name", ""),
+                            arguments=item.get("arguments", ""),
                         ),
                     )
-                    for tc in message_data["tool_calls"]
-                ]
-
-            choices.append(
-                Choice(
-                    index=choice["index"],
-                    message=Message(
-                        content=message_data.get("content") or "",
-                        role=message_data.get("role", "assistant"),
-                        tool_calls=tool_calls,
-                    ),
-                    finish_reason=choice.get("finish_reason"),
                 )
+
+        status = response_data.get("status", "completed")
+        finish_reason = self._status_to_finish_reason(status)
+
+        choices = [
+            Choice(
+                index=0,
+                message=Message(
+                    content=content,
+                    role="assistant",
+                    tool_calls=tool_calls if tool_calls else None,
+                ),
+                finish_reason=finish_reason,
             )
+        ]
+
+        usage_data = response_data.get("usage") or {}
 
         return ChatCompletion(
             id=response_data["id"],
             choices=choices,
-            created=response_data["created"],
-            model=response_data["model"],
+            created=response_data.get("created_at"),
+            model=response_data.get("model", ""),
             provider=self.provider,
             usage=Usage(
-                completion_tokens=response_data.get("usage", {}).get("completion_tokens", 0),
-                prompt_tokens=response_data.get("usage", {}).get("prompt_tokens", 0),
-                total_tokens=response_data.get("usage", {}).get("total_tokens", 0),
+                completion_tokens=usage_data.get("output_tokens", 0),
+                prompt_tokens=usage_data.get("input_tokens", 0),
+                total_tokens=usage_data.get("total_tokens", 0),
             ),
         )
 
-    def _normalize_chunk(self, chunk_data: Dict[str, Any]) -> ChatCompletionChunk:
-        """Normalize Azure stream chunk to our format."""
-        return ChatCompletionChunk(
-            id=chunk_data["id"],
-            choices=[
-                StreamChoice(
-                    index=choice["index"],
-                    delta=DeltaMessage(
-                        content=choice.get("delta", {}).get("content", ""),
-                        role=choice.get("delta", {}).get("role", "assistant"),
-                        function_call=choice.get("delta", {}).get("function_call"),
-                        tool_calls=choice.get("delta", {}).get("tool_calls"),
-                    ),
-                    finish_reason=choice.get("finish_reason"),
-                )
-                for choice in chunk_data["choices"]
-            ],
-            created=chunk_data["created"],
-            model=chunk_data.get("model", ""),
-        )
+    def _parse_sse_events(self, response: httpx.Response) -> Generator[ChatCompletionChunk, None, None]:
+        """Parse Responses API SSE stream and yield ChatCompletionChunks."""
+        response_id = ""
+        response_model = ""
+        created_at = 0
 
-    def _parse_sse_stream(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
-        """Parse Server-Sent Events stream from Azure chat completions."""
         for chunk in response.iter_text():
             for line in chunk.split('\n'):
                 line = line.strip()
                 if not line:
                     continue
-                if line.startswith("data: "):
-                    data = line[6:]  # Remove "data: " prefix
-                    if data.strip() == "[DONE]":
-                        break
-                    try:
-                        yield json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
+                # Responses API sends: event: <type>\ndata: <json>
+                # We only care about the data lines
+                if not line.startswith("data: "):
+                    continue
+                data = line[6:]
+                if data.strip() == "[DONE]":
+                    return
+                try:
+                    event_data = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
 
-    async def _parse_sse_stream_async(self, response: httpx.Response) -> AsyncGenerator[Dict[str, Any], None]:
-        """Parse Server-Sent Events stream from Azure chat completions asynchronously."""
+                event_type = event_data.get("type", "")
+
+                # Capture response metadata from lifecycle events
+                if event_type in ("response.created", "response.in_progress"):
+                    resp = event_data.get("response", {})
+                    response_id = resp.get("id", response_id)
+                    response_model = resp.get("model", response_model)
+                    created_at = resp.get("created_at", created_at)
+                    continue
+
+                if event_type == "response.output_text.delta":
+                    yield ChatCompletionChunk(
+                        id=response_id,
+                        choices=[
+                            StreamChoice(
+                                index=0,
+                                delta=DeltaMessage(
+                                    content=event_data.get("delta", ""),
+                                    role="assistant",
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        created=created_at,
+                        model=response_model,
+                    )
+                elif event_type == "response.function_call_arguments.delta":
+                    yield ChatCompletionChunk(
+                        id=response_id,
+                        choices=[
+                            StreamChoice(
+                                index=0,
+                                delta=DeltaMessage(
+                                    content="",
+                                    role="assistant",
+                                    tool_calls=[{
+                                        "index": event_data.get("output_index", 0),
+                                        "id": event_data.get("item_id", ""),
+                                        "type": "function",
+                                        "function": {
+                                            "arguments": event_data.get("delta", ""),
+                                        },
+                                    }],
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        created=created_at,
+                        model=response_model,
+                    )
+                elif event_type == "response.completed":
+                    resp = event_data.get("response", {})
+                    response_id = resp.get("id", response_id)
+                    yield ChatCompletionChunk(
+                        id=response_id,
+                        choices=[
+                            StreamChoice(
+                                index=0,
+                                delta=DeltaMessage(content="", role="assistant"),
+                                finish_reason="stop",
+                            )
+                        ],
+                        created=created_at,
+                        model=response_model,
+                    )
+                    return
+                # Ignore other lifecycle events
+
+    async def _parse_sse_events_async(self, response: httpx.Response) -> AsyncGenerator[ChatCompletionChunk, None]:
+        """Parse Responses API SSE stream asynchronously and yield ChatCompletionChunks."""
+        response_id = ""
+        response_model = ""
+        created_at = 0
+
         async for chunk in response.aiter_text():
             for line in chunk.split('\n'):
                 line = line.strip()
                 if not line:
                     continue
-                if line.startswith("data: "):
-                    data = line[6:]  # Remove "data: " prefix
-                    if data.strip() == "[DONE]":
-                        return
-                    try:
-                        yield json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
+                if not line.startswith("data: "):
+                    continue
+                data = line[6:]
+                if data.strip() == "[DONE]":
+                    return
+                try:
+                    event_data = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+
+                event_type = event_data.get("type", "")
+
+                if event_type in ("response.created", "response.in_progress"):
+                    resp = event_data.get("response", {})
+                    response_id = resp.get("id", response_id)
+                    response_model = resp.get("model", response_model)
+                    created_at = resp.get("created_at", created_at)
+                    continue
+
+                if event_type == "response.output_text.delta":
+                    yield ChatCompletionChunk(
+                        id=response_id,
+                        choices=[
+                            StreamChoice(
+                                index=0,
+                                delta=DeltaMessage(
+                                    content=event_data.get("delta", ""),
+                                    role="assistant",
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        created=created_at,
+                        model=response_model,
+                    )
+                elif event_type == "response.function_call_arguments.delta":
+                    yield ChatCompletionChunk(
+                        id=response_id,
+                        choices=[
+                            StreamChoice(
+                                index=0,
+                                delta=DeltaMessage(
+                                    content="",
+                                    role="assistant",
+                                    tool_calls=[{
+                                        "index": event_data.get("output_index", 0),
+                                        "id": event_data.get("item_id", ""),
+                                        "type": "function",
+                                        "function": {
+                                            "arguments": event_data.get("delta", ""),
+                                        },
+                                    }],
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        created=created_at,
+                        model=response_model,
+                    )
+                elif event_type == "response.completed":
+                    resp = event_data.get("response", {})
+                    response_id = resp.get("id", response_id)
+                    yield ChatCompletionChunk(
+                        id=response_id,
+                        choices=[
+                            StreamChoice(
+                                index=0,
+                                delta=DeltaMessage(content="", role="assistant"),
+                                finish_reason="stop",
+                            )
+                        ],
+                        created=created_at,
+                        model=response_model,
+                    )
+                    return
 
     def _is_reasoning_model(self) -> bool:
         """Check if the current model is a reasoning model (o1, o3, o4, gpt-5 series)."""
@@ -257,15 +398,16 @@ class AzureLanguageModel(LanguageModel):
 
         effective_kwargs = {
             "model": self.deployment_name,
+            "store": False,
         }
 
-        # Handle token parameters
+        # Handle token parameters — Responses API uses max_output_tokens
         if is_reasoning_model:
-            # Skip max_tokens if it's the default value (850) for reasoning models
+            # Skip if it's the default value (850) for reasoning models
             if self.max_tokens != 850:
-                effective_kwargs["max_completion_tokens"] = self.max_tokens
+                effective_kwargs["max_output_tokens"] = self.max_tokens
         else:
-            effective_kwargs["max_tokens"] = self.max_tokens
+            effective_kwargs["max_output_tokens"] = self.max_tokens
 
         # Handle temperature and top_p - reasoning models don't support these
         if not is_reasoning_model:
@@ -297,7 +439,7 @@ class AzureLanguageModel(LanguageModel):
                 )
 
             if is_json_mode:
-                effective_kwargs["response_format"] = {"type": "json_object"}
+                effective_kwargs["text"] = {"format": {"type": "json_object"}}
 
         if override_kwargs:
             effective_kwargs.update(override_kwargs)
@@ -308,16 +450,16 @@ class AzureLanguageModel(LanguageModel):
         self, messages: List[Dict[str, Any]], api_kwargs: Dict[str, Any]
     ) -> Generator[ChatCompletionChunk, None, None]:
         """Handle streaming chat completion."""
-        url = self._build_url("chat/completions")
+        url = self._build_url("responses")
         with self.client.stream(
             "POST",
             url,
             headers=self._get_headers(),
-            json={"messages": messages, "stream": True, **api_kwargs},
+            json={"input": messages, "stream": True, **api_kwargs},
         ) as response:
             self._handle_error(response)
-            for chunk_data in self._parse_sse_stream(response):
-                yield self._normalize_chunk(chunk_data)
+            for chunk in self._parse_sse_events(response):
+                yield chunk
 
     def chat_complete(
         self,
@@ -370,7 +512,7 @@ class AzureLanguageModel(LanguageModel):
 
         # Add tool-related parameters if configured
         if resolved_tools:
-            api_kwargs["tools"] = self._convert_tools_to_openai(resolved_tools)
+            api_kwargs["tools"] = self._convert_tools_to_responses(resolved_tools)
         if resolved_tool_choice is not None:
             api_kwargs["tool_choice"] = resolved_tool_choice
         if resolved_parallel is not None:
@@ -381,11 +523,11 @@ class AzureLanguageModel(LanguageModel):
             return self._chat_complete_streaming(messages, api_kwargs)
         else:
             # Non-streaming request
-            url = self._build_url("chat/completions")
+            url = self._build_url("responses")
             response = self.client.post(
                 url,
                 headers=self._get_headers(),
-                json={"messages": messages, "stream": False, **api_kwargs},
+                json={"input": messages, "stream": False, **api_kwargs},
             )
             self._handle_error(response)
             result = self._normalize_response(response.json())
@@ -402,16 +544,16 @@ class AzureLanguageModel(LanguageModel):
         self, messages: List[Dict[str, Any]], api_kwargs: Dict[str, Any]
     ) -> AsyncGenerator[ChatCompletionChunk, None]:
         """Handle async streaming chat completion."""
-        url = self._build_url("chat/completions")
+        url = self._build_url("responses")
         async with self.async_client.stream(
             "POST",
             url,
             headers=self._get_headers(),
-            json={"messages": messages, "stream": True, **api_kwargs},
+            json={"input": messages, "stream": True, **api_kwargs},
         ) as response:
             self._handle_error(response)
-            async for chunk_data in self._parse_sse_stream_async(response):
-                yield self._normalize_chunk(chunk_data)
+            async for chunk in self._parse_sse_events_async(response):
+                yield chunk
 
     async def achat_complete(
         self,
@@ -464,7 +606,7 @@ class AzureLanguageModel(LanguageModel):
 
         # Add tool-related parameters if configured
         if resolved_tools:
-            api_kwargs["tools"] = self._convert_tools_to_openai(resolved_tools)
+            api_kwargs["tools"] = self._convert_tools_to_responses(resolved_tools)
         if resolved_tool_choice is not None:
             api_kwargs["tool_choice"] = resolved_tool_choice
         if resolved_parallel is not None:
@@ -475,11 +617,11 @@ class AzureLanguageModel(LanguageModel):
             return self._achat_complete_streaming(messages, api_kwargs)
         else:
             # Non-streaming async request
-            url = self._build_url("chat/completions")
+            url = self._build_url("responses")
             response = await self.async_client.post(
                 url,
                 headers=self._get_headers(),
-                json={"messages": messages, "stream": False, **api_kwargs},
+                json={"input": messages, "stream": False, **api_kwargs},
             )
             self._handle_error(response)
             result = self._normalize_response(response.json())
@@ -527,6 +669,7 @@ class AzureLanguageModel(LanguageModel):
             "api_key": SecretStr(self.api_key) if self.api_key else None,
             "azure_deployment": self.deployment_name,
             "azure_endpoint": self.azure_endpoint,
+            "api_version": "2025-04-01-preview",
             "use_responses_api": True,
             "model_kwargs": model_kwargs,
         }

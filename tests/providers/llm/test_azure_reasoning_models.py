@@ -14,7 +14,6 @@ def azure_config():
         "api_key": "test-key",
         "config": {
             "azure_endpoint": "https://test.openai.azure.com/",
-            "api_version": "2024-02-01",
         }
     }
 
@@ -49,10 +48,11 @@ class TestAzureReasoningModels:
 
             api_kwargs = model._get_api_kwargs()
 
-            # For reasoning models, should use max_completion_tokens
-            assert "max_completion_tokens" in api_kwargs
-            assert api_kwargs["max_completion_tokens"] == 1000
+            # For reasoning models, should use max_output_tokens
+            assert "max_output_tokens" in api_kwargs
+            assert api_kwargs["max_output_tokens"] == 1000
             assert "max_tokens" not in api_kwargs
+            assert "max_completion_tokens" not in api_kwargs
 
             # Should not include temperature or top_p for reasoning models
             assert "temperature" not in api_kwargs
@@ -74,7 +74,8 @@ class TestAzureReasoningModels:
 
             api_kwargs = model._get_api_kwargs()
 
-            # Should skip max_completion_tokens when using default value
+            # Should skip max_output_tokens when using default value
+            assert "max_output_tokens" not in api_kwargs
             assert "max_completion_tokens" not in api_kwargs
             assert "max_tokens" not in api_kwargs
 
@@ -92,10 +93,11 @@ class TestAzureReasoningModels:
 
             api_kwargs = model._get_api_kwargs()
 
-            # For non-reasoning models, should use max_tokens
-            assert "max_tokens" in api_kwargs
-            assert api_kwargs["max_tokens"] == 1000
+            # For non-reasoning models, should use max_output_tokens
+            assert "max_output_tokens" in api_kwargs
+            assert api_kwargs["max_output_tokens"] == 1000
             assert "max_completion_tokens" not in api_kwargs
+            assert "max_tokens" not in api_kwargs
 
             # Should include temperature and top_p for non-reasoning models
             assert api_kwargs["temperature"] == 0.7
