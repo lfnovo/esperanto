@@ -298,13 +298,15 @@ class AzureLanguageModel(LanguageModel):
                 elif event_type == "response.completed":
                     resp = event_data.get("response", {})
                     response_id = resp.get("id", response_id)
+                    status = resp.get("status", "completed")
+                    final_reason = "tool_calls" if function_calls else self._status_to_finish_reason(status)
                     yield ChatCompletionChunk(
                         id=response_id,
                         choices=[
                             StreamChoice(
                                 index=0,
                                 delta=DeltaMessage(content="", role="assistant"),
-                                finish_reason="stop",
+                                finish_reason=final_reason,
                             )
                         ],
                         created=created_at,
@@ -401,13 +403,15 @@ class AzureLanguageModel(LanguageModel):
                 elif event_type == "response.completed":
                     resp = event_data.get("response", {})
                     response_id = resp.get("id", response_id)
+                    status = resp.get("status", "completed")
+                    final_reason = "tool_calls" if function_calls else self._status_to_finish_reason(status)
                     yield ChatCompletionChunk(
                         id=response_id,
                         choices=[
                             StreamChoice(
                                 index=0,
                                 delta=DeltaMessage(content="", role="assistant"),
-                                finish_reason="stop",
+                                finish_reason=final_reason,
                             )
                         ],
                         created=created_at,

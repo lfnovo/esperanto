@@ -281,6 +281,9 @@ def test_streaming_tool_call_includes_function_name(azure_model):
     assert tc_delta2.function.name == "get_weather"
     assert tc_delta2.function.arguments == '"Paris"}'
 
+    # Final chunk should have finish_reason="tool_calls", not "stop"
+    assert chunks[2].choices[0].finish_reason == "tool_calls"
+
 def test_get_api_kwargs(azure_model):
     azure_model.temperature = 0.7
     azure_model.max_tokens = 100
