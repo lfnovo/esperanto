@@ -527,6 +527,7 @@ class AzureLanguageModel(LanguageModel):
             "api_key": SecretStr(self.api_key) if self.api_key else None,
             "azure_deployment": self.deployment_name,
             "azure_endpoint": self.azure_endpoint,
+            "use_responses_api": True,
             "model_kwargs": model_kwargs,
         }
 
