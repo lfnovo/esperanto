@@ -175,7 +175,7 @@ class AzureLanguageModel(LanguageModel):
                 )
 
         status = response_data.get("status", "completed")
-        finish_reason = self._status_to_finish_reason(status)
+        finish_reason = "tool_calls" if tool_calls else self._status_to_finish_reason(status)
 
         choices = [
             Choice(

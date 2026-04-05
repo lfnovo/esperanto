@@ -458,6 +458,7 @@ class TestToolCallResponse:
         assert tool_call.id == "call_abc123"
         assert tool_call.function.name == "get_weather"
         assert '"location": "San Francisco"' in tool_call.function.arguments
+        assert response.choices[0].finish_reason == "tool_calls"
 
     def test_chat_complete_with_tool_choice(self, azure_model_with_tool_response, sample_tools):
         """Test chat_complete with tool_choice parameter."""
