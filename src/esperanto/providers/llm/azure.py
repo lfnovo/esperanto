@@ -61,13 +61,6 @@ class AzureLanguageModel(LanguageModel):
             os.getenv("AZURE_OPENAI_ENDPOINT")
         )
 
-        self.api_version = (
-            self._config.get("api_version") or
-            os.getenv("AZURE_OPENAI_API_VERSION_LLM") or
-            os.getenv("OPENAI_API_VERSION") or  # Backward compatibility
-            os.getenv("AZURE_OPENAI_API_VERSION")
-        )
-
         # deployment_name is model_name for Azure
         self.deployment_name = self.model_name or self._get_default_model()
 
@@ -82,11 +75,6 @@ class AzureLanguageModel(LanguageModel):
                 "Azure OpenAI endpoint not found. Set AZURE_OPENAI_ENDPOINT_LLM "
                 "or AZURE_OPENAI_ENDPOINT environment variable, or provide in config."
             )
-        if not self.api_version:
-            raise ValueError(
-                "Azure OpenAI API version not found. Set AZURE_OPENAI_API_VERSION_LLM "
-                "or AZURE_OPENAI_API_VERSION environment variable, or provide in config."
-            )
         if not self.deployment_name:
             raise ValueError("Azure OpenAI deployment name (model_name) not found")
 
@@ -96,16 +84,16 @@ class AzureLanguageModel(LanguageModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Azure API requests."""
         return {
-            "api-key": self.api_key,  # Azure uses api-key, not Bearer
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
     def _build_url(self, path: str) -> str:
-        """Build Azure OpenAI URL with deployment name."""
+        """Build Azure OpenAI URL."""
         # Remove trailing slash from endpoint
         endpoint = self.azure_endpoint.rstrip('/')
-        # Azure URL pattern: {endpoint}/openai/deployments/{deployment}/{path}?api-version={version}
-        return f"{endpoint}/openai/deployments/{self.deployment_name}/{path}?api-version={self.api_version}"
+        # Azure URL pattern: {endpoint}/openai/v1/{path}
+        return f"{endpoint}/openai/v1/{path}"
 
     def _handle_error(self, response: httpx.Response) -> None:
         """Handle HTTP error responses."""
@@ -538,7 +526,6 @@ class AzureLanguageModel(LanguageModel):
             "streaming": self.streaming,
             "api_key": SecretStr(self.api_key) if self.api_key else None,
             "azure_deployment": self.deployment_name,
-            "api_version": self.api_version,
             "azure_endpoint": self.azure_endpoint,
             "model_kwargs": model_kwargs,
         }
