@@ -156,8 +156,8 @@ class TestLangChainIntegration:
         assert call_args[0] == {"role": "system", "content": "You are helpful."}
         assert call_args[1] == {"role": "user", "content": "Hi"}
 
-    def test_no_think_injects_sentinel_into_first_user_message(self):
-        """no_think=True prepends /no_think to the first user message only."""
+    def test_no_think_passed_as_kwarg(self):
+        """no_think=True is forwarded as a keyword argument to chat_complete."""
         response = _make_fake_response("reply")
         model = _make_brio_model(response)
         wrapper = BrioBaseChatModel(brio_model=model, no_think=True)
@@ -171,10 +171,11 @@ class TestLangChainIntegration:
 
         call_args = model.chat_complete.call_args[0][0]
         assert call_args[0] == {"role": "system", "content": "Be concise."}
-        # /no_think injected into FIRST user message only
-        assert call_args[1] == {"role": "user", "content": "/no_think\nWhat is 2+2?"}
-        # Second user message is NOT modified
+        # Messages are NOT modified — no_think is passed as kwarg instead
+        assert call_args[1] == {"role": "user", "content": "What is 2+2?"}
         assert call_args[2] == {"role": "user", "content": "Follow-up question?"}
+        # no_think forwarded as keyword argument
+        assert model.chat_complete.call_args[1]["no_think"] is True
 
     def test_no_think_false_leaves_messages_unchanged(self):
         """no_think=False (default) does not modify any messages."""
@@ -214,7 +215,7 @@ class TestStreaming:
         model = _make_brio_model(response)
         original_chat = model.chat_complete
 
-        def smart_chat_complete(messages, stream=None):
+        def smart_chat_complete(messages, stream=None, **kwargs):
             if stream:
                 return iter(chunks)
             return original_chat(messages, stream=stream)

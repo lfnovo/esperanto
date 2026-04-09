@@ -184,8 +184,8 @@ def test_wrap_language_model_chat_format_mistral():
     assert len(model.prompt_calls) == 1
 
     call = model.prompt_calls[0]
-    # Mistral format should be used
-    assert call["prompt"].startswith("[INST]")
+    # Mistral format should be used (includes <s> BOS token)
+    assert call["prompt"].startswith("<s>[INST]")
     assert call["prompt"].endswith("[/INST]")
 
 
