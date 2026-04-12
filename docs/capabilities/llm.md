@@ -171,7 +171,7 @@ response = model.chat_complete(messages)
 # Response content will be valid JSON
 ```
 
-**Supported Providers**: OpenAI, Anthropic, Google, Groq, OpenAI-Compatible (varies), Mistral, DeepSeek, xAI, OpenRouter, Azure, Perplexity
+**Supported Providers**: OpenAI, Anthropic, Google, Groq, OpenAI-Compatible (varies), Mistral, DeepSeek, xAI, DashScope, MiniMax, OpenRouter, Azure, Perplexity
 
 ## Provider Selection
 

@@ -43,7 +43,7 @@ model = AIFactory.create_language("azure", "my-gpt4-deployment")
 # Generic (works for all modalities)
 AZURE_OPENAI_API_KEY="your-azure-api-key"
 AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-AZURE_OPENAI_API_VERSION="2024-02-01"
+AZURE_OPENAI_API_VERSION="2024-10-21"
 
 # Modality-specific (takes precedence over generic)
 # Use these when you want different deployments for different AI capabilities
@@ -51,7 +51,7 @@ AZURE_OPENAI_API_VERSION="2024-02-01"
 # Language Models
 # AZURE_OPENAI_API_KEY_LLM="your-llm-key"
 # AZURE_OPENAI_ENDPOINT_LLM="https://your-llm-resource.openai.azure.com/"
-# AZURE_OPENAI_API_VERSION_LLM="2024-02-01"
+# AZURE_OPENAI_API_VERSION_LLM="2024-10-21"
 
 # Embeddings
 # AZURE_OPENAI_API_KEY_EMBEDDING="your-embedding-key"
@@ -61,12 +61,12 @@ AZURE_OPENAI_API_VERSION="2024-02-01"
 # Speech-to-Text
 # AZURE_OPENAI_API_KEY_STT="your-stt-key"
 # AZURE_OPENAI_ENDPOINT_STT="https://your-stt-resource.openai.azure.com/"
-# AZURE_OPENAI_API_VERSION_STT="2024-02-01"
+# AZURE_OPENAI_API_VERSION_STT="2024-10-21"
 
 # Text-to-Speech
 # AZURE_OPENAI_API_KEY_TTS="your-tts-key"
 # AZURE_OPENAI_ENDPOINT_TTS="https://your-tts-resource.openai.azure.com/"
-# AZURE_OPENAI_API_VERSION_TTS="2024-02-01"
+# AZURE_OPENAI_API_VERSION_TTS="2024-10-21"
 ```
 
 **Variable Priority:**
@@ -106,7 +106,7 @@ from esperanto.providers.text_to_speech.azure import AzureTextToSpeech
 llm = AzureLanguageModel(
     api_key="your-azure-key",
     azure_endpoint="https://your-resource.openai.azure.com/",
-    api_version="2024-02-01",
+    api_version="2024-10-21",
     model_name="your-deployment-name"
 )
 
@@ -122,7 +122,7 @@ embedder = AzureEmbeddingModel(
 stt = AzureSpeechToText(
     api_key="your-azure-key",
     azure_endpoint="https://your-resource.openai.azure.com/",
-    api_version="2024-02-01",
+    api_version="2024-10-21",
     model_name="your-whisper-deployment"
 )
 
@@ -130,7 +130,7 @@ stt = AzureSpeechToText(
 tts = AzureTextToSpeech(
     api_key="your-azure-key",
     azure_endpoint="https://your-resource.openai.azure.com/",
-    api_version="2024-02-01",
+    api_version="2024-10-21",
     model_name="your-tts-deployment"
 )
 ```
@@ -193,7 +193,7 @@ model = AIFactory.create_language(
     config={
         "api_key": "your-azure-key",
         "azure_endpoint": "https://your-resource.openai.azure.com/",
-        "api_version": "2024-02-01",
+        "api_version": "2024-10-21",
         "temperature": 0.7,
         "structured": {"type": "json"}  # Azure supports JSON mode
     }
@@ -512,9 +512,9 @@ Error: Failed to connect
 ```
 Error: Invalid API version
 ```
-**Solution:** Use a valid API version. Common versions:
-- `2024-02-01` - General use
-- `2024-12-01-preview` - Embeddings with custom dimensions
+**Solution:** Use a valid API version. Recommended:
+- `2024-10-21` - Latest stable version (recommended for all modalities)
+- `2024-12-01-preview` - Preview features (e.g., embeddings with custom dimensions)
 
 **Rate Limit Error:**
 ```

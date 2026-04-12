@@ -15,6 +15,7 @@ from esperanto.common_types import (
 )
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.profiles import OpenAICompatibleProfile
 from esperanto.providers.stt.base import SpeechToTextModel
 from esperanto.providers.tts.base import TextToSpeechModel
 
@@ -155,6 +156,8 @@ __all__ = [
     "validate_tool_call",
     "validate_tool_calls",
     "find_tool_by_name",
+    # Profiles
+    "OpenAICompatibleProfile",
 ] + provider_classes
 
 # Make provider classes available at module level

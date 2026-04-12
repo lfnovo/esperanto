@@ -1,14 +1,14 @@
-# DashScope
+# DashScope (Alibaba Cloud Qwen)
 
 ## Overview
 
-DashScope (Alibaba Cloud Model Studio) provides advanced reranking capabilities, including the Qwen and GTE series models. These models offer strong performance for multilingual text reranking and instruction-following capabilities.
+DashScope is Alibaba Cloud's AI model service platform, providing access to the Qwen family of models through an OpenAI-compatible API. Qwen models offer strong multilingual performance, especially for Chinese and English tasks.
 
 **Supported Capabilities:**
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Language Models (LLM) | ❌ | Not available |
+| Language Models (LLM) | ✅ | Qwen series (qwen-trubo, qwen-plus, qwen-max) |
 | Embeddings | ❌ | Not available |
 | Reranking | ⚠️ | qwen3-rerank, gte-rerank-v2, * qwen3-vl-rerank |
 | Speech-to-Text | ❌ | Not available |
@@ -23,13 +23,12 @@ DashScope (Alibaba Cloud Model Studio) provides advanced reranking capabilities,
 ## Prerequisites
 
 ### Account Requirements
-- Alibaba Cloud account
-- Activated DashScope (Model Studio) service
-- API key with credits
+- Alibaba Cloud account with DashScope access
+- API key from the DashScope console
 
 ### Getting API Keys
-1. Log in to the [Alibaba Cloud Console](https://dashscope.console.aliyun.com/)
-2. Navigate to the API Key Management section
+1. Visit https://dashscope.console.aliyun.com/
+2. Navigate to API Keys management
 3. Create and copy your API key
 
 ## Environment Variables
@@ -150,6 +149,35 @@ async def rerank_async():
 results = asyncio.run(rerank_async())
 ```
 
+### Language
+**Custom base URL (optional, for international endpoint)**
+DASHSCOPE_BASE_URL="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+```
+
+**Default base URL:** `https://dashscope.aliyuncs.com/compatible-mode/v1`
+
+## Quick Start
+
+```python
+from esperanto.factory import AIFactory
+
+# Create DashScope model
+model = AIFactory.create_language("dashscope", "qwen-plus")
+
+# Chat completion
+messages = [{"role": "user", "content": "Explain quantum computing"}]
+response = model.chat_complete(messages)
+print(response.choices[0].message.content)
+```
+
+**Available Models**
+
+| Model | Context Window | Best For |
+|-------|---------------|----------|
+| `qwen-turbo` | 128K | Fast, cost-effective tasks |
+| `qwen-plus` | 128K | Balanced performance and cost |
+| `qwen-max` | 32K | Most capable, complex reasoning |
+| `qwen-max-longcontext` | 1M | Very long document processing |
 
 
 ## Advanced Features
@@ -202,32 +230,64 @@ responses = reranker.rerank(
 - The image and video inputs can be given by any public-accessible URL. Image inputs can also be encoded as base-64 format.
 - Refer to [Aliyun Reranker Models](https://help.aliyun.com/zh/model-studio/text-rerank-api) for more details.
 
+### Streaming
 
+```python
+model = AIFactory.create_language("dashscope", "qwen-plus")
 
-## Troubleshooting
-
-### Common Errors
-
-**Authentication Error:**
+for chunk in model.chat_complete(messages, stream=True):
+    print(chunk.choices[0].delta.content, end="")
 ```
-Error: DashScope API error (InvalidApiKey): ...
-```
-**Solution:** Verify your `DASHSCOPE_API_KEY` is correct.
 
-**Rate Limit Error:**
-```
-Error: DashScope API error (Throttling.RateQuota): ...
-```
-**Solution:** Check your rate limits in the Alibaba Cloud console.
+### JSON Mode
 
-**Timeout Error:**
+```python
+model = AIFactory.create_language(
+    "dashscope", "qwen-plus",
+    config={"structured": {"type": "json_object"}}
+)
 ```
-Error: Request to DashScope API timed out.
+
+### Tool Calling
+
+```python
+from esperanto.common_types import Tool, ToolFunction
+
+tools = [
+    Tool(function=ToolFunction(
+        name="get_weather",
+        description="Get weather for a city",
+        parameters={"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}
+    ))
+]
+
+response = model.chat_complete(messages, tools=tools)
 ```
-**Solution:** Increase timeout: `config={"timeout": 120.0}`
 
-## See Also
+### Async Support
 
-- [Reranking Guide](../capabilities/reranking.md)
-- [Jina Provider](./jina.md)
-- [Voyage Provider](./voyage.md)
+```python
+response = await model.achat_complete(messages)
+```
+
+## Configuration
+
+```python
+# With explicit API key
+model = AIFactory.create_language(
+    "dashscope", "qwen-plus",
+    config={"api_key": "your-key"}
+)
+
+# With custom base URL (e.g., international endpoint)
+model = AIFactory.create_language(
+    "dashscope", "qwen-plus",
+    config={"base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"}
+)
+```
+
+## Notes
+
+- DashScope uses Alibaba Cloud's OpenAI-compatible endpoint, so all standard Esperanto LLM features (streaming, tool calling, JSON mode) are supported.
+- Some OpenAI-specific parameters like `logit_bias` may not be supported on all models.
+- The `enable_search` DashScope-specific parameter is not exposed through Esperanto's interface. For advanced DashScope features, consider using their native SDK.

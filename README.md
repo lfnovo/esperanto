@@ -46,7 +46,8 @@ Whether you're building a quick prototype or a production application serving mi
   - Azure OpenAI (Chat, Embedding, Whisper, TTS)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
-  - DashScope (Alibaba Cloud Qwen & GTE reranking)
+  - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
+  - MiniMax (MiniMax-M2.5)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
 - **Embedding Support**: Multiple embedding providers for vector representations
@@ -148,7 +149,9 @@ pip install "langchain_deepseek>=0.1.3"
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
-| xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
+| DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | DashScope | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 
@@ -170,10 +173,10 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
-#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
+#     'language': ['anthropic', 'azure', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai'],
+#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter'],
 #     'reranker': ['jina', 'voyage', 'transformers', 'dashscope'],
-#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure'],
+#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure', 'google'],
 #     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure']
 # }
 

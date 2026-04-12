@@ -18,7 +18,9 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [DeepSeek](./deepseek.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [DashScope](./dashscope.md) | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | [Perplexity](./perplexity.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -199,7 +201,9 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Mistral](./mistral.md) | ✅ | ✅ | ✅ | 128K |
 | [DeepSeek](./deepseek.md) | ✅ | ✅ | ✅ | 64K |
 | [Perplexity](./perplexity.md) | ✅ | ✅ | ❌ | 32K |
-| [xAI](./xai.md) | ✅ | ✅ | ✅ | 128K |
+| [xAI](./xai.md) | ✅ | ❌ | ✅ | 128K |
+| [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
+| [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 204K |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ✅ | Varies |
 | [Ollama](./ollama.md) | ✅ | ❌ | ✅ | Model-dependent |
 | [OpenAI-Compatible](./openai-compatible.md) | ✅ | ⚠️ | ⚠️ | Endpoint-dependent |
@@ -306,7 +310,8 @@ Require API keys, pay-per-use:
 - [Groq](./groq.md)
 - [Mistral](./mistral.md)
 - [DeepSeek](./deepseek.md)
-- [DashScope](./dashscope.md)
+- [DashScope (Qwen)](./dashscope.md)
+- [MiniMax](./minimax.md)
 - [Perplexity](./perplexity.md)
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)

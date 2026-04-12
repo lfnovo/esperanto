@@ -55,21 +55,14 @@ response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
-### Direct Instantiation
+### Direct Instantiation (Deprecated)
+
+> **Note:** Direct instantiation via `XAILanguageModel` is deprecated. Use `AIFactory.create_language("xai", ...)` instead. xAI is now implemented as an OpenAI-compatible provider profile.
 
 ```python
+# Deprecated — will emit a DeprecationWarning
 from esperanto.providers.llm.xai import XAILanguageModel
-
-# Create model instance
-model = XAILanguageModel(
-    api_key="your-api-key",
-    model_name="grok-beta"
-)
-
-# Use the model
-messages = [{"role": "user", "content": "Hello!"}]
-response = model.chat_complete(messages)
-print(response.choices[0].message.content)
+model = XAILanguageModel(api_key="your-api-key", model_name="grok-beta")
 ```
 
 ## Capabilities
