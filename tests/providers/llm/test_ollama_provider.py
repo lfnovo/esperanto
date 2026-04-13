@@ -545,6 +545,226 @@ class TestToolCallValidation:
         assert response.choices[0].message.tool_calls is not None
 
 
+# =============================================================================
+# Thinking Model Tests
+# =============================================================================
+
+
+class TestOllamaThinkingModels:
+    """Tests for Ollama thinking models (e.g., Qwen 3.5) that return a separate thinking field."""
+
+    def test_chat_complete_with_thinking(self):
+        """Test that thinking field from Ollama response is preserved."""
+        model = OllamaLanguageModel(model_name="qwen3.5:9b")
+
+        mock_response_data = {
+            "model": "qwen3.5:9b",
+            "message": {
+                "role": "assistant",
+                "content": "Hello",
+                "thinking": "The user asked me to say hello. I should respond with a greeting.",
+            },
+            "done": True,
+            "eval_count": 50,
+            "prompt_eval_count": 10,
+        }
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+
+        mock_client = Mock()
+        mock_client.post.return_value = mock_response
+        model.client = mock_client
+
+        completion = model.chat_complete([{"role": "user", "content": "Say hello"}])
+
+        msg = completion.choices[0].message
+        assert msg.cleaned_content == "Hello"
+        assert msg.thinking == "The user asked me to say hello. I should respond with a greeting."
+
+    def test_chat_complete_thinking_with_empty_content(self):
+        """Test thinking model response when content is empty."""
+        model = OllamaLanguageModel(model_name="qwen3.5:9b")
+
+        mock_response_data = {
+            "model": "qwen3.5:9b",
+            "message": {
+                "role": "assistant",
+                "content": "",
+                "thinking": "Extensive reasoning here...",
+            },
+            "done": True,
+            "eval_count": 850,
+            "prompt_eval_count": 10,
+        }
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+
+        mock_client = Mock()
+        mock_client.post.return_value = mock_response
+        model.client = mock_client
+
+        completion = model.chat_complete([{"role": "user", "content": "Think hard"}])
+
+        msg = completion.choices[0].message
+        assert msg.thinking == "Extensive reasoning here..."
+        assert msg.cleaned_content == ""
+
+    def test_chat_complete_without_thinking(self):
+        """Test that normal responses (no thinking field) still work."""
+        model = OllamaLanguageModel(model_name="gemma2")
+
+        mock_response_data = {
+            "model": "gemma2",
+            "message": {
+                "role": "assistant",
+                "content": "Normal response",
+            },
+            "done": True,
+            "eval_count": 5,
+            "prompt_eval_count": 10,
+        }
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+
+        mock_client = Mock()
+        mock_client.post.return_value = mock_response
+        model.client = mock_client
+
+        completion = model.chat_complete([{"role": "user", "content": "Hello"}])
+
+        msg = completion.choices[0].message
+        assert msg.content == "Normal response"
+        assert msg.thinking is None
+        assert msg.cleaned_content == "Normal response"
+
+    @pytest.mark.asyncio
+    async def test_achat_complete_with_thinking(self):
+        """Test async chat completion with thinking field."""
+        model = OllamaLanguageModel(model_name="qwen3.5:9b")
+
+        mock_response_data = {
+            "model": "qwen3.5:9b",
+            "message": {
+                "role": "assistant",
+                "content": "42",
+                "thinking": "The answer to life, the universe, and everything.",
+            },
+            "done": True,
+            "eval_count": 30,
+            "prompt_eval_count": 10,
+        }
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+
+        mock_async_client = AsyncMock()
+        mock_async_client.post.return_value = mock_response
+        model.async_client = mock_async_client
+
+        completion = await model.achat_complete(
+            [{"role": "user", "content": "What is the answer?"}]
+        )
+
+        msg = completion.choices[0].message
+        assert msg.cleaned_content == "42"
+        assert msg.thinking == "The answer to life, the universe, and everything."
+
+    def test_streaming_with_thinking(self):
+        """Test streaming response with thinking field in chunks."""
+        model = OllamaLanguageModel(model_name="qwen3.5:9b")
+
+        stream_data = [
+            '{"model":"qwen3.5:9b","message":{"role":"assistant","content":"","thinking":"Let me think..."},"done":false}',
+            '{"model":"qwen3.5:9b","message":{"role":"assistant","content":"Hello"},"done":false}',
+            '{"model":"qwen3.5:9b","message":{"role":"assistant","content":""},"done":true}',
+        ]
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.iter_lines.return_value = stream_data
+
+        mock_client = Mock()
+        mock_client.post.return_value = mock_response
+        model.client = mock_client
+
+        chunks = list(
+            model.chat_complete(
+                [{"role": "user", "content": "Hello"}], stream=True
+            )
+        )
+
+        assert len(chunks) == 3
+        # First chunk has thinking
+        assert chunks[0].choices[0].delta.thinking == "Let me think..."
+        # Second chunk has content
+        assert chunks[1].choices[0].delta.cleaned_content == "Hello"
+
+    @pytest.mark.asyncio
+    async def test_async_streaming_with_thinking(self):
+        """Test async streaming response with thinking field."""
+        model = OllamaLanguageModel(model_name="qwen3.5:9b")
+
+        async def mock_aiter_lines():
+            yield '{"model":"qwen3.5:9b","message":{"role":"assistant","content":"","thinking":"Reasoning..."},"done":false}'
+            yield '{"model":"qwen3.5:9b","message":{"role":"assistant","content":"Result"},"done":true}'
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.aiter_lines = mock_aiter_lines
+
+        mock_async_client = AsyncMock()
+        mock_async_client.post.return_value = mock_response
+        model.async_client = mock_async_client
+
+        stream = await model.achat_complete(
+            [{"role": "user", "content": "Think"}], stream=True
+        )
+        chunks = []
+        async for chunk in stream:
+            chunks.append(chunk)
+
+        assert len(chunks) == 2
+        assert chunks[0].choices[0].delta.thinking == "Reasoning..."
+        assert chunks[1].choices[0].delta.cleaned_content == "Result"
+
+
+# =============================================================================
+# Trailing Slash Tests
+# =============================================================================
+
+
+def test_ollama_base_url_trailing_slash_stripped():
+    """Test that trailing slash in base_url is stripped to avoid double-slash."""
+    model = OllamaLanguageModel(base_url="http://localhost:11434/")
+    assert model.base_url == "http://localhost:11434"
+
+
+def test_ollama_base_url_multiple_trailing_slashes_stripped():
+    """Test that multiple trailing slashes are stripped."""
+    model = OllamaLanguageModel(base_url="http://localhost:11434///")
+    assert model.base_url == "http://localhost:11434"
+
+
+def test_ollama_base_url_no_trailing_slash_unchanged():
+    """Test that base_url without trailing slash is unchanged."""
+    model = OllamaLanguageModel(base_url="http://localhost:11434")
+    assert model.base_url == "http://localhost:11434"
+
+
+def test_ollama_base_url_env_var_trailing_slash_stripped():
+    """Test that trailing slash from env var is also stripped."""
+    with patch.dict(os.environ, {"OLLAMA_BASE_URL": "http://env:11434/"}):
+        model = OllamaLanguageModel()
+        assert model.base_url == "http://env:11434"
+
+
 def test_ollama_default_num_ctx():
     """Test that default num_ctx (128000) is applied when not specified."""
     model = OllamaLanguageModel(model_name="gemma2")

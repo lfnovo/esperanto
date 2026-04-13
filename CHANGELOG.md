@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.20.1] - 2026-04-13
+
+### Fixed
+
+- **Ollama thinking models return empty content** — Models like Qwen 3.5 that return a separate `thinking` field in the JSON response (instead of inline `<think>` tags) now have their thinking content correctly merged into the response. Use `message.cleaned_content` for the actual response and `message.thinking` for the reasoning trace. (#112)
+- **Trailing slash in base URL causes double-slash and 301 redirect** — All providers now strip trailing slashes from `base_url` during HTTP client initialization, preventing double-slash URLs (e.g., `http://localhost:11434//api/chat`) that caused silent failures with empty responses. (#113)
+
 ## [2.20.0] - 2026-03-21
 
 ### Added
