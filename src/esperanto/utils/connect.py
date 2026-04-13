@@ -32,6 +32,10 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
         Call this method in provider's __post_init__ after setting up
         API keys and base URLs.
         """
+        # Strip trailing slashes from base_url to avoid double-slash in URL paths
+        if hasattr(self, "base_url") and self.base_url:
+            self.base_url = self.base_url.rstrip("/")
+
         timeout = self._get_timeout()
         verify = self._get_ssl_verify()
         self.client = httpx.Client(timeout=timeout, verify=verify)

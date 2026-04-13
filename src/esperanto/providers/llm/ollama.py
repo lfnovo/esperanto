@@ -462,6 +462,7 @@ class OllamaLanguageModel(LanguageModel):
                     message=Message(
                         role=message.get("role", "assistant"),
                         content=message.get("content") or "",
+                        thinking=message.get("thinking"),
                         tool_calls=tool_calls,
                     ),
                     finish_reason=finish_reason,
@@ -516,6 +517,7 @@ class OllamaLanguageModel(LanguageModel):
                     delta=DeltaMessage(
                         role=message.get("role", "assistant"),
                         content=message.get("content") or "",
+                        thinking=message.get("thinking"),
                         tool_calls=tool_calls_data,
                     ),
                     finish_reason=finish_reason,
