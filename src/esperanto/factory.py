@@ -60,6 +60,7 @@ class AIFactory:
             "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
             "openai-compatible": "esperanto.providers.tts.openai_compatible:OpenAICompatibleTextToSpeechModel",
             "azure": "esperanto.providers.tts.azure:AzureTextToSpeechModel",
+            "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",

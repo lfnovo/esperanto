@@ -111,6 +111,11 @@ try:
 except ImportError:
     VertexTextToSpeechModel = None
 
+try:
+    from esperanto.providers.tts.mistral import MistralTextToSpeechModel
+except ImportError:
+    MistralTextToSpeechModel = None
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
@@ -130,7 +135,8 @@ __provider_classes = {
     "GroqLanguageModel": GroqLanguageModel,
     "VertexLanguageModel": VertexLanguageModel,
     "VertexEmbeddingModel": VertexEmbeddingModel,
-    "VertexTextToSpeechModel": VertexTextToSpeechModel
+    "VertexTextToSpeechModel": VertexTextToSpeechModel,
+    "MistralTextToSpeechModel": MistralTextToSpeechModel,
 }
 
 # Get list of available provider classes (excluding None values)
