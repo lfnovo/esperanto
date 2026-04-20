@@ -23,7 +23,6 @@ def mock_env_vars(monkeypatch):
     """Mock necessary environment variables for Azure."""
     monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test_azure_api_key")
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://test-endpoint.openai.azure.com/")
-    monkeypatch.setenv("OPENAI_API_VERSION", "2023-12-01-preview")
     # AZURE_OPENAI_DEPLOYMENT_NAME is passed as model_name
 
 @pytest.fixture
@@ -33,20 +32,24 @@ def azure_model(mock_env_vars):
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
-        "id": "chatcmpl-test123",
-        "choices": [
+        "id": "resp-test123",
+        "object": "response",
+        "created_at": 1677652288,
+        "status": "completed",
+        "model": "gpt-35-turbo",
+        "output": [
             {
-                "finish_reason": "stop",
-                "index": 0,
-                "message": {
-                    "content": "Hello from Azure!",
-                    "role": "assistant"
-                }
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "output_text",
+                        "text": "Hello from Azure!"
+                    }
+                ]
             }
         ],
-        "created": 1677652288,
-        "model": "gpt-35-turbo",
-        "usage": {"completion_tokens": 5, "prompt_tokens": 10, "total_tokens": 15}
+        "usage": {"output_tokens": 5, "input_tokens": 10, "total_tokens": 15}
     }
 
     # Mock the httpx clients
@@ -74,7 +77,6 @@ def test_initialization_success(mock_env_vars):
     model = AzureLanguageModel(model_name="test-deployment")
     assert model.api_key == "test_azure_api_key"
     assert model.azure_endpoint == "https://test-endpoint.openai.azure.com/"
-    assert model.api_version == "2023-12-01-preview"
     assert model.model_name == "test-deployment" # Deployment name
     assert model.client is not None
     assert model.async_client is not None
@@ -86,12 +88,10 @@ def test_initialization_with_direct_params():
         api_key="direct_key",
         config={
             "azure_endpoint": "https://direct-endpoint.com/",
-            "api_version": "2024-01-01",
         }
     )
     assert model.api_key == "direct_key"
     assert model.azure_endpoint == "https://direct-endpoint.com/"
-    assert model.api_version == "2024-01-01"
     assert model.model_name == "direct-deployment"
 
 @pytest.mark.parametrize(
@@ -99,14 +99,12 @@ def test_initialization_with_direct_params():
     [
         ("AZURE_OPENAI_API_KEY", "Azure OpenAI API key not found"),
         ("AZURE_OPENAI_ENDPOINT", "Azure OpenAI endpoint not found"),
-        ("OPENAI_API_VERSION", "Azure OpenAI API version not found"),
     ],
 )
 def test_initialization_missing_env_vars(monkeypatch, missing_var, error_msg_part):
     """Test initialization failure when an environment variable is missing."""
     monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test_key")
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://test-endpoint.com/")
-    monkeypatch.setenv("OPENAI_API_VERSION", "2023-01-01")
     
     monkeypatch.delenv(missing_var, raising=False)
     
@@ -134,16 +132,16 @@ def test_chat_complete_non_streaming(azure_model):
     azure_model.client.post.assert_called_once()
     call_args = azure_model.client.post.call_args
 
-    # Check URL was built correctly
-    assert "deployments/test-deployment/chat/completions" in call_args[0][0]
+    # Check URL was built correctly (Responses API)
+    assert call_args[0][0].endswith("/openai/v1/responses")
 
-    # Check request payload
+    # Check request payload uses Responses API format
     _, kwargs = call_args
-    assert kwargs['json']['messages'] == messages
+    assert kwargs['json']['input'] == messages
     assert kwargs['json']['stream'] == False
 
     assert isinstance(response, ChatCompletion)
-    assert response.id == "chatcmpl-test123"
+    assert response.id == "resp-test123"
     assert response.choices[0].message.content == "Hello from Azure!"
     assert response.model == "gpt-35-turbo" # Underlying model from response
     assert response.provider == "azure"
@@ -157,16 +155,16 @@ async def test_achat_complete_non_streaming(azure_model):
     azure_model.async_client.post.assert_called_once()
     call_args = azure_model.async_client.post.call_args
 
-    # Check URL was built correctly
-    assert "deployments/test-deployment/chat/completions" in call_args[0][0]
+    # Check URL was built correctly (Responses API)
+    assert call_args[0][0].endswith("/openai/v1/responses")
 
-    # Check request payload
+    # Check request payload uses Responses API format
     _, kwargs = call_args
-    assert kwargs['json']['messages'] == messages
+    assert kwargs['json']['input'] == messages
     assert kwargs['json']['stream'] == False
 
     assert isinstance(response, ChatCompletion)
-    assert response.id == "chatcmpl-test123"
+    assert response.id == "resp-test123"
     assert response.choices[0].message.content == "Hello from Azure!"
     assert response.model == "gpt-35-turbo"
     assert response.provider == "azure"
@@ -176,12 +174,13 @@ async def test_achat_complete_non_streaming(azure_model):
 def test_chat_complete_streaming(azure_model):
     messages = [{"role": "user", "content": "Stream Azure hello!"}]
 
-    # Mock streaming response using httpx SSE format
+    # Mock streaming response using Responses API SSE format
     mock_stream_response = MagicMock()
     mock_stream_response.status_code = 200
     mock_stream_response.iter_text.return_value = [
-        'data: {"id":"chatcmpl-stream-test","choices":[{"index":0,"delta":{"content":"Hello ","role":"assistant"},"finish_reason":null}],"created":1677652290,"model":"gpt-35-turbo"}\n\n',
-        'data: [DONE]\n\n'
+        'event: response.created\ndata: {"type":"response.created","response":{"id":"resp-stream-test","model":"gpt-35-turbo","created_at":1677652290}}\n\n',
+        'event: response.output_text.delta\ndata: {"type":"response.output_text.delta","delta":"Hello ","item_id":"msg_123","output_index":0,"content_index":0}\n\n',
+        'event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp-stream-test","model":"gpt-35-turbo","created_at":1677652290,"status":"completed"}}\n\n',
     ]
 
     # Mock the stream context manager
@@ -196,14 +195,15 @@ def test_chat_complete_streaming(azure_model):
     azure_model.client.stream.assert_called_once()
     call_args = azure_model.client.stream.call_args
 
-    # Check it was called with POST and correct URL
+    # Check it was called with POST and correct URL (Responses API)
     assert call_args[0][0] == "POST"
-    assert "deployments/test-deployment/chat/completions" in call_args[0][1]
+    assert call_args[0][1].endswith("/openai/v1/responses")
 
-    assert len(responses) == 1
+    # Should have text delta + completed chunks
+    assert len(responses) == 2
     chunk = responses[0]
     assert isinstance(chunk, ChatCompletionChunk)
-    assert chunk.id == "chatcmpl-stream-test"
+    assert chunk.id == "resp-stream-test"
     assert chunk.choices[0].delta.content == "Hello "
     assert chunk.model == "gpt-35-turbo"
 
@@ -211,13 +211,14 @@ def test_chat_complete_streaming(azure_model):
 async def test_achat_complete_streaming(azure_model):
     messages = [{"role": "user", "content": "Stream async Azure hello!"}]
 
-    # Mock async streaming response using httpx SSE format
+    # Mock async streaming response using Responses API SSE format
     mock_stream_response = MagicMock()
     mock_stream_response.status_code = 200
 
     async def mock_aiter_text():
-        yield 'data: {"id":"chatcmpl-asyncstream-test","choices":[{"index":0,"delta":{"content":"Async Hello ","role":"assistant"},"finish_reason":null}],"created":1677652291,"model":"gpt-35-turbo"}\n\n'
-        yield 'data: [DONE]\n\n'
+        yield 'event: response.created\ndata: {"type":"response.created","response":{"id":"resp-asyncstream-test","model":"gpt-35-turbo","created_at":1677652291}}\n\n'
+        yield 'event: response.output_text.delta\ndata: {"type":"response.output_text.delta","delta":"Async Hello ","item_id":"msg_123","output_index":0,"content_index":0}\n\n'
+        yield 'event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp-asyncstream-test","model":"gpt-35-turbo","created_at":1677652291,"status":"completed"}}\n\n'
 
     mock_stream_response.aiter_text.return_value = mock_aiter_text()
 
@@ -233,24 +234,64 @@ async def test_achat_complete_streaming(azure_model):
     azure_model.async_client.stream.assert_called_once()
     call_args = azure_model.async_client.stream.call_args
 
-    # Check it was called with POST and correct URL
+    # Check it was called with POST and correct URL (Responses API)
     assert call_args[0][0] == "POST"
-    assert "deployments/test-deployment/chat/completions" in call_args[0][1]
+    assert call_args[0][1].endswith("/openai/v1/responses")
 
-    assert len(responses) == 1
+    # Should have text delta + completed chunks
+    assert len(responses) == 2
     chunk = responses[0]
     assert isinstance(chunk, ChatCompletionChunk)
-    assert chunk.id == "chatcmpl-asyncstream-test"
+    assert chunk.id == "resp-asyncstream-test"
     assert chunk.choices[0].delta.content == "Async Hello "
     assert chunk.model == "gpt-35-turbo"
+
+def test_streaming_tool_call_includes_function_name(azure_model):
+    """Test that streaming tool call deltas include function name from output_item.added."""
+    messages = [{"role": "user", "content": "What's the weather?"}]
+
+    mock_stream_response = MagicMock()
+    mock_stream_response.status_code = 200
+    mock_stream_response.iter_text.return_value = [
+        'event: response.created\ndata: {"type":"response.created","response":{"id":"resp-tool-stream","model":"gpt-35-turbo","created_at":1677652290}}\n\n',
+        'event: response.output_item.added\ndata: {"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","id":"fc_123","call_id":"call_abc","name":"get_weather","arguments":""}}\n\n',
+        'event: response.function_call_arguments.delta\ndata: {"type":"response.function_call_arguments.delta","item_id":"fc_123","output_index":0,"delta":"{\\"location\\":"}\n\n',
+        'event: response.function_call_arguments.delta\ndata: {"type":"response.function_call_arguments.delta","item_id":"fc_123","output_index":0,"delta":"\\"Paris\\"}"}\n\n',
+        'event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp-tool-stream","model":"gpt-35-turbo","created_at":1677652290,"status":"completed"}}\n\n',
+    ]
+
+    mock_stream_context = MagicMock()
+    mock_stream_context.__enter__.return_value = mock_stream_response
+    mock_stream_context.__exit__.return_value = None
+    azure_model.client.stream.return_value = mock_stream_context
+
+    chunks = list(azure_model.chat_complete(messages, stream=True))
+
+    # 2 argument deltas + 1 completed
+    assert len(chunks) == 3
+
+    # First tool call delta should have function name and call_id
+    tc_delta = chunks[0].choices[0].delta.tool_calls[0]
+    assert tc_delta.function.name == "get_weather"
+    assert tc_delta.function.arguments == '{"location":'
+    assert tc_delta.id == "call_abc"
+
+    # Second delta also has name
+    tc_delta2 = chunks[1].choices[0].delta.tool_calls[0]
+    assert tc_delta2.function.name == "get_weather"
+    assert tc_delta2.function.arguments == '"Paris"}'
+
+    # Final chunk should have finish_reason="tool_calls", not "stop"
+    assert chunks[2].choices[0].finish_reason == "tool_calls"
 
 def test_get_api_kwargs(azure_model):
     azure_model.temperature = 0.7
     azure_model.max_tokens = 100
     kwargs = azure_model._get_api_kwargs()
     assert kwargs["temperature"] == 0.7
-    assert kwargs["max_tokens"] == 100
+    assert kwargs["max_output_tokens"] == 100
     assert kwargs.get("model") == "test-deployment" # model_name is used
+    assert kwargs["store"] == False
 
 def test_get_api_kwargs_streaming(azure_model):
     azure_model.streaming = True
@@ -260,11 +301,11 @@ def test_get_api_kwargs_streaming(azure_model):
 def test_get_api_kwargs_json_mode(azure_model):
     azure_model.structured = {"type": "json_object"}
     kwargs = azure_model._get_api_kwargs()
-    assert kwargs["response_format"] == {"type": "json_object"}
+    assert kwargs["text"] == {"format": {"type": "json_object"}}
 
     azure_model.structured = {"type": "json"} # Alias
     kwargs = azure_model._get_api_kwargs()
-    assert kwargs["response_format"] == {"type": "json_object"}
+    assert kwargs["text"] == {"format": {"type": "json_object"}}
 
     with pytest.raises(TypeError):
         azure_model.structured = "not_a_dict"
@@ -284,7 +325,8 @@ def test_to_langchain(MockAzureChatOpenAI, azure_model, mock_env_vars):
     assert call_kwargs["azure_deployment"] == "test-deployment"
     assert call_kwargs["api_key"].get_secret_value() == "test_azure_api_key"
     assert call_kwargs["azure_endpoint"] == "https://test-endpoint.openai.azure.com/"
-    assert call_kwargs["api_version"] == "2023-12-01-preview"
+    assert call_kwargs["api_version"] == "2025-04-01-preview"
+    assert call_kwargs["use_responses_api"] == True
     assert call_kwargs["temperature"] == 0.8
     assert call_kwargs["max_tokens"] == 150
     assert call_kwargs["another_param"] == "test_val" # Kwargs passed directly
@@ -307,7 +349,6 @@ def test_to_langchain_import_error(azure_model):
     # However, the import error should be raised before these are deeply checked by LangChain
     azure_model.api_key = "temp_key"
     azure_model.azure_endpoint = "temp_endpoint"
-    azure_model.api_version = "temp_version"
 
     with pytest.raises(ImportError, match="LangChain or langchain-openai not installed"):
         azure_model.to_langchain()
@@ -353,35 +394,24 @@ def sample_tools():
 
 @pytest.fixture
 def mock_azure_tool_call_response():
-    """Mock HTTP response for Azure OpenAI chat completions with tool calls."""
+    """Mock HTTP response for Azure OpenAI Responses API with tool calls."""
     return {
-        "id": "chatcmpl-tool-123",
-        "object": "chat.completion",
-        "created": 1677652288,
+        "id": "resp-tool-123",
+        "object": "response",
+        "created_at": 1677652288,
+        "status": "completed",
         "model": "gpt-35-turbo",
-        "choices": [
+        "output": [
             {
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [
-                        {
-                            "id": "call_abc123",
-                            "type": "function",
-                            "function": {
-                                "name": "get_weather",
-                                "arguments": '{"location": "San Francisco", "unit": "celsius"}'
-                            }
-                        }
-                    ]
-                },
-                "finish_reason": "tool_calls"
+                "type": "function_call",
+                "call_id": "call_abc123",
+                "name": "get_weather",
+                "arguments": '{"location": "San Francisco", "unit": "celsius"}'
             }
         ],
         "usage": {
-            "prompt_tokens": 50,
-            "completion_tokens": 20,
+            "input_tokens": 50,
+            "output_tokens": 20,
             "total_tokens": 70
         }
     }
@@ -407,35 +437,35 @@ def azure_model_with_tool_response(mock_env_vars, mock_azure_tool_call_response)
 
 
 class TestToolConversion:
-    """Tests for tool conversion to OpenAI format."""
+    """Tests for tool conversion to Responses API format."""
 
     def test_convert_single_tool(self, azure_model, sample_tools):
-        """Test converting a single tool to OpenAI format."""
-        result = azure_model._convert_tools_to_openai([sample_tools[0]])
+        """Test converting a single tool to Responses API format."""
+        result = azure_model._convert_tools_to_responses([sample_tools[0]])
 
         assert len(result) == 1
         assert result[0]["type"] == "function"
-        assert result[0]["function"]["name"] == "get_weather"
-        assert result[0]["function"]["description"] == "Get the current weather for a location"
-        assert result[0]["function"]["parameters"]["type"] == "object"
-        assert "location" in result[0]["function"]["parameters"]["properties"]
+        assert result[0]["name"] == "get_weather"
+        assert result[0]["description"] == "Get the current weather for a location"
+        assert result[0]["parameters"]["type"] == "object"
+        assert "location" in result[0]["parameters"]["properties"]
 
     def test_convert_multiple_tools(self, azure_model, sample_tools):
-        """Test converting multiple tools to OpenAI format."""
-        result = azure_model._convert_tools_to_openai(sample_tools)
+        """Test converting multiple tools to Responses API format."""
+        result = azure_model._convert_tools_to_responses(sample_tools)
 
         assert len(result) == 2
-        assert result[0]["function"]["name"] == "get_weather"
-        assert result[1]["function"]["name"] == "get_time"
+        assert result[0]["name"] == "get_weather"
+        assert result[1]["name"] == "get_time"
 
     def test_convert_none_tools(self, azure_model):
         """Test converting None returns None."""
-        result = azure_model._convert_tools_to_openai(None)
+        result = azure_model._convert_tools_to_responses(None)
         assert result is None
 
     def test_convert_empty_tools(self, azure_model):
         """Test converting empty list returns None."""
-        result = azure_model._convert_tools_to_openai([])
+        result = azure_model._convert_tools_to_responses([])
         assert result is None
 
 
@@ -466,6 +496,7 @@ class TestToolCallResponse:
         assert tool_call.id == "call_abc123"
         assert tool_call.function.name == "get_weather"
         assert '"location": "San Francisco"' in tool_call.function.arguments
+        assert response.choices[0].finish_reason == "tool_calls"
 
     def test_chat_complete_with_tool_choice(self, azure_model_with_tool_response, sample_tools):
         """Test chat_complete with tool_choice parameter."""
