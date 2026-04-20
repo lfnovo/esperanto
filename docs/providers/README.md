@@ -20,7 +20,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Novita* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -316,6 +316,7 @@ Require API keys, pay-per-use:
 - [Perplexity](./perplexity.md)
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
+- [Novita](./openai-compatible.md) (OpenAI-compatible profile)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
 - [ElevenLabs](./elevenlabs.md)

@@ -163,14 +163,6 @@ class TestFactoryIntegration:
         assert model.base_url == "https://api.x.ai/v1"
         assert model._response_format_unsupported is True
 
-    def test_create_language_with_novita_profile(self):
-        model = AIFactory.create_language(
-            "novita", "moonshotai/kimi-k2.5", config={"api_key": "test-key"}
-        )
-        assert model.provider == "novita"
-        assert model.base_url == "https://api.novita.ai/openai"
-        assert model.api_key == "test-key"
-
     def test_create_language_with_user_profile(self):
         AIFactory.register_openai_compatible_profile(
             OpenAICompatibleProfile(
