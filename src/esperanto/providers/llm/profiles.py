@@ -94,6 +94,15 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         owned_by="MiniMax",
         display_name="MiniMax",
     ),
+    "novita": OpenAICompatibleProfile(
+        name="novita",
+        base_url="https://api.novita.ai/openai",
+        api_key_env="NOVITA_API_KEY",
+        base_url_env="NOVITA_BASE_URL",
+        default_model="moonshotai/kimi-k2.5",
+        owned_by="Novita",
+        display_name="Novita",
+    ),
 }
 
 _USER_PROFILES: Dict[str, OpenAICompatibleProfile] = {}

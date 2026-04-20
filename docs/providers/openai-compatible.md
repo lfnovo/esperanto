@@ -95,7 +95,7 @@ model = AIFactory.create_language("my-company", "llama-3-70b")
 response = model.chat_complete(messages)
 ```
 
-Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), and **MiniMax**. See their individual provider docs for details.
+Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, and **Novita**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile.
 
 ## Quick Start
 
