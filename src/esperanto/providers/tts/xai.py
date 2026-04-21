@@ -82,8 +82,10 @@ class XAITextToSpeechModel(TextToSpeechModel):
 
     def build_url(self, path: str) -> str:
         """Build full URL for API endpoint."""
-        # Remove trailing slash from base URL
+        # Remove trailing slash and /v1 suffix to avoid duplication (e.g. .../v1/v1/tts)
         base = self.base_url.rstrip('/')
+        if base.endswith('/v1'):
+            base = base[:-3]
         return f"{base}/{path}"
 
     def _handle_error(self, response: httpx.Response) -> None:

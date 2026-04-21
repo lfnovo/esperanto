@@ -137,6 +137,20 @@ def test_build_url_trailing_slash():
     assert url == "https://custom.api.com/v1/tts"
 
 
+def test_build_url_strips_v1_suffix():
+    """Test URL building strips /v1 suffix to avoid duplication."""
+    model = XAITextToSpeechModel(api_key="test-key", base_url="https://api.x.ai/v1")
+    url = model.build_url("v1/tts")
+    assert url == "https://api.x.ai/v1/tts"
+
+
+def test_build_url_strips_v1_with_trailing_slash():
+    """Test URL building strips /v1/ suffix to avoid duplication."""
+    model = XAITextToSpeechModel(api_key="test-key", base_url="https://api.x.ai/v1/")
+    url = model.build_url("v1/tts")
+    assert url == "https://api.x.ai/v1/tts"
+
+
 def test_handle_error_success(tts_model):
     """Test that successful responses don't raise."""
     response = Mock()
