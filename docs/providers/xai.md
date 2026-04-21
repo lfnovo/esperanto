@@ -292,6 +292,8 @@ response = tts.generate_speech(
 **Example - Different Format:**
 
 ```python
+tts = XAITextToSpeechModel(api_key="your-api-key")
+
 response = tts.generate_speech(
     text="This will be in WAV format.",
     voice="ara",
