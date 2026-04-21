@@ -30,16 +30,19 @@ class XAITextToSpeechModel(TextToSpeechModel):
     def __init__(
         self,
         api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
         **kwargs
     ):
         """Initialize xAI TTS provider.
 
         Args:
             api_key: xAI API key. If not provided, will try env vars
+            base_url: xAI API base URL. If not provided, will try env vars or default to https://api.x.ai
             **kwargs: Additional configuration options
         """
         super().__init__(
             api_key=api_key,
+            base_url=base_url,
             config=kwargs
         )
 
@@ -49,6 +52,14 @@ class XAITextToSpeechModel(TextToSpeechModel):
             self._config.get("api_key") or
             os.getenv("XAI_API_KEY_TTS") or
             os.getenv("XAI_API_KEY")
+        )
+
+        self.base_url = (
+            self.base_url or
+            self._config.get("base_url") or
+            os.getenv("XAI_BASE_URL_TTS") or
+            os.getenv("XAI_BASE_URL") or
+            self.DEFAULT_BASE_URL
         )
 
         # Validate required parameters
@@ -71,7 +82,9 @@ class XAITextToSpeechModel(TextToSpeechModel):
 
     def build_url(self, path: str) -> str:
         """Build full URL for API endpoint."""
-        return f"{self.DEFAULT_BASE_URL}/{path}"
+        # Remove trailing slash from base URL
+        base = self.base_url.rstrip('/')
+        return f"{base}/{path}"
 
     def _handle_error(self, response: httpx.Response) -> None:
         """Handle HTTP error responses."""

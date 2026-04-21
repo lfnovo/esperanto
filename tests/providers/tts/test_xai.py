@@ -89,6 +89,34 @@ def test_init_from_tts_env_var(monkeypatch):
     assert model.api_key == "tts-key"
 
 
+def test_init_default_base_url(tts_model):
+    """Test that default base URL is used."""
+    assert tts_model.base_url == "https://api.x.ai"
+
+
+def test_init_custom_base_url():
+    """Test initialization with custom base URL."""
+    model = XAITextToSpeechModel(api_key="test-key", base_url="https://custom.api.com")
+    assert model.base_url == "https://custom.api.com"
+
+
+def test_init_base_url_from_env_var(monkeypatch):
+    """Test base URL from environment variable."""
+    monkeypatch.setenv("XAI_API_KEY", "test-key")
+    monkeypatch.setenv("XAI_BASE_URL", "https://env-base.api.com")
+    model = XAITextToSpeechModel()
+    assert model.base_url == "https://env-base.api.com"
+
+
+def test_init_base_url_tts_env_priority(monkeypatch):
+    """Test that TTS-specific base URL env var takes priority."""
+    monkeypatch.setenv("XAI_API_KEY", "test-key")
+    monkeypatch.setenv("XAI_BASE_URL", "https://generic.api.com")
+    monkeypatch.setenv("XAI_BASE_URL_TTS", "https://tts-specific.api.com")
+    model = XAITextToSpeechModel()
+    assert model.base_url == "https://tts-specific.api.com"
+
+
 def test_get_headers(tts_model):
     """Test request headers."""
     headers = tts_model._get_headers()
@@ -100,6 +128,13 @@ def test_build_url(tts_model):
     """Test URL building."""
     url = tts_model.build_url("v1/tts")
     assert url == "https://api.x.ai/v1/tts"
+
+
+def test_build_url_trailing_slash():
+    """Test URL building strips trailing slash from base URL."""
+    model = XAITextToSpeechModel(api_key="test-key", base_url="https://custom.api.com/")
+    url = model.build_url("v1/tts")
+    assert url == "https://custom.api.com/v1/tts"
 
 
 def test_handle_error_success(tts_model):
