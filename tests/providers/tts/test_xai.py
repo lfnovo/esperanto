@@ -268,6 +268,20 @@ def test_generate_speech_with_wav_format(tts_model):
     assert response.content_type == "audio/wav"
 
 
+def test_generate_speech_codec_kwarg_overrides_format(tts_model):
+    """Test that codec kwarg overrides response_format and content_type stays consistent."""
+    response = tts_model.generate_speech(
+        text="Hello",
+        voice="eve",
+        codec="wav"
+    )
+
+    call_args = tts_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["output_format"]["codec"] == "wav"
+    assert response.content_type == "audio/wav"
+
+
 def test_generate_speech_with_unknown_format(tts_model):
     """Test speech generation with unmapped format falls back."""
     response = tts_model.generate_speech(

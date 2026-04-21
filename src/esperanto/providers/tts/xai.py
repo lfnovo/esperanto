@@ -179,6 +179,8 @@ class XAITextToSpeechModel(TextToSpeechModel):
         """
         try:
             response_format = kwargs.pop("response_format", "mp3")
+            # Allow codec kwarg to override response_format for consistency
+            response_format = kwargs.pop("codec", response_format)
             language = kwargs.pop("language", "auto")
             url = self.build_url("v1/tts")
 
@@ -248,6 +250,8 @@ class XAITextToSpeechModel(TextToSpeechModel):
         """
         try:
             response_format = kwargs.pop("response_format", "mp3")
+            # Allow codec kwarg to override response_format for consistency
+            response_format = kwargs.pop("codec", response_format)
             language = kwargs.pop("language", "auto")
             url = self.build_url("v1/tts")
 
