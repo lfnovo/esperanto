@@ -12,7 +12,7 @@ xAI provides access to Grok, an AI assistant with real-time knowledge and a uniq
 | Embeddings | ❌ | Not available |
 | Reranking | ❌ | Not available |
 | Speech-to-Text | ❌ | Not available |
-| Text-to-Speech | ❌ | Not available |
+| Text-to-Speech | ✅ | Multiple voices |
 
 **Official Documentation:** https://docs.x.ai
 
@@ -33,11 +33,15 @@ xAI provides access to Grok, an AI assistant with real-time knowledge and a uniq
 ```bash
 # xAI API key (required)
 XAI_API_KEY="xai-..."
+
+# TTS-specific API key (optional, overrides XAI_API_KEY for TTS)
+XAI_API_KEY_TTS="xai-..."
 ```
 
 **Variable Priority:**
 1. Direct parameter in code (`api_key="..."`)
-2. Environment variable (`XAI_API_KEY`)
+2. Modality-specific environment variable (`XAI_API_KEY_TTS`)
+3. Generic environment variable (`XAI_API_KEY`)
 
 ## Quick Start
 
@@ -243,6 +247,81 @@ response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
+### Text-to-Speech (TTS)
+
+**Available Voices:**
+
+| Voice | Gender | Description |
+|-------|--------|-------------|
+| **eve** (default) | Female | Engaging and enthusiastic |
+| **ara** | Female | Balanced and conversational |
+| **rex** | Male | Professional and articulate - ideal for business |
+| **sal** | Male | Versatile voice for a wide range of contexts |
+| **leo** | Male | Commanding and decisive - great for instructional content |
+
+**Supported Output Formats:** mp3, wav, pcm, mulaw, alaw
+
+**Example - Basic TTS:**
+
+```python
+from esperanto.providers.tts.xai import XAITextToSpeechModel
+
+tts = XAITextToSpeechModel(api_key="your-api-key")
+
+response = tts.generate_speech(
+    text="Hello, welcome to xAI text-to-speech!",
+    voice="eve"
+)
+
+# Access audio data
+audio_bytes = response.audio_data
+```
+
+**Example - Save to File:**
+
+```python
+tts = XAITextToSpeechModel(api_key="your-api-key")
+
+response = tts.generate_speech(
+    text="This audio will be saved to a file.",
+    voice="rex",
+    output_file="output.mp3"
+)
+```
+
+**Example - Different Format:**
+
+```python
+response = tts.generate_speech(
+    text="This will be in WAV format.",
+    voice="ara",
+    response_format="wav"
+)
+print(response.content_type)  # audio/wav
+```
+
+**Example - Async TTS:**
+
+```python
+async def generate_async():
+    tts = XAITextToSpeechModel(api_key="your-api-key")
+
+    response = await tts.agenerate_speech(
+        text="Async speech generation.",
+        voice="sal"
+    )
+    return response.audio_data
+```
+
+**Example - List Available Voices:**
+
+```python
+tts = XAITextToSpeechModel(api_key="your-api-key")
+
+for name, voice in tts.available_voices.items():
+    print(f"{name}: {voice.description} ({voice.gender})")
+```
+
 ## Advanced Features
 
 ### JSON Mode
@@ -366,7 +445,7 @@ All Grok models support 128K token context:
 **Consider alternatives if:**
 - Need strongest reasoning (use Claude Opus)
 - Need multimodal capabilities (use GPT-4 Vision, Gemini)
-- Need specialized capabilities (embeddings, STT, TTS)
+- Need specialized capabilities (embeddings, STT)
 - Need guaranteed enterprise SLA
 
 ### Common Applications
@@ -491,6 +570,7 @@ Error: Model not found
 ## See Also
 
 - [Language Models Guide](../capabilities/llm.md)
+- [Text-to-Speech Guide](../capabilities/text-to-speech.md)
 - [OpenAI Provider](./openai.md)
 - [Anthropic Provider](./anthropic.md)
 - [Google Provider](./google.md)
