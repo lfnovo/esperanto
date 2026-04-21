@@ -174,6 +174,7 @@ def test_generate_speech(tts_model):
     json_payload = call_args[1]["json"]
     assert json_payload["voice_id"] == "eve"
     assert json_payload["text"] == "Hello world"
+    assert json_payload["language"] == "auto"
     assert json_payload["output_format"]["codec"] == "mp3"
 
     assert response.audio_data == b"mock audio data for testing"
@@ -189,6 +190,19 @@ def test_generate_speech_default_voice(tts_model):
     call_args = tts_model.client.post.call_args
     json_payload = call_args[1]["json"]
     assert json_payload["voice_id"] == "eve"
+
+
+def test_generate_speech_with_language(tts_model):
+    """Test speech generation with explicit language."""
+    response = tts_model.generate_speech(
+        text="Bonjour",
+        voice="eve",
+        language="fr"
+    )
+
+    call_args = tts_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["language"] == "fr"
 
 
 def test_generate_speech_with_wav_format(tts_model):
@@ -267,6 +281,7 @@ async def test_agenerate_speech(tts_model):
     json_payload = call_args[1]["json"]
     assert json_payload["voice_id"] == "ara"
     assert json_payload["text"] == "Hello world"
+    assert json_payload["language"] == "auto"
     assert json_payload["output_format"]["codec"] == "mp3"
 
     assert response.audio_data == b"mock audio data for testing"

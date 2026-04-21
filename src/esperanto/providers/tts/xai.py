@@ -144,7 +144,7 @@ class XAITextToSpeechModel(TextToSpeechModel):
     def generate_speech(
         self,
         text: str,
-        voice: str = "eve",
+        voice: str = DEFAULT_VOICE,
         output_file: Optional[Union[str, Path]] = None,
         **kwargs
     ) -> AudioResponse:
@@ -164,12 +164,14 @@ class XAITextToSpeechModel(TextToSpeechModel):
         """
         try:
             response_format = kwargs.pop("response_format", "mp3")
+            language = kwargs.pop("language", "auto")
             url = self.build_url("v1/tts")
 
             # Prepare request payload
             payload = {
                 "voice_id": voice,
                 "text": text,
+                "language": language,
                 "output_format": {
                     "codec": response_format,
                     **kwargs
@@ -231,12 +233,14 @@ class XAITextToSpeechModel(TextToSpeechModel):
         """
         try:
             response_format = kwargs.pop("response_format", "mp3")
+            language = kwargs.pop("language", "auto")
             url = self.build_url("v1/tts")
 
             # Prepare request payload
             payload = {
                 "voice_id": voice,
                 "text": text,
+                "language": language,
                 "output_format": {
                     "codec": response_format,
                     **kwargs
