@@ -1,10 +1,18 @@
 """Unit tests for brio_ext adapters."""
 
-from brio_ext.adapters.gemma_adapter import GemmaAdapter
+from pathlib import Path
+
+import jinja2
+import pytest
+
+from brio_ext.adapters.gemma_adapter import Gemma4Adapter
 from brio_ext.adapters.llama_adapter import LlamaAdapter
 from brio_ext.adapters.mistral_adapter import MistralAdapter
 from brio_ext.adapters.phi_adapter import PhiAdapter
 from brio_ext.adapters.qwen_adapter import QwenAdapter
+
+GEMMA_TEMPLATE_PATH = Path(__file__).parent / "resources" / "gemma_chat_template.jinja"
+GEMMA_BOS = "<bos>"
 
 MESSAGES = [
     {"role": "system", "content": "System One"},
@@ -188,21 +196,141 @@ def test_mistral_adapter_system_appears_once():
     assert rendered["prompt"] == expected
 
 
-def test_gemma_adapter_renders_turns():
-    adapter = GemmaAdapter()
-    assert adapter.can_handle("gemma-2-9b")
+class TestGemma4Adapter:
+    """Gemma 4 adapter — rendered output is verified against the actual chat
+    template shipped with `google/gemma-4-*` models. The template is checked
+    into `resources/gemma_chat_template.jinja`; the adapter must produce the
+    same string the template does (modulo the leading BOS token, which the
+    engine prepends during tokenization).
+    """
 
-    rendered = adapter.render(MESSAGES)
-    prompt = rendered["prompt"]
+    @pytest.fixture(scope="class")
+    def template(self):
+        env = jinja2.Environment(
+            trim_blocks=True,
+            lstrip_blocks=True,
+            keep_trailing_newline=False,
+        )
+        return env.from_string(GEMMA_TEMPLATE_PATH.read_text())
 
-    assert prompt.startswith("<start_of_turn>system\n")
-    # Open model turn at the end (no <out> prefix — fencing at factory level)
-    assert "<start_of_turn>model\n" in prompt
-    assert "<out>" not in prompt
-    # Gemma stop token
-    assert "<end_of_turn>" in rendered["stop"]
-    # No </out> stop token — handled at factory level
-    assert "</out>" not in rendered["stop"]
+    @staticmethod
+    def _render_template(template, messages, *, enable_thinking=False):
+        rendered = template.render(
+            bos_token=GEMMA_BOS,
+            messages=messages,
+            tools=None,
+            enable_thinking=enable_thinking,
+            add_generation_prompt=True,
+        )
+        # Adapter does not emit BOS — the engine adds it during tokenization.
+        assert rendered.startswith(GEMMA_BOS)
+        return rendered[len(GEMMA_BOS):]
+
+    def test_can_handle(self):
+        adapter = Gemma4Adapter()
+        assert adapter.can_handle("gemma-4-26b-a4b-it")
+        assert adapter.can_handle("Gemma-4-IT")
+        assert adapter.can_handle("google/gemma4-9b")
+        assert not adapter.can_handle("gemma-2-9b")
+        assert not adapter.can_handle("gemma-3-27b")
+        assert not adapter.can_handle("qwen2.5-7b-instruct")
+        assert not adapter.can_handle("")
+        assert not adapter.can_handle(None)
+
+    def test_stop_sequence(self):
+        rendered = Gemma4Adapter().render([{"role": "user", "content": "Hi"}], no_think=True)
+        assert rendered["stop"] == ["<turn|>"]
+
+    def test_single_user_no_thinking(self, template):
+        messages = [{"role": "user", "content": "Hello"}]
+        expected = self._render_template(template, messages, enable_thinking=False)
+        rendered = Gemma4Adapter().render(messages, no_think=True)
+        assert rendered["prompt"] == expected
+
+    def test_system_and_user_no_thinking(self, template):
+        messages = [
+            {"role": "system", "content": "You are helpful."},
+            {"role": "user", "content": "Hi"},
+        ]
+        expected = self._render_template(template, messages, enable_thinking=False)
+        rendered = Gemma4Adapter().render(messages, no_think=True)
+        assert rendered["prompt"] == expected
+
+    def test_multi_turn_no_thinking(self, template):
+        messages = [
+            {"role": "system", "content": "Be concise."},
+            {"role": "user", "content": "Hi"},
+            {"role": "assistant", "content": "Hello! How can I help?"},
+            {"role": "user", "content": "Tell me a joke."},
+        ]
+        expected = self._render_template(template, messages, enable_thinking=False)
+        rendered = Gemma4Adapter().render(messages, no_think=True)
+        assert rendered["prompt"] == expected
+
+    def test_user_only_thinking_enabled(self, template):
+        messages = [{"role": "user", "content": "Solve this problem"}]
+        expected = self._render_template(template, messages, enable_thinking=True)
+        rendered = Gemma4Adapter().render(messages, no_think=False)
+        assert rendered["prompt"] == expected
+
+    def test_system_user_thinking_enabled(self, template):
+        messages = [
+            {"role": "system", "content": "You are helpful."},
+            {"role": "user", "content": "Hi"},
+        ]
+        expected = self._render_template(template, messages, enable_thinking=True)
+        rendered = Gemma4Adapter().render(messages, no_think=False)
+        assert rendered["prompt"] == expected
+
+    def test_strips_thinking_from_assistant_history(self, template):
+        """Assistant messages with leaked <|channel>...<channel|> blocks must be
+        sanitized identically to the template's `strip_thinking` macro."""
+        messages = [
+            {"role": "user", "content": "Q1"},
+            {
+                "role": "assistant",
+                "content": "<|channel>thought\nreasoning here<channel|>The answer is 42.",
+            },
+            {"role": "user", "content": "Q2"},
+        ]
+        expected = self._render_template(template, messages, enable_thinking=False)
+        rendered = Gemma4Adapter().render(messages, no_think=True)
+        assert rendered["prompt"] == expected
+
+    def test_trims_message_whitespace(self, template):
+        """Whitespace-padded content must be trimmed — matches the template's `| trim`."""
+        messages = [
+            {"role": "system", "content": "  Be concise.  \n"},
+            {"role": "user", "content": "  Hi  "},
+        ]
+        expected = self._render_template(template, messages, enable_thinking=False)
+        rendered = Gemma4Adapter().render(messages, no_think=True)
+        assert rendered["prompt"] == expected
+
+
+class TestGemma4AdapterCleanResponse:
+    """Gemma4Adapter.clean_response() strips Gemma 4 turn and channel markers."""
+
+    def setup_method(self):
+        self.adapter = Gemma4Adapter()
+
+    def test_strips_turn_markers(self):
+        text = "<|turn>model\nHello<turn|>"
+        assert self.adapter.clean_response(text) == "Hello"
+
+    def test_strips_complete_thinking_block(self):
+        text = "<|channel>thought\nreasoning here<channel|>The answer."
+        assert self.adapter.clean_response(text) == "The answer."
+
+    def test_drops_unclosed_thinking_channel(self):
+        text = "answer<|channel>incomplete"
+        assert self.adapter.clean_response(text) == "answer"
+
+    def test_strips_think_marker(self):
+        assert self.adapter.clean_response("<|think|>\nHello") == "Hello"
+
+    def test_passes_through_clean_text(self):
+        assert self.adapter.clean_response("Just a regular response.") == "Just a regular response."
 
 
 def test_phi_adapter_renders_chatml_prompt():

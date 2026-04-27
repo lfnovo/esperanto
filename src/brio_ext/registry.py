@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 from brio_ext.adapters import ChatAdapter
-from brio_ext.adapters.gemma_adapter import GemmaAdapter
+from brio_ext.adapters.gemma_adapter import Gemma4Adapter
 from brio_ext.adapters.llama_adapter import LlamaAdapter
 from brio_ext.adapters.mistral_adapter import MistralAdapter
 from brio_ext.adapters.phi_adapter import PhiAdapter
@@ -15,7 +15,7 @@ ADAPTERS: tuple[ChatAdapter, ...] = (
     QwenAdapter(),
     LlamaAdapter(),
     MistralAdapter(),
-    GemmaAdapter(),
+    Gemma4Adapter(),
     PhiAdapter(),
 )
 
@@ -72,8 +72,9 @@ def _get_adapter_by_format(chat_format: str) -> Optional[ChatAdapter]:
     if format_key in ("mistral", "mistral-instruct"):
         return MistralAdapter()
 
-    # Gemma format
-    if format_key in ("gemma",):
-        return GemmaAdapter()
+    # Gemma format — only Gemma 4 has an adapter; earlier and future
+    # generations need their own.
+    if format_key in ("gemma-4", "gemma4"):
+        return Gemma4Adapter()
 
     return None
