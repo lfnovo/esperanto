@@ -50,14 +50,12 @@ class XAITextToSpeechModel(TextToSpeechModel):
         self.api_key = (
             self.api_key or
             self._config.get("api_key") or
-            os.getenv("XAI_API_KEY_TTS") or
             os.getenv("XAI_API_KEY")
         )
 
         self.base_url = (
             self.base_url or
             self._config.get("base_url") or
-            os.getenv("XAI_BASE_URL_TTS") or
             os.getenv("XAI_BASE_URL") or
             self.DEFAULT_BASE_URL
         )
@@ -65,8 +63,8 @@ class XAITextToSpeechModel(TextToSpeechModel):
         # Validate required parameters
         if not self.api_key:
             raise ValueError(
-                "xAI API key not found. Set XAI_API_KEY_TTS "
-                "or XAI_API_KEY environment variable, or provide in config."
+                "xAI API key not found. Set XAI_API_KEY "
+                "environment variable, or provide in config."
             )
 
         # Initialize HTTP clients with configurable timeout

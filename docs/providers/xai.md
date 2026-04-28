@@ -33,15 +33,11 @@ xAI provides access to Grok, an AI assistant with real-time knowledge and a uniq
 ```bash
 # xAI API key (required)
 XAI_API_KEY="xai-..."
-
-# TTS-specific API key (optional, overrides XAI_API_KEY for TTS)
-XAI_API_KEY_TTS="xai-..."
 ```
 
 **Variable Priority:**
 1. Direct parameter in code (`api_key="..."`)
-2. Modality-specific environment variable (`XAI_API_KEY_TTS`)
-3. Generic environment variable (`XAI_API_KEY`)
+2. Environment variable (`XAI_API_KEY`)
 
 ## Quick Start
 

@@ -69,7 +69,6 @@ def test_init(tts_model):
 def test_init_missing_api_key(monkeypatch):
     """Test that missing API key raises ValueError."""
     monkeypatch.delenv("XAI_API_KEY", raising=False)
-    monkeypatch.delenv("XAI_API_KEY_TTS", raising=False)
     with pytest.raises(ValueError, match="xAI API key not found"):
         XAITextToSpeechModel()
 
@@ -79,14 +78,6 @@ def test_init_from_env_var(monkeypatch):
     monkeypatch.setenv("XAI_API_KEY", "env-test-key")
     model = XAITextToSpeechModel()
     assert model.api_key == "env-test-key"
-
-
-def test_init_from_tts_env_var(monkeypatch):
-    """Test that TTS-specific env var takes priority."""
-    monkeypatch.setenv("XAI_API_KEY", "generic-key")
-    monkeypatch.setenv("XAI_API_KEY_TTS", "tts-key")
-    model = XAITextToSpeechModel()
-    assert model.api_key == "tts-key"
 
 
 def test_init_default_base_url(tts_model):
@@ -106,15 +97,6 @@ def test_init_base_url_from_env_var(monkeypatch):
     monkeypatch.setenv("XAI_BASE_URL", "https://env-base.api.com")
     model = XAITextToSpeechModel()
     assert model.base_url == "https://env-base.api.com"
-
-
-def test_init_base_url_tts_env_priority(monkeypatch):
-    """Test that TTS-specific base URL env var takes priority."""
-    monkeypatch.setenv("XAI_API_KEY", "test-key")
-    monkeypatch.setenv("XAI_BASE_URL", "https://generic.api.com")
-    monkeypatch.setenv("XAI_BASE_URL_TTS", "https://tts-specific.api.com")
-    model = XAITextToSpeechModel()
-    assert model.base_url == "https://tts-specific.api.com"
 
 
 def test_get_headers(tts_model):
