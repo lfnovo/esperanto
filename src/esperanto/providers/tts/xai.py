@@ -1,5 +1,6 @@
 """xAI Text-to-Speech provider implementation."""
 
+import asyncio
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -275,11 +276,15 @@ class XAITextToSpeechModel(TextToSpeechModel):
             # Get audio data (binary content)
             audio_data = response.content
 
-            # Save to file if specified
+            # Save to file if specified (non-blocking)
             if output_file:
                 output_file = Path(output_file)
-                output_file.parent.mkdir(parents=True, exist_ok=True)
-                output_file.write_bytes(audio_data)
+
+                def _write_file():
+                    output_file.parent.mkdir(parents=True, exist_ok=True)
+                    output_file.write_bytes(audio_data)
+
+                await asyncio.to_thread(_write_file)
 
             content_type = self.RESPONSE_FORMAT_TO_CONTENT_TYPE.get(
                 response_format, f"audio/{response_format}"
