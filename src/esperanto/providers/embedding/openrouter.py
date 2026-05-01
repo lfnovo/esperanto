@@ -1,6 +1,5 @@
 """OpenRouter embedding model implementation."""
 
-import json
 import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -80,11 +79,10 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
             **{**self._get_api_kwargs(), **kwargs}
         }
 
-        # Make HTTP request using OpenRouter format (data parameter with JSON string)
         response = self.client.post(
             f"{self.base_url}/embeddings",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # type: ignore[arg-type]  # OpenRouter expects raw JSON body, httpx stub typing prefers Mapping
+            json=payload
         )
         self._handle_error(response)
 
@@ -112,11 +110,10 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
             **{**self._get_api_kwargs(), **kwargs}
         }
 
-        # Make async HTTP request using OpenRouter format (data parameter with JSON string)
         response = await self.async_client.post(
             f"{self.base_url}/embeddings",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # type: ignore[arg-type]
+            json=payload
         )
         self._handle_error(response)
 
