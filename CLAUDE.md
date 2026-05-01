@@ -245,6 +245,38 @@ All providers use utility mixins:
 - **Check types**: `uv run mypy src/esperanto`
 - **Format code**: `uv run black src/ tests/`
 
+## For Automated Agents
+
+If you are an automated coding agent (harny, Claude Code in headless mode, etc.) running against this repo, read this section before deciding what to validate.
+
+### Validator command
+
+The single command to confirm a change is acceptable:
+
+```bash
+uv sync --all-extras && uv run pytest tests/providers tests/unit -q --no-cov
+```
+
+This runs ~830 tests (mocked, no real API calls) in roughly 75 seconds. Pass = exit 0.
+
+### Do NOT use as gates
+
+The following tools have **pre-existing technical debt** on `main`. Running them as part of your validator will produce hundreds of failures unrelated to your change, and trying to fix them will derail the task:
+
+- `uv run mypy src/esperanto` — main has ~273 type errors at the time of writing.
+- `ruff check .` — main has ~200+ lint errors at the time of writing.
+
+If you introduced *new* type or lint regressions, that's worth fixing — but do not gate on the existing debt. Run them out-of-band only, and only act on the delta you introduced.
+
+### Integration tests
+
+`tests/integration/` requires real provider API keys and external network. Always exclude from automated runs unless the user has explicitly set up credentials and asked for it.
+
+### Other notes
+
+- The `notebooks/` directory is local-only (gitignored). If you see modifications there, leave them alone — they aren't part of the project.
+- Do not commit `.env`, `google-credentials.json`, or any other credential file. The `.gitignore` covers the common cases but always double-check before staging.
+
 ## Critical Principles
 
 See @ARCHITECTURE.md for the full design principles. The key rules:
