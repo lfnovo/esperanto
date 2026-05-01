@@ -115,20 +115,21 @@ class TransformersEmbeddingModel(EmbeddingModel):
         if quantize:
             try:
                 import bitsandbytes  # type: ignore[import-not-found]  # noqa: F401  # availability check
-
-                quantization_config = {
-                    "load_in_4bit": quantize == "4bit",
-                    "load_in_8bit": quantize == "8bit",
-                }
             except ImportError:
                 raise ImportError(
                     "bitsandbytes is required for quantization. "
                     "Install it with: pip install bitsandbytes"
                 )
+            from transformers import BitsAndBytesConfig
+
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=quantize == "4bit",
+                load_in_8bit=quantize == "8bit",
+            )
             self.model = AutoModel.from_pretrained(
                 model_name,
                 device_map="auto" if self.device == "cuda" else None,
-                **quantization_config,
+                quantization_config=bnb_config,
             )
         else:
             self.model = AutoModel.from_pretrained(model_name)

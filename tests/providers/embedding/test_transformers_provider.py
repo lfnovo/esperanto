@@ -1,5 +1,9 @@
 """Tests for the Transformers embedding model provider."""
 
+import importlib.metadata
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from esperanto.factory import AIFactory
@@ -103,3 +107,90 @@ def test_quantization():
     embeddings = model.embed(["Test text"])
     assert len(embeddings) == 1
     assert len(embeddings[0]) == 768
+
+
+def _mock_metadata_version(name: str) -> str:
+    if name == "bitsandbytes":
+        return "0.42.0"
+    return importlib.metadata.version(name)
+
+
+def test_quantization_4bit_uses_bits_and_bytes_config():
+    """Test that 4bit quantization passes a BitsAndBytesConfig to from_pretrained."""
+    from transformers import BitsAndBytesConfig
+
+    from esperanto.providers.embedding.transformers import TransformersEmbeddingModel
+
+    mock_bnb = MagicMock()
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    bnb_modules = {
+        "bitsandbytes": mock_bnb,
+        "bitsandbytes.nn": mock_bnb.nn,
+        "bitsandbytes.functional": mock_bnb.functional,
+    }
+
+    with (
+        patch.dict(sys.modules, bnb_modules),
+        patch("importlib.metadata.version", side_effect=_mock_metadata_version),
+        patch(
+            "esperanto.providers.embedding.transformers.AutoModel.from_pretrained",
+            return_value=mock_model,
+        ) as mock_from_pretrained,
+        patch(
+            "esperanto.providers.embedding.transformers.AutoTokenizer.from_pretrained",
+            return_value=mock_tokenizer,
+        ),
+    ):
+        TransformersEmbeddingModel(
+            model_name="bert-base-uncased",
+            device="cpu",
+            quantize="4bit",
+        )
+
+        call_kwargs = mock_from_pretrained.call_args.kwargs
+        assert "quantization_config" in call_kwargs
+        bnb_config = call_kwargs["quantization_config"]
+        assert isinstance(bnb_config, BitsAndBytesConfig)
+        assert bnb_config.load_in_4bit is True
+        assert bnb_config.load_in_8bit is False
+
+
+def test_quantization_8bit_uses_bits_and_bytes_config():
+    """Test that 8bit quantization passes a BitsAndBytesConfig to from_pretrained."""
+    from transformers import BitsAndBytesConfig
+
+    from esperanto.providers.embedding.transformers import TransformersEmbeddingModel
+
+    mock_bnb = MagicMock()
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    bnb_modules = {
+        "bitsandbytes": mock_bnb,
+        "bitsandbytes.nn": mock_bnb.nn,
+        "bitsandbytes.functional": mock_bnb.functional,
+    }
+
+    with (
+        patch.dict(sys.modules, bnb_modules),
+        patch(
+            "esperanto.providers.embedding.transformers.AutoModel.from_pretrained",
+            return_value=mock_model,
+        ) as mock_from_pretrained,
+        patch(
+            "esperanto.providers.embedding.transformers.AutoTokenizer.from_pretrained",
+            return_value=mock_tokenizer,
+        ),
+    ):
+        TransformersEmbeddingModel(
+            model_name="bert-base-uncased",
+            device="cpu",
+            quantize="8bit",
+        )
+
+        call_kwargs = mock_from_pretrained.call_args.kwargs
+        assert "quantization_config" in call_kwargs
+        bnb_config = call_kwargs["quantization_config"]
+        assert isinstance(bnb_config, BitsAndBytesConfig)
+        assert bnb_config.load_in_8bit is True
+        assert bnb_config.load_in_4bit is False
