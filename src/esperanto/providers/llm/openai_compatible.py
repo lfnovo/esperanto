@@ -480,7 +480,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 "Install with: uv add langchain_openai or pip install langchain_openai"
             ) from e
 
-        model_kwargs = {}
+        model_kwargs: Dict[str, Any] = {}
         # Only set response_format if endpoint is likely to support it
         should_skip_response_format = (
             self._is_likely_lmstudio() or self._response_format_unsupported
@@ -494,7 +494,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             if structured_type in ["json", "json_object"]:
                 model_kwargs["response_format"] = {"type": "json_object"}
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,

@@ -519,7 +519,7 @@ class PerplexityLanguageModel(LanguageModel):
         if self.web_search_options is not None:
             model_kwargs["web_search_options"] = self.web_search_options
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
