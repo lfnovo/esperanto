@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **OpenRouter providers send malformed request bodies** — both the LLM and embedding OpenRouter providers were posting payloads via httpx's `data=json.dumps(payload)` instead of `json=payload`. In httpx, `data=` with a string is treated as a form-encoded body (Content-Type `application/x-www-form-urlencoded`), so requests carried JSON bytes with the wrong content type. The four affected call sites now use `json=payload`, which serializes the dict and sets `Content-Type: application/json` automatically. Tests updated to assert on the `json` kwarg so a regression would fail loudly. (#127)
+- **`TransformersEmbeddingModel` quantization not applied** — `_initialize_model` was constructing a `quantization_config` dict with `load_in_4bit` / `load_in_8bit` and spreading it as top-level kwargs to `AutoModel.from_pretrained`, an API form that recent transformers versions deprecated in favor of a `BitsAndBytesConfig` object. The provider now constructs `BitsAndBytesConfig(load_in_4bit=..., load_in_8bit=...)` and passes it via `quantization_config=`. Added mocked unit tests (parametrized over 4bit/8bit) that fail if the config stops reaching `from_pretrained`. (#129)
 
 ## [2.20.1] - 2026-04-13
 
