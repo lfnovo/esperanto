@@ -39,4 +39,4 @@ jobs:
         uv sync --all-extras && uv pip install mxbai-rerank
     
     - name: Run tests
-      run: uv run pytest -v tests/providers
+      run: uv run pytest -v tests/providers tests/unit tests/common_types
