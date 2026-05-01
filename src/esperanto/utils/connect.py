@@ -23,6 +23,11 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
     - Provider-specific __post_init__() that calls super().__post_init__()
     """
 
+    # Type annotations only; the actual instances are assigned by
+    # _create_http_clients() during each provider's __post_init__.
+    client: httpx.Client
+    async_client: httpx.AsyncClient
+
     def _create_http_clients(self) -> None:
         """Create HTTP clients with configured timeout and SSL settings.
 

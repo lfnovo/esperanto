@@ -5,8 +5,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
-from httpx import AsyncClient, Client
-
 from esperanto.common_types import Model, TranscriptionResponse
 from esperanto.utils.connect import HttpConnectionMixin
 
@@ -29,8 +27,6 @@ class SpeechToTextModel(HttpConnectionMixin, ABC):
     config: Optional[Dict[str, Any]] = None
     timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
-    client: Optional[Client] = None
-    async_client: Optional[AsyncClient] = None
 
     def __post_init__(self):
         """Initialize configuration after dataclass initialization."""

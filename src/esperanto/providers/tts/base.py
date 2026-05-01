@@ -6,8 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from httpx import AsyncClient, Client
-
 from esperanto.common_types import Model
 from esperanto.common_types.tts import AudioResponse, Voice
 from esperanto.utils.connect import HttpConnectionMixin
@@ -31,8 +29,6 @@ class TextToSpeechModel(HttpConnectionMixin, ABC):
     config: Optional[Dict[str, Any]] = None
     timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
-    client: Optional[Client] = None
-    async_client: Optional[AsyncClient] = None
 
     # Common SSML tags supported across providers
     COMMON_SSML_TAGS = [
