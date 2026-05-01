@@ -52,6 +52,11 @@ addopts = "-v --cov=esperanto --cov-report=term-missing"
 
 [tool.ruff]
 line-length = 88
+extend-exclude = [
+    ".harny",
+    "notebooks",
+    "examples",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
