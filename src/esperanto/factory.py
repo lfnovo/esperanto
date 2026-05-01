@@ -216,6 +216,12 @@ class AIFactory:
         # Import here to avoid circular imports
         from esperanto.model_discovery import PROVIDER_MODELS_REGISTRY
 
+        nested_config = config.pop("config", None)
+        if nested_config:
+            if not isinstance(nested_config, dict):
+                raise TypeError("config must be a dictionary when provided")
+            config = {**nested_config, **config}
+
         # Normalize provider name to lowercase
         provider = provider.lower().replace("_", "-")
 

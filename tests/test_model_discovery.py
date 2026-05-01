@@ -3,25 +3,22 @@
 
 import hashlib
 import os
-from unittest.mock import MagicMock, patch, Mock
-import pytest
-import httpx
+from unittest.mock import MagicMock, patch
 
+import httpx
+import pytest
+
+from esperanto import AIFactory
 from esperanto.common_types import Model
 from esperanto.model_discovery import (
+    PROVIDER_MODELS_REGISTRY,
     _create_cache_key,
-    get_openai_models,
-    get_openai_compatible_models,
+    _model_cache,
     get_anthropic_models,
     get_google_models,
-    get_mistral_models,
-    get_groq_models,
-    get_jina_models,
-    get_voyage_models,
-    PROVIDER_MODELS_REGISTRY,
-    _model_cache,
+    get_openai_compatible_models,
+    get_openai_models,
 )
-from esperanto import AIFactory
 
 
 class TestCacheKeyCreation:
@@ -156,6 +153,24 @@ class TestOpenAIDiscovery:
             # Verify API key was used
             call_args = mock_get.call_args
             assert call_args.kwargs["headers"]["Authorization"] == "Bearer env-key"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_models_with_base_url(self, mock_get):
+        """Test that OpenAI discovery uses a custom base URL."""
+        _model_cache.clear()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_openai_models(
+            api_key="test-key",
+            base_url="https://custom.openai-compatible.test/v1",
+        )
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "https://custom.openai-compatible.test/v1/models"
 
 
 class TestAnthropicDiscovery:
@@ -379,6 +394,45 @@ class TestAIFactoryIntegration:
             # Should pass model_type in config
             call_args = mock_func.call_args
             assert call_args.kwargs.get("model_type") == "embedding"
+
+    def test_get_provider_models_flattens_config_dict(self):
+        """Test provider model discovery accepts the same config dict shape as factory creation."""
+        with patch.dict("esperanto.model_discovery.PROVIDER_MODELS_REGISTRY") as mock_registry:
+            mock_func = MagicMock(return_value=[])
+            mock_registry["openai"] = mock_func
+
+            AIFactory.get_provider_models(
+                "openai",
+                config={
+                    "api_key": "config-key",
+                    "base_url": "https://custom.openai-compatible.test/v1",
+                },
+            )
+
+            mock_func.assert_called_once_with(
+                api_key="config-key",
+                base_url="https://custom.openai-compatible.test/v1",
+            )
+
+    def test_get_provider_models_direct_config_overrides_nested_config(self):
+        """Test direct discovery kwargs override nested config dict values."""
+        with patch.dict("esperanto.model_discovery.PROVIDER_MODELS_REGISTRY") as mock_registry:
+            mock_func = MagicMock(return_value=[])
+            mock_registry["openai"] = mock_func
+
+            AIFactory.get_provider_models(
+                "openai",
+                config={
+                    "api_key": "config-key",
+                    "base_url": "https://config.example/v1",
+                },
+                base_url="https://direct.example/v1",
+            )
+
+            mock_func.assert_called_once_with(
+                api_key="config-key",
+                base_url="https://direct.example/v1",
+            )
 
     def test_get_provider_models_case_insensitive(self):
         """Test that provider names are case-insensitive."""
