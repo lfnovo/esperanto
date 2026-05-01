@@ -691,8 +691,8 @@ class TestStreamingWithTools:
         delta = result.choices[0].delta
         assert delta.tool_calls is not None
         assert len(delta.tool_calls) == 1
-        # Streaming tool_calls are ToolCall objects due to Message validation
         tool_call = delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
         assert tool_call.function.name == "get_weather"
 
     def test_streaming_chat_complete_with_tools(

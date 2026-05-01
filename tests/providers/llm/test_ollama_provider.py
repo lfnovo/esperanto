@@ -532,6 +532,38 @@ class TestToolCallResponse:
         tool_call = response.choices[0].message.tool_calls[0]
         assert tool_call.function.name == "get_weather"
 
+    def test_normalize_chunk_with_tool_calls(self):
+        """Test _normalize_chunk returns ToolCall objects (not dicts) for streaming tool calls."""
+        model = OllamaLanguageModel(model_name="llama3.2")
+        chunk = {
+            "model": "llama3.2",
+            "message": {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call_abc123",
+                        "type": "function",
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": {"location": "San Francisco"},
+                        },
+                    }
+                ],
+            },
+            "done": True,
+        }
+
+        result = model._normalize_chunk(chunk)
+
+        assert result is not None
+        delta = result.choices[0].delta
+        assert delta.tool_calls is not None
+        assert len(delta.tool_calls) == 1
+        tool_call = delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
+        assert tool_call.function.name == "get_weather"
+
 
 class TestToolCallValidation:
     """Tests for tool call validation."""

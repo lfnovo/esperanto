@@ -494,15 +494,15 @@ class OllamaLanguageModel(LanguageModel):
                 else:
                     arguments_str = str(args)
 
-                tool_calls_data.append({
-                    "index": idx,
-                    "id": tc.get("id", f"call_{uuid.uuid4().hex[:12]}"),
-                    "type": tc.get("type", "function"),
-                    "function": {
-                        "name": func_info.get("name", ""),
-                        "arguments": arguments_str,
-                    },
-                })
+                tool_calls_data.append(ToolCall(
+                    index=idx,
+                    id=tc.get("id", f"call_{uuid.uuid4().hex[:12]}"),
+                    type=tc.get("type", "function"),
+                    function=FunctionCall(
+                        name=func_info.get("name", ""),
+                        arguments=arguments_str,
+                    ),
+                ))
 
         # Determine finish_reason
         finish_reason = None
@@ -518,7 +518,7 @@ class OllamaLanguageModel(LanguageModel):
                         role=message.get("role", "assistant"),
                         content=message.get("content") or "",
                         thinking=message.get("thinking"),
-                        tool_calls=tool_calls_data,  # type: ignore[arg-type]  # TODO: schema mismatch — list[dict] vs list[ToolCall]
+                        tool_calls=tool_calls_data,
                     ),
                     finish_reason=finish_reason,
                 )

@@ -391,15 +391,6 @@ class AnthropicLanguageModel(LanguageModel):
             if block_type == "tool_use":
                 # Start of a tool call - emit the tool call info
                 block_index = event_data.get("index", 0)
-                tool_call_dict = {
-                    "index": block_index,
-                    "id": content_block.get("id", ""),
-                    "type": "function",
-                    "function": {
-                        "name": content_block.get("name", ""),
-                        "arguments": "",  # Arguments come in subsequent deltas
-                    },
-                }
                 return ChatCompletionChunk(
                     id=str(uuid.uuid4()),
                     choices=[
@@ -408,7 +399,15 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],  # type: ignore[list-item]  # TODO: schema mismatch — providers build dicts but DeltaMessage expects list[ToolCall]
+                                tool_calls=[ToolCall(
+                                    id=content_block.get("id", ""),
+                                    type="function",
+                                    function=FunctionCall(
+                                        name=content_block.get("name", ""),
+                                        arguments="",
+                                    ),
+                                    index=block_index,
+                                )],
                             ),
                             finish_reason=None,
                         )
@@ -450,15 +449,6 @@ class AnthropicLanguageModel(LanguageModel):
                 # We need to include all required fields for ToolCall validation.
                 # Use empty id/name for delta updates - these are only valid as
                 # incremental updates to be accumulated by the client.
-                tool_call_dict = {
-                    "index": block_index,
-                    "id": "",  # Empty for delta updates
-                    "type": "function",
-                    "function": {
-                        "name": "",  # Empty for delta updates
-                        "arguments": partial_json,
-                    },
-                }
                 return ChatCompletionChunk(
                     id=str(uuid.uuid4()),
                     choices=[
@@ -467,7 +457,15 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],  # type: ignore[list-item]  # TODO: schema mismatch — providers build dicts but DeltaMessage expects list[ToolCall]
+                                tool_calls=[ToolCall(
+                                    id="",
+                                    type="function",
+                                    function=FunctionCall(
+                                        name="",
+                                        arguments=partial_json,
+                                    ),
+                                    index=block_index,
+                                )],
                             ),
                             finish_reason=None,
                         )

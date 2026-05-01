@@ -937,8 +937,8 @@ class TestStreamingToolCalls:
         assert chunk is not None
         assert chunk.choices[0].delta.tool_calls is not None
         assert len(chunk.choices[0].delta.tool_calls) == 1
-        # tool_calls are converted to ToolCall objects by the DeltaMessage validator
         tool_call = chunk.choices[0].delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
         assert tool_call.id == "toolu_abc123"
         assert tool_call.function.name == "get_weather"
 
@@ -957,8 +957,8 @@ class TestStreamingToolCalls:
 
         assert chunk is not None
         assert chunk.choices[0].delta.tool_calls is not None
-        # tool_calls are converted to ToolCall objects by the DeltaMessage validator
         tool_call = chunk.choices[0].delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
         # For delta updates, id and name are empty (only arguments are sent incrementally)
         assert tool_call.id == ""
         assert tool_call.function.name == ""
