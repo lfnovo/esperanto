@@ -252,7 +252,7 @@ class GoogleLanguageModel(LanguageModel):
 
     def _create_generation_config(self) -> Dict[str, Any]:
         """Create generation config for Google API."""
-        config = {
+        config: Dict[str, Any] = {
             "temperature": float(self.temperature),
             "topP": float(self.top_p),
         }
@@ -599,7 +599,7 @@ class GoogleLanguageModel(LanguageModel):
                     delta=DeltaMessage(
                         role="assistant",
                         content=text_content,
-                        tool_calls=tool_calls_data if tool_calls_data else None,
+                        tool_calls=tool_calls_data if tool_calls_data else None,  # type: ignore[arg-type]  # TODO: schema mismatch — list[dict] vs list[ToolCall]
                     ),
                     finish_reason=finish_reason,
                 )
