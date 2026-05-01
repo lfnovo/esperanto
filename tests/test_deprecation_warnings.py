@@ -40,11 +40,12 @@ class TestLanguageModelDeprecation:
             def to_langchain(self):
                 pass
 
-        TestLLM(model_name="test")
+        model = TestLLM(model_name="test")
 
         # Check that accessing .models raises a deprecation warning
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -113,10 +114,11 @@ class TestEmbeddingModelDeprecation:
             async def aembed(self, texts, **kwargs):
                 pass
 
-        TestEmbedding(model_name="test")
+        model = TestEmbedding(model_name="test")
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -149,10 +151,11 @@ class TestRerankerModelDeprecation:
             def to_langchain(self):
                 pass
 
-        TestReranker(model_name="test")
+        model = TestReranker(model_name="test")
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -182,10 +185,11 @@ class TestSTTModelDeprecation:
             async def atranscribe(self, audio_file, **kwargs):
                 pass
 
-        TestSTT(model_name="test")
+        model = TestSTT(model_name="test")
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -219,10 +223,11 @@ class TestTTSModelDeprecation:
             async def agenerate_speech(self, text, voice, **kwargs):
                 pass
 
-        TestTTS(model_name="test")
+        model = TestTTS(model_name="test")
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -255,10 +260,11 @@ class TestDeprecationMessage:
             def to_langchain(self):
                 pass
 
-        TestLLM(model_name="test")
+        model = TestLLM(model_name="test")
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             message = str(w[0].message)
             assert "custom-provider" in message
@@ -287,10 +293,11 @@ class TestDeprecationMessage:
             def to_langchain(self):
                 pass
 
-        TestLLM(model_name="test")
+        model = TestLLM(model_name="test")
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             message = str(w[0].message)
             assert "AIFactory.get_provider_models" in message
@@ -367,10 +374,11 @@ class TestWarningStackLevel:
             def to_langchain(self):
                 pass
 
-        TestLLM(model_name="test")
+        model = TestLLM(model_name="test")
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
+            model.models
 
             assert len(w) == 1
             # The warning should have been raised from this test file, not from base.py
