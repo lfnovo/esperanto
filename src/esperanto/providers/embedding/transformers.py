@@ -6,7 +6,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional
+from typing import List, Literal, Optional
 
 import numpy as np
 import torch
@@ -114,7 +114,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
         # Configure quantization if requested
         if quantize:
             try:
-                import bitsandbytes as bnb
+                import bitsandbytes  # noqa: F401  # availability check
 
                 quantization_config = {
                     "load_in_4bit": quantize == "4bit",
@@ -332,7 +332,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
 
         try:
             # Get embeddings for sentences to find semantic boundaries
-            sentence_embeddings = self._chunker.encode(sentences)
+            self._chunker.encode(sentences)
             
             chunks = []
             current_chunk = []
@@ -589,8 +589,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
         
         for original_text in original_texts:
             # Find chunks that belong to this original text
-            text_chunks = []
-            original_length = len(original_text)
+            len(original_text)
             
             # Estimate how many chunks this text produced
             # This is a simplification - in practice we'd track this explicitly

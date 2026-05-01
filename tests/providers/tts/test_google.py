@@ -15,7 +15,6 @@ def test_init():
 
 def test_generate_speech():
     """Test synchronous speech generation with httpx mocking."""
-    from unittest.mock import Mock
 
     from esperanto.providers.tts.google import GoogleTextToSpeechModel
     
@@ -64,7 +63,6 @@ def test_generate_speech():
 @pytest.mark.asyncio
 async def test_agenerate_speech():
     """Test asynchronous speech generation with httpx mocking."""
-    from unittest.mock import AsyncMock, Mock
 
     from esperanto.providers.tts.google import GoogleTextToSpeechModel
     

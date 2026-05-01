@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
+from esperanto.common_types import Tool, ToolCall, ToolCallValidationError, ToolFunction
 
 try:
     from langchain_groq import ChatGroq
@@ -118,7 +118,7 @@ def test_to_langchain(groq_model):
     assert langchain_model.temperature == 1.0
     assert langchain_model.max_tokens == 850
     # assert langchain_model.model_kwargs["top_p"] == 0.9 # top_p is not stored in model_kwargs by default
-    assert langchain_model.streaming == False
+    assert langchain_model.streaming is False
     assert langchain_model.groq_api_key.get_secret_value() == "test-key"
 
 

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from httpx import Client, AsyncClient
+from httpx import AsyncClient, Client
 
 from esperanto.common_types import Model
 from esperanto.common_types.task_type import EmbeddingTaskType

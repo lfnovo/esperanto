@@ -3,7 +3,7 @@
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from esperanto.common_types import Model
 from esperanto.providers.embedding.openai import OpenAIEmbeddingModel

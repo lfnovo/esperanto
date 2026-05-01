@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from httpx import Client, AsyncClient
+from httpx import AsyncClient, Client
 
 from esperanto.common_types import Model
 from esperanto.common_types.tts import AudioResponse, Voice

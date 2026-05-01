@@ -22,7 +22,6 @@ def audio_file(tmp_path):
 def test_factory_creates_groq_stt():
     """Test that AIFactory creates Groq STT model."""
     from unittest.mock import patch
-    import os
 
     # Mock the environment variable to provide an API key
     with patch.dict(os.environ, {'GROQ_API_KEY': 'test-key'}):
@@ -95,7 +94,7 @@ def test_groq_transcribe(audio_file):
 @pytest.mark.asyncio
 async def test_groq_atranscribe(audio_file):
     """Test Groq async transcribe method with httpx mocking."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import AsyncMock, Mock
     
     # Create fresh model instance
     model = GroqSpeechToTextModel(api_key="test-key")

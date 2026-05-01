@@ -1,7 +1,8 @@
 """Tests for Google embedding task type translation functionality."""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from esperanto.common_types.task_type import EmbeddingTaskType
 from esperanto.providers.embedding.google import GoogleEmbeddingModel
@@ -73,7 +74,7 @@ class TestGeminiTaskMapping:
         """Test that all enum values have mappings defined."""
         for task_type in EmbeddingTaskType:
             google_model.task_type = task_type
-            result = google_model._get_task_type_param()
+            google_model._get_task_type_param()
             # All task types should have a mapping (even if None for DEFAULT)
             assert task_type in GoogleEmbeddingModel.GEMINI_TASK_MAPPING
 

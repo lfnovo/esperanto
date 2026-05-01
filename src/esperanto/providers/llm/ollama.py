@@ -286,7 +286,7 @@ class OllamaLanguageModel(LanguageModel):
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
-        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        self._resolve_tool_choice(tool_choice)
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
@@ -374,7 +374,7 @@ class OllamaLanguageModel(LanguageModel):
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
-        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        self._resolve_tool_choice(tool_choice)
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 

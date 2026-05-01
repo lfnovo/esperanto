@@ -1,7 +1,7 @@
 """Tests for OpenAI speech-to-text provider."""
 
 import os
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -49,7 +49,7 @@ def mock_openai_models_response():
 @pytest.fixture
 def mock_httpx_clients(mock_openai_transcription_response, mock_openai_models_response):
     """Mock httpx clients for OpenAI STT."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import Mock
     
     client = Mock()
     async_client = AsyncMock()

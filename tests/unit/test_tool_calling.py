@@ -6,23 +6,22 @@ without requiring actual API keys.
 """
 
 import json
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
 from esperanto.common_types import (
-    Tool,
-    ToolFunction,
-    ToolCall,
-    FunctionCall,
     ChatCompletion,
+    FunctionCall,
+    Tool,
+    ToolCall,
     ToolCallValidationError,
+    ToolFunction,
 )
-from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 from esperanto.providers.llm.google import GoogleLanguageModel
 from esperanto.providers.llm.groq import GroqLanguageModel
-
+from esperanto.providers.llm.openai import OpenAILanguageModel
 
 # =============================================================================
 # Fixtures

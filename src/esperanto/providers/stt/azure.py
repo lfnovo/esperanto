@@ -2,7 +2,7 @@
 
 import os
 from dataclasses import dataclass
-from typing import Any, BinaryIO, Dict, List, Optional, Union
+from typing import BinaryIO, Dict, List, Optional, Union
 
 import httpx
 

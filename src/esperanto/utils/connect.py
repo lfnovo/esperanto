@@ -4,8 +4,8 @@ from abc import ABC
 
 import httpx
 
-from .timeout import TimeoutMixin
 from .ssl import SSLMixin
+from .timeout import TimeoutMixin
 
 
 class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):

@@ -41,7 +41,7 @@ class RerankResponse(BaseModel):
 
 
 # Import Usage after defining our classes to avoid circular imports
-from .response import Usage
+from .response import Usage  # noqa: E402
 
 # Update forward reference
 RerankResponse.model_rebuild()

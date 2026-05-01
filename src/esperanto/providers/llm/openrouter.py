@@ -74,7 +74,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             try:
                 error_data = response.json()
                 error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
-            except Exception as e:
+            except Exception:
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"OpenAI API error: {error_message}")
 

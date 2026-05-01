@@ -129,7 +129,9 @@ class GoogleLanguageModel(LanguageModel):
             ImportError: If langchain_google_genai is not installed.
         """
         try:
-            from langchain_core.language_models.chat_models import BaseChatModel
+            from langchain_core.language_models.chat_models import (  # noqa: F401  # availability check
+                BaseChatModel,
+            )
             from langchain_google_genai import ChatGoogleGenerativeAI
         except ImportError as e:
             raise ImportError(

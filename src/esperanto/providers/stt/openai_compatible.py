@@ -1,7 +1,7 @@
 """OpenAI-compatible Speech-to-Text provider implementation."""
 
-import os
 import mimetypes
+import os
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 

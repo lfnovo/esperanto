@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
+from esperanto.common_types import Tool, ToolCall, ToolFunction
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 
 

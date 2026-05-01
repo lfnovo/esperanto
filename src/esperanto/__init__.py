@@ -137,7 +137,7 @@ __provider_classes = {
 provider_classes = [name for name, cls in __provider_classes.items() if cls is not None]
 
 # Import factory after defining providers
-from esperanto.factory import AIFactory
+from esperanto.factory import AIFactory  # noqa: E402
 
 __all__ = [
     # Factory

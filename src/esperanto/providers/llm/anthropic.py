@@ -35,7 +35,6 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
-from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
     from langchain_anthropic import ChatAnthropic

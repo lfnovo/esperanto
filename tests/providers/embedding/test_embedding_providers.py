@@ -2,7 +2,7 @@
 
 import os
 from typing import List
-from unittest.mock import AsyncMock, Mock, call, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
