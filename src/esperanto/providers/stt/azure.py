@@ -64,7 +64,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Azure API requests."""
         return {
-            "api-key": self.api_key,  # Azure uses api-key, not Bearer
+            "api-key": self.api_key or "",  # Azure uses api-key, not Bearer
         }
 
     def _build_url(self, path: str) -> str:
@@ -125,7 +125,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
                 response = self.client.post(
                     url,
                     headers=self._get_headers(),
@@ -146,7 +146,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
+        return TranscriptionResponse(  # type: ignore[call-arg]
             text=response_data["text"],
             language=language,  # Azure doesn't return detected language
             model=self.deployment_name,
@@ -173,7 +173,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
                 response = await self.async_client.post(
                     url,
                     headers=self._get_headers(),
@@ -194,7 +194,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
+        return TranscriptionResponse(  # type: ignore[call-arg]
             text=response_data["text"],
             language=language,  # Azure doesn't return detected language
             model=self.deployment_name,

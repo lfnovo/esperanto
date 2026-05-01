@@ -250,7 +250,7 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
                 # For file path, open and send as multipart form data
                 mime_type = self._get_audio_mime_type(audio_file)
                 with open(audio_file, "rb") as f:
-                    files = {"file": (audio_file, f, mime_type)}
+                    files: Dict[str, Any] = {"file": (audio_file, f, mime_type)}
                     response = self.client.post(
                         f"{self.base_url}/audio/transcriptions",
                         headers=self._get_headers(),
@@ -308,7 +308,7 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
                 # For file path, open and send as multipart form data
                 mime_type = self._get_audio_mime_type(audio_file)
                 with open(audio_file, "rb") as f:
-                    files = {"file": (audio_file, f, mime_type)}
+                    files: Dict[str, Any] = {"file": (audio_file, f, mime_type)}
                     response = await self.async_client.post(
                         f"{self.base_url}/audio/transcriptions",
                         headers=self._get_headers(),

@@ -38,8 +38,9 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
         API keys and base URLs.
         """
         # Strip trailing slashes from base_url to avoid double-slash in URL paths
-        if hasattr(self, "base_url") and self.base_url:
-            self.base_url = self.base_url.rstrip("/")
+        base_url = getattr(self, "base_url", None)
+        if base_url:
+            self.base_url = base_url.rstrip("/")
 
         timeout = self._get_timeout()
         verify = self._get_ssl_verify()
