@@ -131,7 +131,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(  # type: ignore[call-arg]
+        return TranscriptionResponse(
             text=response_data["text"],
             language=language,  # OpenAI doesn't return detected language
             model=self.get_model_name(),
@@ -172,7 +172,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(  # type: ignore[call-arg]
+        return TranscriptionResponse(
             text=response_data["text"],
             language=language,  # OpenAI doesn't return detected language
             model=self.get_model_name(),

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`TranscriptionResponse.provider`** — STT responses now expose the originating provider name as an optional field, matching the existing `AudioResponse.provider` field. All STT providers (`openai`, `elevenlabs`, `azure`) already passed this kwarg, but Pydantic was silently dropping it. Existing callers continue to work unchanged. (#126)
+
 ### Changed
 
 - **Lint and type-check the codebase clean.** Ruff (`ruff check .`) and mypy (`mypy src/esperanto`) now report zero errors. Most fixes are type-only and do not change runtime behavior. Notable structural changes:

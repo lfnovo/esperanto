@@ -146,7 +146,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(  # type: ignore[call-arg]
+        return TranscriptionResponse(
             text=response_data["text"],
             language=language,  # Azure doesn't return detected language
             model=self.deployment_name,
@@ -194,7 +194,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(  # type: ignore[call-arg]
+        return TranscriptionResponse(
             text=response_data["text"],
             language=language,  # Azure doesn't return detected language
             model=self.deployment_name,

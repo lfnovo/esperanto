@@ -14,18 +14,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.python-version }}
-        allow-prereleases: true
-    
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-    
+
     - name: Load cached venv
       id: cached-dependencies
       uses: actions/cache@v3
@@ -37,6 +31,6 @@ jobs:
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
       run: |
         uv sync --all-extras && uv pip install mxbai-rerank
-    
+
     - name: Run tests
       run: uv run pytest -v tests/providers tests/unit tests/common_types

@@ -23,6 +23,9 @@ class TranscriptionResponse(BaseModel):
     model: Optional[str] = Field(
         default=None, description="The model used for transcription"
     )
+    provider: Optional[str] = Field(
+        default=None, description="The provider that produced this transcription"
+    )
     metadata: Optional[Dict[str, Any]] = Field(
         default=None, description="Additional metadata from the provider"
     )

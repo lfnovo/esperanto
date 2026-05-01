@@ -254,10 +254,10 @@ If you are an automated coding agent (harny, Claude Code in headless mode, etc.)
 The single command to confirm a change is acceptable:
 
 ```bash
-uv sync --all-extras && uv run pytest tests/providers tests/unit -q --no-cov
+uv sync --all-extras && uv run pytest tests/providers tests/unit tests/common_types -q --no-cov
 ```
 
-This runs ~865 tests (mocked, no real API calls) in roughly 70 seconds. Pass = exit 0.
+This runs ~895 tests (mocked, no real API calls) in roughly 70 seconds. Pass = exit 0. The same scope is gated in CI via `.github/workflows/test.yml`.
 
 For a stricter local check that mirrors CI, also run:
 
