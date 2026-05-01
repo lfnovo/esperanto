@@ -434,6 +434,28 @@ class TestAIFactoryIntegration:
                 base_url="https://direct.example/v1",
             )
 
+    @pytest.mark.parametrize("nested_config", [False, 0, "", []])
+    def test_get_provider_models_rejects_falsey_non_dict_config(self, nested_config):
+        """Test falsey non-dict nested config values are not silently ignored."""
+        with patch.dict("esperanto.model_discovery.PROVIDER_MODELS_REGISTRY") as mock_registry:
+            mock_func = MagicMock(return_value=[])
+            mock_registry["openai"] = mock_func
+
+            with pytest.raises(TypeError, match="config must be a dictionary"):
+                AIFactory.get_provider_models("openai", config=nested_config)
+
+            mock_func.assert_not_called()
+
+    def test_get_provider_models_ignores_none_nested_config(self):
+        """Test explicit None keeps the optional nested config behavior."""
+        with patch.dict("esperanto.model_discovery.PROVIDER_MODELS_REGISTRY") as mock_registry:
+            mock_func = MagicMock(return_value=[])
+            mock_registry["openai"] = mock_func
+
+            AIFactory.get_provider_models("openai", config=None, api_key="direct-key")
+
+            mock_func.assert_called_once_with(api_key="direct-key")
+
     def test_get_provider_models_case_insensitive(self):
         """Test that provider names are case-insensitive."""
         with patch.dict("esperanto.model_discovery.PROVIDER_MODELS_REGISTRY") as mock_registry:
