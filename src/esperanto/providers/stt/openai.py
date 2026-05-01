@@ -110,7 +110,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
                 response = self.client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -151,7 +151,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
                 response = await self.async_client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),

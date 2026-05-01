@@ -6,7 +6,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional
+from typing import List, Literal, Optional
 
 import numpy as np
 import torch
@@ -18,11 +18,11 @@ from esperanto.providers.embedding.base import EmbeddingModel, Model
 # Optional dependencies for advanced features
 try:
     from sentence_transformers import SentenceTransformer
-    from sklearn.decomposition import PCA
+    from sklearn.decomposition import PCA  # type: ignore[import-untyped]
     ADVANCED_FEATURES_AVAILABLE = True
 except ImportError:
-    SentenceTransformer = None
-    PCA = None
+    SentenceTransformer = None  # type: ignore[assignment,misc]
+    PCA = None  # type: ignore[assignment,misc]
     ADVANCED_FEATURES_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
         # Configure quantization if requested
         if quantize:
             try:
-                import bitsandbytes as bnb
+                import bitsandbytes  # type: ignore[import-not-found]  # noqa: F401  # availability check
 
                 quantization_config = {
                     "load_in_4bit": quantize == "4bit",
@@ -259,15 +259,16 @@ class TransformersEmbeddingModel(EmbeddingModel):
             return [prefix + text for text in texts]
         return texts
 
-    def _apply_late_chunking(self, texts: List[str]) -> List[str]:
+    def _apply_late_chunking(self, texts: List[str], max_chunk_size: int = 8192) -> List[str]:
         """Apply semantic late chunking with intelligent text segmentation.
-        
+
         Uses sentence-transformers for semantic boundary detection and creates
         chunks that respect both semantic coherence and token limits.
-        
+
         Args:
             texts: List of texts to chunk.
-            
+            max_chunk_size: Maximum tokens per chunk (uses provider default when not set).
+
         Returns:
             List of semantically chunked texts.
         """
@@ -332,10 +333,11 @@ class TransformersEmbeddingModel(EmbeddingModel):
 
         try:
             # Get embeddings for sentences to find semantic boundaries
-            sentence_embeddings = self._chunker.encode(sentences)
-            
+            assert self._chunker is not None
+            self._chunker.encode(sentences)
+
             chunks = []
-            current_chunk = []
+            current_chunk: List[str] = []
             current_tokens = 0
             
             for i, sentence in enumerate(sentences):
@@ -372,7 +374,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
     def _create_simple_chunks(self, sentences: List[str]) -> List[str]:
         """Create chunks using simple token counting."""
         chunks = []
-        current_chunk = []
+        current_chunk: List[str] = []
         current_tokens = 0
         
         for sentence in sentences:
@@ -426,10 +428,10 @@ class TransformersEmbeddingModel(EmbeddingModel):
             # Initialize PCA if not already done
             if self._pca_model is None or self._pca_model.n_components != target_dim:
                 self._pca_model = PCA(n_components=target_dim)
-                self._pca_model.fit(embeddings)
+                self._pca_model.fit(embeddings)  # type: ignore[attr-defined]
                 logger.debug(f"Initialized PCA for dimension reduction to {target_dim}")
 
-            reduced = self._pca_model.transform(embeddings)
+            reduced = self._pca_model.transform(embeddings)  # type: ignore[attr-defined]
             logger.debug(f"Reduced dimensions from {embeddings.shape[-1]} to {target_dim}")
             return reduced
 
@@ -461,7 +463,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
         Returns:
             Pooled embeddings tensor
         """
-        token_embeddings = model_output.last_hidden_state
+        token_embeddings = model_output.last_hidden_state  # type: ignore[attr-defined]
 
         if self.pooling_config.strategy == "cls":
             return token_embeddings[:, 0]
@@ -526,13 +528,13 @@ class TransformersEmbeddingModel(EmbeddingModel):
                 )
 
             # Convert to numpy for post-processing
-            embeddings = embeddings.cpu().numpy()
-            
+            embeddings_np = embeddings.cpu().numpy()
+
             # Apply dimension control if configured
-            embeddings = self._apply_dimension_control(embeddings)
-            
+            embeddings_np = self._apply_dimension_control(embeddings_np)
+
             # Convert to list of floats
-            results.extend([embedding.tolist() for embedding in embeddings])
+            results.extend([embedding.tolist() for embedding in embeddings_np])
 
         # Handle aggregation if late chunking was applied
         if self.late_chunking and len(processed_texts) != len(texts):
@@ -589,8 +591,7 @@ class TransformersEmbeddingModel(EmbeddingModel):
         
         for original_text in original_texts:
             # Find chunks that belong to this original text
-            text_chunks = []
-            original_length = len(original_text)
+            len(original_text)
             
             # Estimate how many chunks this text produced
             # This is a simplification - in practice we'd track this explicitly

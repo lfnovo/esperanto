@@ -3,25 +3,22 @@
 
 import hashlib
 import os
-from unittest.mock import MagicMock, patch, Mock
-import pytest
-import httpx
+from unittest.mock import MagicMock, patch
 
+import httpx
+import pytest
+
+from esperanto import AIFactory
 from esperanto.common_types import Model
 from esperanto.model_discovery import (
+    PROVIDER_MODELS_REGISTRY,
     _create_cache_key,
-    get_openai_models,
-    get_openai_compatible_models,
+    _model_cache,
     get_anthropic_models,
     get_google_models,
-    get_mistral_models,
-    get_groq_models,
-    get_jina_models,
-    get_voyage_models,
-    PROVIDER_MODELS_REGISTRY,
-    _model_cache,
+    get_openai_compatible_models,
+    get_openai_models,
 )
-from esperanto import AIFactory
 
 
 class TestCacheKeyCreation:

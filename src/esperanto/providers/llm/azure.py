@@ -96,7 +96,7 @@ class AzureLanguageModel(LanguageModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Azure API requests."""
         return {
-            "api-key": self.api_key,  # Azure uses api-key, not Bearer
+            "api-key": self.api_key or "",  # Azure uses api-key, not Bearer
             "Content-Type": "application/json",
         }
 
@@ -520,7 +520,7 @@ class AzureLanguageModel(LanguageModel):
                 "Please install with `pip install langchain_openai`"
             ) from e
 
-        model_kwargs = {}
+        model_kwargs: Dict[str, Any] = {}
         if self.structured is not None:
             # Handle different structured formats
             if isinstance(self.structured, dict):

@@ -11,6 +11,7 @@ from typing import (
     List,
     Optional,
     Union,
+    cast,
 )
 
 import httpx
@@ -109,7 +110,11 @@ class MistralLanguageModel(LanguageModel):
                 {"id": "mistral-large-latest", "context_window": 32000, "owned_by": "mistralai"},
             ]
             return [
-                Model(id=m["id"], owned_by=m["owned_by"], context_window=m["context_window"])
+                Model(
+                    id=str(m["id"]),
+                    owned_by=str(m["owned_by"]),
+                    context_window=cast(Optional[int], m["context_window"]),
+                )
                 for m in known_models
             ]
 
@@ -430,10 +435,6 @@ class MistralLanguageModel(LanguageModel):
 
         return result
 
-    def _get_default_model(self) -> str:
-        """Get the default model name."""
-        return "mistral-large-latest"
-
     @property
     def provider(self) -> str:
         """Get the provider name."""
@@ -461,4 +462,4 @@ class MistralLanguageModel(LanguageModel):
 
         lc_kwargs = {k: v for k, v in lc_kwargs.items() if v is not None}
         
-        return ChatMistralAI(**lc_kwargs)
+        return ChatMistralAI(**lc_kwargs)  # type: ignore[arg-type]

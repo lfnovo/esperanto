@@ -1,8 +1,11 @@
 """Tests for the OpenAI-compatible Embedding provider."""
-import pytest
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
-from esperanto.providers.embedding.openai_compatible import OpenAICompatibleEmbeddingModel
+import pytest
+
+from esperanto.providers.embedding.openai_compatible import (
+    OpenAICompatibleEmbeddingModel,
+)
 
 
 @pytest.fixture
@@ -293,7 +296,7 @@ def test_error_handling():
 def test_embed_with_additional_kwargs(embedding_model):
     """Test embedding generation with additional parameters."""
     texts = ["Hello world"]
-    embeddings = embedding_model.embed(texts, user="test-user", encoding_format="float")
+    embedding_model.embed(texts, user="test-user", encoding_format="float")
 
     # Check that additional kwargs are passed through
     call_args = embedding_model.client.post.call_args

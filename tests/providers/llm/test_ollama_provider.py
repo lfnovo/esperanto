@@ -6,8 +6,10 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from esperanto.common_types import (
-    ChatCompletion, ChatCompletionChunk,
-    Tool, ToolFunction, ToolCall, ToolCallValidationError
+    ChatCompletion,
+    Tool,
+    ToolCall,
+    ToolFunction,
 )
 from esperanto.providers.llm.ollama import OllamaLanguageModel
 
@@ -90,6 +92,7 @@ def test_ollama_initialization_with_env_var():
 def test_ollama_chat_complete():
     """Test chat completion with httpx mocking."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.ollama import OllamaLanguageModel
     
     # Create fresh model instance
@@ -134,6 +137,7 @@ def test_ollama_chat_complete():
 def test_ollama_chat_complete_streaming():
     """Test streaming chat completion with httpx mocking."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.ollama import OllamaLanguageModel
     
     # Create fresh model instance
@@ -168,7 +172,8 @@ def test_ollama_chat_complete_streaming():
 @pytest.mark.asyncio
 async def test_ollama_achat_complete():
     """Test async chat completion with httpx mocking."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import AsyncMock, Mock
+
     from esperanto.providers.llm.ollama import OllamaLanguageModel
     
     # Create fresh model instance
@@ -207,7 +212,8 @@ async def test_ollama_achat_complete():
 @pytest.mark.asyncio
 async def test_ollama_achat_complete_streaming():
     """Test async streaming chat completion with httpx mocking."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import AsyncMock, Mock
+
     from esperanto.providers.llm.ollama import OllamaLanguageModel
     
     # Create fresh model instance
@@ -279,6 +285,7 @@ def test_ollama_to_langchain_without_structured():
 def test_ollama_chat_complete_with_system_message():
     """Test chat completion with system message using httpx mocking."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.ollama import OllamaLanguageModel
     
     # Create fresh model instance

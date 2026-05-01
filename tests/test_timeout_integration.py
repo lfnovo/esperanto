@@ -3,11 +3,12 @@
 
 import os
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 from esperanto import AIFactory
-from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.reranker.base import RerankerModel
 from esperanto.providers.stt.base import SpeechToTextModel
 from esperanto.providers.tts.base import TextToSpeechModel
@@ -18,7 +19,7 @@ class TestAIFactoryTimeoutIntegration:
 
     def test_language_model_timeout_config(self):
         """Test that timeout config is passed through to language models."""
-        with patch("esperanto.providers.llm.openai.OpenAILanguageModel.__post_init__") as mock_init:
+        with patch("esperanto.providers.llm.openai.OpenAILanguageModel.__post_init__"):
             # Mock the provider to avoid API key requirements
             mock_instance = MagicMock()
             mock_instance._get_timeout.return_value = 120.0
@@ -27,7 +28,7 @@ class TestAIFactoryTimeoutIntegration:
                 mock_class.return_value = mock_instance
 
                 # Create model with timeout config
-                model = AIFactory.create_language(
+                AIFactory.create_language(
                     "openai",
                     "gpt-3.5-turbo",
                     config={"timeout": 120.0}
@@ -41,14 +42,14 @@ class TestAIFactoryTimeoutIntegration:
 
     def test_embedding_model_timeout_config(self):
         """Test that timeout config is passed through to embedding models."""
-        with patch("esperanto.providers.embedding.openai.OpenAIEmbeddingModel.__post_init__") as mock_init:
+        with patch("esperanto.providers.embedding.openai.OpenAIEmbeddingModel.__post_init__"):
             mock_instance = MagicMock()
             mock_instance._get_timeout.return_value = 90.0
 
             with patch("esperanto.providers.embedding.openai.OpenAIEmbeddingModel") as mock_class:
                 mock_class.return_value = mock_instance
 
-                model = AIFactory.create_embedding(
+                AIFactory.create_embedding(
                     "openai",
                     "text-embedding-3-small",
                     config={"timeout": 90.0}
@@ -61,14 +62,14 @@ class TestAIFactoryTimeoutIntegration:
 
     def test_stt_model_timeout_config(self):
         """Test that timeout config is passed through to STT models."""
-        with patch("esperanto.providers.stt.openai.OpenAISpeechToTextModel.__post_init__") as mock_init:
+        with patch("esperanto.providers.stt.openai.OpenAISpeechToTextModel.__post_init__"):
             mock_instance = MagicMock()
             mock_instance._get_timeout.return_value = 600.0
 
             with patch("esperanto.providers.stt.openai.OpenAISpeechToTextModel") as mock_class:
                 mock_class.return_value = mock_instance
 
-                model = AIFactory.create_speech_to_text(
+                AIFactory.create_speech_to_text(
                     "openai",
                     config={"timeout": 600.0}
                 )
@@ -81,7 +82,7 @@ class TestAIFactoryTimeoutIntegration:
 
     def test_tts_model_timeout_config(self):
         """Test that timeout config is passed through to TTS models."""
-        with patch("esperanto.providers.tts.elevenlabs.ElevenLabsTextToSpeechModel.__post_init__") as mock_init:
+        with patch("esperanto.providers.tts.elevenlabs.ElevenLabsTextToSpeechModel.__post_init__"):
             mock_instance = MagicMock()
             mock_instance._get_timeout.return_value = 300.0
 
@@ -89,7 +90,7 @@ class TestAIFactoryTimeoutIntegration:
                 mock_class.return_value = mock_instance
 
                 try:
-                    model = AIFactory.create_text_to_speech(
+                    AIFactory.create_text_to_speech(
                         "elevenlabs",
                         timeout=300.0
                     )
@@ -107,7 +108,7 @@ class TestAIFactoryTimeoutIntegration:
 
     def test_reranker_model_timeout_config(self):
         """Test that timeout config is passed through to reranker models."""
-        with patch("esperanto.providers.reranker.voyage.VoyageRerankerModel.__post_init__") as mock_init:
+        with patch("esperanto.providers.reranker.voyage.VoyageRerankerModel.__post_init__"):
             mock_instance = MagicMock()
             mock_instance._get_timeout.return_value = 75.0
 
@@ -115,7 +116,7 @@ class TestAIFactoryTimeoutIntegration:
                 mock_class.return_value = mock_instance
 
                 try:
-                    model = AIFactory.create_reranker(
+                    AIFactory.create_reranker(
                         "voyage",
                         "rerank-2",
                         config={"timeout": 75.0}
@@ -404,7 +405,7 @@ class TestRealProviderTimeoutIntegration:
 
             # Mock environment variable for API key
             with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-                model = OpenAILanguageModel(
+                OpenAILanguageModel(
                     model_name="gpt-3.5-turbo",
                     config={"timeout": 150.0}
                 )
@@ -424,7 +425,7 @@ class TestRealProviderTimeoutIntegration:
             from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
 
             with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-                model = OpenAIEmbeddingModel(
+                OpenAIEmbeddingModel(
                     model_name="text-embedding-3-small",
                     config={"timeout": 180.0}
                 )
@@ -443,7 +444,7 @@ class TestRealProviderTimeoutIntegration:
             from esperanto.providers.stt.openai import OpenAISpeechToTextModel
 
             with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-                model = OpenAISpeechToTextModel(
+                OpenAISpeechToTextModel(
                     model_name="whisper-1",
                     timeout=450.0  # STT uses direct parameter
                 )

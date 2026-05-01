@@ -254,19 +254,27 @@ If you are an automated coding agent (harny, Claude Code in headless mode, etc.)
 The single command to confirm a change is acceptable:
 
 ```bash
-uv sync --all-extras && uv run pytest tests/providers tests/unit -q --no-cov
+uv sync --all-extras && uv run pytest tests/providers tests/unit tests/common_types -q --no-cov
 ```
 
-This runs ~830 tests (mocked, no real API calls) in roughly 75 seconds. Pass = exit 0.
+This runs ~895 tests (mocked, no real API calls) in roughly 70 seconds. Pass = exit 0. The same scope is gated in CI via `.github/workflows/test.yml`.
 
-### Do NOT use as gates
+For a stricter local check that mirrors CI, also run:
 
-The following tools have **pre-existing technical debt** on `main`. Running them as part of your validator will produce hundreds of failures unrelated to your change, and trying to fix them will derail the task:
+```bash
+uv run ruff check .
+uv run mypy src/esperanto
+```
 
-- `uv run mypy src/esperanto` — main has ~273 type errors at the time of writing.
-- `ruff check .` — main has ~200+ lint errors at the time of writing.
+Both are clean on `main` and gated on every PR by `.github/workflows/lint.yml`. If you introduce a new ruff or mypy error, fix it before opening the PR.
 
-If you introduced *new* type or lint regressions, that's worth fixing — but do not gate on the existing debt. Run them out-of-band only, and only act on the delta you introduced.
+### Known-broken tests (out of validator scope)
+
+A few top-level test files have pre-existing failures unrelated to typical changes:
+
+- `tests/test_deprecation_warnings.py` — several tests construct the warning context but never trigger the deprecated property inside it, so the assertions always fail.
+
+These files are intentionally excluded from the validator command. Don't attempt to fix them as a side-effect of unrelated work.
 
 ### Integration tests
 

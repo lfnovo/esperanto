@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from esperanto.common_types import (
-    FunctionCall,
     Tool,
     ToolCall,
     ToolFunction,
@@ -159,7 +158,7 @@ def mock_httpx_clients(mock_google_chat_response, mock_google_models_response, m
 
     def mock_post_side_effect(url, **kwargs):
         if "generateContent" in url:
-            json_payload = kwargs.get("json", {})
+            kwargs.get("json", {})
             if "streamGenerateContent" in url:
                 return make_response(200, stream_lines=mock_google_chat_stream_chunks)
             else:
@@ -173,7 +172,7 @@ def mock_httpx_clients(mock_google_chat_response, mock_google_models_response, m
 
     async def mock_async_post_side_effect(url, **kwargs):
         if "generateContent" in url:
-            json_payload = kwargs.get("json", {})
+            kwargs.get("json", {})
             if "streamGenerateContent" in url:
                 return make_async_response(200, stream_lines=mock_google_chat_stream_chunks)
             else:

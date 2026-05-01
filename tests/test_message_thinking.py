@@ -1,6 +1,5 @@
 """Tests for Message.thinking and Message.cleaned_content properties."""
 
-import pytest
 
 from esperanto.common_types import Message
 

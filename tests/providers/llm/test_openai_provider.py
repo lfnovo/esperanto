@@ -1,10 +1,16 @@
 """Tests for the OpenAI LLM provider."""
 import os
 from unittest.mock import AsyncMock, Mock, patch
-import json
 
 import pytest
 
+from esperanto.common_types import (
+    FunctionCall,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
+)
 from esperanto.providers.llm.openai import OpenAILanguageModel
 
 
@@ -218,7 +224,7 @@ def test_chat_complete(openai_model):
     json_payload = call_args[1]["json"]
     assert json_payload["model"] == "gpt-4"
     assert json_payload["messages"] == messages
-    assert json_payload["stream"] == False
+    assert json_payload["stream"] is False
     assert json_payload["temperature"] == 1.0
 
     # Verify response structure
@@ -265,7 +271,7 @@ async def test_achat_complete(openai_model):
     json_payload = call_args[1]["json"]
     assert json_payload["model"] == "gpt-4"
     assert json_payload["messages"] == messages
-    assert json_payload["stream"] == False
+    assert json_payload["stream"] is False
     assert json_payload["temperature"] == 1.0
 
     # Verify response structure
@@ -298,7 +304,7 @@ def test_chat_complete_streaming(openai_model):
     openai_model.client.post.assert_called_once()
     call_args = openai_model.client.post.call_args
     json_payload = call_args[1]["json"]
-    assert json_payload["stream"] == True
+    assert json_payload["stream"] is True
 
     # Verify we got chunks
     assert len(chunks) == 3  # 3 chunks before [DONE]
@@ -325,7 +331,7 @@ async def test_achat_complete_streaming(openai_model):
     openai_model.async_client.post.assert_called_once()
     call_args = openai_model.async_client.post.call_args
     json_payload = call_args[1]["json"]
-    assert json_payload["stream"] == True
+    assert json_payload["stream"] is True
 
     # Verify we got chunks
     assert len(chunks) == 3  # 3 chunks before [DONE]
@@ -343,7 +349,7 @@ def test_json_structured_output(openai_model):
     openai_model.structured = {"type": "json_object"}
     messages = [{"role": "user", "content": "Hello!"}]
 
-    response = openai_model.chat_complete(messages)
+    openai_model.chat_complete(messages)
 
     call_args = openai_model.client.post.call_args
     json_payload = call_args[1]["json"]
@@ -355,7 +361,7 @@ async def test_json_structured_output_async(openai_model):
     openai_model.structured = {"type": "json_object"}
     messages = [{"role": "user", "content": "Hello!"}]
 
-    response = await openai_model.achat_complete(messages)
+    await openai_model.achat_complete(messages)
 
     call_args = openai_model.async_client.post.call_args
     json_payload = call_args[1]["json"]
@@ -372,7 +378,7 @@ def test_o1_model_transformations(openai_model):
     ]
 
     # Test synchronous completion
-    response = openai_model.chat_complete(messages)
+    openai_model.chat_complete(messages)
     call_args = openai_model.client.post.call_args
     json_payload = call_args[1]["json"]
 
@@ -446,14 +452,6 @@ def test_to_langchain_with_organization(openai_model):
 # =============================================================================
 # Tool Calling Tests
 # =============================================================================
-
-from esperanto.common_types import (
-    Tool,
-    ToolFunction,
-    ToolCall,
-    FunctionCall,
-    ToolCallValidationError,
-)
 
 
 @pytest.fixture

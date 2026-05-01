@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`TranscriptionResponse.provider`** — STT responses now expose the originating provider name as an optional field, matching the existing `AudioResponse.provider` field. All STT providers (`openai`, `elevenlabs`, `azure`) already passed this kwarg, but Pydantic was silently dropping it. Existing callers continue to work unchanged. (#126)
+
+### Changed
+
+- **Lint and type-check the codebase clean.** Ruff (`ruff check .`) and mypy (`mypy src/esperanto`) now report zero errors. Most fixes are type-only and do not change runtime behavior. Notable structural changes:
+  - `HttpConnectionMixin` now declares `client: httpx.Client` and `async_client: httpx.AsyncClient` as non-Optional. The `Optional[Client] = None` dataclass fields previously redeclared on every provider base class have been removed; clients are still assigned by `_create_http_clients()` during `__post_init__`, so the runtime contract is unchanged.
+  - Removed a duplicate `_get_default_model` definition in the Mistral provider (returned the same value as the original).
+- **CI: lint/type-check job.** Pull requests now run `ruff check` and `mypy` via a new `.github/workflows/lint.yml` workflow.
+- **`types-jsonschema`** added to dev dependencies so `jsonschema` is properly type-checked.
+- **Ruff exclusions:** `notebooks/`, `.harny/`, and `examples/` are now excluded from lint runs (the first two are gitignored scratch directories; `examples/` contains illustrative scripts).
+
 ## [2.20.1] - 2026-04-13
 
 ### Fixed

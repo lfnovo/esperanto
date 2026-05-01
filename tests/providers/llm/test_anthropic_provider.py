@@ -1,11 +1,16 @@
-import io
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from esperanto.common_types import (
+    FunctionCall,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
+)
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
-from esperanto.utils.logging import logger
 
 
 def test_provider_name(anthropic_model):
@@ -129,7 +134,7 @@ def test_to_langchain(anthropic_model):
 
 def test_to_langchain_with_base_url(anthropic_model):
     anthropic_model.base_url = "https://custom.anthropic.com"
-    langchain_model = anthropic_model.to_langchain()
+    anthropic_model.to_langchain()
     # Check that base URL configuration is preserved
     assert anthropic_model.base_url == "https://custom.anthropic.com"
 
@@ -159,6 +164,7 @@ def mock_stream_events():
 def test_chat_complete_streaming():
     """Test streaming chat completion."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.anthropic import AnthropicLanguageModel
     
     # Create fresh model instance without fixtures
@@ -198,6 +204,7 @@ def test_chat_complete_streaming():
 async def test_achat_complete_streaming():
     """Test async streaming chat completion."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 
     # Create fresh model instance without fixtures
@@ -401,14 +408,6 @@ def test_top_p_used_when_temperature_not_set():
 # =============================================================================
 # Tool Calling Tests
 # =============================================================================
-
-from esperanto.common_types import (
-    Tool,
-    ToolFunction,
-    ToolCall,
-    FunctionCall,
-    ToolCallValidationError,
-)
 
 
 @pytest.fixture

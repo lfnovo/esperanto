@@ -4,8 +4,8 @@ from abc import ABC
 
 import httpx
 
-from .timeout import TimeoutMixin
 from .ssl import SSLMixin
+from .timeout import TimeoutMixin
 
 
 class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
@@ -23,6 +23,11 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
     - Provider-specific __post_init__() that calls super().__post_init__()
     """
 
+    # Type annotations only; the actual instances are assigned by
+    # _create_http_clients() during each provider's __post_init__.
+    client: httpx.Client
+    async_client: httpx.AsyncClient
+
     def _create_http_clients(self) -> None:
         """Create HTTP clients with configured timeout and SSL settings.
 
@@ -33,8 +38,9 @@ class HttpConnectionMixin(TimeoutMixin, SSLMixin, ABC):
         API keys and base URLs.
         """
         # Strip trailing slashes from base_url to avoid double-slash in URL paths
-        if hasattr(self, "base_url") and self.base_url:
-            self.base_url = self.base_url.rstrip("/")
+        base_url = getattr(self, "base_url", None)
+        if base_url:
+            self.base_url = base_url.rstrip("/")
 
         timeout = self._get_timeout()
         verify = self._get_ssl_verify()

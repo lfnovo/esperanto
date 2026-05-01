@@ -1,16 +1,17 @@
 """Tests for the Perplexity AI language model provider."""
 
 import os
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from langchain_openai import ChatOpenAI
 
-from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 from esperanto.common_types import (
-    ChatCompletion, Choice, Message, Usage,
-    Tool, ToolFunction, ToolCall, ToolCallValidationError
+    Tool,
+    ToolCall,
+    ToolFunction,
 )
+from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 
 
 @pytest.fixture

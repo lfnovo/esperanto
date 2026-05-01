@@ -1,7 +1,7 @@
 """Tests for the OpenAI-compatible TTS provider."""
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock
 
 from esperanto.providers.tts.openai_compatible import OpenAICompatibleTextToSpeechModel
 
@@ -402,7 +402,7 @@ def test_error_handling():
 
 def test_generate_speech_with_default_voice(tts_model):
     """Test speech generation with default voice."""
-    response = tts_model.generate_speech(text="Hello world")
+    tts_model.generate_speech(text="Hello world")
 
     # Check that default voice was used
     call_args = tts_model.client.post.call_args
@@ -412,7 +412,7 @@ def test_generate_speech_with_default_voice(tts_model):
 
 def test_generate_speech_with_additional_kwargs(tts_model):
     """Test speech generation with additional parameters."""
-    response = tts_model.generate_speech(
+    tts_model.generate_speech(
         text="Hello world",
         voice="test-voice",
         speed=1.2,

@@ -93,8 +93,8 @@ class VertexLanguageModel(LanguageModel):
                 from google.oauth2 import service_account
             except ImportError:
                 raise ImportError(
-                    f"credentials_file requires the google-auth package. "
-                    f"Install with: uv add google-auth or pip install google-auth"
+                    "credentials_file requires the google-auth package. "
+                    "Install with: uv add google-auth or pip install google-auth"
                 )
 
             scopes = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -473,7 +473,7 @@ class VertexLanguageModel(LanguageModel):
                     delta=DeltaMessage(
                         role="assistant",
                         content=text_content,
-                        tool_calls=tool_calls_data if tool_calls_data else None,
+                        tool_calls=tool_calls_data if tool_calls_data else None,  # type: ignore[arg-type]  # TODO: schema mismatch — list[dict] vs list[ToolCall]
                     ),
                     finish_reason=finish_reason,
                 )

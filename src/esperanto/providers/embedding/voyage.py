@@ -1,7 +1,7 @@
 """Voyage AI embedding model provider."""
 
 import os
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import httpx
 

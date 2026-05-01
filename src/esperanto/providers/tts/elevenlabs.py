@@ -1,7 +1,7 @@
 """ElevenLabs Text-to-Speech provider implementation."""
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 
@@ -69,7 +69,7 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for ElevenLabs API requests."""
         return {
-            "xi-api-key": self.api_key,
+            "xi-api-key": self.api_key or "",
             "Content-Type": "application/json",
         }
 
@@ -83,7 +83,7 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"ElevenLabs API error: {error_message}")
 
-    def generate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None) -> AudioResponse:
+    def generate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None, **kwargs: Any) -> AudioResponse:
         """Generate speech synchronously."""
         # Prepare request payload
         payload = {
@@ -117,7 +117,7 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
 
         return response_audio
 
-    async def agenerate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None) -> AudioResponse:
+    async def agenerate_speech(self, text: str, voice: str, output_file: Optional[Union[str, Path]] = None, **kwargs: Any) -> AudioResponse:
         """Generate speech asynchronously."""
         # Prepare request payload
         payload = {

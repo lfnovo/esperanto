@@ -35,7 +35,6 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
-from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
     from langchain_anthropic import ChatAnthropic
@@ -64,7 +63,7 @@ class AnthropicLanguageModel(LanguageModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Anthropic API requests."""
         return {
-            "x-api-key": self.api_key,
+            "x-api-key": self.api_key or "",
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
@@ -409,7 +408,7 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],
+                                tool_calls=[tool_call_dict],  # type: ignore[list-item]  # TODO: schema mismatch — providers build dicts but DeltaMessage expects list[ToolCall]
                             ),
                             finish_reason=None,
                         )
@@ -468,7 +467,7 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],
+                                tool_calls=[tool_call_dict],  # type: ignore[list-item]  # TODO: schema mismatch — providers build dicts but DeltaMessage expects list[ToolCall]
                             ),
                             finish_reason=None,
                         )
@@ -798,4 +797,4 @@ class AnthropicLanguageModel(LanguageModel):
         elif self.top_p is not None:
             kwargs["top_p"] = self.top_p
 
-        return ChatAnthropic(**kwargs)
+        return ChatAnthropic(**kwargs)  # type: ignore[arg-type]

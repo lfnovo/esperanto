@@ -5,8 +5,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
-from httpx import AsyncClient, Client
-
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.utils.connect import HttpConnectionMixin
 
@@ -30,8 +28,6 @@ class LanguageModel(HttpConnectionMixin, ABC):
     tool_choice: Optional[Union[str, Dict[str, Any]]] = None
     parallel_tool_calls: Optional[bool] = None
     _config: Dict[str, Any] = field(default_factory=dict)
-    client: Optional[Client] = None
-    async_client: Optional[AsyncClient] = None
 
     @property
     def models(self) -> List[Model]:

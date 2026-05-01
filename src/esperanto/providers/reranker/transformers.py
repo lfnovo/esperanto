@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from esperanto.common_types import Model
 from esperanto.common_types.reranker import RerankResponse, RerankResult
+
 from .base import RerankerModel
 
 if TYPE_CHECKING:
@@ -26,26 +27,26 @@ try:
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    torch = None
-    AutoTokenizer = None
-    AutoModelForCausalLM = None
-    AutoModelForSequenceClassification = None
-    AutoConfig = None
+    torch = None  # type: ignore[assignment]
+    AutoTokenizer = None  # type: ignore[assignment,misc]
+    AutoModelForCausalLM = None  # type: ignore[assignment,misc]
+    AutoModelForSequenceClassification = None  # type: ignore[assignment,misc]
+    AutoConfig = None  # type: ignore[assignment,misc]
 
 # Optional sentence_transformers import (part of transformers dependency)
 try:
     from sentence_transformers import CrossEncoder
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
-    CrossEncoder = None
+    CrossEncoder = None  # type: ignore[assignment,misc]
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 # Optional mxbai-rerank import
 try:
-    from mxbai_rerank import MxbaiRerankV2
+    from mxbai_rerank import MxbaiRerankV2  # type: ignore[import-not-found]
     MXBAI_AVAILABLE = True
 except ImportError:
-    MxbaiRerankV2 = None
+    MxbaiRerankV2 = None  # type: ignore[assignment,misc]
     MXBAI_AVAILABLE = False
 
 
@@ -506,8 +507,8 @@ class TransformersRerankerModel(RerankerModel):
     def to_langchain(self):
         """Convert to LangChain-compatible reranker."""
         try:
-            from langchain_core.documents import Document
             from langchain_core.callbacks.manager import Callbacks
+            from langchain_core.documents import Document
         except ImportError:
             raise ImportError(
                 "LangChain not installed. Install with: pip install langchain"

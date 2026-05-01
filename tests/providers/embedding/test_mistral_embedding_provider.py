@@ -1,9 +1,9 @@
-import os
-import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-import httpx
+
 from esperanto.providers.embedding.mistral import MistralEmbeddingModel
+
 
 @pytest.fixture
 def mock_httpx_response():

@@ -220,7 +220,7 @@ class OllamaLanguageModel(LanguageModel):
                 except json.JSONDecodeError:
                     continue
 
-    async def _parse_stream_async(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
+    async def _parse_stream_async(self, response: httpx.Response) -> AsyncGenerator[Dict[str, Any], None]:
         """Parse streaming response from Ollama asynchronously."""
         async for line in response.aiter_lines():
             if line.strip():
@@ -286,7 +286,7 @@ class OllamaLanguageModel(LanguageModel):
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
-        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        self._resolve_tool_choice(tool_choice)
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
@@ -374,7 +374,7 @@ class OllamaLanguageModel(LanguageModel):
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
-        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        self._resolve_tool_choice(tool_choice)
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
@@ -459,7 +459,7 @@ class OllamaLanguageModel(LanguageModel):
             choices=[
                 Choice(
                     index=0,
-                    message=Message(
+                    message=Message(  # type: ignore[call-arg]  # `thinking` consumed by model_validator (response.py)
                         role=message.get("role", "assistant"),
                         content=message.get("content") or "",
                         thinking=message.get("thinking"),
@@ -514,11 +514,11 @@ class OllamaLanguageModel(LanguageModel):
             choices=[
                 StreamChoice(
                     index=0,
-                    delta=DeltaMessage(
+                    delta=DeltaMessage(  # type: ignore[call-arg]  # `thinking` consumed by model_validator (response.py)
                         role=message.get("role", "assistant"),
                         content=message.get("content") or "",
                         thinking=message.get("thinking"),
-                        tool_calls=tool_calls_data,
+                        tool_calls=tool_calls_data,  # type: ignore[arg-type]  # TODO: schema mismatch — list[dict] vs list[ToolCall]
                     ),
                     finish_reason=finish_reason,
                 )
