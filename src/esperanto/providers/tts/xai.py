@@ -3,11 +3,12 @@
 import asyncio
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import httpx
 
 from .base import AudioResponse, Model, TextToSpeechModel, Voice
+
 
 class XAITextToSpeechModel(TextToSpeechModel):
     """xAI Text-to-Speech implementation using direct HTTP.
@@ -27,6 +28,10 @@ class XAITextToSpeechModel(TextToSpeechModel):
         "mulaw": "audio/basic",
         "alaw": "audio/alaw",
     }
+    # Known fields that belong inside the request's `output_format` object.
+    # Any other kwargs are forwarded to the top level of the request payload
+    # so future xAI top-level params don't get misrouted.
+    OUTPUT_FORMAT_FIELDS = {"codec", "sample_rate", "bitrate", "channels"}
 
     def __init__(
         self,
@@ -82,6 +87,7 @@ class XAITextToSpeechModel(TextToSpeechModel):
     def build_url(self, path: str) -> str:
         """Build full URL for API endpoint."""
         # Remove trailing slash and /v1 suffix to avoid duplication (e.g. .../v1/v1/tts)
+        assert self.base_url is not None  # guaranteed by __init__ validation
         base = self.base_url.rstrip('/')
         if base.endswith('/v1'):
             base = base[:-3]
@@ -183,6 +189,14 @@ class XAITextToSpeechModel(TextToSpeechModel):
             language = kwargs.pop("language", "auto")
             url = self.build_url("v1/tts")
 
+            # Split kwargs: known output_format fields stay nested, everything
+            # else is forwarded as a top-level request param.
+            format_kwargs = {
+                k: kwargs.pop(k)
+                for k in list(kwargs)
+                if k in self.OUTPUT_FORMAT_FIELDS
+            }
+
             # Prepare request payload
             payload = {
                 "voice_id": voice,
@@ -190,11 +204,13 @@ class XAITextToSpeechModel(TextToSpeechModel):
                 "language": language,
                 "output_format": {
                     "codec": response_format,
-                    **kwargs
-                }
+                    **format_kwargs,
+                },
+                **kwargs,
             }
 
             # Generate speech
+            assert self.client is not None  # guaranteed by __init__ via _create_http_clients
             response = self.client.post(
                 url,
                 headers=self._get_headers(),
@@ -254,6 +270,14 @@ class XAITextToSpeechModel(TextToSpeechModel):
             language = kwargs.pop("language", "auto")
             url = self.build_url("v1/tts")
 
+            # Split kwargs: known output_format fields stay nested, everything
+            # else is forwarded as a top-level request param.
+            format_kwargs = {
+                k: kwargs.pop(k)
+                for k in list(kwargs)
+                if k in self.OUTPUT_FORMAT_FIELDS
+            }
+
             # Prepare request payload
             payload = {
                 "voice_id": voice,
@@ -261,11 +285,13 @@ class XAITextToSpeechModel(TextToSpeechModel):
                 "language": language,
                 "output_format": {
                     "codec": response_format,
-                    **kwargs
-                }
+                    **format_kwargs,
+                },
+                **kwargs,
             }
 
             # Generate speech
+            assert self.async_client is not None  # guaranteed by __init__ via _create_http_clients
             response = await self.async_client.post(
                 url,
                 headers=self._get_headers(),

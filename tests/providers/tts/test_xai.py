@@ -1,7 +1,7 @@
 """Tests for the xAI TTS provider."""
-import pytest
-from pathlib import Path
 from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from esperanto.providers.tts.xai import XAITextToSpeechModel
 
@@ -216,7 +216,7 @@ def test_generate_speech(tts_model):
 
 def test_generate_speech_default_voice(tts_model):
     """Test that default voice is eve."""
-    response = tts_model.generate_speech(text="Hello")
+    tts_model.generate_speech(text="Hello")
 
     call_args = tts_model.client.post.call_args
     json_payload = call_args[1]["json"]
@@ -225,7 +225,7 @@ def test_generate_speech_default_voice(tts_model):
 
 def test_generate_speech_with_language(tts_model):
     """Test speech generation with explicit language."""
-    response = tts_model.generate_speech(
+    tts_model.generate_speech(
         text="Bonjour",
         voice="eve",
         language="fr"
@@ -274,10 +274,77 @@ def test_generate_speech_with_unknown_format(tts_model):
     assert response.content_type == "audio/ogg"
 
 
+def test_generate_speech_routes_format_kwargs(tts_model):
+    """Known output_format fields are nested under output_format."""
+    tts_model.generate_speech(
+        text="Hello",
+        voice="eve",
+        sample_rate=24000,
+        bitrate=128000,
+        channels=2,
+    )
+
+    call_args = tts_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+
+    assert json_payload["output_format"] == {
+        "codec": "mp3",
+        "sample_rate": 24000,
+        "bitrate": 128000,
+        "channels": 2,
+    }
+    # None of these should leak to the top level
+    for key in ("sample_rate", "bitrate", "channels"):
+        assert key not in json_payload
+
+
+def test_generate_speech_unknown_kwargs_go_to_top_level(tts_model):
+    """Unknown kwargs are forwarded as top-level request params, not nested."""
+    tts_model.generate_speech(
+        text="Hello",
+        voice="eve",
+        seed=42,
+        custom_param="value",
+    )
+
+    call_args = tts_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+
+    # Unknown params land at the top level
+    assert json_payload["seed"] == 42
+    assert json_payload["custom_param"] == "value"
+    # And do NOT pollute output_format
+    assert "seed" not in json_payload["output_format"]
+    assert "custom_param" not in json_payload["output_format"]
+    # output_format only contains the codec by default
+    assert json_payload["output_format"] == {"codec": "mp3"}
+
+
+def test_generate_speech_mixed_kwargs_routing(tts_model):
+    """Mixed kwargs are split between output_format and top-level."""
+    tts_model.generate_speech(
+        text="Hello",
+        voice="eve",
+        response_format="wav",
+        sample_rate=48000,
+        seed=123,
+    )
+
+    call_args = tts_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+
+    assert json_payload["output_format"] == {
+        "codec": "wav",
+        "sample_rate": 48000,
+    }
+    assert json_payload["seed"] == 123
+    assert "seed" not in json_payload["output_format"]
+
+
 def test_generate_speech_saves_to_file(tts_model, tmp_path):
     """Test speech generation saves to file when output_file is specified."""
     output_file = tmp_path / "output.mp3"
-    response = tts_model.generate_speech(
+    tts_model.generate_speech(
         text="Hello",
         voice="eve",
         output_file=output_file
@@ -354,7 +421,7 @@ async def test_agenerate_speech_with_format(tts_model):
 async def test_agenerate_speech_saves_to_file(tts_model, tmp_path):
     """Test async speech generation saves to file."""
     output_file = tmp_path / "async_output.mp3"
-    response = await tts_model.agenerate_speech(
+    await tts_model.agenerate_speech(
         text="Hello",
         voice="leo",
         output_file=output_file
@@ -374,3 +441,30 @@ async def test_agenerate_speech_api_error(tts_model):
 
     with pytest.raises(RuntimeError, match="Failed to generate speech"):
         await tts_model.agenerate_speech(text="Hello", voice="eve")
+
+
+@pytest.mark.asyncio
+async def test_agenerate_speech_routes_kwargs(tts_model):
+    """Async path also routes format kwargs vs top-level kwargs correctly."""
+    await tts_model.agenerate_speech(
+        text="Hello",
+        voice="eve",
+        response_format="wav",
+        sample_rate=48000,
+        bitrate=192000,
+        seed=7,
+        custom_param="value",
+    )
+
+    call_args = tts_model.async_client.post.call_args
+    json_payload = call_args[1]["json"]
+
+    assert json_payload["output_format"] == {
+        "codec": "wav",
+        "sample_rate": 48000,
+        "bitrate": 192000,
+    }
+    assert json_payload["seed"] == 7
+    assert json_payload["custom_param"] == "value"
+    assert "seed" not in json_payload["output_format"]
+    assert "custom_param" not in json_payload["output_format"]
