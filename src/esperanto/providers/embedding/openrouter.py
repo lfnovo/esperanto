@@ -84,7 +84,7 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
         response = self.client.post(
             f"{self.base_url}/embeddings",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # Use data= instead of json=
+            data=json.dumps(payload)  # type: ignore[arg-type]  # OpenRouter expects raw JSON body, httpx stub typing prefers Mapping
         )
         self._handle_error(response)
 
@@ -116,7 +116,7 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
         response = await self.async_client.post(
             f"{self.base_url}/embeddings",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # Use data= instead of json=
+            data=json.dumps(payload)  # type: ignore[arg-type]
         )
         self._handle_error(response)
 

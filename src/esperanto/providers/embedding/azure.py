@@ -73,7 +73,7 @@ class AzureEmbeddingModel(EmbeddingModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Azure API requests."""
         return {
-            "api-key": self.api_key,  # Azure uses api-key, not Bearer
+            "api-key": self.api_key or "",  # Azure uses api-key, not Bearer
             "Content-Type": "application/json",
         }
 

@@ -86,7 +86,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         response = self.client.post(
             f"{self.base_url}/chat/completions",
             headers=headers,
-            data=json.dumps(payload)  # Use data= instead of json=
+            data=json.dumps(payload)  # type: ignore[arg-type]  # OpenRouter expects raw JSON body
         )
         self._handle_error(response)
         return response
@@ -97,7 +97,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         response = await self.async_client.post(
             f"{self.base_url}/chat/completions",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # Use data= instead of json=
+            data=json.dumps(payload)  # type: ignore[arg-type]
         )
         self._handle_error(response)
         return response

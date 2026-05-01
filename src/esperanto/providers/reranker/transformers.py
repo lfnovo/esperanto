@@ -27,26 +27,26 @@ try:
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    torch = None
-    AutoTokenizer = None
-    AutoModelForCausalLM = None
-    AutoModelForSequenceClassification = None
-    AutoConfig = None
+    torch = None  # type: ignore[assignment]
+    AutoTokenizer = None  # type: ignore[assignment,misc]
+    AutoModelForCausalLM = None  # type: ignore[assignment,misc]
+    AutoModelForSequenceClassification = None  # type: ignore[assignment,misc]
+    AutoConfig = None  # type: ignore[assignment,misc]
 
 # Optional sentence_transformers import (part of transformers dependency)
 try:
     from sentence_transformers import CrossEncoder
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
-    CrossEncoder = None
+    CrossEncoder = None  # type: ignore[assignment,misc]
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 # Optional mxbai-rerank import
 try:
-    from mxbai_rerank import MxbaiRerankV2
+    from mxbai_rerank import MxbaiRerankV2  # type: ignore[import-not-found]
     MXBAI_AVAILABLE = True
 except ImportError:
-    MxbaiRerankV2 = None
+    MxbaiRerankV2 = None  # type: ignore[assignment,misc]
     MXBAI_AVAILABLE = False
 
 

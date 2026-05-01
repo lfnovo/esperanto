@@ -123,9 +123,10 @@ class TextToSpeechModel(HttpConnectionMixin, ABC):
         Returns:
             List[Model]: List of available models
         """
+        provider_name = getattr(self, "provider", self.__class__.__name__)
         warnings.warn(
             f"The `.models` property is deprecated and will be removed in version 3.0. "
-            f"Use AIFactory.get_provider_models('{self.provider}') instead for static "
+            f"Use AIFactory.get_provider_models('{provider_name}') instead for static "
             f"model discovery without creating provider instances.",
             DeprecationWarning,
             stacklevel=2
