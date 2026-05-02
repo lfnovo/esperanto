@@ -254,7 +254,7 @@ If you are an automated coding agent (harny, Claude Code in headless mode, etc.)
 The single command to confirm a change is acceptable:
 
 ```bash
-uv sync --all-extras && uv run pytest tests/providers tests/unit tests/common_types -q --no-cov
+uv sync --all-extras && uv run pytest tests/providers tests/unit tests/common_types tests/test_deprecation_warnings.py -q --no-cov
 ```
 
 This runs ~895 tests (mocked, no real API calls) in roughly 70 seconds. Pass = exit 0. The same scope is gated in CI via `.github/workflows/test.yml`.
@@ -267,14 +267,6 @@ uv run mypy src/esperanto
 ```
 
 Both are clean on `main` and gated on every PR by `.github/workflows/lint.yml`. If you introduce a new ruff or mypy error, fix it before opening the PR.
-
-### Known-broken tests (out of validator scope)
-
-A few top-level test files have pre-existing failures unrelated to typical changes:
-
-- `tests/test_deprecation_warnings.py` — several tests construct the warning context but never trigger the deprecated property inside it, so the assertions always fail.
-
-These files are intentionally excluded from the validator command. Don't attempt to fix them as a side-effect of unrelated work.
 
 ### Integration tests
 
