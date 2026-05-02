@@ -299,6 +299,15 @@ _PROVIDER_ENV_VARS = [
 
 
 @pytest.fixture(autouse=True)
-def _clean_provider_env(monkeypatch):
+def _clean_provider_env(request, monkeypatch):
+    """Scrub provider env vars before each test to prevent local credentials
+    from leaking into provider tests (see #144 / PR #152).
+
+    EXCEPTION: tests marked with ``@pytest.mark.release`` deliberately need
+    real provider credentials in order to make actual API calls. Skip the
+    cleanup for those so the release suite (``uv run pytest -m release``)
+    can find the keys it needs."""
+    if request.node.get_closest_marker("release"):
+        return
     for var in _PROVIDER_ENV_VARS:
         monkeypatch.delenv(var, raising=False)
