@@ -51,7 +51,7 @@ class OpenAILanguageModel(LanguageModel):
             raise ValueError("OpenAI API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+        self.base_url = (self.base_url os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

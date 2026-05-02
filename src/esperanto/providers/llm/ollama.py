@@ -49,8 +49,8 @@ class OllamaLanguageModel(LanguageModel):
 
         # Set default base URL if not provided
         self.base_url = (
-            self.base_url or os.getenv("OLLAMA_BASE_URL")  or os.getenv("OLLAMA_API_BASE") or "http://localhost:11434"
-        )
+            self.base_url or os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE") or "http://localhost:11434"
+        ).rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

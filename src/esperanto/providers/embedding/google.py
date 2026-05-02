@@ -41,7 +41,7 @@ class GoogleEmbeddingModel(EmbeddingModel):
             raise ValueError("Google API key not found")
 
         # Set base URL
-        base_host = os.getenv("GEMINI_API_BASE_URL") or "https://generativelanguage.googleapis.com"
+        base_host = (os.getenv("GEMINI_API_BASE_URL") or "https://generativelanguage.googleapis.com").rstrip("/")
         self.base_url = f"{base_host}/v1beta"
 
         # Initialize HTTP clients with configurable timeout

@@ -29,7 +29,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
             raise ValueError("ElevenLabs API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.elevenlabs.io/v1"
+        self.base_url = (self.base_url or "https://api.elevenlabs.io/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

@@ -59,7 +59,7 @@ class VertexLanguageModel(LanguageModel):
             )
 
         # Set base URL for Vertex AI
-        self.base_url = f"https://{self.location}-aiplatform.googleapis.com/v1"
+        self.base_url = f"https://{self.location}-aiplatform.googleapis.com/v1".rstrip("/")
 
         # Load credentials (service account file, ADC, or None for gcloud fallback)
         self._load_credentials()

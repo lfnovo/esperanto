@@ -23,7 +23,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             raise ValueError("OpenAI API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.openai.com/v1"
+        self.base_url = (self.base_url or "https://api.openai.com/v1").rstrip("/")
 
         # Update config with model_name if provided
         if "model_name" in kwargs:
