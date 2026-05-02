@@ -656,6 +656,14 @@ class AnthropicLanguageModel(LanguageModel):
             temperature: Per-call override for temperature. If None, uses instance value.
             top_p: Per-call override for top_p. If None, uses instance value.
 
+                Note: Anthropic rejects API requests where both ``temperature``
+                and ``top_p`` are set (see issue #100). When the resolved
+                payload contains both, ``top_p`` is silently dropped (with a
+                DEBUG log) regardless of which side (instance or per-call)
+                supplied each value. To force a per-call ``top_p`` to win,
+                pass ``temperature=None`` explicitly on the call to disable
+                the instance-level temperature for that request.
+
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
             if streaming. When the model calls tools, the response message will
@@ -748,6 +756,14 @@ class AnthropicLanguageModel(LanguageModel):
             max_tokens: Per-call override for max_tokens. If None, uses instance value.
             temperature: Per-call override for temperature. If None, uses instance value.
             top_p: Per-call override for top_p. If None, uses instance value.
+
+                Note: Anthropic rejects API requests where both ``temperature``
+                and ``top_p`` are set (see issue #100). When the resolved
+                payload contains both, ``top_p`` is silently dropped (with a
+                DEBUG log) regardless of which side (instance or per-call)
+                supplied each value. To force a per-call ``top_p`` to win,
+                pass ``temperature=None`` explicitly on the call to disable
+                the instance-level temperature for that request.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
