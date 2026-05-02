@@ -116,6 +116,11 @@ try:
 except ImportError:
     MistralTextToSpeechModel = None  # type: ignore[assignment,misc]
 
+try:
+    from esperanto.providers.stt.mistral import MistralSpeechToTextModel
+except ImportError:
+    MistralSpeechToTextModel = None  # type: ignore[assignment,misc]
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
@@ -137,6 +142,7 @@ __provider_classes = {
     "VertexEmbeddingModel": VertexEmbeddingModel,
     "VertexTextToSpeechModel": VertexTextToSpeechModel,
     "MistralTextToSpeechModel": MistralTextToSpeechModel,
+    "MistralSpeechToTextModel": MistralSpeechToTextModel,
 }
 
 # Get list of available provider classes (excluding None values)
