@@ -119,23 +119,26 @@ model = AIFactory.create_language(
 
 **Context Window (`num_ctx`):**
 
-Esperanto uses a default context window of **128,000 tokens** for Ollama models, which is much larger than Ollama's built-in default of 2,048 tokens. This ensures that large documents and long conversations work out of the box.
+Esperanto uses a default context window of **8,192 tokens** for Ollama models. This default was chosen to work reliably on hardware with 8 GB VRAM — Ollama's built-in default of 2,048 tokens is too small for typical chat workloads, while a 128K default causes out-of-memory errors on common consumer GPUs. 8,192 strikes a balance that works out of the box on most hardware.
 
-You can customize this value if needed:
+Override via `config` whenever you need more (or less) context:
 
 ```python
-# Use a smaller context window for memory efficiency
+# Default — 8192 tokens, safe for 8 GB VRAM hardware
+model = AIFactory.create_language("ollama", "llama3.1")
+
+# Increase for longer conversations or documents
 model = AIFactory.create_language(
     "ollama",
     "llama3.1",
-    config={"num_ctx": 8192}
+    config={"num_ctx": 32768}
 )
 
-# Use a larger context window for very long documents
+# Use a very large context window if your hardware supports it
 model = AIFactory.create_language(
     "ollama",
     "llama3.1",
-    config={"num_ctx": 131072}  # 128K tokens
+    config={"num_ctx": 131072}  # 128K tokens — needs 24 GB+ VRAM
 )
 ```
 
@@ -489,7 +492,7 @@ Error: Out of memory
 Issue: Model gives generic answers ignoring provided context
 ```
 **Solution:**
-This usually means the context window is too small and your input is being truncated. Esperanto defaults to 128K tokens, but if you're overriding `num_ctx` with a smaller value, increase it:
+This usually means the context window is too small and your input is being truncated. Esperanto defaults to 8,192 tokens. If your conversation or document is longer, increase `num_ctx`:
 ```python
 model = AIFactory.create_language(
     "ollama",
