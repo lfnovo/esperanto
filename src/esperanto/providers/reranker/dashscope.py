@@ -3,7 +3,7 @@
 import os
 from dataclasses import dataclass
 from re import match as re_match
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 from urllib.parse import urlparse
 
 import httpx
@@ -43,6 +43,8 @@ class DashScopeRerankerModel(RerankerModel):
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
+        self.client = cast(httpx.Client, self.client)
+        self.async_client = cast(httpx.AsyncClient, self.async_client)
 
         # Model specific parameter cases
         _model_name = self.get_model_name()
@@ -170,11 +172,9 @@ class DashScopeRerankerModel(RerankerModel):
 
         if self.__vl_avail:
             is_valid_vl_input = all(
-                isinstance(item, dict) for item in documents
-            ) and all(
-                len(item) == 1 for item in documents
-            ) and all(
-                next(iter(item.keys())) in ("text", "image", "video")
+                isinstance(item, dict)
+                and len(item) == 1
+                and next(iter(item.keys())) in ("text", "image", "video")
                 for item in documents
             )
 
@@ -195,6 +195,7 @@ class DashScopeRerankerModel(RerankerModel):
                 )
 
         if self.__vl_avail:
+            documents = cast(List[Dict[str, str]], documents)
             # Check image encode format
             for _item in documents:
                 if "image" not in _item:
@@ -257,7 +258,7 @@ class DashScopeRerankerModel(RerankerModel):
         Returns:
             Request payload dict.
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.get_model_name(),
         }
 
@@ -266,7 +267,7 @@ class DashScopeRerankerModel(RerankerModel):
             "documents": documents,  # NOTE: Documents format should be checked before.
         }
 
-        param_body = {
+        param_body: Dict[str, Any] = {
             "top_n": top_k  # DashScope uses top_n instead of top_k
         }
 
@@ -499,13 +500,17 @@ class DashScopeRerankerModel(RerankerModel):
                 Returns:
                     List of Document object sorted by ranking result.
                 """
-                texts = [doc.page_content for doc in documents]
+                texts = [
+                    doc.page_content for doc in documents
+                ]
 
                 if self.reranker.is_vl_model:
-                    texts = [{"text": content} for content in texts]
+                    vl_texts = [{"text": content} for content in texts]
 
                 # Rerank using DashScope
-                rerank_response = self.reranker.rerank(query, texts)
+                rerank_response = self.reranker.rerank(
+                    query, vl_texts if self.reranker.is_vl_model else texts
+                )
 
                 # Convert back to LangChain documents
                 reranked_docs = []
