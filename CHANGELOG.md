@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Test-infrastructure cleanup** — mocked integration tests removed from `tests/integration/` (moved to per-provider test files under `tests/providers/`). A `release` pytest marker introduced: real-API tests are now tagged `@pytest.mark.release`, excluded from the default `uv run pytest` run, and invoked explicitly with `uv run pytest -m release` before each release. Unique `to_langchain()` coverage previously in `tests/integration/` moved to the corresponding per-provider test files. (#166, #141)
 - **Ollama `num_ctx` default lowered from 128,000 to 8,192.** The previous 128K default caused out-of-memory errors on consumer GPUs with 8 GB VRAM. 8,192 tokens works reliably on common hardware while still being large enough for typical chat workloads. Override with `config={"num_ctx": N}` when you need a larger context window. (#107)
 - **Lint and type-check the codebase clean.** Ruff (`ruff check .`) and mypy (`mypy src/esperanto`) now report zero errors. Most fixes are type-only and do not change runtime behavior. Notable structural changes:
   - `HttpConnectionMixin` now declares `client: httpx.Client` and `async_client: httpx.AsyncClient` as non-Optional. The `Optional[Client] = None` dataclass fields previously redeclared on every provider base class have been removed; clients are still assigned by `_create_http_clients()` during `__post_init__`, so the runtime contract is unchanged.

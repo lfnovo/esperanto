@@ -272,6 +272,16 @@ Both are clean on `main` and gated on every PR by `.github/workflows/lint.yml`. 
 
 `tests/integration/` requires real provider API keys and external network. Always exclude from automated runs unless the user has explicitly set up credentials and asked for it.
 
+### Release tests
+
+Real-API tests live in `tests/integration/` and are gated by the `release` pytest marker. Run them with:
+
+```bash
+uv run pytest -m release
+```
+
+These tests cost real money (they make actual API calls to provider endpoints) and require provider keys set in a `.env` file at the repo root. CI does not run them — they are a local-only ritual intended to be executed by a maintainer before publishing a release. Never include them in automated agent validation runs.
+
 ### Other notes
 
 - The `notebooks/` directory is local-only (gitignored). If you see modifications there, leave them alone — they aren't part of the project.
