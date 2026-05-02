@@ -7,6 +7,7 @@ import httpx
 
 from esperanto.common_types import Model
 from esperanto.common_types.task_type import EmbeddingTaskType
+from esperanto.utils import validate_and_decode_embedding
 
 from .base import EmbeddingModel
 
@@ -165,13 +166,7 @@ class JinaEmbeddingModel(EmbeddingModel):
             embeddings = []
             for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
-                    raise RuntimeError(
-                        f"Embedding at index {idx} is null, empty, or contains null values. "
-                        "This typically happens when the input is too short or contains only special tokens. "
-                        "Consider filtering very short inputs before embedding."
-                    )
-                embeddings.append([float(value) for value in embedding])
+                embeddings.append(validate_and_decode_embedding(idx, embedding))
 
             return embeddings
 
@@ -213,13 +208,7 @@ class JinaEmbeddingModel(EmbeddingModel):
             embeddings = []
             for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
-                    raise RuntimeError(
-                        f"Embedding at index {idx} is null, empty, or contains null values. "
-                        "This typically happens when the input is too short or contains only special tokens. "
-                        "Consider filtering very short inputs before embedding."
-                    )
-                embeddings.append([float(value) for value in embedding])
+                embeddings.append(validate_and_decode_embedding(idx, embedding))
 
             return embeddings
 

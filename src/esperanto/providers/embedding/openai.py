@@ -5,6 +5,7 @@ from typing import Dict, List
 import httpx
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
+from esperanto.utils import validate_and_decode_embedding
 
 
 class OpenAIEmbeddingModel(EmbeddingModel):
@@ -87,13 +88,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         results = []
         for idx, data in enumerate(response_data["data"]):
             raw = data.get("embedding")
-            if raw is None or len(raw) == 0 or any(v is None for v in raw):
-                raise RuntimeError(
-                    f"Embedding at index {idx} is null, empty, or contains null values. "
-                    "This typically happens when the input is too short or contains only special tokens. "
-                    "Consider filtering very short inputs before embedding."
-                )
-            results.append([float(v) for v in raw])
+            results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
@@ -129,13 +124,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         results = []
         for idx, data in enumerate(response_data["data"]):
             raw = data.get("embedding")
-            if raw is None or len(raw) == 0 or any(v is None for v in raw):
-                raise RuntimeError(
-                    f"Embedding at index {idx} is null, empty, or contains null values. "
-                    "This typically happens when the input is too short or contains only special tokens. "
-                    "Consider filtering very short inputs before embedding."
-                )
-            results.append([float(v) for v in raw])
+            results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     def _get_default_model(self) -> str:

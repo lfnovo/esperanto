@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 import httpx
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
+from esperanto.utils import validate_and_decode_embedding
 
 
 class OllamaEmbeddingModel(EmbeddingModel):
@@ -92,13 +93,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             response_data = response.json()
             results = []
             for idx, embedding in enumerate(response_data["embeddings"]):
-                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
-                    raise RuntimeError(
-                        f"Embedding at index {idx} is null, empty, or contains null values. "
-                        "This typically happens when the input is too short or contains only special tokens. "
-                        "Consider filtering very short inputs before embedding."
-                    )
-                results.append([float(v) for v in embedding])
+                results.append(validate_and_decode_embedding(idx, embedding))
             return results
         except Exception as e:
             raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
@@ -150,13 +145,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             response_data = response.json()
             results = []
             for idx, embedding in enumerate(response_data["embeddings"]):
-                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
-                    raise RuntimeError(
-                        f"Embedding at index {idx} is null, empty, or contains null values. "
-                        "This typically happens when the input is too short or contains only special tokens. "
-                        "Consider filtering very short inputs before embedding."
-                    )
-                results.append([float(v) for v in embedding])
+                results.append(validate_and_decode_embedding(idx, embedding))
             return results
         except Exception as e:
             raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
