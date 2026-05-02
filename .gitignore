@@ -1,6 +1,7 @@
 
 *.wav
-*.mp3
+tests/fixtures/*
+!tests/fixtures/sample.mp3
 
 # Python
 __pycache__/
