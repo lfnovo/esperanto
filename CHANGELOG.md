@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`types-jsonschema`** added to dev dependencies so `jsonschema` is properly type-checked.
 - **Ruff exclusions:** `notebooks/`, `.harny/`, and `examples/` are now excluded from lint runs (the first two are gitignored scratch directories; `examples/` contains illustrative scripts).
 
+### Removed
+
+- **CI: `claude-code-review` workflow** removed entirely. The workflow file `.github/workflows/claude-code-review.yml` is deleted. `cubic-dev-ai` covers automated PR review; the `claude.yml` workflow remains for `@claude` mentions in comments. Closes #138.
+
 ### Fixed
 
 - **OpenRouter providers send malformed request bodies** — both the LLM and embedding OpenRouter providers were posting payloads via httpx's `data=json.dumps(payload)` instead of `json=payload`. In httpx, `data=` with a string is treated as a form-encoded body (Content-Type `application/x-www-form-urlencoded`), so requests carried JSON bytes with the wrong content type. The four affected call sites now use `json=payload`, which serializes the dict and sets `Content-Type: application/json` automatically. Tests updated to assert on the `json` kwarg so a regression would fail loudly. (#127)
