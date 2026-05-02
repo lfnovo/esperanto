@@ -165,9 +165,9 @@ class JinaEmbeddingModel(EmbeddingModel):
             embeddings = []
             for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding is None or any(v is None for v in embedding):
+                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
                     raise RuntimeError(
-                        f"Embedding at index {idx} is null or contains null values. "
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
                         "This typically happens when the input is too short or contains only special tokens. "
                         "Consider filtering very short inputs before embedding."
                     )
@@ -213,9 +213,9 @@ class JinaEmbeddingModel(EmbeddingModel):
             embeddings = []
             for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding is None or any(v is None for v in embedding):
+                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
                     raise RuntimeError(
-                        f"Embedding at index {idx} is null or contains null values. "
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
                         "This typically happens when the input is too short or contains only special tokens. "
                         "Consider filtering very short inputs before embedding."
                     )

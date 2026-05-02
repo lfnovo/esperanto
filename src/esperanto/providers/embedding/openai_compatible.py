@@ -217,9 +217,9 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             results = []
             for idx, data in enumerate(response_data["data"]):
                 raw = data.get("embedding")
-                if raw is None or any(v is None for v in raw):
+                if raw is None or len(raw) == 0 or any(v is None for v in raw):
                     raise RuntimeError(
-                        f"Embedding at index {idx} is null or contains null values. "
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
                         "This typically happens when the input is too short or contains only special tokens. "
                         "Consider filtering very short inputs before embedding."
                     )
@@ -265,9 +265,9 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             results = []
             for idx, data in enumerate(response_data["data"]):
                 raw = data.get("embedding")
-                if raw is None or any(v is None for v in raw):
+                if raw is None or len(raw) == 0 or any(v is None for v in raw):
                     raise RuntimeError(
-                        f"Embedding at index {idx} is null or contains null values. "
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
                         "This typically happens when the input is too short or contains only special tokens. "
                         "Consider filtering very short inputs before embedding."
                     )
