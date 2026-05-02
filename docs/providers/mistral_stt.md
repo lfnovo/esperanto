@@ -39,7 +39,7 @@ MISTRAL_API_KEY="your-api-key"
 ```python
 from esperanto.factory import AIFactory
 
-transcriber = AIFactory.create_stt("mistral")
+transcriber = AIFactory.create_speech_to_text("mistral")
 response = transcriber.transcribe("audio.mp3")
 print(response.text)
 print(response.language)  # auto-detected by Mistral
@@ -62,7 +62,7 @@ response = transcriber.transcribe("audio.mp3")
 | `voxtral-small-latest` | Higher accuracy |
 
 ```python
-transcriber = AIFactory.create_stt("mistral", "voxtral-small-latest")
+transcriber = AIFactory.create_speech_to_text("mistral", "voxtral-small-latest")
 ```
 
 ## Options
@@ -82,7 +82,7 @@ import asyncio
 from esperanto.factory import AIFactory
 
 async def main():
-    transcriber = AIFactory.create_stt("mistral")
+    transcriber = AIFactory.create_speech_to_text("mistral")
     response = await transcriber.atranscribe("audio.mp3")
     print(response.text)
 
