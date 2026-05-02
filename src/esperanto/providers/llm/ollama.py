@@ -39,6 +39,9 @@ if TYPE_CHECKING:
     from langchain_ollama import ChatOllama
 
 
+DEFAULT_NUM_CTX = 8192
+
+
 class OllamaLanguageModel(LanguageModel):
     """Ollama language model implementation."""
 
@@ -96,9 +99,8 @@ class OllamaLanguageModel(LanguageModel):
                 else:
                     kwargs[key] = value
 
-        # Handle Ollama-specific options from _config (num_ctx for context window)
-        # Default to 128000 tokens if not specified (Ollama's default of 2048 is too small)
-        options["num_ctx"] = self._config.get("num_ctx", 128000)
+        # Use a modest default so local Ollama models work on typical 8GB VRAM machines.
+        options["num_ctx"] = self._config.get("num_ctx", DEFAULT_NUM_CTX)
 
         # Handle keep_alive (top-level parameter, not in options)
         # Only set if explicitly provided - don't force memory usage on users
@@ -578,7 +580,7 @@ class OllamaLanguageModel(LanguageModel):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "num_predict": self.max_tokens,
-            "num_ctx": self._config.get("num_ctx", 128000),
+            "num_ctx": self._config.get("num_ctx", DEFAULT_NUM_CTX),
             "base_url": self.base_url,
         }
 
