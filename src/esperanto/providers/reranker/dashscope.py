@@ -2,9 +2,9 @@
 
 import os
 from dataclasses import dataclass
+from re import match as re_match
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
-from re import match as re_match
 
 import httpx
 
@@ -477,8 +477,8 @@ class DashScopeRerankerModel(RerankerModel):
             ImportError: Langchain not installed.
         """
         try:
-            from langchain_core.documents import Document
             from langchain_core.callbacks.manager import Callbacks
+            from langchain_core.documents import Document
         except ImportError:
             raise ImportError(
                 "LangChain not installed. Install with: pip install langchain."
