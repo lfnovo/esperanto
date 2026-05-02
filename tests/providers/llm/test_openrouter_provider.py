@@ -1,10 +1,9 @@
-import json
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
+from esperanto.common_types import Tool, ToolCall, ToolFunction
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 
 
@@ -250,9 +249,9 @@ class TestToolCallResponse:
             messages, tools=sample_tools
         )
 
-        # Check payload included tools (OpenRouter uses data= with JSON string, not json=)
+        # Check payload included tools
         call_args = openrouter_model_with_tool_response.client.post.call_args
-        json_payload = json.loads(call_args.kwargs["data"])
+        json_payload = call_args.kwargs["json"]
         assert "tools" in json_payload
         assert len(json_payload["tools"]) == 2
 
@@ -275,9 +274,8 @@ class TestToolCallResponse:
             messages, tools=sample_tools, tool_choice="required"
         )
 
-        # OpenRouter uses data= with JSON string, not json=
         call_args = openrouter_model_with_tool_response.client.post.call_args
-        json_payload = json.loads(call_args.kwargs["data"])
+        json_payload = call_args.kwargs["json"]
         assert json_payload["tool_choice"] == "required"
 
     @pytest.mark.asyncio
@@ -289,9 +287,9 @@ class TestToolCallResponse:
             messages, tools=sample_tools
         )
 
-        # Check payload included tools (OpenRouter uses data= with JSON string, not json=)
+        # Check payload included tools
         call_args = openrouter_model_with_tool_response.async_client.post.call_args
-        json_payload = json.loads(call_args.kwargs["data"])
+        json_payload = call_args.kwargs["json"]
         assert "tools" in json_payload
 
         # Check response has tool calls

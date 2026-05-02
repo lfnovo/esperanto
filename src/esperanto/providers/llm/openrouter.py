@@ -1,6 +1,5 @@
 """OpenRouter language model implementation."""
 
-import json
 import os
 from dataclasses import dataclass
 from typing import (
@@ -74,30 +73,28 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             try:
                 error_data = response.json()
                 error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
-            except Exception as e:
+            except Exception:
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"OpenAI API error: {error_message}")
 
     def _make_http_request(self, payload: Dict[str, Any]) -> Any:
         """Make HTTP request in OpenRouter's expected format."""
-        # OpenRouter expects data as JSON string, not json parameter
         headers = self._get_headers()
-        
+
         response = self.client.post(
             f"{self.base_url}/chat/completions",
             headers=headers,
-            data=json.dumps(payload)  # Use data= instead of json=
+            json=payload
         )
         self._handle_error(response)
         return response
 
     async def _make_async_http_request(self, payload: Dict[str, Any]) -> Any:
         """Make async HTTP request in OpenRouter's expected format."""
-        # OpenRouter expects data as JSON string, not json parameter
         response = await self.async_client.post(
             f"{self.base_url}/chat/completions",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # Use data= instead of json=
+            json=payload
         )
         self._handle_error(response)
         return response

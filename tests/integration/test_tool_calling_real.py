@@ -12,8 +12,7 @@ import os
 import pytest
 
 from esperanto import AIFactory
-from esperanto.common_types import Tool, ToolFunction, ToolCall
-
+from esperanto.common_types import Tool, ToolCall, ToolFunction
 
 # =============================================================================
 # Test Configuration

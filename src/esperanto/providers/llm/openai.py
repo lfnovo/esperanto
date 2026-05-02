@@ -499,11 +499,11 @@ class OpenAILanguageModel(LanguageModel):
                 "Install with: uv add langchain_openai or pip install langchain_openai"
             ) from e
 
-        model_kwargs = {}
+        model_kwargs: Dict[str, Any] = {}
         if self.structured == "json":
             model_kwargs["response_format"] = {"type": "json_object"}
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,

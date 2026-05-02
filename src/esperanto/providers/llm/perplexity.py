@@ -3,7 +3,6 @@
 import json
 import os
 from dataclasses import dataclass, field
-
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -34,7 +33,6 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
-from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
@@ -521,7 +519,7 @@ class PerplexityLanguageModel(LanguageModel):
         if self.web_search_options is not None:
             model_kwargs["web_search_options"] = self.web_search_options
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,

@@ -116,3 +116,9 @@ claude-logs/
 
 
 specs/*
+
+# Local-only notebooks (kept on disk, not in git)
+notebooks/
+
+# Harny agent scratch (worktrees, run state)
+.harny/

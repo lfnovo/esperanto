@@ -129,7 +129,9 @@ class GoogleLanguageModel(LanguageModel):
             ImportError: If langchain_google_genai is not installed.
         """
         try:
-            from langchain_core.language_models.chat_models import BaseChatModel
+            from langchain_core.language_models.chat_models import (  # noqa: F401  # availability check
+                BaseChatModel,
+            )
             from langchain_google_genai import ChatGoogleGenerativeAI
         except ImportError as e:
             raise ImportError(
@@ -250,7 +252,7 @@ class GoogleLanguageModel(LanguageModel):
 
     def _create_generation_config(self) -> Dict[str, Any]:
         """Create generation config for Google API."""
-        config = {
+        config: Dict[str, Any] = {
             "temperature": float(self.temperature),
             "topP": float(self.top_p),
         }
@@ -552,7 +554,7 @@ class GoogleLanguageModel(LanguageModel):
 
         # Extract text and tool calls from parts
         text_parts: List[str] = []
-        tool_calls_data: List[Dict[str, Any]] = []
+        tool_calls_data: List[ToolCall] = []
 
         for idx, part in enumerate(parts):
             if "text" in part:
@@ -562,15 +564,15 @@ class GoogleLanguageModel(LanguageModel):
                 func_args = fc.get("args", {})
                 arguments_str = json.dumps(func_args) if isinstance(func_args, dict) else str(func_args)
 
-                tool_calls_data.append({
-                    "index": idx,
-                    "id": f"call_{uuid.uuid4().hex[:12]}",
-                    "type": "function",
-                    "function": {
-                        "name": fc.get("name", ""),
-                        "arguments": arguments_str,
-                    },
-                })
+                tool_calls_data.append(ToolCall(
+                    index=idx,
+                    id=f"call_{uuid.uuid4().hex[:12]}",
+                    type="function",
+                    function=FunctionCall(
+                        name=fc.get("name", ""),
+                        arguments=arguments_str,
+                    ),
+                ))
 
         text_content = "".join(text_parts) if text_parts else None
 

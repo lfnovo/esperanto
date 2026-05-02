@@ -1,11 +1,12 @@
 """Voyage AI embedding model provider."""
 
 import os
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import httpx
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
+from esperanto.utils import validate_and_decode_embedding
 
 
 class VoyageEmbeddingModel(EmbeddingModel):
@@ -83,7 +84,11 @@ class VoyageEmbeddingModel(EmbeddingModel):
         self._handle_error(response)
         
         response_data = response.json()
-        return [data["embedding"] for data in response_data["data"]]
+        results = []
+        for idx, data in enumerate(response_data["data"]):
+            raw = data.get("embedding")
+            results.append(validate_and_decode_embedding(idx, raw))
+        return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -115,7 +120,11 @@ class VoyageEmbeddingModel(EmbeddingModel):
         self._handle_error(response)
         
         response_data = response.json()
-        return [data["embedding"] for data in response_data["data"]]
+        results = []
+        for idx, data in enumerate(response_data["data"]):
+            raw = data.get("embedding")
+            results.append(validate_and_decode_embedding(idx, raw))
+        return results
 
     def _get_default_model(self) -> str:
         """Get the default model name."""

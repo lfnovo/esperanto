@@ -245,6 +245,38 @@ All providers use utility mixins:
 - **Check types**: `uv run mypy src/esperanto`
 - **Format code**: `uv run black src/ tests/`
 
+## For Automated Agents
+
+If you are an automated coding agent (harny, Claude Code in headless mode, etc.) running against this repo, read this section before deciding what to validate.
+
+### Validator command
+
+The single command to confirm a change is acceptable:
+
+```bash
+uv sync --all-extras && uv run pytest tests/providers tests/unit tests/common_types tests/test_deprecation_warnings.py -q --no-cov
+```
+
+This runs ~895 tests (mocked, no real API calls) in roughly 70 seconds. Pass = exit 0. The same scope is gated in CI via `.github/workflows/test.yml`.
+
+For a stricter local check that mirrors CI, also run:
+
+```bash
+uv run ruff check .
+uv run mypy src/esperanto
+```
+
+Both are clean on `main` and gated on every PR by `.github/workflows/lint.yml`. If you introduce a new ruff or mypy error, fix it before opening the PR.
+
+### Integration tests
+
+`tests/integration/` requires real provider API keys and external network. Always exclude from automated runs unless the user has explicitly set up credentials and asked for it.
+
+### Other notes
+
+- The `notebooks/` directory is local-only (gitignored). If you see modifications there, leave them alone — they aren't part of the project.
+- Do not commit `.env`, `google-credentials.json`, or any other credential file. The `.gitignore` covers the common cases but always double-check before staging.
+
 ## Critical Principles
 
 See @ARCHITECTURE.md for the full design principles. The key rules:

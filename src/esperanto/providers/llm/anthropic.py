@@ -35,7 +35,6 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
-from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
     from langchain_anthropic import ChatAnthropic
@@ -64,7 +63,7 @@ class AnthropicLanguageModel(LanguageModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Anthropic API requests."""
         return {
-            "x-api-key": self.api_key,
+            "x-api-key": self.api_key or "",
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
@@ -392,15 +391,6 @@ class AnthropicLanguageModel(LanguageModel):
             if block_type == "tool_use":
                 # Start of a tool call - emit the tool call info
                 block_index = event_data.get("index", 0)
-                tool_call_dict = {
-                    "index": block_index,
-                    "id": content_block.get("id", ""),
-                    "type": "function",
-                    "function": {
-                        "name": content_block.get("name", ""),
-                        "arguments": "",  # Arguments come in subsequent deltas
-                    },
-                }
                 return ChatCompletionChunk(
                     id=str(uuid.uuid4()),
                     choices=[
@@ -409,7 +399,15 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],
+                                tool_calls=[ToolCall(
+                                    id=content_block.get("id", ""),
+                                    type="function",
+                                    function=FunctionCall(
+                                        name=content_block.get("name", ""),
+                                        arguments="",
+                                    ),
+                                    index=block_index,
+                                )],
                             ),
                             finish_reason=None,
                         )
@@ -451,15 +449,6 @@ class AnthropicLanguageModel(LanguageModel):
                 # We need to include all required fields for ToolCall validation.
                 # Use empty id/name for delta updates - these are only valid as
                 # incremental updates to be accumulated by the client.
-                tool_call_dict = {
-                    "index": block_index,
-                    "id": "",  # Empty for delta updates
-                    "type": "function",
-                    "function": {
-                        "name": "",  # Empty for delta updates
-                        "arguments": partial_json,
-                    },
-                }
                 return ChatCompletionChunk(
                     id=str(uuid.uuid4()),
                     choices=[
@@ -468,7 +457,15 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],
+                                tool_calls=[ToolCall(
+                                    id="",
+                                    type="function",
+                                    function=FunctionCall(
+                                        name="",
+                                        arguments=partial_json,
+                                    ),
+                                    index=block_index,
+                                )],
                             ),
                             finish_reason=None,
                         )
@@ -798,4 +795,4 @@ class AnthropicLanguageModel(LanguageModel):
         elif self.top_p is not None:
             kwargs["top_p"] = self.top_p
 
-        return ChatAnthropic(**kwargs)
+        return ChatAnthropic(**kwargs)  # type: ignore[arg-type]

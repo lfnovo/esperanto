@@ -1,6 +1,6 @@
 [project]
 name = "esperanto"
-version = "2.20.0"
+version = "2.20.1"
 description = "A light-weight, production-ready, unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
@@ -52,6 +52,11 @@ addopts = "-v --cov=esperanto --cov-report=term-missing"
 
 [tool.ruff]
 line-length = 88
+extend-exclude = [
+    ".harny",
+    "notebooks",
+    "examples",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
@@ -74,6 +79,7 @@ dev = [
     "responses>=0.25.6",
     "python-dotenv>=1.0.1",
     "types-requests>=2.32.0.20241016",
+    "types-jsonschema>=4.0.0",
     "build",
     "twine",
     "langchain>=1.2.4,<2.0.0",

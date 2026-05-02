@@ -93,8 +93,8 @@ class VertexLanguageModel(LanguageModel):
                 from google.oauth2 import service_account
             except ImportError:
                 raise ImportError(
-                    f"credentials_file requires the google-auth package. "
-                    f"Install with: uv add google-auth or pip install google-auth"
+                    "credentials_file requires the google-auth package. "
+                    "Install with: uv add google-auth or pip install google-auth"
                 )
 
             scopes = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -428,7 +428,7 @@ class VertexLanguageModel(LanguageModel):
 
         # Extract text and tool calls from parts
         text_parts: List[str] = []
-        tool_calls_data: List[Dict[str, Any]] = []
+        tool_calls_data: List[ToolCall] = []
 
         for idx, part in enumerate(parts):
             if "text" in part:
@@ -438,15 +438,15 @@ class VertexLanguageModel(LanguageModel):
                 func_args = fc.get("args", {})
                 arguments_str = json.dumps(func_args) if isinstance(func_args, dict) else str(func_args)
 
-                tool_calls_data.append({
-                    "index": idx,
-                    "id": f"call_{uuid.uuid4().hex[:12]}",
-                    "type": "function",
-                    "function": {
-                        "name": fc.get("name", ""),
-                        "arguments": arguments_str,
-                    },
-                })
+                tool_calls_data.append(ToolCall(
+                    index=idx,
+                    id=f"call_{uuid.uuid4().hex[:12]}",
+                    type="function",
+                    function=FunctionCall(
+                        name=fc.get("name", ""),
+                        arguments=arguments_str,
+                    ),
+                ))
 
         text_content = "".join(text_parts) if text_parts else None
 

@@ -240,8 +240,8 @@ class JinaRerankerModel(RerankerModel):
     def to_langchain(self):
         """Convert to LangChain-compatible reranker."""
         try:
-            from langchain_core.documents import Document
             from langchain_core.callbacks.manager import Callbacks
+            from langchain_core.documents import Document
         except ImportError:
             raise ImportError(
                 "LangChain not installed. Install with: pip install langchain"

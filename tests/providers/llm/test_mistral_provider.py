@@ -1,11 +1,10 @@
-import os
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
+
 import pytest
+
+from esperanto.common_types import Tool, ToolCall, ToolCallValidationError, ToolFunction
 from esperanto.providers.llm.mistral import MistralLanguageModel
-from esperanto.common_types import (
-    ChatCompletion, Choice, Message, Usage,
-    Tool, ToolFunction, ToolCall, ToolCallValidationError
-)
+
 
 @pytest.fixture
 def mock_httpx_response():

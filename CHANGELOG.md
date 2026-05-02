@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mistral TTS provider** — `MistralTextToSpeechModel` using the Voxtral (`voxtral-mini-tts-2603`) model. Supports `pcm`, `wav`, `mp3`, `flac`, and `opus` response formats. Reuses the existing `MISTRAL_API_KEY` environment variable. Voice discovery via `available_voices` calls `GET /v1/audio/voices`.
+- **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_stt("mistral")`.
+- **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_speech_to_text("mistral")`.
+- **`TranscriptionResponse.provider`** — STT responses now expose the originating provider name as an optional field, matching the existing `AudioResponse.provider` field. All STT providers (`openai`, `elevenlabs`, `azure`) already passed this kwarg, but Pydantic was silently dropping it. Existing callers continue to work unchanged. (#126)
+
+### Changed
+
+- **Lint and type-check the codebase clean.** Ruff (`ruff check .`) and mypy (`mypy src/esperanto`) now report zero errors. Most fixes are type-only and do not change runtime behavior. Notable structural changes:
+  - `HttpConnectionMixin` now declares `client: httpx.Client` and `async_client: httpx.AsyncClient` as non-Optional. The `Optional[Client] = None` dataclass fields previously redeclared on every provider base class have been removed; clients are still assigned by `_create_http_clients()` during `__post_init__`, so the runtime contract is unchanged.
+  - Removed a duplicate `_get_default_model` definition in the Mistral provider (returned the same value as the original).
+- **CI: lint/type-check job.** Pull requests now run `ruff check` and `mypy` via a new `.github/workflows/lint.yml` workflow.
+- **`types-jsonschema`** added to dev dependencies so `jsonschema` is properly type-checked.
+- **Ruff exclusions:** `notebooks/`, `.harny/`, and `examples/` are now excluded from lint runs (the first two are gitignored scratch directories; `examples/` contains illustrative scripts).
+
+### Removed
+
+- **CI: `claude-code-review` workflow** removed entirely. The workflow file `.github/workflows/claude-code-review.yml` is deleted. `cubic-dev-ai` covers automated PR review; the `claude.yml` workflow remains for `@claude` mentions in comments. Closes #138.
+
+### Fixed
+
+- **OpenRouter providers send malformed request bodies** — both the LLM and embedding OpenRouter providers were posting payloads via httpx's `data=json.dumps(payload)` instead of `json=payload`. In httpx, `data=` with a string is treated as a form-encoded body (Content-Type `application/x-www-form-urlencoded`), so requests carried JSON bytes with the wrong content type. The four affected call sites now use `json=payload`, which serializes the dict and sets `Content-Type: application/json` automatically. Tests updated to assert on the `json` kwarg so a regression would fail loudly. (#127)
+- **`TransformersEmbeddingModel` quantization not applied** — `_initialize_model` was constructing a `quantization_config` dict with `load_in_4bit` / `load_in_8bit` and spreading it as top-level kwargs to `AutoModel.from_pretrained`, an API form that recent transformers versions deprecated in favor of a `BitsAndBytesConfig` object. The provider now constructs `BitsAndBytesConfig(load_in_4bit=..., load_in_8bit=...)` and passes it via `quantization_config=`. Added mocked unit tests (parametrized over 4bit/8bit) that fail if the config stops reaching `from_pretrained`. (#129)
+- **`tests/test_deprecation_warnings.py` — 8 tests asserted on warnings without ever triggering them.** Each test created a model instance, then entered a `warnings.catch_warnings(record=True)` block but never accessed the deprecated `.models` property inside the block, so the recorded list was always empty and `assert len(w) == 1` always failed. The tests now bind the instance to a variable and call `model.models` inside the `with` block, so the deprecation warning is actually captured. The file is also added back into the gated test scope (`.github/workflows/test.yml` and the `CLAUDE.md` validator command), and the "known-broken tests" note in `CLAUDE.md` is removed since it no longer applies. (#130)
+- **Streaming providers passed `list[dict]` to `DeltaMessage.tool_calls` (typed `list[ToolCall]`).** Four streaming LLM providers (Anthropic, Google, Vertex, Ollama) constructed `DeltaMessage(tool_calls=...)` with raw dicts. Pydantic was coercing them to `ToolCall` via field validators at runtime, so tests passed, but the type contract was wrong — downstream consumers couldn't safely call `delta.tool_calls[0].function.name`. All four streaming normalizers now build proper `ToolCall(id=..., type=..., function=FunctionCall(...), index=...)` objects, mirroring the non-streaming path in each provider. The four `# type: ignore[arg-type/list-item]` stopgaps and their TODO comments are removed. Tests assert `isinstance(tool_call, ToolCall)` so a regression would fail loudly. (#128)
+- **Embedding providers crash with opaque TypeError on null values from OpenAI-compatible endpoints.** When an upstream embeddings endpoint returns `null` for a vector (or an element within a vector) — typical of llama.cpp `llama-server` when the input is too short or contains only special tokens — the response-parsing list comprehensions called `float(None)`, which raised `TypeError` and was re-wrapped as a generic `RuntimeError: Failed to generate embeddings: ...`. Affected providers: `openai`, `openai_compatible`, `azure`, `ollama`, `mistral`, `voyage`, `jina` (and by inheritance `openrouter`, `deepseek`, `xai`, etc.). Each now enumerates the response, detects null embeddings, empty vectors, or null elements, and raises a clear `RuntimeError` that names the input index and suggests filtering very short inputs. Jina previously silently skipped null embeddings (data loss); it now raises consistent with the rest. (#119)
+
+## [2.20.1] - 2026-04-13
+
+### Fixed
+
+- **Ollama thinking models return empty content** — Models like Qwen 3.5 that return a separate `thinking` field in the JSON response (instead of inline `<think>` tags) now have their thinking content correctly merged into the response. Use `message.cleaned_content` for the actual response and `message.thinking` for the reasoning trace. (#112)
+- **Trailing slash in base URL causes double-slash and 301 redirect** — All providers now strip trailing slashes from `base_url` during HTTP client initialization, preventing double-slash URLs (e.g., `http://localhost:11434//api/chat`) that caused silent failures with empty responses. (#113)
+
 ## [2.20.0] - 2026-03-21
 
 ### Added

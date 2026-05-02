@@ -1,12 +1,11 @@
 """OpenAI Text-to-Speech provider implementation."""
 import os
-import asyncio
 from pathlib import Path
-from typing import Optional, Union, Dict, Any, List
+from typing import Dict, List, Optional, Union
 
 import httpx
 
-from .base import TextToSpeechModel, AudioResponse, Voice, Model
+from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
 RESPONSE_FORMAT_TO_CONTENT_TYPE = {
     "mp3": "audio/mp3",
