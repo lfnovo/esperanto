@@ -52,6 +52,7 @@ class AIFactory:
             "openai-compatible": "esperanto.providers.stt.openai_compatible:OpenAICompatibleSpeechToTextModel",
             "azure": "esperanto.providers.stt.azure:AzureSpeechToTextModel",
             "google": "esperanto.providers.stt.google:GoogleSpeechToTextModel",
+            "mistral": "esperanto.providers.stt.mistral:MistralSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
