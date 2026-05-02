@@ -165,9 +165,8 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
-        effective_max_tokens = self._resolve_max_tokens(max_tokens)
-        effective_temperature = self._resolve_temperature(temperature)
-        effective_top_p = self._resolve_top_p(top_p)
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
 
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
@@ -191,9 +190,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
-                max_tokens=effective_max_tokens,
-                temperature=effective_temperature,
-                top_p=effective_top_p,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 
@@ -263,9 +262,8 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
-        effective_max_tokens = self._resolve_max_tokens(max_tokens)
-        effective_temperature = self._resolve_temperature(temperature)
-        effective_top_p = self._resolve_top_p(top_p)
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
 
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
@@ -289,9 +287,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
-                max_tokens=effective_max_tokens,
-                temperature=effective_temperature,
-                top_p=effective_top_p,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 

@@ -659,10 +659,12 @@ class AnthropicLanguageModel(LanguageModel):
                 Note: Anthropic rejects API requests where both ``temperature``
                 and ``top_p`` are set (see issue #100). When the resolved
                 payload contains both, ``top_p`` is silently dropped (with a
-                DEBUG log) regardless of which side (instance or per-call)
-                supplied each value. To force a per-call ``top_p`` to win,
-                pass ``temperature=None`` explicitly on the call to disable
-                the instance-level temperature for that request.
+                DEBUG log). Per-call values participate in the conflict on
+                the same footing as instance values — there is no per-call
+                way to disable an instance-level ``temperature``. If you need
+                to use ``top_p`` exclusively, construct the model without
+                ``temperature`` (or set ``model.temperature = None``) before
+                calling chat_complete.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -760,10 +762,12 @@ class AnthropicLanguageModel(LanguageModel):
                 Note: Anthropic rejects API requests where both ``temperature``
                 and ``top_p`` are set (see issue #100). When the resolved
                 payload contains both, ``top_p`` is silently dropped (with a
-                DEBUG log) regardless of which side (instance or per-call)
-                supplied each value. To force a per-call ``top_p`` to win,
-                pass ``temperature=None`` explicitly on the call to disable
-                the instance-level temperature for that request.
+                DEBUG log). Per-call values participate in the conflict on
+                the same footing as instance values — there is no per-call
+                way to disable an instance-level ``temperature``. If you need
+                to use ``top_p`` exclusively, construct the model without
+                ``temperature`` (or set ``model.temperature = None``) before
+                calling chat_complete.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
