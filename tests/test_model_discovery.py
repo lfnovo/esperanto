@@ -154,6 +154,50 @@ class TestOpenAIDiscovery:
             call_args = mock_get.call_args
             assert call_args.kwargs["headers"]["Authorization"] == "Bearer env-key"
 
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_models_custom_base_url_param(self, mock_get):
+        """Test that explicit base_url param overrides the default."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        _model_cache.clear()
+        get_openai_models(api_key="test-key", base_url="https://my-litellm.example.com/v1")
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "https://my-litellm.example.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_models_base_url_from_env(self, mock_get):
+        """Test that OPENAI_BASE_URL env var is used when no explicit base_url given."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        _model_cache.clear()
+        with patch.dict(os.environ, {"OPENAI_BASE_URL": "https://env-proxy.example.com/v1", "OPENAI_API_KEY": "test-key"}):
+            get_openai_models()
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "https://env-proxy.example.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_models_param_overrides_env(self, mock_get):
+        """Test that explicit base_url param takes precedence over OPENAI_BASE_URL env var."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        _model_cache.clear()
+        with patch.dict(os.environ, {"OPENAI_BASE_URL": "https://env-proxy.example.com/v1"}):
+            get_openai_models(api_key="test-key", base_url="https://my-litellm.example.com/v1")
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "https://my-litellm.example.com/v1/models"
+
 
 class TestAnthropicDiscovery:
     """Test Anthropic model discovery."""
