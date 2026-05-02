@@ -565,6 +565,78 @@ class TestToolCallResponse:
         assert tool_call.function.name == "get_weather"
 
 
+class TestParameterOverrides:
+    """Tests for per-call max_tokens, temperature, top_p overrides."""
+
+    def _make_model_with_mock_client(self):
+        """Return a fresh OllamaLanguageModel with a sync mock client."""
+        model = OllamaLanguageModel(model_name="gemma2")
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "model": "gemma2",
+            "message": {"role": "assistant", "content": "Test"},
+            "done": True,
+        }
+        mock_client = Mock()
+        mock_client.post.return_value = mock_response
+        model.client = mock_client
+        return model
+
+    def test_max_tokens_override(self):
+        """Per-call max_tokens maps to options['num_predict'] instead of instance default."""
+        model = self._make_model_with_mock_client()
+        messages = [{"role": "user", "content": "Hello"}]
+        model.chat_complete(messages, max_tokens=500)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload["options"]["num_predict"] == 500
+
+    def test_temperature_override(self):
+        """Per-call temperature overrides the instance default in options."""
+        model = self._make_model_with_mock_client()
+        messages = [{"role": "user", "content": "Hello"}]
+        model.chat_complete(messages, temperature=0.2)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload["options"]["temperature"] == 0.2
+
+    def test_top_p_override(self):
+        """Per-call top_p overrides the instance default in options."""
+        model = self._make_model_with_mock_client()
+        messages = [{"role": "user", "content": "Hello"}]
+        model.chat_complete(messages, top_p=0.7)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload["options"]["top_p"] == 0.7
+
+    def test_instance_defaults_when_no_overrides(self):
+        """Regression guard: omitting overrides uses instance-level values."""
+        model = self._make_model_with_mock_client()
+        messages = [{"role": "user", "content": "Hello"}]
+        model.chat_complete(messages)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload["options"]["num_predict"] == 850
+        assert json_payload["options"]["temperature"] == 1.0
+
+    @pytest.mark.asyncio
+    async def test_async_max_tokens_override(self):
+        """Async: per-call max_tokens maps to options['num_predict']."""
+        model = OllamaLanguageModel(model_name="gemma2")
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "model": "gemma2",
+            "message": {"role": "assistant", "content": "Test"},
+            "done": True,
+        }
+        mock_async_client = AsyncMock()
+        mock_async_client.post.return_value = mock_response
+        model.async_client = mock_async_client
+
+        messages = [{"role": "user", "content": "Hello"}]
+        await model.achat_complete(messages, max_tokens=500)
+        json_payload = mock_async_client.post.call_args[1]["json"]
+        assert json_payload["options"]["num_predict"] == 500
+
+
 class TestToolCallValidation:
     """Tests for tool call validation."""
 

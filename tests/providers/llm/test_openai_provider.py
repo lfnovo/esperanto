@@ -939,6 +939,47 @@ class TestToolResultMessages:
         assert tool_msg["tool_call_id"] == "call_abc123"
 
 
+class TestParameterOverrides:
+    """Tests for per-call max_tokens, temperature, top_p overrides."""
+
+    def test_max_tokens_override(self, openai_model):
+        """Per-call max_tokens overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        openai_model.chat_complete(messages, max_tokens=500)
+        json_payload = openai_model.client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 500
+
+    def test_temperature_override(self, openai_model):
+        """Per-call temperature overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        openai_model.chat_complete(messages, temperature=0.2)
+        json_payload = openai_model.client.post.call_args[1]["json"]
+        assert json_payload["temperature"] == 0.2
+
+    def test_top_p_override(self, openai_model):
+        """Per-call top_p overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        openai_model.chat_complete(messages, top_p=0.7)
+        json_payload = openai_model.client.post.call_args[1]["json"]
+        assert json_payload["top_p"] == 0.7
+
+    def test_instance_defaults_when_no_overrides(self, openai_model):
+        """Regression guard: omitting overrides uses instance-level values."""
+        messages = [{"role": "user", "content": "Hello"}]
+        openai_model.chat_complete(messages)
+        json_payload = openai_model.client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 850
+        assert json_payload["temperature"] == 1.0
+
+    @pytest.mark.asyncio
+    async def test_async_max_tokens_override(self, openai_model):
+        """Async: per-call max_tokens overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        await openai_model.achat_complete(messages, max_tokens=500)
+        json_payload = openai_model.async_client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 500
+
+
 class TestNormalizeResponse:
     """Tests for response normalization with tool calls."""
 
@@ -1043,3 +1084,34 @@ class TestNormalizeResponse:
         assert result.choices[0].message.content == "I'll check the weather for you."
         assert result.choices[0].message.tool_calls is not None
         assert len(result.choices[0].message.tool_calls) == 1
+
+class TestParameterOverridesReasoningModel:
+    """Per-call max_tokens=850 must be honored on reasoning models too (cubic
+    regression catch on PR #164). The pre-existing magic-default skip was
+    triggering on per-call values that happened to equal 850."""
+
+    def test_reasoning_model_per_call_max_tokens_850_honored(self):
+        """o1 model + per-call max_tokens=850 → kwargs include max_completion_tokens=850."""
+        from unittest.mock import patch
+
+        from esperanto.providers.llm.openai import OpenAILanguageModel
+        with patch("httpx.Client"), patch("httpx.AsyncClient"):
+            model = OpenAILanguageModel(api_key="test-key", model_name="o1-mini")
+            kwargs = model._get_api_kwargs(max_tokens=850)
+            # Reasoning models translate max_tokens -> max_completion_tokens
+            assert kwargs.get("max_completion_tokens") == 850, (
+                "Per-call max_tokens=850 must reach the API even on reasoning models"
+            )
+
+    def test_reasoning_model_default_max_tokens_still_skipped(self):
+        """o1 model + no per-call override + instance default 850 → max_completion_tokens not sent."""
+        from unittest.mock import patch
+
+        from esperanto.providers.llm.openai import OpenAILanguageModel
+        with patch("httpx.Client"), patch("httpx.AsyncClient"):
+            model = OpenAILanguageModel(api_key="test-key", model_name="o1-mini")
+            kwargs = model._get_api_kwargs()
+            assert "max_completion_tokens" not in kwargs, (
+                "Instance default 850 should still be filtered when no per-call override"
+            )
+            assert "max_tokens" not in kwargs

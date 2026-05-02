@@ -467,3 +467,29 @@ class TestToolCallValidation:
 
         with pytest.raises(ToolCallValidationError):
             model.chat_complete(messages, tools=sample_tools, validate_tool_calls=True)
+
+
+
+class TestParameterOverrides:
+    """Per-call max_tokens, temperature, top_p override tests (issue #102)."""
+
+    def test_max_tokens_override_with_default_value(self, groq_model):
+        """Per-call max_tokens=850 must reach the API even though 850 is also the
+        instance default. Cubic regression catch on PR #164."""
+        messages = [{"role": "user", "content": "Hello"}]
+        groq_model.chat_complete(messages, max_tokens=850)
+        json_payload = groq_model.client.post.call_args[1]["json"]
+        assert json_payload.get("max_tokens") == 850, (
+            "Per-call max_tokens=850 must not be silently dropped by the magic-default filter"
+        )
+
+    def test_max_tokens_omitted_when_neither_set_per_call_nor_overridden(self, groq_model):
+        """When the user does not pass max_tokens per-call AND the instance is at
+        the default of 850, the request should omit max_tokens (preserving the
+        existing optimization that lets Groq pick its server default)."""
+        messages = [{"role": "user", "content": "Hello"}]
+        groq_model.chat_complete(messages)
+        json_payload = groq_model.client.post.call_args[1]["json"]
+        assert "max_tokens" not in json_payload, (
+            "Default 850 with no per-call override should be filtered out"
+        )

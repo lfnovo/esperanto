@@ -262,10 +262,22 @@ class AzureLanguageModel(LanguageModel):
                 model_name.startswith("gpt-5"))
 
     def _get_api_kwargs(
-        self, override_kwargs: Optional[Dict[str, Any]] = None
+        self,
+        override_kwargs: Optional[Dict[str, Any]] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Get kwargs for Azure API calls, using current instance attributes and overrides."""
         is_reasoning_model = self._is_reasoning_model()
+
+        # Track per-call explicit overrides so the magic-default skip below
+        # does not silently drop them (issue #102 + cubic feedback).
+        max_tokens_explicit = max_tokens is not None
+
+        effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
+        effective_temperature = temperature if temperature is not None else self.temperature
+        effective_top_p = top_p if top_p is not None else self.top_p
 
         effective_kwargs = {
             "model": self.deployment_name,
@@ -273,16 +285,17 @@ class AzureLanguageModel(LanguageModel):
 
         # Handle token parameters
         if is_reasoning_model:
-            # Skip max_tokens if it's the default value (850) for reasoning models
-            if self.max_tokens != 850:
-                effective_kwargs["max_completion_tokens"] = self.max_tokens
+            # Skip max_tokens if it's the instance default (850) on reasoning models
+            # AND was not explicitly supplied as a per-call override.
+            if effective_max_tokens != 850 or max_tokens_explicit:
+                effective_kwargs["max_completion_tokens"] = effective_max_tokens
         else:
-            effective_kwargs["max_tokens"] = self.max_tokens
+            effective_kwargs["max_tokens"] = effective_max_tokens
 
         # Handle temperature and top_p - reasoning models don't support these
         if not is_reasoning_model:
-            effective_kwargs["temperature"] = self.temperature
-            effective_kwargs["top_p"] = self.top_p
+            effective_kwargs["temperature"] = effective_temperature
+            effective_kwargs["top_p"] = effective_top_p
 
         effective_kwargs["stream"] = self.streaming
 
@@ -339,6 +352,9 @@ class AzureLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -359,6 +375,9 @@ class AzureLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -372,12 +391,21 @@ class AzureLanguageModel(LanguageModel):
         if stream is not None:
             call_override_kwargs["stream"] = stream
 
+        # Resolve per-call overrides
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
         resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
-        api_kwargs = self._get_api_kwargs(override_kwargs=call_override_kwargs)
+        api_kwargs = self._get_api_kwargs(
+            override_kwargs=call_override_kwargs,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
         effective_stream_setting = api_kwargs.pop("stream", False)
 
         # Add tool-related parameters if configured
@@ -433,6 +461,9 @@ class AzureLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -453,6 +484,9 @@ class AzureLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -466,12 +500,21 @@ class AzureLanguageModel(LanguageModel):
         if stream is not None:
             call_override_kwargs["stream"] = stream
 
+        # Resolve per-call overrides
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
         resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
-        api_kwargs = self._get_api_kwargs(override_kwargs=call_override_kwargs)
+        api_kwargs = self._get_api_kwargs(
+            override_kwargs=call_override_kwargs,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
         effective_stream_setting = api_kwargs.pop("stream", False)
 
         # Add tool-related parameters if configured

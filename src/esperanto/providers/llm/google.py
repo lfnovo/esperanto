@@ -250,15 +250,24 @@ class GoogleLanguageModel(LanguageModel):
 
         return formatted, system_instruction
 
-    def _create_generation_config(self) -> Dict[str, Any]:
+    def _create_generation_config(
+        self,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Create generation config for Google API."""
+        effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
+        effective_temperature = temperature if temperature is not None else self.temperature
+        effective_top_p = top_p if top_p is not None else self.top_p
+
         config: Dict[str, Any] = {
-            "temperature": float(self.temperature),
-            "topP": float(self.top_p),
+            "temperature": float(effective_temperature),
+            "topP": float(effective_top_p),
         }
 
-        if self.max_tokens:
-            config["maxOutputTokens"] = int(self.max_tokens)
+        if effective_max_tokens:
+            config["maxOutputTokens"] = int(effective_max_tokens)
 
         if self.structured:
             if not isinstance(self.structured, dict):
@@ -368,6 +377,9 @@ class GoogleLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -388,6 +400,9 @@ class GoogleLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -398,6 +413,11 @@ class GoogleLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -410,7 +430,11 @@ class GoogleLanguageModel(LanguageModel):
         # Prepare request payload
         payload: Dict[str, Any] = {
             "contents": formatted_messages,
-            "generationConfig": self._create_generation_config(),
+            "generationConfig": self._create_generation_config(
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         if system_instruction:
@@ -616,6 +640,9 @@ class GoogleLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -636,6 +663,9 @@ class GoogleLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -646,6 +676,11 @@ class GoogleLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -658,7 +693,11 @@ class GoogleLanguageModel(LanguageModel):
         # Prepare request payload
         payload: Dict[str, Any] = {
             "contents": formatted_messages,
-            "generationConfig": self._create_generation_config(),
+            "generationConfig": self._create_generation_config(
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         if system_instruction:

@@ -190,3 +190,35 @@ class TestAzureReasoningModels:
             # Should preserve original values for non-reasoning models
             assert call_kwargs["temperature"] == 0.7
             assert call_kwargs["top_p"] == 0.9
+
+
+class TestPerCallMaxTokens850:
+    """Per-call max_tokens=850 must be honored on Azure reasoning models too
+    (cubic regression catch on PR #164)."""
+
+    def test_reasoning_model_per_call_max_tokens_850_honored(self, azure_config):
+        """o1 + per-call max_tokens=850 → max_completion_tokens=850 reaches the API."""
+        from unittest.mock import patch
+        with patch('httpx.Client'), patch('httpx.AsyncClient'):
+            model = AzureLanguageModel(
+                model_name="o1-preview",
+                max_tokens=850,  # also the instance default
+                **azure_config
+            )
+            kwargs = model._get_api_kwargs(max_tokens=850)
+            assert kwargs.get("max_completion_tokens") == 850, (
+                "Per-call max_tokens=850 must reach the API on reasoning models"
+            )
+
+    def test_reasoning_model_default_max_tokens_still_skipped(self, azure_config):
+        """o1 + no per-call override + instance default 850 → max_completion_tokens not sent."""
+        from unittest.mock import patch
+        with patch('httpx.Client'), patch('httpx.AsyncClient'):
+            model = AzureLanguageModel(
+                model_name="o1-preview",
+                max_tokens=850,
+                **azure_config
+            )
+            kwargs = model._get_api_kwargs()
+            assert "max_completion_tokens" not in kwargs
+            assert "max_tokens" not in kwargs
