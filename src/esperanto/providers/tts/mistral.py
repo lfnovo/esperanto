@@ -66,20 +66,34 @@ class MistralTextToSpeechModel(TextToSpeechModel):
     def available_voices(self) -> Dict[str, Voice]:
         if self._voices_cache is not None:
             return self._voices_cache
-        items = []
-        page = 1
+
+        items: List[Dict[str, Any]] = []
+        offset = 0
+        limit = 100
         while True:
             response = self.client.get(
                 f"{self.base_url}/audio/voices",
                 headers=self._get_headers(),
-                params={"page": page},
+                params={"limit": limit, "offset": offset},
             )
             self._handle_error(response)
             body = response.json()
-            items.extend(body.get("items", []))
-            if page >= body.get("total_pages", 1):
+            page_items = body.get("items", [])
+            items.extend(page_items)
+
+            total = body.get("total")
+            if total is not None:
+                if len(items) >= total:
+                    break
+            elif len(page_items) < limit:
                 break
-            page += 1
+
+            if not page_items:
+                # To avoid an infinite loop.
+                break
+
+            offset += len(page_items)
+
         self._voices_cache = {
             item["id"]: Voice(
                 id=item["id"],

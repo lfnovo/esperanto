@@ -163,7 +163,7 @@ def test_available_voices(tts_model):
     tts_model.client.get.assert_called_once_with(
         "https://api.mistral.ai/v1/audio/voices",
         headers=tts_model._get_headers(),
-        params={"page": 1},
+        params={"limit": 100, "offset": 0},
     )
 
     assert "gb_jane_neutral" in voices
@@ -178,6 +178,83 @@ def test_available_voices_cached(tts_model):
     _ = tts_model.available_voices
     _ = tts_model.available_voices
     assert tts_model.client.get.call_count == 1
+
+
+def test_available_voices_paginated(tts_model):
+    """Multi-page response: all pages' voices should be returned."""
+    page_one_items = [
+        {
+            "id": f"voice_{i}",
+            "name": f"Voice {i}",
+            "gender": "NEUTRAL",
+            "languages": ["en"],
+        }
+        for i in range(100)
+    ]
+    page_two_items = [
+        {
+            "id": "voice_100",
+            "name": "Voice 100",
+            "gender": "NEUTRAL",
+            "languages": ["en"],
+        },
+        {
+            "id": "voice_101",
+            "name": "Voice 101",
+            "gender": "NEUTRAL",
+            "languages": ["en"],
+        },
+    ]
+
+    def make_response(status_code, json_data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = json_data
+        response.text = ""
+        return response
+
+    def paginated_get(url, **kwargs):
+        params = kwargs.get("params", {})
+        offset = params.get("offset", 0)
+        if offset == 0:
+            return make_response(
+                200,
+                {
+                    "items": page_one_items,
+                    "page": 1,
+                    "page_size": 100,
+                    "total": 102,
+                    "total_pages": 2,
+                },
+            )
+        if offset == 100:
+            return make_response(
+                200,
+                {
+                    "items": page_two_items,
+                    "page": 2,
+                    "page_size": 100,
+                    "total": 102,
+                    "total_pages": 2,
+                },
+            )
+        return make_response(200, {"items": [], "total": 102})
+
+    tts_model.client.get.side_effect = paginated_get
+
+    voices = tts_model.available_voices
+
+    assert len(voices) == 102
+    assert "voice_0" in voices
+    assert "voice_99" in voices
+    assert "voice_100" in voices
+    assert "voice_101" in voices
+    assert tts_model.client.get.call_count == 2
+
+    first_call = tts_model.client.get.call_args_list[0]
+    second_call = tts_model.client.get.call_args_list[1]
+    assert first_call.kwargs["params"] == {"limit": 100, "offset": 0}
+    assert second_call.kwargs["params"] == {"limit": 100, "offset": 100}
 
 
 def test_error_handling_4xx(tts_model):
@@ -202,38 +279,3 @@ def test_error_handling_5xx(tts_model):
 
     with pytest.raises(RuntimeError, match="Mistral API error"):
         tts_model.generate_speech(text="Hello", voice="gb_jane_neutral")
-
-
-def test_available_voices_paginated():
-    voice_a = {"id": "voice_a", "name": "Voice A", "gender": "FEMALE", "languages": ["en"]}
-    voice_b = {"id": "voice_b", "name": "Voice B", "gender": "MALE", "languages": ["fr"]}
-
-    page1_response = Mock()
-    page1_response.status_code = 200
-    page1_response.json.return_value = {
-        "items": [voice_a],
-        "page": 1,
-        "page_size": 1,
-        "total": 2,
-        "total_pages": 2,
-    }
-
-    page2_response = Mock()
-    page2_response.status_code = 200
-    page2_response.json.return_value = {
-        "items": [voice_b],
-        "page": 2,
-        "page_size": 1,
-        "total": 2,
-        "total_pages": 2,
-    }
-
-    model = MistralTextToSpeechModel(api_key="test-key")
-    model.client = Mock()
-    model.client.get.side_effect = [page1_response, page2_response]
-
-    voices = model.available_voices
-
-    assert "voice_a" in voices
-    assert "voice_b" in voices
-    assert model.client.get.call_count == 2
