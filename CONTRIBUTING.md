@@ -99,6 +99,22 @@ The project's ruff configuration is in `pyproject.toml` and enforces:
 - Standard Python style rules (E, F)
 - Import sorting (I)
 
+## Release Tests
+
+The `tests/integration/` directory contains tests that call real provider APIs. These are marked with the `release` pytest marker and are excluded from the default `uv run pytest` run to avoid accidental API charges.
+
+To run release tests:
+
+```bash
+uv run pytest -m release
+```
+
+**Important:**
+- These tests cost real money — they make live API calls to provider endpoints.
+- They require provider API keys to be set in a `.env` file at the repo root.
+- They are deliberately excluded from CI. Running them is a local-only ritual, intended for maintainers to verify everything works end-to-end before publishing a release.
+- Do not add release tests to the default test scope, and do not run them in automated pipelines.
+
 ## Adding a New Provider
 
 This is the most common type of contribution. To keep Esperanto maintainable, we have clear criteria for what we accept.

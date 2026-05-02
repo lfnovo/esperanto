@@ -74,6 +74,7 @@ def weather_tools():
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("OPENAI_API_KEY"),
     reason="OPENAI_API_KEY not configured",
@@ -168,6 +169,7 @@ class TestOpenAIToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("ANTHROPIC_API_KEY"),
     reason="ANTHROPIC_API_KEY not configured",
@@ -259,6 +261,7 @@ class TestAnthropicToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("GROQ_API_KEY"),
     reason="GROQ_API_KEY not configured",
@@ -350,6 +353,7 @@ class TestGroqToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("MISTRAL_API_KEY"),
     reason="MISTRAL_API_KEY not configured",
@@ -441,6 +445,7 @@ class TestMistralToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("DEEPSEEK_API_KEY"),
     reason="DEEPSEEK_API_KEY not configured",
@@ -527,6 +532,7 @@ class TestDeepSeekToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("XAI_API_KEY"),
     reason="XAI_API_KEY not configured",
@@ -613,6 +619,7 @@ class TestXAIToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("OPENROUTER_API_KEY"),
     reason="OPENROUTER_API_KEY not configured",
@@ -700,6 +707,7 @@ class TestOpenRouterToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skip(reason="Perplexity does not support tool calling")
 class TestPerplexityToolCalling:
     """Real integration tests for Perplexity tool calling.
@@ -786,6 +794,7 @@ class TestPerplexityToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("AZURE_OPENAI_API_KEY_LLM"),
     reason="AZURE_OPENAI_API_KEY_LLM not configured",
@@ -888,6 +897,7 @@ class TestAzureToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("OLLAMA_BASE_URL"),
     reason="OLLAMA_BASE_URL not configured",
@@ -983,6 +993,7 @@ class TestOllamaToolCalling:
 # =============================================================================
 
 
+@pytest.mark.release
 @pytest.mark.skipif(
     not (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")),
     reason="GOOGLE_API_KEY or GEMINI_API_KEY not configured",

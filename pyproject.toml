@@ -48,7 +48,10 @@ package-dir = {"esperanto" = "src/esperanto"}
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=esperanto --cov-report=term-missing"
+addopts = "-v --cov=esperanto --cov-report=term-missing -m 'not release'"
+markers = [
+    "release: real-API tests run before each release (costs money, requires keys)",
+]
 
 [tool.ruff]
 line-length = 88

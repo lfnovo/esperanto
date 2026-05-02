@@ -759,3 +759,27 @@ class TestErrorHandling:
         messages = [{"role": "user", "content": "Hello"}]
         with pytest.raises(RuntimeError, match="Google API error"):
             google_model.chat_complete(messages)
+
+
+# =============================================================================
+# LangChain Conversion Tests
+# =============================================================================
+
+
+def test_google_langchain_conversion():
+    pytest.importorskip("langchain_google_genai")
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    model = GoogleLanguageModel(
+        api_key="test-key",
+        model_name="gemini-1.5-pro",
+        temperature=0.7,
+        max_tokens=100,
+        top_p=0.9,
+    )
+    langchain_model = model.to_langchain()
+    assert isinstance(langchain_model, ChatGoogleGenerativeAI)
+    assert langchain_model.model == "gemini-1.5-pro"
+    assert langchain_model.temperature == 0.7
+    assert langchain_model.max_output_tokens == 100
+    assert langchain_model.top_p == 0.9
