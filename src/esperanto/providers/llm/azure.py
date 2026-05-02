@@ -342,6 +342,14 @@ class AzureLanguageModel(LanguageModel):
         ) as response:
             self._handle_error(response)
             for chunk_data in self._parse_sse_stream(response):
+                # Azure can emit metadata-only chunks (e.g., content-filter
+                # results) before the content stream begins. These chunks
+                # carry an empty `choices` list. Skip them so the iterator
+                # contract matches OpenAI (every yielded chunk has at least
+                # one choice). Caught by Phase C of the integration→main
+                # pre-flight review of #141 — provider parity gap.
+                if not chunk_data.get("choices"):
+                    continue
                 yield self._normalize_chunk(chunk_data)
 
     def chat_complete(
@@ -451,6 +459,10 @@ class AzureLanguageModel(LanguageModel):
         ) as response:
             self._handle_error(response)
             async for chunk_data in self._parse_sse_stream_async(response):
+                # See sync variant above — Azure metadata-only chunks have
+                # empty `choices`; skip for provider parity.
+                if not chunk_data.get("choices"):
+                    continue
                 yield self._normalize_chunk(chunk_data)
 
     async def achat_complete(

@@ -91,6 +91,10 @@ class TestElevenLabsTTS:
 # =============================================================================
 
 
+@pytest.mark.xfail(
+    reason="Google TTS prompt format rejected by current API — see #178",
+    strict=False,
+)
 @pytest.mark.release
 @pytest.mark.skipif(
     not (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")),
@@ -170,8 +174,9 @@ class TestVertexTTS:
         (os.getenv("AZURE_OPENAI_API_KEY_TTS") or os.getenv("AZURE_OPENAI_API_KEY"))
         and (os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or os.getenv("AZURE_OPENAI_ENDPOINT"))
         and (os.getenv("AZURE_OPENAI_API_VERSION_TTS") or os.getenv("AZURE_OPENAI_API_VERSION"))
+        and os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_TTS")
     ),
-    reason="Azure TTS requires API key, endpoint, and API version (AZURE_OPENAI_API_KEY[_TTS] + AZURE_OPENAI_ENDPOINT[_TTS] + AZURE_OPENAI_API_VERSION[_TTS])",
+    reason="Azure TTS requires API key, endpoint, API version, and deployment name (AZURE_OPENAI_DEPLOYMENT_NAME_TTS) — different Azure subscriptions vary in which deployments exist",
 )
 class TestAzureTTS:
     """Real integration tests for Azure text-to-speech."""

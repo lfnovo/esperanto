@@ -77,6 +77,10 @@ class TestOpenAIEmbedding:
 # =============================================================================
 
 
+@pytest.mark.xfail(
+    reason="Google default model text-embedding-004 deprecated on v1beta — see #177",
+    strict=False,
+)
 @pytest.mark.release
 @pytest.mark.skipif(
     not (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")),
