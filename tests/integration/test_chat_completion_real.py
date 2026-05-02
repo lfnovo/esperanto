@@ -222,8 +222,16 @@ class TestVertexChat:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("AZURE_OPENAI_API_KEY_LLM"),
-    reason="AZURE_OPENAI_API_KEY_LLM not configured",
+    not (
+        (os.getenv("AZURE_OPENAI_API_KEY_LLM") or os.getenv("AZURE_OPENAI_API_KEY"))
+        and (os.getenv("AZURE_OPENAI_ENDPOINT_LLM") or os.getenv("AZURE_OPENAI_ENDPOINT"))
+        and (
+            os.getenv("AZURE_OPENAI_API_VERSION_LLM")
+            or os.getenv("OPENAI_API_VERSION")
+            or os.getenv("AZURE_OPENAI_API_VERSION")
+        )
+    ),
+    reason="Azure LLM requires API key, endpoint, and API version (AZURE_OPENAI_API_KEY[_LLM] + AZURE_OPENAI_ENDPOINT[_LLM] + AZURE_OPENAI_API_VERSION[_LLM])",
 )
 class TestAzureChat:
     """Real integration tests for Azure OpenAI chat completion."""
@@ -350,15 +358,15 @@ class TestMistralChat:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("OLLAMA_BASE_URL"),
-    reason="OLLAMA_BASE_URL not configured",
+    not (os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")),
+    reason="OLLAMA_BASE_URL or OLLAMA_API_BASE not configured",
 )
 class TestOllamaChat:
     """Real integration tests for Ollama chat completion."""
 
     def test_sync_chat_complete(self):
         model = AIFactory.create_language(
-            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL")}
+            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")}
         )
         response = model.chat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
@@ -367,7 +375,7 @@ class TestOllamaChat:
 
     async def test_async_chat_complete(self):
         model = AIFactory.create_language(
-            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL")}
+            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")}
         )
         response = await model.achat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
@@ -376,7 +384,7 @@ class TestOllamaChat:
 
     def test_sync_streaming(self):
         model = AIFactory.create_language(
-            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL")}
+            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")}
         )
         response = model.chat_complete(messages=MESSAGES, stream=True)
         total_content = ""
@@ -388,7 +396,7 @@ class TestOllamaChat:
 
     async def test_async_streaming(self):
         model = AIFactory.create_language(
-            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL")}
+            "ollama", "qwen3:32b", config={"base_url": os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")}
         )
         response = await model.achat_complete(messages=MESSAGES, stream=True)
         total_content = ""
