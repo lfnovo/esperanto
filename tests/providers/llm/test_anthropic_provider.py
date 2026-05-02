@@ -405,6 +405,29 @@ def test_top_p_used_when_temperature_not_set():
     assert "temperature" not in payload
 
 
+def test_temperature_drops_top_p_with_debug_log(anthropic_model, caplog):
+    """When both temperature and top_p are set, top_p is silently dropped with a DEBUG log."""
+    import logging
+
+    anthropic_model.top_p = 0.95  # fixture already has temperature=0.7
+
+    messages = [{"role": "user", "content": "Hello!"}]
+
+    with caplog.at_level(logging.DEBUG, logger="esperanto.providers.llm.anthropic"):
+        anthropic_model.chat_complete(messages)
+
+    call_args = anthropic_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert "temperature" in json_payload
+    assert "top_p" not in json_payload
+
+    assert any(
+        "top_p" in record.message and "Anthropic" in record.message
+        for record in caplog.records
+        if record.levelno == logging.DEBUG
+    )
+
+
 # =============================================================================
 # Tool Calling Tests
 # =============================================================================
