@@ -174,7 +174,8 @@ class DashScopeRerankerModel(RerankerModel):
             is_valid_vl_input = all(
                 isinstance(item, dict)
                 and len(item) == 1
-                and next(iter(item.keys())) in ("text", "image", "video")
+                and (_key := next(iter(item.keys()))) in ("text", "image", "video")
+                and isinstance(item[_key], str)
                 for item in documents
             )
 
