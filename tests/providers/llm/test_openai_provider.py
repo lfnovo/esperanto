@@ -1093,6 +1093,7 @@ class TestParameterOverridesReasoningModel:
     def test_reasoning_model_per_call_max_tokens_850_honored(self):
         """o1 model + per-call max_tokens=850 → kwargs include max_completion_tokens=850."""
         from unittest.mock import patch
+
         from esperanto.providers.llm.openai import OpenAILanguageModel
         with patch("httpx.Client"), patch("httpx.AsyncClient"):
             model = OpenAILanguageModel(api_key="test-key", model_name="o1-mini")
@@ -1105,6 +1106,7 @@ class TestParameterOverridesReasoningModel:
     def test_reasoning_model_default_max_tokens_still_skipped(self):
         """o1 model + no per-call override + instance default 850 → max_completion_tokens not sent."""
         from unittest.mock import patch
+
         from esperanto.providers.llm.openai import OpenAILanguageModel
         with patch("httpx.Client"), patch("httpx.AsyncClient"):
             model = OpenAILanguageModel(api_key="test-key", model_name="o1-mini")
