@@ -55,14 +55,22 @@ class DashScopeRerankerModel(RerankerModel):
         self.__vl_avail: bool = _model_name in self.__MULTI_MODAL
 
     def _get_headers(self) -> Dict[str, str]:
-        """Get request headers for DashScope API."""
+        """Get request headers for DashScope API.
+
+        Returns:
+            A json header containing api string.
+        """
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
     def _get_default_model(self) -> str:
-        """Get default DashScope model."""
+        """Get default DashScope model.
+
+        Returns:
+            Default model name.
+        """
         return "qwen3-rerank"
 
     @property
@@ -76,7 +84,11 @@ class DashScopeRerankerModel(RerankerModel):
         return self.__vl_avail
 
     def _get_models(self) -> List[Model]:
-        """Available DashScope reranker models"""
+        """Available DashScope reranker models.
+
+        Returns:
+            A list of 'Model' objects available in dashscope.
+        """
         return [
             Model(
                 id="qwen3-rerank",
@@ -97,7 +109,13 @@ class DashScopeRerankerModel(RerankerModel):
 
     @staticmethod
     def _is_web_url(s: str) -> bool:
-        """Check if string is a http / https web url"""
+        """Check if string is a http / https web url.
+
+        NOTE: This is currently used for url encoded in vl content.
+
+        Returns:
+            Flag if given string is a well-formed web url.
+        """
         try:
             result = urlparse(s)
             return result.scheme in ("http", "https") and bool(result.netloc)
@@ -110,7 +128,11 @@ class DashScopeRerankerModel(RerankerModel):
 
     @staticmethod
     def _is_image_base64(s: str) -> Tuple[bool, str]:
-        """Check if string match DashScope API base64 image data format."""
+        """Check if string match DashScope API base64 image data format.
+
+        Returns:
+            True if given str is a well-formed base64 string, along with image format.
+        """
         pattern = r"^data:image/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/]+=*)$"
         if mat := re_match(pattern, s):
             # Check image format
@@ -119,10 +141,10 @@ class DashScopeRerankerModel(RerankerModel):
         else:
             return False, ""
 
-    def _validate_inputs(
+    def _validate_inputs_vl(
         self,
         query: str,
-        documents: List[str | Dict[str, str]],
+        documents: List[str] | List[Dict[str, str]],
         top_k: Optional[int] = None,
         fps: Optional[float] = None
     ) -> Tuple[str, List[str] | List[Dict[str, str]], int]:
@@ -132,6 +154,7 @@ class DashScopeRerankerModel(RerankerModel):
             query: The search query.
             documents: List of documents to rerank.
             top_k: Maximum number of results to return.
+            fps: Extraction rate on video inputs for VL model.
 
         Returns:
             Tuple of validated (query, documents, top_k).
@@ -215,7 +238,7 @@ class DashScopeRerankerModel(RerankerModel):
     def _build_request_payload(
         self,
         query: str,
-        documents: List[str | Dict[str, str]],
+        documents: List[str] | List[Dict[str, str]],
         top_k: int,
         instruct: Optional[str] = None,
         fps: Optional[float] = None,
@@ -289,7 +312,7 @@ class DashScopeRerankerModel(RerankerModel):
 
     def _parse_response(
         self, response_data: Dict[str, Any],
-        documents: List[str | Dict[str, str]]
+        documents: List[str] | List[Dict[str, str]]
     ) -> RerankResponse:
         """Parse DashScope API response into standardized format.
 
@@ -341,7 +364,7 @@ class DashScopeRerankerModel(RerankerModel):
     def rerank(
         self,
         query: str,
-        documents: List[str | Dict[str, str]],
+        documents: List[str] | List[Dict[str, str]],
         top_k: Optional[int] = None,
         instruct: Optional[str] = None,
         fps: Optional[float] = None,
@@ -364,7 +387,7 @@ class DashScopeRerankerModel(RerankerModel):
             RuntimeError: Given inputs are invalid or errors occur during model calling.
         """
         # Validate inputs
-        query, documents, top_k = self._validate_inputs(
+        query, documents, top_k = self._validate_inputs_vl(
             query, documents, top_k, fps
         )
 
@@ -394,7 +417,7 @@ class DashScopeRerankerModel(RerankerModel):
     async def arerank(
         self,
         query: str,
-        documents: List[str | Dict[str, str]],
+        documents: List[str] | List[Dict[str, str]],
         top_k: Optional[int] = None,
         instruct: Optional[str] = None,
         fps: Optional[float] = None,
@@ -417,7 +440,7 @@ class DashScopeRerankerModel(RerankerModel):
             RuntimeError: Given inputs are invalid or errors occur during model calling.
         """
         # Validate inputs
-        query, documents, top_k = self._validate_inputs(
+        query, documents, top_k = self._validate_inputs_vl(
             query, documents, top_k, fps
         )
 
