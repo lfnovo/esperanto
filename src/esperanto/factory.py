@@ -61,6 +61,7 @@ class AIFactory:
             "openai-compatible": "esperanto.providers.tts.openai_compatible:OpenAICompatibleTextToSpeechModel",
             "azure": "esperanto.providers.tts.azure:AzureTextToSpeechModel",
             "xai": "esperanto.providers.tts.xai:XAITextToSpeechModel",
+            "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
