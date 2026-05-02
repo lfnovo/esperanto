@@ -805,12 +805,12 @@ def test_ollama_base_url_env_var_trailing_slash_stripped():
 
 
 def test_ollama_default_num_ctx():
-    """Test that default num_ctx (128000) is applied when not specified."""
+    """Test that default num_ctx (8192) is applied when not specified."""
     model = OllamaLanguageModel(model_name="gemma2")
     api_kwargs = model._get_api_kwargs()
 
     assert "options" in api_kwargs
-    assert api_kwargs["options"]["num_ctx"] == 128000
+    assert api_kwargs["options"]["num_ctx"] == 8192
 
 
 def test_ollama_custom_num_ctx():
@@ -823,11 +823,11 @@ def test_ollama_custom_num_ctx():
 
 
 def test_ollama_to_langchain_default_num_ctx():
-    """Test that to_langchain uses default num_ctx (128000) when not specified."""
+    """Test that to_langchain uses default num_ctx (8192) when not specified."""
     model = OllamaLanguageModel(model_name="gemma2")
     langchain_model = model.to_langchain()
 
-    assert langchain_model.num_ctx == 128000
+    assert langchain_model.num_ctx == 8192
 
 
 def test_ollama_to_langchain_custom_num_ctx():
