@@ -7,7 +7,11 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 import httpx
 
 from esperanto.common_types import TranscriptionResponse
-from esperanto.providers.stt.base import Model, SpeechToTextModel
+from esperanto.providers.stt.base import (
+    Model,
+    SpeechToTextModel,
+    _guess_audio_content_type,
+)
 
 
 @dataclass
@@ -78,7 +82,7 @@ class MistralSpeechToTextModel(SpeechToTextModel):
 
         if isinstance(audio_file, str):
             with open(audio_file, "rb") as f:
-                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = self.client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -87,7 +91,7 @@ class MistralSpeechToTextModel(SpeechToTextModel):
                 )
         else:
             filename = getattr(audio_file, "name", "audio.mp3")
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = self.client.post(
                 f"{self.base_url}/audio/transcriptions",
                 headers=self._get_headers(),
@@ -116,7 +120,7 @@ class MistralSpeechToTextModel(SpeechToTextModel):
 
         if isinstance(audio_file, str):
             with open(audio_file, "rb") as f:
-                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = await self.async_client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -125,7 +129,7 @@ class MistralSpeechToTextModel(SpeechToTextModel):
                 )
         else:
             filename = getattr(audio_file, "name", "audio.mp3")
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = await self.async_client.post(
                 f"{self.base_url}/audio/transcriptions",
                 headers=self._get_headers(),

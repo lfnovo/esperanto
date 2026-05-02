@@ -1,5 +1,6 @@
 """Base speech-to-text model interface."""
 
+import mimetypes
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -7,6 +8,14 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 from esperanto.common_types import Model, TranscriptionResponse
 from esperanto.utils.connect import HttpConnectionMixin
+
+
+def _guess_audio_content_type(filename: str) -> str:
+    """Guess audio MIME type from filename, falling back to audio/mpeg."""
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type and mime_type.startswith("audio/"):
+        return mime_type
+    return "audio/mpeg"
 
 
 @dataclass
