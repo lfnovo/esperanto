@@ -8,8 +8,8 @@ DashScope is Alibaba Cloud's AI model service platform, providing access to the 
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Language Models (LLM) | ✅ | Qwen series (qwen-trubo, qwen-plus, qwen-max) |
-| Embeddings | ❌ | Not available |
+| Language Models (LLM) | ✅ | Qwen series (qwen-turbo, qwen-plus, qwen-max) |
+| Embeddings | ❌ | Not available via profile (use Open-AI-Compatible) |
 | Reranking | ⚠️ | qwen3-rerank, gte-rerank-v2, * qwen3-vl-rerank |
 | Speech-to-Text | ❌ | Not available |
 | Text-to-Speech | ❌ | Not available |
@@ -73,9 +73,9 @@ reranker = DashScopeRerankerModel(
 
 | Model | Max Request Token Length | Max Single Query / Document Token Length | Max Document Amount |
 |-------|---------|----------|-------|
-| **qwen3-rerank** | 30K | 4K | 500 |
+| **qwen3-rerank** | 120K | 4K | 500 |
 | **gte-rerank-v2** | 30K | 4K | 500 |
-| **qwen3-vl-rerank** | 800K | 8K | 100 |
+| **qwen3-vl-rerank** | 120K | 8K | 100 |
 
 **Configuration:**
 
