@@ -301,14 +301,16 @@ class TestOpenAICompatibleTTS:
         assert response.content_type.startswith("audio/")
 
     def test_async_agenerate_speech(self):
-        """Test async speech generation."""
+        """Test async speech generation. See sync variant for voice handling notes."""
+        voice_override = os.getenv("OPENAI_COMPATIBLE_TTS_VOICE")
+        kwargs = {"voice": voice_override} if voice_override else {}
         model = AIFactory.create_text_to_speech(
             "openai-compatible",
             config={"base_url": os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")},
         )
 
         async def _run() -> object:
-            return await model.agenerate_speech(TEST_TEXT, voice="alloy")
+            return await model.agenerate_speech(TEST_TEXT, **kwargs)
 
         response = asyncio.run(_run())
         assert response.audio_data

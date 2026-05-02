@@ -148,8 +148,9 @@ class TestGoogleSTT:
     not (
         (os.getenv("AZURE_OPENAI_API_KEY_STT") or os.getenv("AZURE_OPENAI_API_KEY"))
         and (os.getenv("AZURE_OPENAI_ENDPOINT_STT") or os.getenv("AZURE_OPENAI_ENDPOINT"))
+        and (os.getenv("AZURE_OPENAI_API_VERSION_STT") or os.getenv("AZURE_OPENAI_API_VERSION"))
     ),
-    reason="Azure STT requires both an API key and an endpoint (AZURE_OPENAI_API_KEY[_STT] + AZURE_OPENAI_ENDPOINT[_STT])",
+    reason="Azure STT requires API key, endpoint, and API version (AZURE_OPENAI_API_KEY[_STT] + AZURE_OPENAI_ENDPOINT[_STT] + AZURE_OPENAI_API_VERSION[_STT])",
 )
 class TestAzureSTT:
     """Real integration tests for Azure speech-to-text."""
