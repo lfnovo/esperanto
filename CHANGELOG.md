@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Per-call `max_tokens`, `temperature`, `top_p` overrides** — `chat_complete()` and `achat_complete()` now accept `max_tokens`, `temperature`, and `top_p` keyword arguments that override the instance-level values for a single request. Supported by all LLM providers. For Anthropic, `top_p` is silently dropped when `temperature` is also set, consistent with the mutual-exclusivity rule enforced by that provider's API.
 - **Mistral TTS provider** — `MistralTextToSpeechModel` using the Voxtral (`voxtral-mini-tts-2603`) model. Supports `pcm`, `wav`, `mp3`, `flac`, and `opus` response formats. Reuses the existing `MISTRAL_API_KEY` environment variable. Voice discovery via `available_voices` calls `GET /v1/audio/voices`.
 - **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_stt("mistral")`.
 - **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_speech_to_text("mistral")`.

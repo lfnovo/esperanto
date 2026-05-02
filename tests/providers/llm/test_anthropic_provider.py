@@ -939,6 +939,58 @@ class TestToolCallValidation:
             model.chat_complete(messages, tools=sample_tools, validate_tool_calls=True)
 
 
+class TestParameterOverrides:
+    """Tests for per-call max_tokens, temperature, top_p overrides."""
+
+    def test_max_tokens_override(self, anthropic_model):
+        """Per-call max_tokens overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        anthropic_model.chat_complete(messages, max_tokens=500)
+        json_payload = anthropic_model.client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 500
+
+    def test_temperature_override(self, anthropic_model):
+        """Per-call temperature overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        anthropic_model.chat_complete(messages, temperature=0.2)
+        json_payload = anthropic_model.client.post.call_args[1]["json"]
+        assert json_payload["temperature"] == 0.2
+
+    def test_top_p_override_when_temperature_not_set(self, mock_anthropic_client):
+        """Per-call top_p reaches the payload only when instance temperature is None.
+
+        Anthropic rejects requests with both temperature and top_p, so the provider
+        drops top_p when temperature is set (mutual-exclusivity rule).
+        """
+        model = AnthropicLanguageModel(
+            api_key="test-key",
+            model_name="claude-3-opus-20240229",
+            temperature=None,
+        )
+        model.client, model.async_client = mock_anthropic_client
+        messages = [{"role": "user", "content": "Hello"}]
+        model.chat_complete(messages, top_p=0.7)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload.get("top_p") == 0.7
+        assert "temperature" not in json_payload
+
+    def test_instance_defaults_when_no_overrides(self, anthropic_model):
+        """Regression guard: omitting overrides uses instance-level values."""
+        messages = [{"role": "user", "content": "Hello"}]
+        anthropic_model.chat_complete(messages)
+        json_payload = anthropic_model.client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 850
+        assert json_payload["temperature"] == 0.7
+
+    @pytest.mark.asyncio
+    async def test_async_max_tokens_override(self, anthropic_model):
+        """Async: per-call max_tokens overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        await anthropic_model.achat_complete(messages, max_tokens=500)
+        json_payload = anthropic_model.async_client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 500
+
+
 class TestStreamingToolCalls:
     """Tests for streaming with tool calls."""
 

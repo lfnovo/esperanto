@@ -258,6 +258,9 @@ class OpenAILanguageModel(LanguageModel):
         if top_p is not None:
             config["top_p"] = top_p
         is_reasoning_model = self._is_reasoning_model()
+        # Track per-call explicit overrides so the magic-default skip below
+        # does not silently drop them (issue #102 + cubic feedback).
+        max_tokens_explicit = max_tokens is not None
 
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
@@ -272,8 +275,9 @@ class OpenAILanguageModel(LanguageModel):
                 "tool_choice",
                 "parallel_tool_calls",
             ]:
-                # Skip max_tokens if it's the default value (850) and we're using an o1 model
-                if key == "max_tokens" and value == 850 and is_reasoning_model:
+                # Skip max_tokens if it's the instance default (850) on a reasoning
+                # model AND was not explicitly supplied as a per-call override.
+                if key == "max_tokens" and value == 850 and is_reasoning_model and not max_tokens_explicit:
                     continue
                 kwargs[key] = value
 
@@ -352,9 +356,8 @@ class OpenAILanguageModel(LanguageModel):
         is_reasoning_model = self._is_reasoning_model()
 
         # Resolve per-call overrides
-        effective_max_tokens = self._resolve_max_tokens(max_tokens)
-        effective_temperature = self._resolve_temperature(temperature)
-        effective_top_p = self._resolve_top_p(top_p)
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -374,9 +377,9 @@ class OpenAILanguageModel(LanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
-                max_tokens=effective_max_tokens,
-                temperature=effective_temperature,
-                top_p=effective_top_p,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 
@@ -461,9 +464,8 @@ class OpenAILanguageModel(LanguageModel):
         is_reasoning_model = self._is_reasoning_model()
 
         # Resolve per-call overrides
-        effective_max_tokens = self._resolve_max_tokens(max_tokens)
-        effective_temperature = self._resolve_temperature(temperature)
-        effective_top_p = self._resolve_top_p(top_p)
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -483,9 +485,9 @@ class OpenAILanguageModel(LanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
-                max_tokens=effective_max_tokens,
-                temperature=effective_temperature,
-                top_p=effective_top_p,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 
