@@ -169,11 +169,7 @@ class TestVertexTTS:
     not (
         (os.getenv("AZURE_OPENAI_API_KEY_TTS") or os.getenv("AZURE_OPENAI_API_KEY"))
         and (os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or os.getenv("AZURE_OPENAI_ENDPOINT"))
-        and (
-            os.getenv("AZURE_OPENAI_API_VERSION_TTS")
-            or os.getenv("OPENAI_API_VERSION")
-            or os.getenv("AZURE_OPENAI_API_VERSION")
-        )
+        and (os.getenv("AZURE_OPENAI_API_VERSION_TTS") or os.getenv("AZURE_OPENAI_API_VERSION"))
     ),
     reason="Azure TTS requires API key, endpoint, and API version (AZURE_OPENAI_API_KEY[_TTS] + AZURE_OPENAI_ENDPOINT[_TTS] + AZURE_OPENAI_API_VERSION[_TTS])",
 )
@@ -291,12 +287,20 @@ class TestOpenAICompatibleTTS:
     """Real integration tests for OpenAI-compatible text-to-speech."""
 
     def test_sync_generate_speech(self):
-        """Test sync speech generation."""
+        """Test sync speech generation.
+
+        Uses the provider's default voice rather than hardcoding 'alloy', so
+        non-OpenAI-mimicking endpoints (which don't have an 'alloy' voice)
+        still work. Override via OPENAI_COMPATIBLE_TTS_VOICE if the default
+        voice is not appropriate for the configured backend.
+        """
+        voice_override = os.getenv("OPENAI_COMPATIBLE_TTS_VOICE")
+        kwargs = {"voice": voice_override} if voice_override else {}
         model = AIFactory.create_text_to_speech(
             "openai-compatible",
             config={"base_url": os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")},
         )
-        response = model.generate_speech(TEST_TEXT, voice="alloy")
+        response = model.generate_speech(TEST_TEXT, **kwargs)
         assert response.audio_data
         assert response.content_type.startswith("audio/")
 
