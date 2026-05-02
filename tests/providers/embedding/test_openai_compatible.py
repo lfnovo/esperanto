@@ -409,3 +409,160 @@ def test_error_message_mentions_both_env_vars(monkeypatch):
     error_message = str(exc_info.value)
     assert "OPENAI_COMPATIBLE_BASE_URL_EMBEDDING" in error_message
     assert "OPENAI_COMPATIBLE_BASE_URL" in error_message
+
+
+def test_embed_null_embedding_raises_runtime_error():
+    """Test that embed raises RuntimeError when response contains a null embedding."""
+    model = OpenAICompatibleEmbeddingModel(
+        model_name="nomic-embed-text",
+        api_key="test-key",
+        base_url="http://localhost:1234/v1",
+    )
+    null_response = {
+        "object": "list",
+        "data": [
+            {"object": "embedding", "index": 0, "embedding": [0.1, 0.2, 0.3]},
+            {"object": "embedding", "index": 1, "embedding": None},
+        ],
+    }
+    client = Mock()
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = null_response
+    client.post.return_value = response
+    model.client = client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        model.embed(["text one", "text two"])
+    assert "1" in str(exc_info.value)
+
+
+def test_embed_null_element_in_vector_raises_runtime_error():
+    """Test that embed raises RuntimeError when a vector contains a null element."""
+    model = OpenAICompatibleEmbeddingModel(
+        model_name="nomic-embed-text",
+        api_key="test-key",
+        base_url="http://localhost:1234/v1",
+    )
+    null_element_response = {
+        "object": "list",
+        "data": [
+            {"object": "embedding", "index": 0, "embedding": [0.1, None, 0.3]},
+        ],
+    }
+    client = Mock()
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = null_element_response
+    client.post.return_value = response
+    model.client = client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        model.embed(["text one"])
+    assert "0" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_aembed_null_embedding_raises_runtime_error():
+    """Test that aembed raises RuntimeError when response contains a null embedding."""
+    model = OpenAICompatibleEmbeddingModel(
+        model_name="nomic-embed-text",
+        api_key="test-key",
+        base_url="http://localhost:1234/v1",
+    )
+    null_response = {
+        "object": "list",
+        "data": [
+            {"object": "embedding", "index": 0, "embedding": [0.1, 0.2, 0.3]},
+            {"object": "embedding", "index": 1, "embedding": None},
+        ],
+    }
+    async_client = AsyncMock()
+    async_response = AsyncMock()
+    async_response.status_code = 200
+    async_response.json = Mock(return_value=null_response)
+    async_client.post.return_value = async_response
+    model.async_client = async_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await model.aembed(["text one", "text two"])
+    assert "1" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_aembed_null_element_in_vector_raises_runtime_error():
+    """Test that aembed raises RuntimeError when a vector contains a null element."""
+    model = OpenAICompatibleEmbeddingModel(
+        model_name="nomic-embed-text",
+        api_key="test-key",
+        base_url="http://localhost:1234/v1",
+    )
+    null_element_response = {
+        "object": "list",
+        "data": [
+            {"object": "embedding", "index": 0, "embedding": [0.1, None, 0.3]},
+        ],
+    }
+    async_client = AsyncMock()
+    async_response = AsyncMock()
+    async_response.status_code = 200
+    async_response.json = Mock(return_value=null_element_response)
+    async_client.post.return_value = async_response
+    model.async_client = async_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await model.aembed(["text one"])
+    assert "0" in str(exc_info.value)
+
+
+def test_embed_empty_vector_raises_runtime_error():
+    """Test that embed raises RuntimeError when a vector is an empty list."""
+    model = OpenAICompatibleEmbeddingModel(
+        model_name="nomic-embed-text",
+        api_key="test-key",
+        base_url="http://localhost:1234/v1",
+    )
+    empty_vector_response = {
+        "object": "list",
+        "data": [
+            {"object": "embedding", "index": 0, "embedding": [0.1, 0.2, 0.3]},
+            {"object": "embedding", "index": 1, "embedding": []},
+        ],
+    }
+    client = Mock()
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = empty_vector_response
+    client.post.return_value = response
+    model.client = client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        model.embed(["text one", "text two"])
+    assert "index 1" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_aembed_empty_vector_raises_runtime_error():
+    """Test that aembed raises RuntimeError when a vector is an empty list."""
+    model = OpenAICompatibleEmbeddingModel(
+        model_name="nomic-embed-text",
+        api_key="test-key",
+        base_url="http://localhost:1234/v1",
+    )
+    empty_vector_response = {
+        "object": "list",
+        "data": [
+            {"object": "embedding", "index": 0, "embedding": [0.1, 0.2, 0.3]},
+            {"object": "embedding", "index": 1, "embedding": []},
+        ],
+    }
+    async_client = AsyncMock()
+    async_response = AsyncMock()
+    async_response.status_code = 200
+    async_response.json = Mock(return_value=empty_vector_response)
+    async_client.post.return_value = async_response
+    model.async_client = async_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await model.aembed(["text one", "text two"])
+    assert "index 1" in str(exc_info.value)

@@ -90,11 +90,15 @@ class OllamaEmbeddingModel(EmbeddingModel):
             self._handle_error(response)
 
             response_data = response.json()
-            # Convert embeddings to regular floats
-            results = [
-                [float(value) for value in embedding]
-                for embedding in response_data["embeddings"]
-            ]
+            results = []
+            for idx, embedding in enumerate(response_data["embeddings"]):
+                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
+                    raise RuntimeError(
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
+                        "This typically happens when the input is too short or contains only special tokens. "
+                        "Consider filtering very short inputs before embedding."
+                    )
+                results.append([float(v) for v in embedding])
             return results
         except Exception as e:
             raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
@@ -144,11 +148,15 @@ class OllamaEmbeddingModel(EmbeddingModel):
             self._handle_error(response)
 
             response_data = response.json()
-            # Convert embeddings to regular floats
-            results = [
-                [float(value) for value in embedding]
-                for embedding in response_data["embeddings"]
-            ]
+            results = []
+            for idx, embedding in enumerate(response_data["embeddings"]):
+                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
+                    raise RuntimeError(
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
+                        "This typically happens when the input is too short or contains only special tokens. "
+                        "Consider filtering very short inputs before embedding."
+                    )
+                results.append([float(v) for v in embedding])
             return results
         except Exception as e:
             raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e

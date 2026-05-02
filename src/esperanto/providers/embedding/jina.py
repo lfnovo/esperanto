@@ -163,11 +163,15 @@ class JinaEmbeddingModel(EmbeddingModel):
 
             # Extract embeddings from response
             embeddings = []
-            for item in response_data.get("data", []):
+            for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding:
-                    # Ensure all values are floats for consistency
-                    embeddings.append([float(value) for value in embedding])
+                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
+                    raise RuntimeError(
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
+                        "This typically happens when the input is too short or contains only special tokens. "
+                        "Consider filtering very short inputs before embedding."
+                    )
+                embeddings.append([float(value) for value in embedding])
 
             return embeddings
 
@@ -207,11 +211,15 @@ class JinaEmbeddingModel(EmbeddingModel):
 
             # Extract embeddings from response
             embeddings = []
-            for item in response_data.get("data", []):
+            for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding:
-                    # Ensure all values are floats for consistency
-                    embeddings.append([float(value) for value in embedding])
+                if embedding is None or len(embedding) == 0 or any(v is None for v in embedding):
+                    raise RuntimeError(
+                        f"Embedding at index {idx} is null, empty, or contains null values. "
+                        "This typically happens when the input is too short or contains only special tokens. "
+                        "Consider filtering very short inputs before embedding."
+                    )
+                embeddings.append([float(value) for value in embedding])
 
             return embeddings
 

@@ -83,7 +83,17 @@ class VoyageEmbeddingModel(EmbeddingModel):
         self._handle_error(response)
         
         response_data = response.json()
-        return [data["embedding"] for data in response_data["data"]]
+        results = []
+        for idx, data in enumerate(response_data["data"]):
+            raw = data.get("embedding")
+            if raw is None or len(raw) == 0 or any(v is None for v in raw):
+                raise RuntimeError(
+                    f"Embedding at index {idx} is null, empty, or contains null values. "
+                    "This typically happens when the input is too short or contains only special tokens. "
+                    "Consider filtering very short inputs before embedding."
+                )
+            results.append([float(v) for v in raw])
+        return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -115,7 +125,17 @@ class VoyageEmbeddingModel(EmbeddingModel):
         self._handle_error(response)
         
         response_data = response.json()
-        return [data["embedding"] for data in response_data["data"]]
+        results = []
+        for idx, data in enumerate(response_data["data"]):
+            raw = data.get("embedding")
+            if raw is None or len(raw) == 0 or any(v is None for v in raw):
+                raise RuntimeError(
+                    f"Embedding at index {idx} is null, empty, or contains null values. "
+                    "This typically happens when the input is too short or contains only special tokens. "
+                    "Consider filtering very short inputs before embedding."
+                )
+            results.append([float(v) for v in raw])
+        return results
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
