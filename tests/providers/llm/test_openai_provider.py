@@ -182,7 +182,7 @@ def test_initialization_without_api_key():
 def test_models(openai_model):
     """Test that the models property works with HTTP."""
     models = openai_model.models
-    
+
     # Verify HTTP GET was called
     openai_model.client.get.assert_called_with(
         "https://api.openai.com/v1/models",
@@ -191,7 +191,7 @@ def test_models(openai_model):
             "Content-Type": "application/json"
         }
     )
-    
+
     # Check that only GPT models are returned
     assert len(models) == 2
     assert models[0].id == "gpt-4"
@@ -199,6 +199,30 @@ def test_models(openai_model):
     # Model type is None when not explicitly provided by the API
     assert models[0].type is None
     assert models[1].type is None
+
+
+def test_models_custom_base_url(mock_openai_models_response):
+    """Test that _get_models() uses a custom base_url when provided."""
+    model = OpenAILanguageModel(
+        base_url="https://my-litellm.example.com/v1",
+        api_key="test-key",
+    )
+    mock_client = Mock()
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_openai_models_response
+    mock_client.get.return_value = mock_response
+    model.client = mock_client
+
+    model._get_models()
+
+    mock_client.get.assert_called_once_with(
+        "https://my-litellm.example.com/v1/models",
+        headers={
+            "Authorization": "Bearer test-key",
+            "Content-Type": "application/json",
+        },
+    )
 
 
 def test_chat_complete(openai_model):

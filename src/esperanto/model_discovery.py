@@ -66,7 +66,7 @@ def get_openai_models(
         raise ValueError("OpenAI API key not found. Provide api_key or set OPENAI_API_KEY environment variable.")
 
     # Set defaults
-    base_url = base_url or "https://api.openai.com/v1"
+    base_url = base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1"
 
     # Check cache
     cache_key = _create_cache_key("openai", api_key=api_key, base_url=base_url, model_type=model_type)
