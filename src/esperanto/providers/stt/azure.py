@@ -7,7 +7,7 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 import httpx
 
 from esperanto.common_types import Model, TranscriptionResponse
-from esperanto.providers.stt.base import SpeechToTextModel
+from esperanto.providers.stt.base import SpeechToTextModel, _guess_audio_content_type
 
 
 @dataclass
@@ -125,7 +125,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = self.client.post(
                     url,
                     headers=self._get_headers(),
@@ -135,7 +135,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = self.client.post(
                 url,
                 headers=self._get_headers(),
@@ -173,7 +173,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files: Dict[str, Any] = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = await self.async_client.post(
                     url,
                     headers=self._get_headers(),
@@ -183,7 +183,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = await self.async_client.post(
                 url,
                 headers=self._get_headers(),

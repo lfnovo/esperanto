@@ -1,12 +1,58 @@
 """Tests for base speech-to-text model."""
 
+import mimetypes
 from dataclasses import dataclass
 from typing import BinaryIO, Optional, Union
 
 import pytest
 
 from esperanto.common_types import TranscriptionResponse
-from esperanto.providers.stt.base import SpeechToTextModel
+from esperanto.providers.stt.base import SpeechToTextModel, _guess_audio_content_type
+
+
+class TestGuessAudioContentType:
+    def test_wav_returns_audio_type(self):
+        result = _guess_audio_content_type("audio.wav")
+        assert result.startswith("audio/")
+
+    def test_flac_returns_audio_type(self):
+        result = _guess_audio_content_type("audio.flac")
+        assert result.startswith("audio/")
+
+    def test_m4a_returns_audio_type(self):
+        result = _guess_audio_content_type("audio.m4a")
+        assert result.startswith("audio/")
+
+    def test_ogg_returns_audio_ogg(self):
+        result = _guess_audio_content_type("audio.ogg")
+        assert result == "audio/ogg"
+
+    def test_webm_returns_audio_type_or_fallback(self):
+        result = _guess_audio_content_type("audio.webm")
+        mime, _ = mimetypes.guess_type("audio.webm")
+        if mime and mime.startswith("audio/"):
+            assert result == mime
+        else:
+            assert result == "audio/mpeg"
+
+    def test_unknown_extension_falls_back(self):
+        assert _guess_audio_content_type("audio.xyz") == "audio/mpeg"
+
+    def test_stream_without_name_falls_back(self):
+        # getattr(stream, 'name', 'audio.mp3') gives 'audio.mp3' → audio/mpeg
+        assert _guess_audio_content_type("audio.mp3") == "audio/mpeg"
+
+    def test_non_audio_mime_falls_back(self):
+        # .html is text/html — not audio
+        assert _guess_audio_content_type("page.html") == "audio/mpeg"
+
+    def test_none_filename_falls_back(self):
+        # BinaryIO with .name explicitly set to None must not crash
+        assert _guess_audio_content_type(None) == "audio/mpeg"
+
+    def test_empty_filename_falls_back(self):
+        # Empty string must not crash mimetypes.guess_type
+        assert _guess_audio_content_type("") == "audio/mpeg"
 
 
 def test_cannot_instantiate_abstract_base():
