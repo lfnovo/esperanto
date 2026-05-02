@@ -150,8 +150,11 @@ class TestVertexEmbedding:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not (os.getenv("AZURE_OPENAI_API_KEY_EMBEDDING") or os.getenv("AZURE_OPENAI_API_KEY")),
-    reason="AZURE_OPENAI_API_KEY_EMBEDDING or AZURE_OPENAI_API_KEY not configured",
+    not (
+        (os.getenv("AZURE_OPENAI_API_KEY_EMBEDDING") or os.getenv("AZURE_OPENAI_API_KEY"))
+        and (os.getenv("AZURE_OPENAI_ENDPOINT_EMBEDDING") or os.getenv("AZURE_OPENAI_ENDPOINT"))
+    ),
+    reason="Azure embedding requires both an API key and an endpoint (AZURE_OPENAI_API_KEY[_EMBEDDING] + AZURE_OPENAI_ENDPOINT[_EMBEDDING])",
 )
 class TestAzureEmbedding:
     """Real integration tests for Azure OpenAI embeddings."""
@@ -390,8 +393,11 @@ class TestOpenRouterEmbedding:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not (os.getenv("OPENAI_COMPATIBLE_API_KEY") or os.getenv("OPENAI_COMPATIBLE_API_KEY_EMBEDDING")),
-    reason="OPENAI_COMPATIBLE_API_KEY not configured",
+    not (
+        (os.getenv("OPENAI_COMPATIBLE_API_KEY_EMBEDDING") or os.getenv("OPENAI_COMPATIBLE_API_KEY"))
+        and (os.getenv("OPENAI_COMPATIBLE_BASE_URL_EMBEDDING") or os.getenv("OPENAI_COMPATIBLE_BASE_URL"))
+    ),
+    reason="OpenAI-compatible embedding requires both API key and base URL (OPENAI_COMPATIBLE_API_KEY[_EMBEDDING] + OPENAI_COMPATIBLE_BASE_URL[_EMBEDDING])",
 )
 class TestOpenAICompatibleEmbedding:
     """Real integration tests for OpenAI-compatible embeddings."""
