@@ -1,6 +1,7 @@
 """Anthropic language model implementation."""
 
 import json
+import logging
 import os
 import time
 import uuid
@@ -35,6 +36,8 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from langchain_anthropic import ChatAnthropic
@@ -584,6 +587,10 @@ class AnthropicLanguageModel(LanguageModel):
         # Anthropic does not allow both temperature and top_p to be set
         # Prioritize temperature if both are provided
         if self.temperature is not None:
+            if self.top_p is not None:
+                logger.debug(
+                    "Dropping top_p — Anthropic recommends setting only temperature OR top_p, not both."
+                )
             payload["temperature"] = max(0.0, min(1.0, float(self.temperature)))
         elif self.top_p is not None:
             payload["top_p"] = float(self.top_p)
