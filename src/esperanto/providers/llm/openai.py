@@ -234,14 +234,29 @@ class OpenAILanguageModel(LanguageModel):
             for msg in messages
         ]
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
 
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
+            max_tokens: Per-call override for max_tokens.
+            temperature: Per-call override for temperature.
+            top_p: Per-call override for top_p.
         """
         kwargs = {}
         config = self.get_completion_kwargs()
+        if max_tokens is not None:
+            config["max_tokens"] = max_tokens
+        if temperature is not None:
+            config["temperature"] = temperature
+        if top_p is not None:
+            config["top_p"] = top_p
         is_reasoning_model = self._is_reasoning_model()
 
         # Only include non-provider-specific args that were explicitly set
@@ -297,6 +312,9 @@ class OpenAILanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -317,6 +335,9 @@ class OpenAILanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -329,6 +350,11 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
+
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -346,7 +372,12 @@ class OpenAILanguageModel(LanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -390,6 +421,9 @@ class OpenAILanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -410,6 +444,9 @@ class OpenAILanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -422,6 +459,11 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
+
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -439,7 +481,12 @@ class OpenAILanguageModel(LanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured

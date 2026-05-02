@@ -560,6 +560,9 @@ class AnthropicLanguageModel(LanguageModel):
         tools: Optional[List[Tool]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Create request payload for Anthropic API.
 
@@ -569,16 +572,23 @@ class AnthropicLanguageModel(LanguageModel):
             tools: List of tools the model can call.
             tool_choice: Controls tool usage.
             parallel_tool_calls: Whether to allow parallel tool calls.
+            max_tokens: Per-call override for max_tokens.
+            temperature: Per-call override for temperature.
+            top_p: Per-call override for top_p.
 
         Returns:
             Request payload dict for Anthropic API.
         """
         system_message, formatted_messages = self._prepare_messages(messages)
 
+        effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
+        effective_temperature = temperature if temperature is not None else self.temperature
+        effective_top_p = top_p if top_p is not None else self.top_p
+
         payload: Dict[str, Any] = {
             "model": self.get_model_name(),
             "messages": formatted_messages,
-            "max_tokens": self.max_tokens or 1024,
+            "max_tokens": effective_max_tokens or 1024,
         }
 
         if system_message:
@@ -586,14 +596,14 @@ class AnthropicLanguageModel(LanguageModel):
 
         # Anthropic does not allow both temperature and top_p to be set
         # Prioritize temperature if both are provided
-        if self.temperature is not None:
-            if self.top_p is not None:
+        if effective_temperature is not None:
+            if effective_top_p is not None:
                 logger.debug(
                     "Dropping top_p — Anthropic recommends setting only temperature OR top_p, not both."
                 )
-            payload["temperature"] = max(0.0, min(1.0, float(self.temperature)))
-        elif self.top_p is not None:
-            payload["top_p"] = float(self.top_p)
+            payload["temperature"] = max(0.0, min(1.0, float(effective_temperature)))
+        elif effective_top_p is not None:
+            payload["top_p"] = float(effective_top_p)
 
         if stream:
             payload["stream"] = True
@@ -619,6 +629,9 @@ class AnthropicLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -639,6 +652,9 @@ class AnthropicLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -649,6 +665,11 @@ class AnthropicLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -661,6 +682,9 @@ class AnthropicLanguageModel(LanguageModel):
             tools=resolved_tools,
             tool_choice=resolved_tool_choice,
             parallel_tool_calls=resolved_parallel,
+            max_tokens=effective_max_tokens,
+            temperature=effective_temperature,
+            top_p=effective_top_p,
         )
 
         # Make HTTP request
@@ -698,6 +722,9 @@ class AnthropicLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -718,6 +745,9 @@ class AnthropicLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -728,6 +758,11 @@ class AnthropicLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -740,6 +775,9 @@ class AnthropicLanguageModel(LanguageModel):
             tools=resolved_tools,
             tool_choice=resolved_tool_choice,
             parallel_tool_calls=resolved_parallel,
+            max_tokens=effective_max_tokens,
+            temperature=effective_temperature,
+            top_p=effective_top_p,
         )
 
         # Make async HTTP request

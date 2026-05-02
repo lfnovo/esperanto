@@ -99,12 +99,23 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         self._handle_error(response)
         return response
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
 
         Note: OpenRouter doesn't support JSON response format for non-OpenAI models.
         """
-        kwargs = super()._get_api_kwargs(exclude_stream)
+        kwargs = super()._get_api_kwargs(
+            exclude_stream,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
 
         # Remove response_format for non-OpenAI models
         model = self.get_model_name().lower()
@@ -121,6 +132,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request using OpenRouter-specific HTTP format.
 
@@ -151,6 +165,10 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
@@ -171,7 +189,12 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -207,6 +230,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request using OpenRouter-specific HTTP format.
 
@@ -237,6 +263,10 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
@@ -257,7 +287,12 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured

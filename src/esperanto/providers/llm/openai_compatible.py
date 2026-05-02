@@ -267,19 +267,32 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         )
 
     def _get_api_kwargs(
-        self, exclude_stream: bool = False, exclude_response_format: bool = False
+        self,
+        exclude_stream: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        exclude_response_format: bool = False,
     ) -> Dict[str, Any]:
         """Get API kwargs with graceful feature fallback.
 
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
             exclude_response_format: If True, excludes response_format parameter.
+            max_tokens: Per-call override for max_tokens.
+            temperature: Per-call override for temperature.
+            top_p: Per-call override for top_p.
 
         Returns:
             Dict containing API parameters for the request.
         """
         # Get base kwargs from parent
-        kwargs = super()._get_api_kwargs(exclude_stream)
+        kwargs = super()._get_api_kwargs(
+            exclude_stream,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
 
         # Remove response_format if:
         # 1. Explicitly requested (for retry logic)
@@ -312,6 +325,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request with retry for unsupported response_format.
 
@@ -333,6 +349,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -341,7 +360,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         """
         try:
             return super().chat_complete(
-                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                max_tokens=max_tokens, temperature=temperature, top_p=top_p,
             )
         except RuntimeError as e:
             # Check if it's a response_format error and we haven't already disabled it
@@ -353,7 +373,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 self._response_format_unsupported = True
                 # Retry without response_format
                 return super().chat_complete(
-                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                    max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                 )
             raise
 
@@ -365,6 +386,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request with retry for unsupported response_format.
 
@@ -386,6 +410,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -394,7 +421,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         """
         try:
             return await super().achat_complete(
-                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                max_tokens=max_tokens, temperature=temperature, top_p=top_p,
             )
         except RuntimeError as e:
             # Check if it's a response_format error and we haven't already disabled it
@@ -406,7 +434,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 self._response_format_unsupported = True
                 # Retry without response_format
                 return await super().achat_complete(
-                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                    max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                 )
             raise
 

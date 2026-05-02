@@ -71,10 +71,21 @@ class OllamaLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Ollama API error: {error_message}")
 
-    def _get_api_kwargs(self) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
+        if max_tokens is not None:
+            config["max_tokens"] = max_tokens
+        if temperature is not None:
+            config["temperature"] = temperature
+        if top_p is not None:
+            config["top_p"] = top_p
         options = {}
 
         # Only include non-provider-specific args that were explicitly set
@@ -237,6 +248,9 @@ class OllamaLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -260,6 +274,9 @@ class OllamaLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -284,6 +301,11 @@ class OllamaLanguageModel(LanguageModel):
             if "content" not in message and message["role"] not in ["assistant", "tool"]:
                 raise ValueError("Missing content in message")
 
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         self._resolve_tool_choice(tool_choice)
@@ -298,7 +320,11 @@ class OllamaLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": converted_messages,
             "stream": should_stream,
-            **self._get_api_kwargs(),
+            **self._get_api_kwargs(
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -335,6 +361,9 @@ class OllamaLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -358,6 +387,9 @@ class OllamaLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -371,6 +403,11 @@ class OllamaLanguageModel(LanguageModel):
 
         if not messages:
             raise ValueError("Messages cannot be empty")
+
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -386,7 +423,11 @@ class OllamaLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": converted_messages,
             "stream": should_stream,
-            **self._get_api_kwargs(),
+            **self._get_api_kwargs(
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured

@@ -306,18 +306,27 @@ class VertexLanguageModel(LanguageModel):
 
         return formatted, system_instruction
 
-    def _create_generation_config(self) -> Dict[str, Any]:
+    def _create_generation_config(
+        self,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Create generation config for Vertex AI."""
         config = {}
 
-        if self.temperature is not None:
-            config["temperature"] = float(self.temperature)
+        effective_temperature = temperature if temperature is not None else self.temperature
+        effective_top_p = top_p if top_p is not None else self.top_p
+        effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
 
-        if self.top_p is not None:
-            config["topP"] = float(self.top_p)
+        if effective_temperature is not None:
+            config["temperature"] = float(effective_temperature)
 
-        if self.max_tokens:
-            config["maxOutputTokens"] = int(self.max_tokens)
+        if effective_top_p is not None:
+            config["topP"] = float(effective_top_p)
+
+        if effective_max_tokens:
+            config["maxOutputTokens"] = int(effective_max_tokens)
 
         return config
 
@@ -490,6 +499,9 @@ class VertexLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -519,6 +531,10 @@ class VertexLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         should_stream = stream if stream is not None else self.streaming
 
         # Resolve tool configuration
@@ -535,7 +551,11 @@ class VertexLanguageModel(LanguageModel):
         }
 
         # Add generation config if provided
-        generation_config = self._create_generation_config()
+        generation_config = self._create_generation_config(
+            max_tokens=effective_max_tokens,
+            temperature=effective_temperature,
+            top_p=effective_top_p,
+        )
         if generation_config:
             payload["generationConfig"] = generation_config
 
@@ -673,6 +693,9 @@ class VertexLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -702,6 +725,10 @@ class VertexLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         should_stream = stream if stream is not None else self.streaming
 
         # Resolve tool configuration
@@ -718,7 +745,11 @@ class VertexLanguageModel(LanguageModel):
         }
 
         # Add generation config if provided
-        generation_config = self._create_generation_config()
+        generation_config = self._create_generation_config(
+            max_tokens=effective_max_tokens,
+            temperature=effective_temperature,
+            top_p=effective_top_p,
+        )
         if generation_config:
             payload["generationConfig"] = generation_config
 
