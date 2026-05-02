@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_stt("mistral")`.
 - **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_speech_to_text("mistral")`.
 - **`TranscriptionResponse.provider`** — STT responses now expose the originating provider name as an optional field, matching the existing `AudioResponse.provider` field. All STT providers (`openai`, `elevenlabs`, `azure`) already passed this kwarg, but Pydantic was silently dropping it. Existing callers continue to work unchanged. (#126)
+- **Release-gated integration tests for chat completion** — Added `tests/integration/test_chat_completion_real.py` with sync/async and streaming coverage across all LLM providers (OpenAI, Anthropic, Google, Vertex, Azure, Mistral, Ollama, Groq, OpenRouter, Perplexity, DeepSeek, xAI, DashScope, MiniMax).
 
 ### Changed
 
