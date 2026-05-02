@@ -46,6 +46,14 @@ class TestGuessAudioContentType:
         # .html is text/html — not audio
         assert _guess_audio_content_type("page.html") == "audio/mpeg"
 
+    def test_none_filename_falls_back(self):
+        # BinaryIO with .name explicitly set to None must not crash
+        assert _guess_audio_content_type(None) == "audio/mpeg"
+
+    def test_empty_filename_falls_back(self):
+        # Empty string must not crash mimetypes.guess_type
+        assert _guess_audio_content_type("") == "audio/mpeg"
+
 
 def test_cannot_instantiate_abstract_base():
     """Test that SpeechToTextModel cannot be instantiated directly."""

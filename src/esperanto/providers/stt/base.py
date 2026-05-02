@@ -10,8 +10,14 @@ from esperanto.common_types import Model, TranscriptionResponse
 from esperanto.utils.connect import HttpConnectionMixin
 
 
-def _guess_audio_content_type(filename: str) -> str:
-    """Guess audio MIME type from filename, falling back to audio/mpeg."""
+def _guess_audio_content_type(filename: Optional[str]) -> str:
+    """Guess audio MIME type from filename, falling back to audio/mpeg.
+
+    Returns audio/mpeg as a safe default when filename is None or empty
+    (e.g., a BinaryIO whose ``.name`` attribute is explicitly None).
+    """
+    if not filename:
+        return "audio/mpeg"
     mime_type, _ = mimetypes.guess_type(filename)
     if mime_type and mime_type.startswith("audio/"):
         return mime_type
