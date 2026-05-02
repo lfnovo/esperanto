@@ -17,7 +17,11 @@ VOICES_RESPONSE = {
             "gender": "NEUTRAL",
             "languages": ["en"],
         }
-    ]
+    ],
+    "page": 1,
+    "page_size": 1,
+    "total": 1,
+    "total_pages": 1,
 }
 
 
@@ -159,6 +163,7 @@ def test_available_voices(tts_model):
     tts_model.client.get.assert_called_once_with(
         "https://api.mistral.ai/v1/audio/voices",
         headers=tts_model._get_headers(),
+        params={"page": 1},
     )
 
     assert "gb_jane_neutral" in voices
@@ -197,3 +202,38 @@ def test_error_handling_5xx(tts_model):
 
     with pytest.raises(RuntimeError, match="Mistral API error"):
         tts_model.generate_speech(text="Hello", voice="gb_jane_neutral")
+
+
+def test_available_voices_paginated():
+    voice_a = {"id": "voice_a", "name": "Voice A", "gender": "FEMALE", "languages": ["en"]}
+    voice_b = {"id": "voice_b", "name": "Voice B", "gender": "MALE", "languages": ["fr"]}
+
+    page1_response = Mock()
+    page1_response.status_code = 200
+    page1_response.json.return_value = {
+        "items": [voice_a],
+        "page": 1,
+        "page_size": 1,
+        "total": 2,
+        "total_pages": 2,
+    }
+
+    page2_response = Mock()
+    page2_response.status_code = 200
+    page2_response.json.return_value = {
+        "items": [voice_b],
+        "page": 2,
+        "page_size": 1,
+        "total": 2,
+        "total_pages": 2,
+    }
+
+    model = MistralTextToSpeechModel(api_key="test-key")
+    model.client = Mock()
+    model.client.get.side_effect = [page1_response, page2_response]
+
+    voices = model.available_voices
+
+    assert "voice_a" in voices
+    assert "voice_b" in voices
+    assert model.client.get.call_count == 2
