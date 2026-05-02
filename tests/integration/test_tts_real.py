@@ -131,8 +131,11 @@ class TestGoogleTTS:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-    reason="GOOGLE_APPLICATION_CREDENTIALS not configured",
+    not (
+        os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        and (os.getenv("VERTEX_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT"))
+    ),
+    reason="Vertex TTS requires GOOGLE_APPLICATION_CREDENTIALS and a project env var (VERTEX_PROJECT or GOOGLE_CLOUD_PROJECT)",
 )
 class TestVertexTTS:
     """Real integration tests for Vertex AI text-to-speech."""
@@ -163,8 +166,11 @@ class TestVertexTTS:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("AZURE_OPENAI_API_KEY_TTS"),
-    reason="AZURE_OPENAI_API_KEY_TTS not configured",
+    not (
+        (os.getenv("AZURE_OPENAI_API_KEY_TTS") or os.getenv("AZURE_OPENAI_API_KEY"))
+        and (os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or os.getenv("AZURE_OPENAI_ENDPOINT"))
+    ),
+    reason="Azure TTS requires both an API key and an endpoint (AZURE_OPENAI_API_KEY[_TTS] + AZURE_OPENAI_ENDPOINT[_TTS])",
 )
 class TestAzureTTS:
     """Real integration tests for Azure text-to-speech."""

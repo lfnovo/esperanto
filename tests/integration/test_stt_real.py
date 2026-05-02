@@ -145,8 +145,11 @@ class TestGoogleSTT:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("AZURE_OPENAI_API_KEY_STT"),
-    reason="AZURE_OPENAI_API_KEY_STT not configured",
+    not (
+        (os.getenv("AZURE_OPENAI_API_KEY_STT") or os.getenv("AZURE_OPENAI_API_KEY"))
+        and (os.getenv("AZURE_OPENAI_ENDPOINT_STT") or os.getenv("AZURE_OPENAI_ENDPOINT"))
+    ),
+    reason="Azure STT requires both an API key and an endpoint (AZURE_OPENAI_API_KEY[_STT] + AZURE_OPENAI_ENDPOINT[_STT])",
 )
 class TestAzureSTT:
     """Real integration tests for Azure speech-to-text."""
@@ -249,18 +252,19 @@ class TestElevenLabsSTT:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("OPENAI_COMPATIBLE_STT_BASE_URL"),
-    reason="OPENAI_COMPATIBLE_STT_BASE_URL not configured",
+    not (os.getenv("OPENAI_COMPATIBLE_BASE_URL_STT") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")),
+    reason="OpenAI-compatible STT requires OPENAI_COMPATIBLE_BASE_URL_STT or OPENAI_COMPATIBLE_BASE_URL",
 )
 class TestOpenAICompatibleSTT:
     """Real integration tests for OpenAI-compatible speech-to-text."""
 
     def test_sync_transcribe(self):
         """Test sync transcription."""
+        base_url = os.getenv("OPENAI_COMPATIBLE_BASE_URL_STT") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")
         model = AIFactory.create_speech_to_text(
             "openai-compatible",
             "whisper-1",
-            config={"base_url": os.getenv("OPENAI_COMPATIBLE_STT_BASE_URL")},
+            config={"base_url": base_url},
         )
         result = model.transcribe(str(SAMPLE_AUDIO))
         assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
@@ -270,7 +274,7 @@ class TestOpenAICompatibleSTT:
         model = AIFactory.create_speech_to_text(
             "openai-compatible",
             "whisper-1",
-            config={"base_url": os.getenv("OPENAI_COMPATIBLE_STT_BASE_URL")},
+            config={"base_url": os.getenv("OPENAI_COMPATIBLE_BASE_URL_STT") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")},
         )
 
         async def _run() -> object:
