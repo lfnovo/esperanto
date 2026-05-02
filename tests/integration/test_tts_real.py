@@ -169,8 +169,13 @@ class TestVertexTTS:
     not (
         (os.getenv("AZURE_OPENAI_API_KEY_TTS") or os.getenv("AZURE_OPENAI_API_KEY"))
         and (os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or os.getenv("AZURE_OPENAI_ENDPOINT"))
+        and (
+            os.getenv("AZURE_OPENAI_API_VERSION_TTS")
+            or os.getenv("OPENAI_API_VERSION")
+            or os.getenv("AZURE_OPENAI_API_VERSION")
+        )
     ),
-    reason="Azure TTS requires both an API key and an endpoint (AZURE_OPENAI_API_KEY[_TTS] + AZURE_OPENAI_ENDPOINT[_TTS])",
+    reason="Azure TTS requires API key, endpoint, and API version (AZURE_OPENAI_API_KEY[_TTS] + AZURE_OPENAI_ENDPOINT[_TTS] + AZURE_OPENAI_API_VERSION[_TTS])",
 )
 class TestAzureTTS:
     """Real integration tests for Azure text-to-speech."""
@@ -279,8 +284,8 @@ class TestMistralTTS:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("OPENAI_COMPATIBLE_TTS_BASE_URL"),
-    reason="OPENAI_COMPATIBLE_TTS_BASE_URL not configured",
+    not (os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")),
+    reason="OpenAI-compatible TTS requires OPENAI_COMPATIBLE_BASE_URL_TTS or OPENAI_COMPATIBLE_BASE_URL",
 )
 class TestOpenAICompatibleTTS:
     """Real integration tests for OpenAI-compatible text-to-speech."""
@@ -289,7 +294,7 @@ class TestOpenAICompatibleTTS:
         """Test sync speech generation."""
         model = AIFactory.create_text_to_speech(
             "openai-compatible",
-            config={"base_url": os.getenv("OPENAI_COMPATIBLE_TTS_BASE_URL")},
+            config={"base_url": os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")},
         )
         response = model.generate_speech(TEST_TEXT, voice="alloy")
         assert response.audio_data
@@ -299,7 +304,7 @@ class TestOpenAICompatibleTTS:
         """Test async speech generation."""
         model = AIFactory.create_text_to_speech(
             "openai-compatible",
-            config={"base_url": os.getenv("OPENAI_COMPATIBLE_TTS_BASE_URL")},
+            config={"base_url": os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS") or os.getenv("OPENAI_COMPATIBLE_BASE_URL")},
         )
 
         async def _run() -> object:
