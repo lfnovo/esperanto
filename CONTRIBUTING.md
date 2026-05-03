@@ -115,6 +115,34 @@ uv run pytest -m release
 - They are deliberately excluded from CI. Running them is a local-only ritual, intended for maintainers to verify everything works end-to-end before publishing a release.
 - Do not add release tests to the default test scope, and do not run them in automated pipelines.
 
+### Provider credentials reference
+
+Each release-gated test class is `skipif`-gated on the env vars its provider needs. Set whichever subset you want to validate; tests without configured credentials skip cleanly. Common envs:
+
+| Provider | Required env vars |
+|----------|-------------------|
+| OpenAI | `OPENAI_API_KEY` |
+| Anthropic | `ANTHROPIC_API_KEY` |
+| Google (Gemini) | `GOOGLE_API_KEY` or `GEMINI_API_KEY` |
+| Vertex AI | `GOOGLE_APPLICATION_CREDENTIALS` + (`VERTEX_PROJECT` or `GOOGLE_CLOUD_PROJECT`) |
+| Azure OpenAI | `AZURE_OPENAI_API_KEY[_LLM/_EMBEDDING/_STT/_TTS]` + `AZURE_OPENAI_ENDPOINT[_*]` + `AZURE_OPENAI_API_VERSION[_*]`; for TTS also `AZURE_OPENAI_DEPLOYMENT_NAME_TTS` |
+| Ollama | none — auto-probes `http://localhost:11434`. Override with `OLLAMA_BASE_URL` or `OLLAMA_API_BASE` for remote/non-default. |
+| Mistral | `MISTRAL_API_KEY` |
+| Groq | `GROQ_API_KEY` |
+| DeepSeek | `DEEPSEEK_API_KEY` |
+| xAI | `XAI_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Perplexity | `PERPLEXITY_API_KEY` (note: tool-calling tests skip — Perplexity API doesn't support tools) |
+| MiniMax | `MINIMAX_API_KEY` |
+| DashScope (Qwen) | `DASHSCOPE_API_KEY` |
+| Jina | `JINA_API_KEY` |
+| Voyage | `VOYAGE_API_KEY` |
+| ElevenLabs | `ELEVENLABS_API_KEY` |
+| Transformers (local reranker) | none — gates on `sentence-transformers` package being installed |
+| OpenAI-compatible (LiteLLM, vLLM, Together, etc.) | `OPENAI_COMPATIBLE_API_KEY[_LLM/_EMBEDDING/_STT/_TTS]` + `OPENAI_COMPATIBLE_BASE_URL[_*]` |
+
+If a test fails with a "deployment not found" or similar provider-specific error rather than skipping, it usually means partial credentials are set (e.g., API key but no endpoint for Azure). The skipif gates require all the env vars the provider's `__post_init__` actually reads.
+
 ## Adding a New Provider
 
 This is the most common type of contribution. To keep Esperanto maintainable, we have clear criteria for what we accept.
