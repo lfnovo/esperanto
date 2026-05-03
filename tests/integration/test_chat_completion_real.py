@@ -14,14 +14,19 @@ from esperanto import AIFactory
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk
 
 
-def _ollama_available() -> bool:
-    """Probe for a reachable Ollama instance.
+def _ollama_available(required_model: str = "") -> bool:
+    """Probe for a reachable Ollama instance, optionally requiring a model.
 
     Ollama defaults to ``http://localhost:11434`` per its own provider source,
     so the test should run whenever Ollama is reachable — locally OR via the
     optional ``OLLAMA_BASE_URL`` / ``OLLAMA_API_BASE`` env override. Avoids
     skipping tests when the user has Ollama running locally without setting
     an env var.
+
+    When ``required_model`` is supplied, also confirm that model is in the
+    server's ``/api/tags`` listing — protects tests that need a specific
+    model (e.g. tool-calling needs ``qwen3:32b``) from running and failing
+    against a server that doesn't have it pulled.
     """
     import httpx
     base_url = (
@@ -31,7 +36,12 @@ def _ollama_available() -> bool:
     )
     try:
         response = httpx.get(f"{base_url}/api/tags", timeout=2.0)
-        return response.status_code == 200
+        if response.status_code != 200:
+            return False
+        if required_model:
+            tags = [m.get("name", "") for m in response.json().get("models", [])]
+            return any(required_model in tag for tag in tags)
+        return True
     except Exception:
         return False
 
@@ -193,14 +203,17 @@ class TestGoogleChat:
 
 
 @pytest.mark.release
-@pytest.mark.skip(
-    reason="Vertex AI requires ADC or GOOGLE_APPLICATION_CREDENTIALS — not a simple API-key env var; omitted in tool-calling tests for the same reason"
+@pytest.mark.release
+@pytest.mark.skipif(
+    not (os.getenv("VERTEX_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT")),
+    reason="Vertex AI requires VERTEX_PROJECT or GOOGLE_CLOUD_PROJECT (auth via ADC, GOOGLE_APPLICATION_CREDENTIALS, or gcloud)",
 )
 class TestVertexChat:
     """Real integration tests for Vertex AI chat completion.
 
-    NOTE: Vertex AI requires Google Application Default Credentials (ADC) or
-    GOOGLE_APPLICATION_CREDENTIALS, not a simple API key. These tests are skipped.
+    NOTE: Vertex AI requires a project ID via env var. Authentication is
+    auto-discovered by the Google SDK (ADC, GOOGLE_APPLICATION_CREDENTIALS,
+    or gcloud login).
     """
 
     def test_sync_chat_complete(self):
@@ -264,9 +277,14 @@ class TestAzureChat:
             "azure",
             os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_LLM", "gpt-4o-mini"),
             config={
-                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM"),
-                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM"),
-                "api_version": os.getenv("OPENAI_API_VERSION", "2024-12-01-preview"),
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM") or os.getenv("AZURE_OPENAI_API_KEY"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM") or os.getenv("AZURE_OPENAI_ENDPOINT"),
+                "api_version": (
+                    os.getenv("AZURE_OPENAI_API_VERSION_LLM")
+                    or os.getenv("OPENAI_API_VERSION")
+                    or os.getenv("AZURE_OPENAI_API_VERSION")
+                    or "2024-12-01-preview"
+                ),
             },
         )
         response = model.chat_complete(messages=MESSAGES)
@@ -279,9 +297,14 @@ class TestAzureChat:
             "azure",
             os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_LLM", "gpt-4o-mini"),
             config={
-                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM"),
-                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM"),
-                "api_version": os.getenv("OPENAI_API_VERSION", "2024-12-01-preview"),
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM") or os.getenv("AZURE_OPENAI_API_KEY"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM") or os.getenv("AZURE_OPENAI_ENDPOINT"),
+                "api_version": (
+                    os.getenv("AZURE_OPENAI_API_VERSION_LLM")
+                    or os.getenv("OPENAI_API_VERSION")
+                    or os.getenv("AZURE_OPENAI_API_VERSION")
+                    or "2024-12-01-preview"
+                ),
             },
         )
         response = await model.achat_complete(messages=MESSAGES)
@@ -294,9 +317,14 @@ class TestAzureChat:
             "azure",
             os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_LLM", "gpt-4o-mini"),
             config={
-                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM"),
-                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM"),
-                "api_version": os.getenv("OPENAI_API_VERSION", "2024-12-01-preview"),
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM") or os.getenv("AZURE_OPENAI_API_KEY"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM") or os.getenv("AZURE_OPENAI_ENDPOINT"),
+                "api_version": (
+                    os.getenv("AZURE_OPENAI_API_VERSION_LLM")
+                    or os.getenv("OPENAI_API_VERSION")
+                    or os.getenv("AZURE_OPENAI_API_VERSION")
+                    or "2024-12-01-preview"
+                ),
             },
         )
         response = model.chat_complete(messages=MESSAGES, stream=True)
@@ -312,9 +340,14 @@ class TestAzureChat:
             "azure",
             os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_LLM", "gpt-4o-mini"),
             config={
-                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM"),
-                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM"),
-                "api_version": os.getenv("OPENAI_API_VERSION", "2024-12-01-preview"),
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_LLM") or os.getenv("AZURE_OPENAI_API_KEY"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_LLM") or os.getenv("AZURE_OPENAI_ENDPOINT"),
+                "api_version": (
+                    os.getenv("AZURE_OPENAI_API_VERSION_LLM")
+                    or os.getenv("OPENAI_API_VERSION")
+                    or os.getenv("AZURE_OPENAI_API_VERSION")
+                    or "2024-12-01-preview"
+                ),
             },
         )
         response = await model.achat_complete(messages=MESSAGES, stream=True)
