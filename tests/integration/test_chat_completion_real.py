@@ -13,6 +13,29 @@ import pytest
 from esperanto import AIFactory
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk
 
+
+def _ollama_available() -> bool:
+    """Probe for a reachable Ollama instance.
+
+    Ollama defaults to ``http://localhost:11434`` per its own provider source,
+    so the test should run whenever Ollama is reachable — locally OR via the
+    optional ``OLLAMA_BASE_URL`` / ``OLLAMA_API_BASE`` env override. Avoids
+    skipping tests when the user has Ollama running locally without setting
+    an env var.
+    """
+    import httpx
+    base_url = (
+        os.getenv("OLLAMA_BASE_URL")
+        or os.getenv("OLLAMA_API_BASE")
+        or "http://localhost:11434"
+    )
+    try:
+        response = httpx.get(f"{base_url}/api/tags", timeout=2.0)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
 MESSAGES = [{"role": "user", "content": "Say hello in one sentence."}]
 
 
@@ -358,8 +381,8 @@ class TestMistralChat:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not (os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")),
-    reason="OLLAMA_BASE_URL or OLLAMA_API_BASE not configured",
+    not _ollama_available(),
+    reason="Ollama not reachable at configured base URL or localhost:11434",
 )
 class TestOllamaChat:
     """Real integration tests for Ollama chat completion."""
