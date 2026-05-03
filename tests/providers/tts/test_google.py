@@ -59,6 +59,11 @@ def test_generate_speech():
     assert response.voice == "en-US-Standard-A"
     assert response.provider == "google"
 
+    # Verify systemInstruction is present in the request payload
+    call_kwargs = mock_client.post.call_args.kwargs
+    assert "systemInstruction" in call_kwargs["json"]
+    assert call_kwargs["json"]["systemInstruction"] == {"parts": [{"text": "Read aloud the following text."}]}
+
 
 @pytest.mark.asyncio
 async def test_agenerate_speech():
@@ -106,6 +111,11 @@ async def test_agenerate_speech():
     assert response.model == "gemini-2.5-flash-preview-tts"
     assert response.voice == "en-US-Standard-A"
     assert response.provider == "google"
+
+    # Verify systemInstruction is present in the request payload
+    call_kwargs = mock_async_client.post.call_args.kwargs
+    assert "systemInstruction" in call_kwargs["json"]
+    assert call_kwargs["json"]["systemInstruction"] == {"parts": [{"text": "Read aloud the following text."}]}
 
 
 def test_available_voices():

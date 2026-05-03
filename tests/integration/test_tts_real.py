@@ -91,10 +91,6 @@ class TestElevenLabsTTS:
 # =============================================================================
 
 
-@pytest.mark.xfail(
-    reason="Google TTS prompt format rejected by current API — see #178",
-    strict=False,
-)
 @pytest.mark.release
 @pytest.mark.skipif(
     not (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")),

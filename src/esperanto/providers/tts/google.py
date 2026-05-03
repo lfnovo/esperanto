@@ -325,6 +325,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -397,6 +400,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -487,6 +493,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -569,6 +578,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
