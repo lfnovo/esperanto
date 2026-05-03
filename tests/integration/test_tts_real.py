@@ -185,9 +185,10 @@ class TestAzureTTS:
         """Test sync speech generation."""
         model = AIFactory.create_text_to_speech(
             "azure",
+            os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_TTS"),
             config={
-                "api_key": os.getenv("AZURE_OPENAI_API_KEY_TTS"),
-                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_TTS"),
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_TTS") or os.getenv("AZURE_OPENAI_API_KEY"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or os.getenv("AZURE_OPENAI_ENDPOINT"),
             },
         )
         response = model.generate_speech(TEST_TEXT, voice="alloy")
@@ -198,9 +199,10 @@ class TestAzureTTS:
         """Test async speech generation."""
         model = AIFactory.create_text_to_speech(
             "azure",
+            os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_TTS"),
             config={
-                "api_key": os.getenv("AZURE_OPENAI_API_KEY_TTS"),
-                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_TTS"),
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_TTS") or os.getenv("AZURE_OPENAI_API_KEY"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or os.getenv("AZURE_OPENAI_ENDPOINT"),
             },
         )
 

@@ -124,7 +124,7 @@ Each release-gated test class is `skipif`-gated on the env vars its provider nee
 | OpenAI | `OPENAI_API_KEY` |
 | Anthropic | `ANTHROPIC_API_KEY` |
 | Google (Gemini) | `GOOGLE_API_KEY` or `GEMINI_API_KEY` |
-| Vertex AI | `GOOGLE_APPLICATION_CREDENTIALS` + (`VERTEX_PROJECT` or `GOOGLE_CLOUD_PROJECT`) |
+| Vertex AI | `VERTEX_PROJECT` or `GOOGLE_CLOUD_PROJECT` (auth auto-discovered: ADC, `GOOGLE_APPLICATION_CREDENTIALS`, or `gcloud auth application-default login`) |
 | Azure OpenAI | `AZURE_OPENAI_API_KEY[_LLM/_EMBEDDING/_STT/_TTS]` + `AZURE_OPENAI_ENDPOINT[_*]` + `AZURE_OPENAI_API_VERSION[_*]`; for TTS also `AZURE_OPENAI_DEPLOYMENT_NAME_TTS` |
 | Ollama | none — auto-probes `http://localhost:11434`. Override with `OLLAMA_BASE_URL` or `OLLAMA_API_BASE` for remote/non-default. |
 | Mistral | `MISTRAL_API_KEY` |
@@ -139,7 +139,7 @@ Each release-gated test class is `skipif`-gated on the env vars its provider nee
 | Voyage | `VOYAGE_API_KEY` |
 | ElevenLabs | `ELEVENLABS_API_KEY` |
 | Transformers (local reranker) | none — gates on `sentence-transformers` package being installed |
-| OpenAI-compatible (LiteLLM, vLLM, Together, etc.) | `OPENAI_COMPATIBLE_API_KEY[_LLM/_EMBEDDING/_STT/_TTS]` + `OPENAI_COMPATIBLE_BASE_URL[_*]` |
+| OpenAI-compatible (LiteLLM, vLLM, Together, etc.) | `OPENAI_COMPATIBLE_BASE_URL[_LLM/_EMBEDDING/_STT/_TTS]` (required); `OPENAI_COMPATIBLE_API_KEY[_*]` (optional — local servers like LiteLLM may not need auth; cloud-hosted ones like Together do) |
 
 If a test fails with a "deployment not found" or similar provider-specific error rather than skipping, it usually means partial credentials are set (e.g., API key but no endpoint for Azure). The skipif gates require all the env vars the provider's `__post_init__` actually reads.
 
