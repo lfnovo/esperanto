@@ -1,6 +1,5 @@
 """Tests for base speech-to-text model."""
 
-import mimetypes
 from dataclasses import dataclass
 from typing import BinaryIO, Optional, Union
 
@@ -21,19 +20,20 @@ class TestGuessAudioContentType:
 
     def test_m4a_returns_audio_type(self):
         result = _guess_audio_content_type("audio.m4a")
-        assert result.startswith("audio/")
+        assert result == "audio/mp4"
 
     def test_ogg_returns_audio_ogg(self):
         result = _guess_audio_content_type("audio.ogg")
         assert result == "audio/ogg"
 
-    def test_webm_returns_audio_type_or_fallback(self):
-        result = _guess_audio_content_type("audio.webm")
-        mime, _ = mimetypes.guess_type("audio.webm")
-        if mime and mime.startswith("audio/"):
-            assert result == mime
-        else:
-            assert result == "audio/mpeg"
+    def test_webm_returns_audio_webm(self):
+        assert _guess_audio_content_type("audio.webm") == "audio/webm"
+
+    def test_mp4_returns_audio_mp4(self):
+        assert _guess_audio_content_type("podcast.mp4") == "audio/mp4"
+
+    def test_mpeg_returns_audio_mpeg(self):
+        assert _guess_audio_content_type("clip.mpeg") == "audio/mpeg"
 
     def test_unknown_extension_falls_back(self):
         assert _guess_audio_content_type("audio.xyz") == "audio/mpeg"

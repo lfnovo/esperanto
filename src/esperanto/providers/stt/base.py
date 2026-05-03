@@ -1,6 +1,7 @@
 """Base speech-to-text model interface."""
 
 import mimetypes
+import pathlib
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -8,6 +9,14 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 from esperanto.common_types import Model, TranscriptionResponse
 from esperanto.utils.connect import HttpConnectionMixin
+
+_AUDIO_CONTAINER_EXTENSIONS = {
+    ".webm": "audio/webm",
+    ".mp4": "audio/mp4",
+    ".mpeg": "audio/mpeg",
+    ".mpga": "audio/mpeg",
+    ".m4a": "audio/mp4",
+}
 
 
 def _guess_audio_content_type(filename: Optional[str]) -> str:
@@ -18,6 +27,9 @@ def _guess_audio_content_type(filename: Optional[str]) -> str:
     """
     if not filename:
         return "audio/mpeg"
+    ext = pathlib.Path(filename).suffix.lower()
+    if ext in _AUDIO_CONTAINER_EXTENSIONS:
+        return _AUDIO_CONTAINER_EXTENSIONS[ext]
     mime_type, _ = mimetypes.guess_type(filename)
     if mime_type and mime_type.startswith("audio/"):
         return mime_type
