@@ -74,6 +74,38 @@ def weather_tools():
 # =============================================================================
 
 
+def _ollama_available(required_model: str = "") -> bool:
+    """Probe for a reachable Ollama instance, optionally requiring a model.
+
+    Ollama defaults to ``http://localhost:11434`` per its own provider source,
+    so the test should run whenever Ollama is reachable — locally OR via the
+    optional ``OLLAMA_BASE_URL`` / ``OLLAMA_API_BASE`` env override. Avoids
+    skipping tests when the user has Ollama running locally without setting
+    an env var.
+
+    When ``required_model`` is supplied, also confirm that model is in the
+    server's ``/api/tags`` listing — protects tests that need a specific
+    model (e.g. tool-calling needs ``qwen3:32b``) from running and failing
+    against a server that doesn't have it pulled.
+    """
+    import httpx
+    base_url = (
+        os.getenv("OLLAMA_BASE_URL")
+        or os.getenv("OLLAMA_API_BASE")
+        or "http://localhost:11434"
+    )
+    try:
+        response = httpx.get(f"{base_url}/api/tags", timeout=2.0)
+        if response.status_code != 200:
+            return False
+        if required_model:
+            tags = [m.get("name", "") for m in response.json().get("models", [])]
+            return any(required_model in tag for tag in tags)
+        return True
+    except Exception:
+        return False
+
+
 @pytest.mark.release
 @pytest.mark.skipif(
     not os.getenv("OPENAI_API_KEY"),
@@ -899,8 +931,8 @@ class TestAzureToolCalling:
 
 @pytest.mark.release
 @pytest.mark.skipif(
-    not os.getenv("OLLAMA_BASE_URL"),
-    reason="OLLAMA_BASE_URL not configured",
+    not _ollama_available(required_model="qwen3:32b"),
+    reason="Ollama not reachable, or qwen3:32b model not pulled (pull via: ollama pull qwen3:32b)",
 )
 class TestOllamaToolCalling:
     """Real integration tests for Ollama tool calling."""

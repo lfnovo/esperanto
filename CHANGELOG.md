@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Real-API release tests for STT, TTS, and reranker** — `tests/integration/test_stt_real.py`, `tests/integration/test_tts_real.py`, and `tests/integration/test_reranker_real.py` cover all providers per type. Tests are gated with `@pytest.mark.release` and excluded from the default `uv run pytest` run; invoke with `uv run pytest -m release`. (#169)
 - **Per-call `max_tokens`, `temperature`, `top_p` overrides** — `chat_complete()` and `achat_complete()` now accept `max_tokens`, `temperature`, and `top_p` keyword arguments that override the instance-level values for a single request. Supported by all LLM providers. For Anthropic, `top_p` is silently dropped when `temperature` is also set, consistent with the mutual-exclusivity rule enforced by that provider's API.
+- **Real-API embedding integration tests** — `tests/integration/test_embedding_real.py` covers all embedding providers (OpenAI, Google, Vertex AI, Azure, Jina, Voyage, Mistral, Transformers, Ollama, OpenRouter, OpenAI-Compatible) with sync, async, and batch embed tests. Task-type translation tested for Google and Jina (native task param). Gated by `@pytest.mark.release`; excluded from default test runs.
 - **Mistral TTS provider** — `MistralTextToSpeechModel` using the Voxtral (`voxtral-mini-tts-2603`) model. Supports `pcm`, `wav`, `mp3`, `flac`, and `opus` response formats. Reuses the existing `MISTRAL_API_KEY` environment variable. Voice discovery via `available_voices` calls `GET /v1/audio/voices`.
-- **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_stt("mistral")`.
 - **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_speech_to_text("mistral")`.
 - **`TranscriptionResponse.provider`** — STT responses now expose the originating provider name as an optional field, matching the existing `AudioResponse.provider` field. All STT providers (`openai`, `elevenlabs`, `azure`) already passed this kwarg, but Pydantic was silently dropping it. Existing callers continue to work unchanged. (#126)
+- **Release-gated integration tests for chat completion** — Added `tests/integration/test_chat_completion_real.py` with sync/async and streaming coverage across all LLM providers (OpenAI, Anthropic, Google, Vertex, Azure, Mistral, Ollama, Groq, OpenRouter, Perplexity, DeepSeek, xAI, DashScope, MiniMax).
 
 ### Changed
 
