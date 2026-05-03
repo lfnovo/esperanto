@@ -342,3 +342,59 @@ def test_xai_tts_base_url_env_var_trailing_slash_stripped(monkeypatch):
 
     model = XAITextToSpeechModel()
     assert model.base_url == "https://xai.example.com/v1"
+
+
+def _azure_env(monkeypatch, modality_suffix: str) -> None:
+    """Set common Azure env vars with trailing slash on the endpoint."""
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv(
+        "AZURE_OPENAI_ENDPOINT",
+        "https://test-endpoint.openai.azure.com/",
+    )
+    monkeypatch.setenv("AZURE_OPENAI_API_VERSION", f"2024-{modality_suffix}-01")
+
+
+def test_azure_llm_endpoint_trailing_slash_stripped(monkeypatch):
+    _azure_env(monkeypatch, "01")
+    monkeypatch.setenv("OPENAI_API_VERSION", "2024-01-01")
+    from esperanto.providers.llm.azure import AzureLanguageModel
+
+    model = AzureLanguageModel(model_name="test-deployment")
+    assert model.azure_endpoint == "https://test-endpoint.openai.azure.com"
+
+
+def test_azure_llm_endpoint_via_base_url_trailing_slash_stripped(monkeypatch):
+    monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("AZURE_OPENAI_API_VERSION", "2024-01-01")
+    from esperanto.providers.llm.azure import AzureLanguageModel
+
+    model = AzureLanguageModel(
+        model_name="test-deployment",
+        base_url="https://direct-endpoint.com/",
+    )
+    assert model.azure_endpoint == "https://direct-endpoint.com"
+
+
+def test_azure_embedding_endpoint_trailing_slash_stripped(monkeypatch):
+    _azure_env(monkeypatch, "02")
+    from esperanto.providers.embedding.azure import AzureEmbeddingModel
+
+    model = AzureEmbeddingModel(model_name="test-deployment")
+    assert model.azure_endpoint == "https://test-endpoint.openai.azure.com"
+
+
+def test_azure_stt_endpoint_trailing_slash_stripped(monkeypatch):
+    _azure_env(monkeypatch, "03")
+    from esperanto.providers.stt.azure import AzureSpeechToTextModel
+
+    model = AzureSpeechToTextModel(model_name="test-deployment")
+    assert model.azure_endpoint == "https://test-endpoint.openai.azure.com"
+
+
+def test_azure_tts_endpoint_trailing_slash_stripped(monkeypatch):
+    _azure_env(monkeypatch, "04")
+    from esperanto.providers.tts.azure import AzureTextToSpeechModel
+
+    model = AzureTextToSpeechModel(model_name="test-deployment")
+    assert model.azure_endpoint == "https://test-endpoint.openai.azure.com"
