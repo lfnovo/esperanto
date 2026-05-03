@@ -29,7 +29,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
             raise ValueError("OpenAI API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.openai.com/v1"
+        self.base_url = (self.base_url or "https://api.openai.com/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

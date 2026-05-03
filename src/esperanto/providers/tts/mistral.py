@@ -27,7 +27,7 @@ class MistralTextToSpeechModel(TextToSpeechModel):
             raise ValueError(
                 "Mistral API key not found. Set MISTRAL_API_KEY environment variable."
             )
-        self.base_url = self.base_url or "https://api.mistral.ai/v1"
+        self.base_url = (self.base_url or "https://api.mistral.ai/v1").rstrip("/")
         self.model_name = self.model_name or self._get_default_model()
         self._voices_cache: Optional[Dict[str, Voice]] = None
         self._create_http_clients()

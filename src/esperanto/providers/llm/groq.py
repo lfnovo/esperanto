@@ -51,7 +51,7 @@ class GroqLanguageModel(LanguageModel):
             raise ValueError("Groq API key not found")
 
         # Set base URL for Groq's OpenAI-compatible API
-        self.base_url = "https://api.groq.com/openai/v1"
+        self.base_url = "https://api.groq.com/openai/v1".rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

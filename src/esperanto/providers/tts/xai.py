@@ -64,7 +64,7 @@ class XAITextToSpeechModel(TextToSpeechModel):
             self._config.get("base_url") or
             os.getenv("XAI_BASE_URL") or
             self.DEFAULT_BASE_URL
-        )
+        ).rstrip("/")
 
         # Validate required parameters
         if not self.api_key:

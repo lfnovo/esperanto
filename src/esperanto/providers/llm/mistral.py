@@ -53,7 +53,7 @@ class MistralLanguageModel(LanguageModel):
             raise ValueError("Mistral API key not found. Set MISTRAL_API_KEY environment variable.")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.mistral.ai/v1"
+        self.base_url = (self.base_url or "https://api.mistral.ai/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

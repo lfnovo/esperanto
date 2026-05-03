@@ -56,9 +56,9 @@ class PerplexityLanguageModel(LanguageModel):
         super().__post_init__()
 
         # Initialize Perplexity-specific configuration
-        self.base_url = self.base_url or os.getenv(
+        self.base_url = (self.base_url or os.getenv(
             "PERPLEXITY_BASE_URL", "https://api.perplexity.ai"
-        )
+        )).rstrip("/")
         self.api_key = self.api_key or os.getenv("PERPLEXITY_API_KEY")
 
         if not self.api_key:

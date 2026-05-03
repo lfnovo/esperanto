@@ -54,6 +54,9 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
             base_url=base_url or "https://api.elevenlabs.io",
             config=kwargs
         )
+
+        if self.base_url:
+            self.base_url = self.base_url.rstrip("/")
         
         self.voice_settings = {
             **self.DEFAULT_VOICE_SETTINGS,

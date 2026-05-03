@@ -31,6 +31,8 @@ class AzureSpeechToTextModel(SpeechToTextModel):
             os.getenv("AZURE_OPENAI_ENDPOINT_STT") or
             os.getenv("AZURE_OPENAI_ENDPOINT")
         )
+        if self.azure_endpoint:
+            self.azure_endpoint = self.azure_endpoint.rstrip("/")
 
         self.api_version = (
             self._config.get("api_version") or

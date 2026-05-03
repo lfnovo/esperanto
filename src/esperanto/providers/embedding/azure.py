@@ -39,6 +39,8 @@ class AzureEmbeddingModel(EmbeddingModel):
             os.getenv("AZURE_OPENAI_ENDPOINT_EMBEDDING") or
             os.getenv("AZURE_OPENAI_ENDPOINT")
         )
+        if self.azure_endpoint:
+            self.azure_endpoint = self.azure_endpoint.rstrip("/")
 
         self.api_version = (
             api_version or

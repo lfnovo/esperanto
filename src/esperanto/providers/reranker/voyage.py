@@ -29,7 +29,7 @@ class VoyageRerankerModel(RerankerModel):
             )
 
         # API configuration
-        self.base_url = self.base_url or "https://api.voyageai.com/v1"
+        self.base_url = (self.base_url or "https://api.voyageai.com/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

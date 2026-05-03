@@ -26,9 +26,9 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
             self.base_url = self.base_url or self.config.get("base_url")
 
         # Initialize OpenRouter-specific configuration
-        self.base_url = self.base_url or os.getenv(
+        self.base_url = (self.base_url or os.getenv(
             "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-        )
+        )).rstrip("/")
         self.api_key = self.api_key or os.getenv("OPENROUTER_API_KEY")
 
         if not self.api_key:
