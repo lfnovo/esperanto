@@ -205,7 +205,7 @@ class GoogleEmbeddingModel(EmbeddingModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "text-embedding-004"
+        return "gemini-embedding-001"
 
     @property
     def provider(self) -> str:
@@ -233,6 +233,6 @@ class GoogleEmbeddingModel(EmbeddingModel):
         except Exception:
             # Fallback to known models if API call fails
             return [
-                Model(id="text-embedding-004", owned_by="Google", context_window=2048),
-                Model(id="embedding-001", owned_by="Google", context_window=2048),
+                Model(id="gemini-embedding-001", owned_by="Google", context_window=2048),
+                Model(id="text-embedding-005", owned_by="Google", context_window=2048),
             ]
