@@ -109,10 +109,6 @@ class TestOpenAIEmbedding:
 # =============================================================================
 
 
-@pytest.mark.xfail(
-    reason="Google default model text-embedding-004 deprecated on v1beta — see #177",
-    strict=False,
-)
 @pytest.mark.release
 @pytest.mark.skipif(
     not (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")),
@@ -123,19 +119,19 @@ class TestGoogleEmbedding:
 
     def test_sync_embed(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        model = AIFactory.create_embedding("google", "text-embedding-004", config={"api_key": api_key})
+        model = AIFactory.create_embedding("google", "gemini-embedding-001", config={"api_key": api_key})
         result = model.embed(TEXTS_SINGLE)
         _assert_valid_embedding(result, 1)
 
     def test_async_embed(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        model = AIFactory.create_embedding("google", "text-embedding-004", config={"api_key": api_key})
+        model = AIFactory.create_embedding("google", "gemini-embedding-001", config={"api_key": api_key})
         result = asyncio.run(model.aembed(TEXTS_SINGLE))
         _assert_valid_embedding(result, 1)
 
     def test_batch_embed(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        model = AIFactory.create_embedding("google", "text-embedding-004", config={"api_key": api_key})
+        model = AIFactory.create_embedding("google", "gemini-embedding-001", config={"api_key": api_key})
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
 
@@ -143,7 +139,7 @@ class TestGoogleEmbedding:
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         model = AIFactory.create_embedding(
             "google",
-            "text-embedding-004",
+            "gemini-embedding-001",
             config={"api_key": api_key, "task_type": EmbeddingTaskType.RETRIEVAL_QUERY},
         )
         result = model.embed(["query text"])

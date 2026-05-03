@@ -68,6 +68,16 @@ When a provider offers both OpenAI-compatible and a native (non-OpenAI) endpoint
 
 **Origin:** Issue #104, 2026-05-01.
 
+### Per-item Metadata Escape Hatch
+
+When normalizing collections of items returned by providers (transcription segments, search results, streaming chunks), expose only the **universal fields** as first-class typed attributes (e.g. `text`, `start`, `end`). Provider-specific extras (`avg_logprob`, `speaker`, `tokens`, `confidence`, `compression_ratio`, etc.) go into an `Optional[Dict[str, Any]] metadata` field on the item itself.
+
+**Why:** Per-item provider extras vary wildly (Whisper returns 6 numeric fields per segment, Mistral returns 1, Google returns speaker IDs). Promoting any of them to first-class breaks parity for providers that don't have it, and forces every new provider to either fake or null-fill the field. The `metadata` dict gives users an escape hatch without inflating the public interface or pre-committing to a shape that may not generalize.
+
+**Scope:** Designing new collection-of-items response types (segments, words, ranked results, streaming chunks). Pairs with **Demand-Driven Abstraction Extension** — promote a field from `metadata` to first-class only when 2+ providers expose it with compatible semantics.
+
+**Origin:** Issue #146, 2026-05-03.
+
 ## Provider Tiers
 
 Not all providers require the same level of implementation effort. We classify them into tiers:
