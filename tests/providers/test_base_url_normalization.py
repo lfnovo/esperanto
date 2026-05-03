@@ -264,6 +264,14 @@ def test_groq_stt_base_url_trailing_slash_stripped(monkeypatch):
     assert model.base_url == "https://api.groq.com/openai/v1"
 
 
+def test_mistral_stt_base_url_trailing_slash_stripped(monkeypatch):
+    monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
+    from esperanto.providers.stt.mistral import MistralSpeechToTextModel
+
+    model = MistralSpeechToTextModel(base_url="https://api.mistral.ai/v1/")
+    assert model.base_url == "https://api.mistral.ai/v1"
+
+
 def test_openai_stt_base_url_trailing_slash_stripped(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     from esperanto.providers.stt.openai import OpenAISpeechToTextModel
