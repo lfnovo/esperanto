@@ -16,6 +16,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Ollama](./ollama.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | [Mistral](./mistral.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | [DeepSeek](./deepseek.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [DashScope](./dashscope.md) | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | [Perplexity](./perplexity.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -142,6 +143,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[Jina](./jina.md)**: Multilingual (100+ languages), production-ready
 - **[Voyage](./voyage.md)**: rerank-2, rerank-1 (high accuracy)
 - **[Transformers](./transformers.md)**: Universal support (any CrossEncoder model), local/offline
+- **[DashScope](./dashscope.md)**: Alibaba Cloud Qwen & GTE models, good for Chinese/Multilingual
 
 **Best for Multilingual:**
 - **[Jina](./jina.md)**: jina-reranker-v2-base-multilingual

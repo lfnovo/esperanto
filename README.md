@@ -153,6 +153,7 @@ pip install "langchain_deepseek>=0.1.3"
 | DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| DashScope | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
 
@@ -172,9 +173,9 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['anthropic', 'azure', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai'],
+#     'language': ['anthropic', 'azure', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter'],
-#     'reranker': ['jina', 'voyage', 'transformers'],
+#     'reranker': ['jina', 'voyage', 'transformers', 'dashscope'],
 #     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure', 'google'],
 #     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure']
 # }
