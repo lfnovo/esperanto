@@ -7,6 +7,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Real-API release tests for STT, TTS, and reranker** — `tests/integration/test_stt_real.py`, `tests/integration/test_tts_real.py`, and `tests/integration/test_reranker_real.py` cover all providers per type. Tests are gated with `@pytest.mark.release` and excluded from the default `uv run pytest` run; invoke with `uv run pytest -m release`. (#169)
+- **Per-call `max_tokens`, `temperature`, `top_p` overrides** — `chat_complete()` and `achat_complete()` now accept `max_tokens`, `temperature`, and `top_p` keyword arguments that override the instance-level values for a single request. Supported by all LLM providers. For Anthropic, `top_p` is silently dropped when `temperature` is also set, consistent with the mutual-exclusivity rule enforced by that provider's API.
+- **Real-API embedding integration tests** — `tests/integration/test_embedding_real.py` covers all embedding providers (OpenAI, Google, Vertex AI, Azure, Jina, Voyage, Mistral, Transformers, Ollama, OpenRouter, OpenAI-Compatible) with sync, async, and batch embed tests. Task-type translation tested for Google and Jina (native task param). Gated by `@pytest.mark.release`; excluded from default test runs.
+- **Mistral TTS provider** — `MistralTextToSpeechModel` using the Voxtral (`voxtral-mini-tts-2603`) model. Supports `pcm`, `wav`, `mp3`, `flac`, and `opus` response formats. Reuses the existing `MISTRAL_API_KEY` environment variable. Voice discovery via `available_voices` calls `GET /v1/audio/voices`.
+- **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_speech_to_text("mistral")`.
+- **`TranscriptionResponse.provider`** — STT responses now expose the originating provider name as an optional field, matching the existing `AudioResponse.provider` field. All STT providers (`openai`, `elevenlabs`, `azure`) already passed this kwarg, but Pydantic was silently dropping it. Existing callers continue to work unchanged. (#126)
+- **Release-gated integration tests for chat completion** — Added `tests/integration/test_chat_completion_real.py` with sync/async and streaming coverage across all LLM providers (OpenAI, Anthropic, Google, Vertex, Azure, Mistral, Ollama, Groq, OpenRouter, Perplexity, DeepSeek, xAI, DashScope, MiniMax).
+
+### Changed
+
+- **Google embedding default model updated from `text-embedding-004` to `gemini-embedding-001`** — `text-embedding-004` was removed from the Google `v1beta` API. `gemini-embedding-001` is the current recommended model (3072-dimensional output; override with `model_name=` if you need 768-d vectors from `text-embedding-005`). (#177)
+- **Test-infrastructure cleanup** — mocked integration tests removed from `tests/integration/` (moved to per-provider test files under `tests/providers/`). A `release` pytest marker introduced: real-API tests are now tagged `@pytest.mark.release`, excluded from the default `uv run pytest` run, and invoked explicitly with `uv run pytest -m release` before each release. Unique `to_langchain()` coverage previously in `tests/integration/` moved to the corresponding per-provider test files. (#166, #141)
+- **Ollama `num_ctx` default lowered from 128,000 to 8,192.** The previous 128K default caused out-of-memory errors on consumer GPUs with 8 GB VRAM. 8,192 tokens works reliably on common hardware while still being large enough for typical chat workloads. Override with `config={"num_ctx": N}` when you need a larger context window. (#107)
+- **Lint and type-check the codebase clean.** Ruff (`ruff check .`) and mypy (`mypy src/esperanto`) now report zero errors. Most fixes are type-only and do not change runtime behavior. Notable structural changes:
+  - `HttpConnectionMixin` now declares `client: httpx.Client` and `async_client: httpx.AsyncClient` as non-Optional. The `Optional[Client] = None` dataclass fields previously redeclared on every provider base class have been removed; clients are still assigned by `_create_http_clients()` during `__post_init__`, so the runtime contract is unchanged.
+  - Removed a duplicate `_get_default_model` definition in the Mistral provider (returned the same value as the original).
+- **CI: lint/type-check job.** Pull requests now run `ruff check` and `mypy` via a new `.github/workflows/lint.yml` workflow.
+- **`types-jsonschema`** added to dev dependencies so `jsonschema` is properly type-checked.
+- **Ruff exclusions:** `notebooks/`, `.harny/`, and `examples/` are now excluded from lint runs (the first two are gitignored scratch directories; `examples/` contains illustrative scripts).
+
+### Removed
+
+- **CI: `claude-code-review` workflow** removed entirely. The workflow file `.github/workflows/claude-code-review.yml` is deleted. `cubic-dev-ai` covers automated PR review; the `claude.yml` workflow remains for `@claude` mentions in comments. Closes #138.
+
+### Fixed
+
+- **Google TTS prompt format** — Added a `systemInstruction` to the Gemini TTS request payload so raw text is accepted by the current API. Previously, the API rejected bare `contents` text with "Model tried to generate text, but it should only be used for TTS". (#178)
+- **`_guess_audio_content_type` returns `audio/mpeg` for `.webm`, `.mp4`, `.mpeg` files** — an explicit extension allowlist now maps these video-container extensions to their correct audio MIME types (`audio/webm`, `audio/mp4`, `audio/mpeg`) instead of the generic `audio/mpeg` fallback. (#160)
+- **OpenRouter providers send malformed request bodies** — both the LLM and embedding OpenRouter providers were posting payloads via httpx's `data=json.dumps(payload)` instead of `json=payload`. In httpx, `data=` with a string is treated as a form-encoded body (Content-Type `application/x-www-form-urlencoded`), so requests carried JSON bytes with the wrong content type. The four affected call sites now use `json=payload`, which serializes the dict and sets `Content-Type: application/json` automatically. Tests updated to assert on the `json` kwarg so a regression would fail loudly. (#127)
+- **`TransformersEmbeddingModel` quantization not applied** — `_initialize_model` was constructing a `quantization_config` dict with `load_in_4bit` / `load_in_8bit` and spreading it as top-level kwargs to `AutoModel.from_pretrained`, an API form that recent transformers versions deprecated in favor of a `BitsAndBytesConfig` object. The provider now constructs `BitsAndBytesConfig(load_in_4bit=..., load_in_8bit=...)` and passes it via `quantization_config=`. Added mocked unit tests (parametrized over 4bit/8bit) that fail if the config stops reaching `from_pretrained`. (#129)
+- **`tests/test_deprecation_warnings.py` — 8 tests asserted on warnings without ever triggering them.** Each test created a model instance, then entered a `warnings.catch_warnings(record=True)` block but never accessed the deprecated `.models` property inside the block, so the recorded list was always empty and `assert len(w) == 1` always failed. The tests now bind the instance to a variable and call `model.models` inside the `with` block, so the deprecation warning is actually captured. The file is also added back into the gated test scope (`.github/workflows/test.yml` and the `CLAUDE.md` validator command), and the "known-broken tests" note in `CLAUDE.md` is removed since it no longer applies. (#130)
+- **Streaming providers passed `list[dict]` to `DeltaMessage.tool_calls` (typed `list[ToolCall]`).** Four streaming LLM providers (Anthropic, Google, Vertex, Ollama) constructed `DeltaMessage(tool_calls=...)` with raw dicts. Pydantic was coercing them to `ToolCall` via field validators at runtime, so tests passed, but the type contract was wrong — downstream consumers couldn't safely call `delta.tool_calls[0].function.name`. All four streaming normalizers now build proper `ToolCall(id=..., type=..., function=FunctionCall(...), index=...)` objects, mirroring the non-streaming path in each provider. The four `# type: ignore[arg-type/list-item]` stopgaps and their TODO comments are removed. Tests assert `isinstance(tool_call, ToolCall)` so a regression would fail loudly. (#128)
+- **Embedding providers crash with opaque TypeError on null values from OpenAI-compatible endpoints.** When an upstream embeddings endpoint returns `null` for a vector (or an element within a vector) — typical of llama.cpp `llama-server` when the input is too short or contains only special tokens — the response-parsing list comprehensions called `float(None)`, which raised `TypeError` and was re-wrapped as a generic `RuntimeError: Failed to generate embeddings: ...`. Affected providers: `openai`, `openai_compatible`, `azure`, `ollama`, `mistral`, `voyage`, `jina` (and by inheritance `openrouter`, `deepseek`, `xai`, etc.). Each now enumerates the response, detects null embeddings, empty vectors, or null elements, and raises a clear `RuntimeError` that names the input index and suggests filtering very short inputs. Jina previously silently skipped null embeddings (data loss); it now raises consistent with the rest. (#119)
+
+## [2.20.1] - 2026-04-13
+
+### Fixed
+
+- **Ollama thinking models return empty content** — Models like Qwen 3.5 that return a separate `thinking` field in the JSON response (instead of inline `<think>` tags) now have their thinking content correctly merged into the response. Use `message.cleaned_content` for the actual response and `message.thinking` for the reasoning trace. (#112)
+- **Trailing slash in base URL causes double-slash and 301 redirect** — All providers now strip trailing slashes from `base_url` during HTTP client initialization, preventing double-slash URLs (e.g., `http://localhost:11434//api/chat`) that caused silent failures with empty responses. (#113)
+
+## [2.20.0] - 2026-03-21
+
+### Added
+
+- **OpenAI-compatible provider profiles** — config-driven virtual providers that eliminate the need for separate Python classes for each OpenAI-compatible endpoint. Add a new provider with 6 lines of config instead of a new file. Users can also register custom profiles at runtime via `AIFactory.register_openai_compatible_profile()`.
+- **DashScope (Qwen) provider** — Alibaba Cloud's Qwen models via OpenAI-compatible profile (`qwen-turbo`, `qwen-plus`, `qwen-max`).
+- **MiniMax provider** — MiniMax models via OpenAI-compatible profile (`MiniMax-M2.5`, `MiniMax-M2.5-highspeed` with 204K context).
+- **`OpenAICompatibleProfile`** exported from `esperanto` for custom provider registration.
+- **`ARCHITECTURE.md`** — design principles and contributor guide for the project.
+- **`CONTRIBUTING.md`** — rewritten with practical guidance, provider addition checklist, and link to ARCHITECTURE.md.
+
+### Changed
+
+- **DeepSeek and xAI providers migrated to profiles** — both now use `OpenAICompatibleLanguageModel` configured by profile data instead of dedicated provider classes. The factory API is unchanged: `AIFactory.create_language("deepseek", ...)` works exactly as before.
+- **`OpenAICompatibleLanguageModel._normalize_response` now extracts tool calls** — previously tool_calls in API responses were silently dropped. This was a pre-existing bug that surfaced during the migration.
+
+### Deprecated
+
+- **`DeepSeekLanguageModel` direct instantiation** — use `AIFactory.create_language("deepseek", ...)` instead. Direct import still works but emits `DeprecationWarning`.
+- **`XAILanguageModel` direct instantiation** — use `AIFactory.create_language("xai", ...)` instead. Direct import still works but emits `DeprecationWarning`.
+
+## [2.19.7] - 2026-03-11
+
+### Fixed
+
+- **Azure embedding provider ignores `api_key` and `base_url` from config** - Fixed `AzureEmbeddingModel` reading `api_key` and `base_url` from `kwargs` instead of `self.*`, causing config-provided values to be silently ignored.
+- **Embedding providers have redundant `kwargs.get()` fallbacks** - Cleaned up dead code in OpenAI, Voyage, Google, and Jina embedding providers that redundantly read `api_key`/`base_url` from `kwargs` after the base class already set them on `self.*`.
+
+## [2.19.6] - 2026-03-11
+
+### Fixed
+
+- **OllamaEmbeddingModel ignores `base_url` from config** - Fixed `OllamaEmbeddingModel.__post_init__` reading `base_url` from `kwargs` instead of `self.base_url`, causing config-provided and factory-provided base URLs to be silently overwritten by the environment variable fallback or localhost default.
+
+## [2.19.5] - 2026-03-10
+
+### Fixed
+
+- **OpenAI-compatible embeddings return base64 instead of float** - Added `encoding_format: "float"` to OpenAI-compatible embedding payloads (both sync and async). Some providers (e.g., OpenRouter) return base64-encoded embeddings when `encoding_format` is not explicitly set, causing `"could not convert string to float"` errors at parse time.
+
+### Changed
+
+- **Azure documentation: recommend latest API version** - Updated all Azure provider documentation examples to recommend `2024-10-21` (latest stable) instead of the outdated `2024-02-01`.
+
 ## [2.19.4] - 2026-02-17
 
 ### Fixed

@@ -1,12 +1,13 @@
 """Jina AI embedding model implementation."""
 
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 
 from esperanto.common_types import Model
 from esperanto.common_types.task_type import EmbeddingTaskType
+from esperanto.utils import validate_and_decode_embedding
 
 from .base import EmbeddingModel
 
@@ -41,8 +42,6 @@ class JinaEmbeddingModel(EmbeddingModel):
         super().__init__(**kwargs)
         self.api_key = (
             self.api_key
-            or kwargs.get("api_key")
-            or (self.config or {}).get("api_key")
             or os.getenv("JINA_API_KEY")
         )
         if not self.api_key:
@@ -52,10 +51,8 @@ class JinaEmbeddingModel(EmbeddingModel):
             )
         self.base_url = (
             self.base_url
-            or kwargs.get("base_url")
-            or (self.config or {}).get("base_url")
             or "https://api.jina.ai/v1/embeddings"
-        )
+        ).rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -65,7 +62,7 @@ class JinaEmbeddingModel(EmbeddingModel):
         # Don't apply prefix - Jina API handles this natively
         return texts
 
-    def _apply_late_chunking(self, texts: List[str]) -> List[str]:
+    def _apply_late_chunking(self, texts: List[str], max_chunk_size: int = 8192) -> List[str]:
         """Jina handles late chunking natively via API."""
         # Don't chunk here - Jina API handles this natively
         return texts
@@ -77,7 +74,7 @@ class JinaEmbeddingModel(EmbeddingModel):
             "Content-Type": "application/json"
         }
 
-    def _map_task_type(self) -> str:
+    def _map_task_type(self) -> Optional[str]:
         """Map universal task type to Jina-specific value."""
         if not self.task_type:
             return None
@@ -111,13 +108,13 @@ class JinaEmbeddingModel(EmbeddingModel):
 
         # Add other advanced features - all natively supported
         if self.late_chunking:
-            payload["late_chunking"] = True
+            payload["late_chunking"] = True  # type: ignore[assignment]
 
         if self.truncate_at_max_length:
-            payload["truncate"] = True
+            payload["truncate"] = True  # type: ignore[assignment]
 
         if self.output_dimensions:
-            payload["dimensions"] = self.output_dimensions
+            payload["dimensions"] = self.output_dimensions  # type: ignore[assignment]
 
         return payload
 
@@ -155,7 +152,7 @@ class JinaEmbeddingModel(EmbeddingModel):
 
         try:
             response = self.client.post(
-                self.base_url,
+                self.base_url or "",
                 json=payload,
                 headers=self._get_headers()
             )
@@ -167,11 +164,9 @@ class JinaEmbeddingModel(EmbeddingModel):
 
             # Extract embeddings from response
             embeddings = []
-            for item in response_data.get("data", []):
+            for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding:
-                    # Ensure all values are floats for consistency
-                    embeddings.append([float(value) for value in embedding])
+                embeddings.append(validate_and_decode_embedding(idx, embedding))
 
             return embeddings
 
@@ -199,7 +194,7 @@ class JinaEmbeddingModel(EmbeddingModel):
 
         try:
             response = await self.async_client.post(
-                self.base_url,
+                self.base_url or "",
                 json=payload,
                 headers=self._get_headers()
             )
@@ -211,11 +206,9 @@ class JinaEmbeddingModel(EmbeddingModel):
 
             # Extract embeddings from response
             embeddings = []
-            for item in response_data.get("data", []):
+            for idx, item in enumerate(response_data.get("data", [])):
                 embedding = item.get("embedding")
-                if embedding:
-                    # Ensure all values are floats for consistency
-                    embeddings.append([float(value) for value in embedding])
+                embeddings.append(validate_and_decode_embedding(idx, embedding))
 
             return embeddings
 

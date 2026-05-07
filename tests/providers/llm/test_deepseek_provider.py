@@ -3,8 +3,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from esperanto.common_types import Tool, ToolFunction, ToolCall, ToolCallValidationError
+from esperanto.common_types import Tool, ToolCall, ToolCallValidationError, ToolFunction
 from esperanto.providers.llm.deepseek import DeepSeekLanguageModel
+
+# Suppress the specific DeepSeek deprecation warning throughout this module
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:DeepSeekLanguageModel is deprecated:DeprecationWarning"
+)
 
 
 def test_provider_name():

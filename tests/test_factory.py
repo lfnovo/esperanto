@@ -1,12 +1,9 @@
 """Tests for the AIFactory class."""
 
 import warnings
-
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from esperanto.factory import AIFactory
-
 
 # Note: Caching functionality has been removed from AIFactory.
 # Tests now verify that factory creates new instances each time.

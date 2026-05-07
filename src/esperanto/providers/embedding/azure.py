@@ -1,11 +1,12 @@
 """Azure OpenAI embedding model provider."""
 
 import os
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import httpx
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
+from esperanto.utils import validate_and_decode_embedding
 
 
 class AzureEmbeddingModel(EmbeddingModel):
@@ -23,21 +24,23 @@ class AzureEmbeddingModel(EmbeddingModel):
 
         super().__init__(**kwargs)
 
-        # Resolve configuration with priority: kwargs → config dict → modality env var → generic env var
+        # Resolve configuration with priority: self (set by super) → config dict → modality env var → generic env var
         self.api_key = (
-            kwargs.get("api_key") or
+            self.api_key or
             self._config.get("api_key") or
             os.getenv("AZURE_OPENAI_API_KEY_EMBEDDING") or
             os.getenv("AZURE_OPENAI_API_KEY")
         )
 
         self.azure_endpoint = (
-            kwargs.get("base_url") or
             azure_endpoint or
+            self.base_url or
             self._config.get("azure_endpoint") or
             os.getenv("AZURE_OPENAI_ENDPOINT_EMBEDDING") or
             os.getenv("AZURE_OPENAI_ENDPOINT")
         )
+        if self.azure_endpoint:
+            self.azure_endpoint = self.azure_endpoint.rstrip("/")
 
         self.api_version = (
             api_version or
@@ -73,7 +76,7 @@ class AzureEmbeddingModel(EmbeddingModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Azure API requests."""
         return {
-            "api-key": self.api_key,  # Azure uses api-key, not Bearer
+            "api-key": self.api_key or "",  # Azure uses api-key, not Bearer
             "Content-Type": "application/json",
         }
 
@@ -129,7 +132,11 @@ class AzureEmbeddingModel(EmbeddingModel):
 
         # Parse response
         response_data = response.json()
-        return [[float(value) for value in data["embedding"]] for data in response_data["data"]]
+        results = []
+        for idx, data in enumerate(response_data["data"]):
+            raw = data.get("embedding")
+            results.append(validate_and_decode_embedding(idx, raw))
+        return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -166,7 +173,11 @@ class AzureEmbeddingModel(EmbeddingModel):
 
         # Parse response
         response_data = response.json()
-        return [[float(value) for value in data["embedding"]] for data in response_data["data"]]
+        results = []
+        for idx, data in enumerate(response_data["data"]):
+            raw = data.get("embedding")
+            results.append(validate_and_decode_embedding(idx, raw))
+        return results
 
     def _get_default_model(self) -> str:
         """Get the default model name."""

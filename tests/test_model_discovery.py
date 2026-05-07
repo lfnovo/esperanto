@@ -3,25 +3,22 @@
 
 import hashlib
 import os
-from unittest.mock import MagicMock, patch, Mock
-import pytest
-import httpx
+from unittest.mock import MagicMock, patch
 
+import httpx
+import pytest
+
+from esperanto import AIFactory
 from esperanto.common_types import Model
 from esperanto.model_discovery import (
+    PROVIDER_MODELS_REGISTRY,
     _create_cache_key,
-    get_openai_models,
-    get_openai_compatible_models,
+    _model_cache,
     get_anthropic_models,
     get_google_models,
-    get_mistral_models,
-    get_groq_models,
-    get_jina_models,
-    get_voyage_models,
-    PROVIDER_MODELS_REGISTRY,
-    _model_cache,
+    get_openai_compatible_models,
+    get_openai_models,
 )
-from esperanto import AIFactory
 
 
 class TestCacheKeyCreation:
@@ -156,6 +153,50 @@ class TestOpenAIDiscovery:
             # Verify API key was used
             call_args = mock_get.call_args
             assert call_args.kwargs["headers"]["Authorization"] == "Bearer env-key"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_models_custom_base_url_param(self, mock_get):
+        """Test that explicit base_url param overrides the default."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        _model_cache.clear()
+        get_openai_models(api_key="test-key", base_url="https://my-litellm.example.com/v1")
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "https://my-litellm.example.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_models_base_url_from_env(self, mock_get):
+        """Test that OPENAI_BASE_URL env var is used when no explicit base_url given."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        _model_cache.clear()
+        with patch.dict(os.environ, {"OPENAI_BASE_URL": "https://env-proxy.example.com/v1", "OPENAI_API_KEY": "test-key"}):
+            get_openai_models()
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "https://env-proxy.example.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_openai_models_param_overrides_env(self, mock_get):
+        """Test that explicit base_url param takes precedence over OPENAI_BASE_URL env var."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        _model_cache.clear()
+        with patch.dict(os.environ, {"OPENAI_BASE_URL": "https://env-proxy.example.com/v1"}):
+            get_openai_models(api_key="test-key", base_url="https://my-litellm.example.com/v1")
+
+        call_args = mock_get.call_args
+        assert call_args.args[0] == "https://my-litellm.example.com/v1/models"
 
 
 class TestAnthropicDiscovery:

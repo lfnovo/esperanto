@@ -1,6 +1,6 @@
 [project]
 name = "esperanto"
-version = "2.19.4"
+version = "2.20.1"
 description = "A light-weight, production-ready, unified interface for various AI model providers"
 authors = [
     { name = "LUIS NOVO", email = "lfnovo@gmail.com" }
@@ -48,10 +48,18 @@ package-dir = {"esperanto" = "src/esperanto"}
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=esperanto --cov-report=term-missing"
+addopts = "-v --cov=esperanto --cov-report=term-missing -m 'not release'"
+markers = [
+    "release: real-API tests run before each release (costs money, requires keys)",
+]
 
 [tool.ruff]
 line-length = 88
+extend-exclude = [
+    ".harny",
+    "notebooks",
+    "examples",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
@@ -74,6 +82,7 @@ dev = [
     "responses>=0.25.6",
     "python-dotenv>=1.0.1",
     "types-requests>=2.32.0.20241016",
+    "types-jsonschema>=4.0.0",
     "build",
     "twine",
     "langchain>=1.2.4,<2.0.0",
@@ -85,4 +94,8 @@ dev = [
     "langchain-groq>=1.1.1,<2.0.0",
     "langchain-mistralai>=1.1.1,<2.0.0",
     "langchain-deepseek>=1.0.1,<2.0.0",
+    "jsonschema>=4.26.0",
+    "torch>=2.10.0",
+    "numpy>=2.2.6",
+    "transformers>=4.57.6",
 ]

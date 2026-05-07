@@ -2,7 +2,7 @@
 
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,9 +10,8 @@ from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
     Tool,
-    ToolFunction,
     ToolCall,
-    ToolCallValidationError,
+    ToolFunction,
 )
 from esperanto.providers.llm.azure import AzureLanguageModel
 
@@ -73,7 +72,7 @@ def test_initialization_success(mock_env_vars):
     """Test successful initialization with environment variables."""
     model = AzureLanguageModel(model_name="test-deployment")
     assert model.api_key == "test_azure_api_key"
-    assert model.azure_endpoint == "https://test-endpoint.openai.azure.com/"
+    assert model.azure_endpoint == "https://test-endpoint.openai.azure.com"
     assert model.api_version == "2023-12-01-preview"
     assert model.model_name == "test-deployment" # Deployment name
     assert model.client is not None
@@ -90,7 +89,7 @@ def test_initialization_with_direct_params():
         }
     )
     assert model.api_key == "direct_key"
-    assert model.azure_endpoint == "https://direct-endpoint.com/"
+    assert model.azure_endpoint == "https://direct-endpoint.com"
     assert model.api_version == "2024-01-01"
     assert model.model_name == "direct-deployment"
 
@@ -140,7 +139,7 @@ def test_chat_complete_non_streaming(azure_model):
     # Check request payload
     _, kwargs = call_args
     assert kwargs['json']['messages'] == messages
-    assert kwargs['json']['stream'] == False
+    assert kwargs['json']['stream'] is False
 
     assert isinstance(response, ChatCompletion)
     assert response.id == "chatcmpl-test123"
@@ -163,7 +162,7 @@ async def test_achat_complete_non_streaming(azure_model):
     # Check request payload
     _, kwargs = call_args
     assert kwargs['json']['messages'] == messages
-    assert kwargs['json']['stream'] == False
+    assert kwargs['json']['stream'] is False
 
     assert isinstance(response, ChatCompletion)
     assert response.id == "chatcmpl-test123"
@@ -276,14 +275,14 @@ def test_to_langchain(MockAzureChatOpenAI, azure_model, mock_env_vars):
     azure_model.temperature = 0.8
     azure_model.max_tokens = 150
     # model_name is the deployment name
-    lc_model = azure_model.to_langchain(another_param="test_val")
+    azure_model.to_langchain(another_param="test_val")
 
     MockAzureChatOpenAI.assert_called_once()
     call_kwargs = MockAzureChatOpenAI.call_args[1]
 
     assert call_kwargs["azure_deployment"] == "test-deployment"
     assert call_kwargs["api_key"].get_secret_value() == "test_azure_api_key"
-    assert call_kwargs["azure_endpoint"] == "https://test-endpoint.openai.azure.com/"
+    assert call_kwargs["azure_endpoint"] == "https://test-endpoint.openai.azure.com"
     assert call_kwargs["api_version"] == "2023-12-01-preview"
     assert call_kwargs["temperature"] == 0.8
     assert call_kwargs["max_tokens"] == 150
@@ -292,7 +291,7 @@ def test_to_langchain(MockAzureChatOpenAI, azure_model, mock_env_vars):
 @patch("langchain_openai.AzureChatOpenAI")
 def test_to_langchain_json_mode(MockAzureChatOpenAI, azure_model, mock_env_vars):
     azure_model.structured = {"type": "json"}
-    lc_model = azure_model.to_langchain()
+    azure_model.to_langchain()
 
     MockAzureChatOpenAI.assert_called_once()
     call_kwargs = MockAzureChatOpenAI.call_args[1]

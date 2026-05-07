@@ -49,8 +49,8 @@ class OllamaLanguageModel(LanguageModel):
 
         # Set default base URL if not provided
         self.base_url = (
-            self.base_url or os.getenv("OLLAMA_BASE_URL")  or os.getenv("OLLAMA_API_BASE") or "http://localhost:11434"
-        )
+            self.base_url or os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE") or "http://localhost:11434"
+        ).rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -71,10 +71,21 @@ class OllamaLanguageModel(LanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"Ollama API error: {error_message}")
 
-    def _get_api_kwargs(self) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
+        if max_tokens is not None:
+            config["max_tokens"] = max_tokens
+        if temperature is not None:
+            config["temperature"] = temperature
+        if top_p is not None:
+            config["top_p"] = top_p
         options = {}
 
         # Only include non-provider-specific args that were explicitly set
@@ -97,8 +108,8 @@ class OllamaLanguageModel(LanguageModel):
                     kwargs[key] = value
 
         # Handle Ollama-specific options from _config (num_ctx for context window)
-        # Default to 128000 tokens if not specified (Ollama's default of 2048 is too small)
-        options["num_ctx"] = self._config.get("num_ctx", 128000)
+        # Default to 8192 to avoid OOM on 8 GB VRAM hardware; override via config={"num_ctx": N}
+        options["num_ctx"] = self._config.get("num_ctx", 8192)
 
         # Handle keep_alive (top-level parameter, not in options)
         # Only set if explicitly provided - don't force memory usage on users
@@ -245,7 +256,7 @@ class OllamaLanguageModel(LanguageModel):
                 except json.JSONDecodeError:
                     continue
 
-    async def _parse_stream_async(self, response: httpx.Response) -> Generator[Dict[str, Any], None, None]:
+    async def _parse_stream_async(self, response: httpx.Response) -> AsyncGenerator[Dict[str, Any], None]:
         """Parse streaming response from Ollama asynchronously."""
         async for line in response.aiter_lines():
             if line.strip():
@@ -262,6 +273,9 @@ class OllamaLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -285,6 +299,9 @@ class OllamaLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -309,9 +326,14 @@ class OllamaLanguageModel(LanguageModel):
             if "content" not in message and message["role"] not in ["assistant", "tool"]:
                 raise ValueError("Missing content in message")
 
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
-        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        self._resolve_tool_choice(tool_choice)
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
@@ -323,7 +345,11 @@ class OllamaLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": converted_messages,
             "stream": should_stream,
-            **self._get_api_kwargs(),
+            **self._get_api_kwargs(
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -360,6 +386,9 @@ class OllamaLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -383,6 +412,9 @@ class OllamaLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -397,9 +429,14 @@ class OllamaLanguageModel(LanguageModel):
         if not messages:
             raise ValueError("Messages cannot be empty")
 
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
-        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        self._resolve_tool_choice(tool_choice)
         # Note: parallel_tool_calls is resolved but Ollama may not support it
         _ = self._resolve_parallel_tool_calls(parallel_tool_calls)
 
@@ -411,7 +448,11 @@ class OllamaLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": converted_messages,
             "stream": should_stream,
-            **self._get_api_kwargs(),
+            **self._get_api_kwargs(
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -484,9 +525,10 @@ class OllamaLanguageModel(LanguageModel):
             choices=[
                 Choice(
                     index=0,
-                    message=Message(
+                    message=Message(  # type: ignore[call-arg]  # `thinking` consumed by model_validator (response.py)
                         role=message.get("role", "assistant"),
                         content=message.get("content") or "",
+                        thinking=message.get("thinking"),
                         tool_calls=tool_calls,
                     ),
                     finish_reason=finish_reason,
@@ -518,15 +560,15 @@ class OllamaLanguageModel(LanguageModel):
                 else:
                     arguments_str = str(args)
 
-                tool_calls_data.append({
-                    "index": idx,
-                    "id": tc.get("id", f"call_{uuid.uuid4().hex[:12]}"),
-                    "type": tc.get("type", "function"),
-                    "function": {
-                        "name": func_info.get("name", ""),
-                        "arguments": arguments_str,
-                    },
-                })
+                tool_calls_data.append(ToolCall(
+                    index=idx,
+                    id=tc.get("id", f"call_{uuid.uuid4().hex[:12]}"),
+                    type=tc.get("type", "function"),
+                    function=FunctionCall(
+                        name=func_info.get("name", ""),
+                        arguments=arguments_str,
+                    ),
+                ))
 
         # Determine finish_reason
         finish_reason = None
@@ -538,9 +580,10 @@ class OllamaLanguageModel(LanguageModel):
             choices=[
                 StreamChoice(
                     index=0,
-                    delta=DeltaMessage(
+                    delta=DeltaMessage(  # type: ignore[call-arg]  # `thinking` consumed by model_validator (response.py)
                         role=message.get("role", "assistant"),
                         content=message.get("content") or "",
+                        thinking=message.get("thinking"),
                         tool_calls=tool_calls_data,
                     ),
                     finish_reason=finish_reason,
@@ -601,7 +644,7 @@ class OllamaLanguageModel(LanguageModel):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "num_predict": self.max_tokens,
-            "num_ctx": self._config.get("num_ctx", 128000),
+            "num_ctx": self._config.get("num_ctx", 8192),
             "base_url": self.base_url,
         }
 

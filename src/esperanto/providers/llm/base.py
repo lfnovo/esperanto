@@ -5,8 +5,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
-from httpx import AsyncClient, Client
-
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.utils.connect import HttpConnectionMixin
 
@@ -30,8 +28,6 @@ class LanguageModel(HttpConnectionMixin, ABC):
     tool_choice: Optional[Union[str, Dict[str, Any]]] = None
     parallel_tool_calls: Optional[bool] = None
     _config: Dict[str, Any] = field(default_factory=dict)
-    client: Optional[Client] = None
-    async_client: Optional[AsyncClient] = None
 
     @property
     def models(self) -> List[Model]:
@@ -146,6 +142,51 @@ class LanguageModel(HttpConnectionMixin, ABC):
             return parallel_tool_calls
         return self.parallel_tool_calls
 
+    def _resolve_max_tokens(self, max_tokens: Optional[int] = None) -> int:
+        """Resolve max_tokens from parameter or instance config.
+
+        Call-time max_tokens takes precedence over instance-level setting.
+
+        Args:
+            max_tokens: max_tokens passed at call time, or None to use instance value.
+
+        Returns:
+            The resolved max_tokens value.
+        """
+        if max_tokens is not None:
+            return max_tokens
+        return self.max_tokens
+
+    def _resolve_temperature(self, temperature: Optional[float] = None) -> float:
+        """Resolve temperature from parameter or instance config.
+
+        Call-time temperature takes precedence over instance-level setting.
+
+        Args:
+            temperature: temperature passed at call time, or None to use instance value.
+
+        Returns:
+            The resolved temperature value.
+        """
+        if temperature is not None:
+            return temperature
+        return self.temperature
+
+    def _resolve_top_p(self, top_p: Optional[float] = None) -> float:
+        """Resolve top_p from parameter or instance config.
+
+        Call-time top_p takes precedence over instance-level setting.
+
+        Args:
+            top_p: top_p passed at call time, or None to use instance value.
+
+        Returns:
+            The resolved top_p value.
+        """
+        if top_p is not None:
+            return top_p
+        return self.top_p
+
     def _warn_if_validate_with_streaming(
         self,
         validate_tool_calls: bool,
@@ -180,6 +221,9 @@ class LanguageModel(HttpConnectionMixin, ABC):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -200,6 +244,9 @@ class LanguageModel(HttpConnectionMixin, ABC):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -217,6 +264,9 @@ class LanguageModel(HttpConnectionMixin, ABC):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -237,6 +287,9 @@ class LanguageModel(HttpConnectionMixin, ABC):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks

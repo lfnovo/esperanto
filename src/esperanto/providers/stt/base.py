@@ -1,14 +1,39 @@
 """Base speech-to-text model interface."""
 
+import mimetypes
+import pathlib
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
-from httpx import Client, AsyncClient
-
 from esperanto.common_types import Model, TranscriptionResponse
 from esperanto.utils.connect import HttpConnectionMixin
+
+_AUDIO_CONTAINER_EXTENSIONS = {
+    ".webm": "audio/webm",
+    ".mp4": "audio/mp4",
+    ".mpeg": "audio/mpeg",
+    ".mpga": "audio/mpeg",
+    ".m4a": "audio/mp4",
+}
+
+
+def _guess_audio_content_type(filename: Optional[str]) -> str:
+    """Guess audio MIME type from filename, falling back to audio/mpeg.
+
+    Returns audio/mpeg as a safe default when filename is None or empty
+    (e.g., a BinaryIO whose ``.name`` attribute is explicitly None).
+    """
+    if not filename:
+        return "audio/mpeg"
+    ext = pathlib.Path(filename).suffix.lower()
+    if ext in _AUDIO_CONTAINER_EXTENSIONS:
+        return _AUDIO_CONTAINER_EXTENSIONS[ext]
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type and mime_type.startswith("audio/"):
+        return mime_type
+    return "audio/mpeg"
 
 
 @dataclass
@@ -29,8 +54,6 @@ class SpeechToTextModel(HttpConnectionMixin, ABC):
     config: Optional[Dict[str, Any]] = None
     timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
-    client: Optional[Client] = None
-    async_client: Optional[AsyncClient] = None
 
     def __post_init__(self):
         """Initialize configuration after dataclass initialization."""

@@ -1,0 +1,239 @@
+# Architecture & Design Principles
+
+This document defines the core design principles that guide Esperanto's development. **Please read this before contributing** — it will save you time and help us review your work faster.
+
+## Core Principle: Provider Parity
+
+Esperanto's entire value proposition is a **consistent, provider-agnostic interface**. Users can switch providers by changing one parameter, with identical code otherwise:
+
+```python
+# Same code, different provider — this is the promise
+model = AIFactory.create_language("openai", "gpt-4o")
+model = AIFactory.create_language("anthropic", "claude-sonnet-4-20250514")
+model = AIFactory.create_language("google", "gemini-2.0-flash")
+
+response = model.chat_complete(messages)  # identical API for all
+```
+
+This means:
+
+1. **New features must work across all (or most) providers.** If a feature only makes sense for one provider, it probably doesn't belong in the public interface. Open an issue to discuss the cross-provider design before implementing.
+
+2. **Interface consistency > feature count.** We'd rather ship a feature later with full provider support than ship it early for one provider. Partial implementations create an inconsistent API surface that breaks the core promise.
+
+3. **Graceful degradation when needed.** Some providers genuinely can't support certain features. In those rare cases, raise a clear error — never silently ignore or return unexpected results. The user should always know what to expect.
+
+## Parameter Handling
+
+### Model Quirks vs Unsupported Features
+
+Distinguish **unsupported features** from **model-specific quirks**:
+
+- When a provider can't support a feature at all (e.g. no streaming), raise a clear error.
+- When a model has a request-shape quirk that breaks an otherwise-supported parameter (e.g. Claude 4.x rejecting `temperature` + `top_p` together), the provider's request-builder sanitizes the request silently with a debug log. Users should not need to know per-model quirks.
+
+**Why:** Raising forces users to know which model has which quirk, which defeats the parity promise. But silently dropping a *feature* the provider doesn't support would mislead users into thinking it ran. The split keeps both honest.
+
+**Scope:** Provider request-builders (LLM, embedding, etc.). Refines the "graceful degradation" principle above.
+
+**Origin:** Issue #100, 2026-05-01.
+
+### Hot-Swap-First Defaults
+
+Esperanto's defaults must make provider hot-swap "just work." Where the underlying provider's native default would break the parity promise (e.g. Ollama's 2048 `num_ctx` failing typical chat that worked on cloud providers), Esperanto picks a workable default — even if that overrides the provider's default. Users can always override via config or per-call.
+
+**Why:** Provider-agnostic interface is the core promise. If switching from OpenAI to Ollama breaks user code with the same messages, we've failed the promise.
+
+**Scope:** All provider runtime defaults. When in doubt, prefer a default that makes typical workloads succeed over mirroring the upstream provider's native default.
+
+**Origin:** Issues #107 + #101, 2026-05-01.
+
+### Demand-Driven Abstraction Extension
+
+Extend abstractions (profile systems, base classes, parameter surfaces) only when there's concrete demand — typically two or more provider requests for the same shape. Don't pre-emptively generalize.
+
+**Why:** YAGNI. Abstractions built without demand often miss the actual shape of the demand when it arrives. Building on demand grounds the abstraction in real cases.
+
+**Scope:** Adding new tiers, profile systems for new model types (embedding/TTS/STT profiles), parameter surfaces beyond the universal set.
+
+**Origin:** Group A.1 design session, 2026-05-01.
+
+### Prefer OpenAI-Compatible
+
+When a provider offers both OpenAI-compatible and a native (non-OpenAI) endpoint, integrate via the OpenAI-compatible path. Native-format integrations (Anthropic message format, Cohere native, etc.) are reserved for providers that genuinely lack an OpenAI-compatible endpoint. If a future need for native-only features emerges, a dedicated subclass can be added per-provider.
+
+**Why:** OpenAI-compatible is the de-facto standard. Going native when a compatible endpoint exists creates duplicate code paths and maintenance burden without parity benefit.
+
+**Scope:** Adding new providers. Belongs in the "When to Add a New Provider" checklist.
+
+**Origin:** Issue #104, 2026-05-01.
+
+### Per-item Metadata Escape Hatch
+
+When normalizing collections of items returned by providers (transcription segments, search results, streaming chunks), expose only the **universal fields** as first-class typed attributes (e.g. `text`, `start`, `end`). Provider-specific extras (`avg_logprob`, `speaker`, `tokens`, `confidence`, `compression_ratio`, etc.) go into an `Optional[Dict[str, Any]] metadata` field on the item itself.
+
+**Why:** Per-item provider extras vary wildly (Whisper returns 6 numeric fields per segment, Mistral returns 1, Google returns speaker IDs). Promoting any of them to first-class breaks parity for providers that don't have it, and forces every new provider to either fake or null-fill the field. The `metadata` dict gives users an escape hatch without inflating the public interface or pre-committing to a shape that may not generalize.
+
+**Scope:** Designing new collection-of-items response types (segments, words, ranked results, streaming chunks). Pairs with **Demand-Driven Abstraction Extension** — promote a field from `metadata` to first-class only when 2+ providers expose it with compatible semantics.
+
+**Origin:** Issue #146, 2026-05-03.
+
+## Provider Tiers
+
+Not all providers require the same level of implementation effort. We classify them into tiers:
+
+### First-class Providers
+
+Providers with a fundamentally different API or SDK that requires unique implementation logic:
+
+- **OpenAI** — the reference implementation
+- **Anthropic** — different message format, tool format, content blocks
+- **Google / Vertex AI** — parts-based format, GCP authentication
+- **Azure** — deployment-based naming, Azure-specific auth
+- **Ollama** — local execution, no auth, options dict
+- **Mistral** — different tool format
+
+These justify their own provider class with custom logic.
+
+### Extended Providers
+
+Providers that are OpenAI-compatible but add meaningful unique capabilities that require code:
+
+- **Perplexity** — web search options, custom streaming behavior
+
+### Profile-based Providers (OpenAI-Compatible)
+
+Providers that are OpenAI-compatible with a different `base_url` and API key. These are implemented as **profiles** — declarative config objects — not Python classes:
+
+- **DeepSeek** — just changes `base_url` and API key
+- **xAI** — changes `base_url`, disables `response_format`, filters models to `grok-*`
+- **DashScope (Qwen)** — Alibaba Cloud's OpenAI-compatible endpoint
+- **MiniMax** — OpenAI-compatible endpoint
+
+Profiles are defined in `src/esperanto/providers/llm/profiles.py` and resolved by the factory at runtime. Adding a new OpenAI-compatible provider is a **6-line config change**, not a new class:
+
+```python
+"minimax": OpenAICompatibleProfile(
+    name="minimax",
+    base_url="https://api.minimax.io/v1",
+    api_key_env="MINIMAX_API_KEY",
+    default_model="MiniMax-M2.5",
+    owned_by="MiniMax",
+    display_name="MiniMax",
+),
+```
+
+Users can also register their own profiles at runtime:
+
+```python
+from esperanto import AIFactory, OpenAICompatibleProfile
+
+AIFactory.register_openai_compatible_profile(
+    OpenAICompatibleProfile(
+        name="together",
+        base_url="https://api.together.xyz/v1",
+        api_key_env="TOGETHER_API_KEY",
+        default_model="meta-llama/Llama-3-70b-chat-hf",
+    )
+)
+model = AIFactory.create_language("together", "meta-llama/Llama-3-70b-chat-hf")
+```
+
+### Extended Providers (OpenAI-Compatible with Custom Code)
+
+Providers that are OpenAI-compatible but add unique behavior that can't be expressed as config:
+
+- **OpenRouter** — custom HTTP headers, selective `response_format` by model, custom HTTP request format
+- **Perplexity** — web search parameters, custom streaming behavior
+
+These keep their own Python classes because their customizations go beyond what a profile can express.
+
+### When to Add a New Provider
+
+Before implementing a new provider, ask yourself:
+
+1. **Is it OpenAI-compatible?** If yes, add a profile in `profiles.py` — don't create a new class. This covers the vast majority of new provider requests.
+2. **Does it need custom behavior beyond base_url/api_key/model filtering?** Custom headers, unique parameters, special error handling? If yes, it may need a class that extends `OpenAICompatibleLanguageModel`.
+3. **Does it have a fundamentally different API?** Different message format, auth mechanism, or response structure? Then it needs a first-class provider class.
+4. **Can it support the full interface?** A provider that can only do `chat_complete` but not streaming, tools, or structured output may not be ready for first-class support.
+
+When in doubt, open an issue. We'd rather discuss the design upfront than review a PR that doesn't align with these principles.
+
+## Architecture Overview
+
+### Provider Pattern
+
+All provider types follow the same structure:
+
+```
+Base class (abstract interface)
+  -> Provider implementation (API integration)
+    -> Factory registration (discoverability)
+      -> Common response types (consistency)
+```
+
+### Configuration Priority
+
+Three-tier configuration system (highest to lowest priority):
+
+1. **Constructor args / config dict**: `config={"timeout": 120}`
+2. **Environment variables**: `ESPERANTO_LLM_TIMEOUT=90`
+3. **Provider defaults**
+
+### Provider Composition
+
+Providers inherit functionality via mixins:
+
+- `TimeoutMixin` — configurable HTTP timeouts
+- `SSLMixin` — configurable SSL verification
+- Base class (e.g., `LanguageModel`) — provider-specific interface
+- Provider implementation — actual API integration
+
+### Response Types
+
+All providers convert API-specific responses into Esperanto's common types:
+
+| Type | Response |
+|------|----------|
+| Language | `ChatCompletion` / `ChatCompletionChunk` |
+| Embedding | `List[List[float]]` |
+| Reranker | `RerankResponse` |
+| Speech-to-Text | `TranscriptionResponse` |
+| Text-to-Speech | `AudioResponse` |
+
+This normalization is what enables the provider-agnostic interface.
+
+## Testing Philosophy
+
+With 40+ provider implementations across 5 provider types, manual testing is impractical. We rely heavily on automated tests:
+
+- **Every provider must have unit tests** that mock API responses and verify the Esperanto response format.
+- **Every feature must be tested across all providers that support it.** A feature that works for OpenAI but breaks on Anthropic is a bug, not a partial implementation.
+- **Test the interface, not the internals.** Tests should verify that `chat_complete()` returns the right `ChatCompletion` regardless of provider — not test provider-specific parsing logic in isolation.
+
+Run the full test suite before submitting:
+
+```bash
+uv run pytest -v
+```
+
+## Key Design Decisions
+
+### Why Not Just Wrap LangChain/LiteLLM?
+
+Esperanto is a lightweight, focused library. We control the interface, the response types, and the provider implementations. This gives us:
+
+- Predictable behavior across providers
+- Minimal dependencies (only install SDKs for providers you use)
+- First-class async support without adapter layers
+- Direct control over streaming, tool calling, and structured output formats
+
+### Why Optional Dependencies?
+
+Each provider SDK is an optional dependency. Users only install what they need:
+
+```bash
+pip install esperanto[openai,anthropic]  # only these two
+```
+
+This keeps the base install small and avoids dependency conflicts between provider SDKs.

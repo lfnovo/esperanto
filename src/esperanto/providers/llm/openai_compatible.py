@@ -15,6 +15,7 @@ from typing import (
 
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.providers.llm.profiles import OpenAICompatibleProfile, get_profile
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
@@ -36,38 +37,73 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         # Initialize _config first (from base class)
         if not hasattr(self, '_config'):
             self._config = {}
-        
+
         # Update with any provided config
         if hasattr(self, "config") and self.config:
             self._config.update(self.config)
-        
-        # Configuration precedence: Factory config > Environment variables > Default
-        self.base_url = (
-            self.base_url or
-            self._config.get("base_url") or
-            os.getenv("OPENAI_COMPATIBLE_BASE_URL_LLM") or
-            os.getenv("OPENAI_COMPATIBLE_BASE_URL")
-        )
-        self.api_key = (
-            self.api_key or
-            self._config.get("api_key") or
-            os.getenv("OPENAI_COMPATIBLE_API_KEY_LLM") or
-            os.getenv("OPENAI_COMPATIBLE_API_KEY")
-        )
 
-        # Validation
-        if not self.base_url:
-            raise ValueError(
-                "OpenAI-compatible base URL is required. "
-                "Set OPENAI_COMPATIBLE_BASE_URL_LLM or OPENAI_COMPATIBLE_BASE_URL "
-                "environment variable or provide base_url in config."
+        # Resolve provider profile if configured
+        profile_name = self._config.get("_profile_name")
+        self._profile: Optional[OpenAICompatibleProfile] = None
+        if profile_name:
+            self._profile = get_profile(profile_name)
+            if not self._profile:
+                raise ValueError(f"Unknown provider profile: '{profile_name}'")
+
+        if self._profile:
+            # Profile-aware configuration precedence:
+            # explicit param > config dict > profile env var > profile default
+            self.base_url = (
+                self.base_url or
+                self._config.get("base_url") or
+                os.getenv(self._profile.base_url_env or "") or
+                self._profile.base_url
             )
-        # Use a default API key if none is provided (some endpoints don't require authentication)
-        if not self.api_key:
-            self.api_key = "not-required"
+            self.api_key = (
+                self.api_key or
+                self._config.get("api_key") or
+                os.getenv(self._profile.api_key_env)
+            )
+            display = self._profile.display_name or self._profile.name.title()
+            if not self.base_url:
+                raise ValueError(
+                    f"{display} base URL is not configured. "
+                    f"Provide base_url in config or check the profile configuration."
+                )
+            if not self.api_key:
+                raise ValueError(
+                    f"{display} API key not found. "
+                    f"Set {self._profile.api_key_env} environment variable "
+                    f"or provide api_key in config."
+                )
+        else:
+            # Standard OpenAI-compatible configuration precedence
+            self.base_url = (
+                self.base_url or
+                self._config.get("base_url") or
+                os.getenv("OPENAI_COMPATIBLE_BASE_URL_LLM") or
+                os.getenv("OPENAI_COMPATIBLE_BASE_URL")
+            )
+            self.api_key = (
+                self.api_key or
+                self._config.get("api_key") or
+                os.getenv("OPENAI_COMPATIBLE_API_KEY_LLM") or
+                os.getenv("OPENAI_COMPATIBLE_API_KEY")
+            )
+
+            # Validation
+            if not self.base_url:
+                raise ValueError(
+                    "OpenAI-compatible base URL is required. "
+                    "Set OPENAI_COMPATIBLE_BASE_URL_LLM or OPENAI_COMPATIBLE_BASE_URL "
+                    "environment variable or provide base_url in config."
+                )
+            # Use a default API key if none is provided (some endpoints don't require authentication)
+            if not self.api_key:
+                self.api_key = "not-required"
 
         # Ensure base_url doesn't end with trailing slash for consistency
-        if self.base_url.endswith("/"):
+        if self.base_url and self.base_url.endswith("/"):
             self.base_url = self.base_url.rstrip("/")
 
         # Call parent's post_init to set up HTTP clients and normalized response handling
@@ -75,6 +111,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
 
         # Track if we've detected that this endpoint doesn't support json_object
         self._response_format_unsupported = False
+        # Apply profile feature flags after parent init
+        if self._profile and not self._profile.supports_response_format:
+            self._response_format_unsupported = True
 
     def _is_likely_lmstudio(self) -> bool:
         """Check if this endpoint is likely LM Studio based on port.
@@ -109,24 +148,48 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
     
     def _normalize_response(self, response_data: Dict[str, Any]) -> "ChatCompletion":
         """Normalize OpenAI-compatible response to our format with graceful fallback."""
-        from esperanto.common_types import ChatCompletion, Choice, Message, Usage
-        
+        from esperanto.common_types import (
+            ChatCompletion,
+            Choice,
+            FunctionCall,
+            Message,
+            ToolCall,
+            Usage,
+        )
+
         # Handle missing or incomplete response fields gracefully
         response_id = response_data.get("id", "chatcmpl-unknown")
         created = response_data.get("created", 0)
         model = response_data.get("model", self.get_model_name())
-        
+
         # Handle choices array
         choices = response_data.get("choices", [])
         normalized_choices = []
-        
+
         for choice in choices:
             message = choice.get("message", {})
+
+            # Extract tool_calls if present
+            tool_calls = None
+            if "tool_calls" in message and message["tool_calls"]:
+                tool_calls = [
+                    ToolCall(
+                        id=tc.get("id", ""),
+                        type=tc.get("type", "function"),
+                        function=FunctionCall(
+                            name=tc.get("function", {}).get("name", ""),
+                            arguments=tc.get("function", {}).get("arguments", "{}"),
+                        ),
+                    )
+                    for tc in message["tool_calls"]
+                ]
+
             normalized_choice = Choice(
                 index=choice.get("index", 0),
                 message=Message(
-                    content=message.get("content", ""),
+                    content=message.get("content", "") if not tool_calls else message.get("content"),
                     role=message.get("role", "assistant"),
+                    tool_calls=tool_calls,
                 ),
                 finish_reason=choice.get("finish_reason", "stop"),
             )
@@ -159,7 +222,11 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
 
     def _normalize_chunk(self, chunk_data: Dict[str, Any]) -> "ChatCompletionChunk":
         """Normalize OpenAI-compatible stream chunk to our format with graceful fallback."""
-        from esperanto.common_types import ChatCompletionChunk, StreamChoice, DeltaMessage
+        from esperanto.common_types import (
+            ChatCompletionChunk,
+            DeltaMessage,
+            StreamChoice,
+        )
         
         # Handle missing or incomplete chunk fields gracefully
         chunk_id = chunk_data.get("id", "chatcmpl-unknown")
@@ -200,19 +267,32 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         )
 
     def _get_api_kwargs(
-        self, exclude_stream: bool = False, exclude_response_format: bool = False
+        self,
+        exclude_stream: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        exclude_response_format: bool = False,
     ) -> Dict[str, Any]:
         """Get API kwargs with graceful feature fallback.
 
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
             exclude_response_format: If True, excludes response_format parameter.
+            max_tokens: Per-call override for max_tokens.
+            temperature: Per-call override for temperature.
+            top_p: Per-call override for top_p.
 
         Returns:
             Dict containing API parameters for the request.
         """
         # Get base kwargs from parent
-        kwargs = super()._get_api_kwargs(exclude_stream)
+        kwargs = super()._get_api_kwargs(
+            exclude_stream,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
 
         # Remove response_format if:
         # 1. Explicitly requested (for retry logic)
@@ -245,6 +325,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request with retry for unsupported response_format.
 
@@ -266,6 +349,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -274,7 +360,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         """
         try:
             return super().chat_complete(
-                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                max_tokens=max_tokens, temperature=temperature, top_p=top_p,
             )
         except RuntimeError as e:
             # Check if it's a response_format error and we haven't already disabled it
@@ -286,7 +373,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 self._response_format_unsupported = True
                 # Retry without response_format
                 return super().chat_complete(
-                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                    max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                 )
             raise
 
@@ -298,6 +386,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request with retry for unsupported response_format.
 
@@ -319,6 +410,9 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -327,7 +421,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         """
         try:
             return await super().achat_complete(
-                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                max_tokens=max_tokens, temperature=temperature, top_p=top_p,
             )
         except RuntimeError as e:
             # Check if it's a response_format error and we haven't already disabled it
@@ -339,15 +434,18 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 self._response_format_unsupported = True
                 # Retry without response_format
                 return await super().achat_complete(
-                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls
+                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
+                    max_tokens=max_tokens, temperature=temperature, top_p=top_p,
                 )
             raise
 
     def _get_models(self) -> List[Model]:
         """List all available models for this provider.
-        
+
         Note: This attempts to fetch models from the /models endpoint.
         If the endpoint doesn't support this, it will return an empty list.
+        When a profile is active, results are filtered by model_prefix_filter
+        and owned_by is overridden if configured.
         """
         try:
             response = self.client.get(
@@ -355,16 +453,26 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 headers=self._get_headers()
             )
             self._handle_error(response)
-            
+
             models_data = response.json()
-            return [
+            owned_by_default = (
+                self._profile.owned_by if self._profile and self._profile.owned_by else "custom"
+            )
+            models = [
                 Model(
                     id=model["id"],
-                    owned_by=model.get("owned_by", "custom"),
+                    owned_by=owned_by_default if self._profile and self._profile.owned_by else model.get("owned_by", "custom"),
                     context_window=model.get("context_window", None),
                 )
                 for model in models_data.get("data", [])
             ]
+
+            # Apply profile-based model filtering
+            if self._profile and self._profile.model_prefix_filter:
+                prefix = self._profile.model_prefix_filter
+                models = [m for m in models if m.id.startswith(prefix)]
+
+            return models
         except Exception as e:
             # Log the error but don't fail completely
             logger.debug(f"Could not fetch models from OpenAI-compatible endpoint: {e}")
@@ -372,15 +480,19 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name.
-        
-        For OpenAI-compatible endpoints, we use a generic default
-        that users should override with their specific model.
+
+        Returns the profile's default_model if a profile is active,
+        otherwise a generic default.
         """
+        if self._profile:
+            return self._profile.default_model
         return "gpt-3.5-turbo"
 
     @property
     def provider(self) -> str:
         """Get the provider name."""
+        if self._profile:
+            return self._profile.name
         return "openai-compatible"
 
     def to_langchain(self) -> "ChatOpenAI":
@@ -397,7 +509,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                 "Install with: uv add langchain_openai or pip install langchain_openai"
             ) from e
 
-        model_kwargs = {}
+        model_kwargs: Dict[str, Any] = {}
         # Only set response_format if endpoint is likely to support it
         should_skip_response_format = (
             self._is_likely_lmstudio() or self._response_format_unsupported
@@ -411,7 +523,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             if structured_type in ["json", "json_object"]:
                 model_kwargs["response_format"] = {"type": "json_object"}
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,

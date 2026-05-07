@@ -1,8 +1,8 @@
 """Tests for the ElevenLabs TTS provider."""
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
 import os
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from esperanto.providers.tts.elevenlabs import ElevenLabsTextToSpeechModel
 

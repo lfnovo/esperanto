@@ -131,6 +131,20 @@ XAI_API_KEY=...
 
 → **[Full xAI Setup Guide](./providers/xai.md)**
 
+#### DashScope (Qwen)
+```bash
+DASHSCOPE_API_KEY=...
+```
+
+→ **[Full DashScope Setup Guide](./providers/dashscope.md)**
+
+#### MiniMax
+```bash
+MINIMAX_API_KEY=...
+```
+
+→ **[Full MiniMax Setup Guide](./providers/minimax.md)**
+
 #### OpenRouter
 ```bash
 OPENROUTER_API_KEY=...

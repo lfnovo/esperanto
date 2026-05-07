@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from esperanto.common_types import Model
+from esperanto.utils import validate_and_decode_embedding
 from esperanto.utils.logging import logger
 
 from .base import EmbeddingModel
@@ -202,6 +203,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             payload = {
                 "input": texts,
                 "model": self.get_model_name(),
+                "encoding_format": "float",
                 **{**self._get_api_kwargs(), **kwargs},
             }
 
@@ -213,10 +215,11 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
 
             # Parse response
             response_data = response.json()
-            return [
-                [float(value) for value in data["embedding"]]
-                for data in response_data["data"]
-            ]
+            results = []
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
+            return results
 
         except Exception as e:
             raise RuntimeError(f"Failed to generate embeddings: {str(e)}") from e
@@ -242,6 +245,7 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
             payload = {
                 "input": texts,
                 "model": self.get_model_name(),
+                "encoding_format": "float",
                 **{**self._get_api_kwargs(), **kwargs},
             }
 
@@ -253,10 +257,11 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
 
             # Parse response
             response_data = response.json()
-            return [
-                [float(value) for value in data["embedding"]]
-                for data in response_data["data"]
-            ]
+            results = []
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
+            return results
 
         except Exception as e:
             raise RuntimeError(f"Failed to generate embeddings: {str(e)}") from e
