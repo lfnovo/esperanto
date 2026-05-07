@@ -7,7 +7,11 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 import httpx
 
 from esperanto.common_types import TranscriptionResponse
-from esperanto.providers.stt.base import Model, SpeechToTextModel
+from esperanto.providers.stt.base import (
+    Model,
+    SpeechToTextModel,
+    _guess_audio_content_type,
+)
 
 
 @dataclass
@@ -25,7 +29,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
             raise ValueError("OpenAI API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.openai.com/v1"
+        self.base_url = (self.base_url or "https://api.openai.com/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -110,7 +114,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = self.client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -120,7 +124,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = self.client.post(
                 f"{self.base_url}/audio/transcriptions",
                 headers=self._get_headers(),
@@ -151,7 +155,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = await self.async_client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -161,7 +165,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = await self.async_client.post(
                 f"{self.base_url}/audio/transcriptions",
                 headers=self._get_headers(),

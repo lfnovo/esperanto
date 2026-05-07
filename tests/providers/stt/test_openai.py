@@ -1,12 +1,13 @@
 """Tests for OpenAI speech-to-text provider."""
 
 import os
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from esperanto.common_types import TranscriptionResponse
 from esperanto.factory import AIFactory
+from esperanto.providers.stt.base import _guess_audio_content_type
 from esperanto.providers.stt.openai import OpenAISpeechToTextModel
 
 
@@ -16,6 +17,34 @@ def audio_file(tmp_path):
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"mock audio content")
     return str(audio_file)
+
+
+@pytest.fixture
+def wav_file(tmp_path):
+    f = tmp_path / "test.wav"
+    f.write_bytes(b"mock wav content")
+    return str(f)
+
+
+@pytest.fixture
+def flac_file(tmp_path):
+    f = tmp_path / "test.flac"
+    f.write_bytes(b"mock flac content")
+    return str(f)
+
+
+@pytest.fixture
+def ogg_file(tmp_path):
+    f = tmp_path / "test.ogg"
+    f.write_bytes(b"mock ogg content")
+    return str(f)
+
+
+@pytest.fixture
+def unknown_file(tmp_path):
+    f = tmp_path / "test.xyz"
+    f.write_bytes(b"mock unknown content")
+    return str(f)
 
 
 @pytest.fixture
@@ -49,7 +78,7 @@ def mock_openai_models_response():
 @pytest.fixture
 def mock_httpx_clients(mock_openai_transcription_response, mock_openai_models_response):
     """Mock httpx clients for OpenAI STT."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import Mock
     
     client = Mock()
     async_client = AsyncMock()
@@ -246,3 +275,82 @@ def test_openai_models(mock_httpx_clients):
     assert models[0].id == "whisper-1"
     # Model type is None when not explicitly provided by the API
     assert models[0].type is None
+
+
+def test_openai_transcribe_wav_content_type(wav_file, mock_httpx_clients):
+    """Test that .wav file uses correct audio MIME type."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    model.transcribe(wav_file)
+
+    call_args = model.client.post.call_args
+    content_type = call_args[1]["files"]["file"][2]
+    assert content_type == _guess_audio_content_type(wav_file)
+    assert content_type.startswith("audio/")
+
+
+def test_openai_transcribe_flac_content_type(flac_file, mock_httpx_clients):
+    """Test that .flac file uses correct audio MIME type."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    model.transcribe(flac_file)
+
+    call_args = model.client.post.call_args
+    content_type = call_args[1]["files"]["file"][2]
+    assert content_type == _guess_audio_content_type(flac_file)
+    assert content_type.startswith("audio/")
+
+
+def test_openai_transcribe_ogg_content_type(ogg_file, mock_httpx_clients):
+    """Test that .ogg file uses audio/ogg MIME type."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    model.transcribe(ogg_file)
+
+    call_args = model.client.post.call_args
+    content_type = call_args[1]["files"]["file"][2]
+    assert content_type == "audio/ogg"
+
+
+def test_openai_transcribe_unknown_extension_falls_back(unknown_file, mock_httpx_clients):
+    """Test that unknown extension falls back to audio/mpeg."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    model.transcribe(unknown_file)
+
+    call_args = model.client.post.call_args
+    content_type = call_args[1]["files"]["file"][2]
+    assert content_type == "audio/mpeg"
+
+
+def test_openai_transcribe_binaryio_mp3_name_uses_mpeg(mock_httpx_clients):
+    """Test that BinaryIO with .mp3 name uses audio/mpeg."""
+    import io
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    stream = io.BytesIO(b"mock audio")
+    stream.name = "audio.mp3"
+    model.transcribe(stream)
+
+    call_args = model.client.post.call_args
+    content_type = call_args[1]["files"]["file"][2]
+    assert content_type == "audio/mpeg"
+
+
+@pytest.mark.asyncio
+async def test_openai_atranscribe_wav_content_type(wav_file, mock_httpx_clients):
+    """Test that async .wav transcribe uses correct audio MIME type."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    await model.atranscribe(wav_file)
+
+    call_args = model.async_client.post.call_args
+    content_type = call_args[1]["files"]["file"][2]
+    assert content_type == _guess_audio_content_type(wav_file)
+    assert content_type.startswith("audio/")

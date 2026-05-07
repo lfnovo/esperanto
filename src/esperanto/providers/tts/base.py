@@ -6,8 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from httpx import Client, AsyncClient
-
 from esperanto.common_types import Model
 from esperanto.common_types.tts import AudioResponse, Voice
 from esperanto.utils.connect import HttpConnectionMixin
@@ -31,8 +29,6 @@ class TextToSpeechModel(HttpConnectionMixin, ABC):
     config: Optional[Dict[str, Any]] = None
     timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
-    client: Optional[Client] = None
-    async_client: Optional[AsyncClient] = None
 
     # Common SSML tags supported across providers
     COMMON_SSML_TAGS = [
@@ -127,9 +123,10 @@ class TextToSpeechModel(HttpConnectionMixin, ABC):
         Returns:
             List[Model]: List of available models
         """
+        provider_name = getattr(self, "provider", self.__class__.__name__)
         warnings.warn(
             f"The `.models` property is deprecated and will be removed in version 3.0. "
-            f"Use AIFactory.get_provider_models('{self.provider}') instead for static "
+            f"Use AIFactory.get_provider_models('{provider_name}') instead for static "
             f"model discovery without creating provider instances.",
             DeprecationWarning,
             stacklevel=2

@@ -8,7 +8,7 @@ from esperanto.common_types import Model
 from esperanto.utils.logging import logger
 
 from .base import AudioResponse, Voice
-from .openai import OpenAITextToSpeechModel, RESPONSE_FORMAT_TO_CONTENT_TYPE
+from .openai import RESPONSE_FORMAT_TO_CONTENT_TYPE, OpenAITextToSpeechModel
 
 
 class OpenAICompatibleTextToSpeechModel(OpenAITextToSpeechModel):

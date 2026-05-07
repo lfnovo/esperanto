@@ -133,9 +133,9 @@ def test_embed(openrouter_model):
     # Check URL
     assert call_args[0][0] == "https://openrouter.ai/api/v1/embeddings"
 
-    # Check that data parameter was used (not json)
-    assert "data" in call_args[1]
-    assert "json" not in call_args[1]
+    # Check that json parameter was used (not data)
+    assert "json" in call_args[1]
+    assert "data" not in call_args[1]
 
     # Check headers include OpenRouter-specific headers
     headers = call_args[1]["headers"]
@@ -162,9 +162,9 @@ async def test_aembed(openrouter_model):
     # Check URL
     assert call_args[0][0] == "https://openrouter.ai/api/v1/embeddings"
 
-    # Check that data parameter was used (not json)
-    assert "data" in call_args[1]
-    assert "json" not in call_args[1]
+    # Check that json parameter was used (not data)
+    assert "json" in call_args[1]
+    assert "data" not in call_args[1]
 
     # Check headers
     headers = call_args[1]["headers"]
@@ -223,11 +223,9 @@ def test_text_cleaning(openrouter_model):
     texts = ["Hello\nWorld", "Test\nText"]
     openrouter_model.embed(texts)
 
-    # Check that the input was cleaned - need to parse the JSON from data parameter
+    # Check that the input was cleaned
     call_args = openrouter_model.client.post.call_args
-    import json
-    data_str = call_args[1]["data"]
-    payload = json.loads(data_str)
+    payload = call_args[1]["json"]
     assert payload["input"] == ["Hello World", "Test Text"]
 
 

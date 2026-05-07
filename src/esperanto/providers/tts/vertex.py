@@ -4,7 +4,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import httpx
 
@@ -47,7 +47,7 @@ class VertexTextToSpeechModel(TextToSpeechModel):
             )
 
         # Set base URL for Cloud Text-to-Speech API
-        self.base_url = "https://texttospeech.googleapis.com/v1"
+        self.base_url = "https://texttospeech.googleapis.com/v1".rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()

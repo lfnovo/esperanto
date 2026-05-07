@@ -1,9 +1,8 @@
 """OpenRouter embedding model implementation."""
 
-import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from esperanto.common_types import Model
 from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
@@ -27,9 +26,9 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
             self.base_url = self.base_url or self.config.get("base_url")
 
         # Initialize OpenRouter-specific configuration
-        self.base_url = self.base_url or os.getenv(
+        self.base_url = (self.base_url or os.getenv(
             "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-        )
+        )).rstrip("/")
         self.api_key = self.api_key or os.getenv("OPENROUTER_API_KEY")
 
         if not self.api_key:
@@ -80,11 +79,10 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
             **{**self._get_api_kwargs(), **kwargs}
         }
 
-        # Make HTTP request using OpenRouter format (data parameter with JSON string)
         response = self.client.post(
             f"{self.base_url}/embeddings",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # Use data= instead of json=
+            json=payload
         )
         self._handle_error(response)
 
@@ -112,11 +110,10 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
             **{**self._get_api_kwargs(), **kwargs}
         }
 
-        # Make async HTTP request using OpenRouter format (data parameter with JSON string)
         response = await self.async_client.post(
             f"{self.base_url}/embeddings",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # Use data= instead of json=
+            json=payload
         )
         self._handle_error(response)
 

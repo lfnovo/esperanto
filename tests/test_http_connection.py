@@ -1,6 +1,7 @@
 """Tests for HttpConnectionMixin functionality."""
 
 import gc
+
 import pytest
 
 from esperanto.providers.embedding.base import EmbeddingModel

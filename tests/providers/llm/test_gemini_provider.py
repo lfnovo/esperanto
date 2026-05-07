@@ -1,8 +1,7 @@
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from google.genai import types
 
 from esperanto.providers.llm.google import GoogleLanguageModel
 
@@ -35,6 +34,7 @@ def test_initialization_without_api_key():
 def test_chat_complete():
     """Test chat completion with httpx mocking."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.google import GoogleLanguageModel
     
     # Create fresh model instance without old fixtures
@@ -87,7 +87,8 @@ def test_chat_complete():
 @pytest.mark.asyncio
 async def test_achat_complete():
     """Test async chat completion with httpx mocking."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import Mock
+
     from esperanto.providers.llm.google import GoogleLanguageModel
     
     # Create fresh model instance
@@ -140,6 +141,7 @@ async def test_achat_complete():
 def test_json_structured_output():
     """Test structured JSON output with httpx mocking."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.google import GoogleLanguageModel
     
     # Create fresh model instance
@@ -180,7 +182,7 @@ def test_json_structured_output():
     mock_client.post.return_value = mock_response
     model.client = mock_client
 
-    response = model.chat_complete(messages)
+    model.chat_complete(messages)
 
     # Verify the HTTP request was made correctly
     mock_client.post.assert_called_once()
@@ -194,7 +196,8 @@ def test_json_structured_output():
 @pytest.mark.asyncio
 async def test_json_structured_output_async():
     """Test async structured JSON output with httpx mocking."""
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import Mock
+
     from esperanto.providers.llm.google import GoogleLanguageModel
     
     # Create fresh model instance
@@ -235,7 +238,7 @@ async def test_json_structured_output_async():
     mock_async_client.post.return_value = mock_response
     model.async_client = mock_async_client
 
-    response = await model.achat_complete(messages)
+    await model.achat_complete(messages)
 
     # Verify the HTTP request was made correctly
     mock_async_client.post.assert_called_once()
@@ -249,6 +252,7 @@ async def test_json_structured_output_async():
 def test_to_langchain():
     """Test LangChain conversion."""
     from unittest.mock import Mock, patch
+
     from esperanto.providers.llm.google import GoogleLanguageModel
     
     # Mock the LangChain classes to avoid credential issues

@@ -27,7 +27,7 @@ class GroqSpeechToTextModel(OpenAISpeechToTextModel):
             raise ValueError("Groq API key not found")
 
         # Set Groq's OpenAI-compatible base URL
-        self.base_url = self.base_url or "https://api.groq.com/openai/v1"
+        self.base_url = (self.base_url or "https://api.groq.com/openai/v1").rstrip("/")
 
         # Call parent's post_init (won't overwrite since values are already set)
         super().__post_init__()

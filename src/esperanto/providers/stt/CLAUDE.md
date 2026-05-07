@@ -54,11 +54,13 @@ def transcribe(self, audio_file: Union[str, BinaryIO], ...):
     # Process audio_data...
 ```
 
-For APIs that expect files, create multipart form data:
+For APIs that expect files, create multipart form data using `_guess_audio_content_type` (from `base.py`) to derive the MIME type from the filename rather than hardcoding it:
 
 ```python
+from esperanto.providers.stt.base import _guess_audio_content_type
+
 files = {
-    "file": ("audio.mp3", audio_data, "audio/mpeg")
+    "file": (filename, audio_data, _guess_audio_content_type(filename))
 }
 ```
 
@@ -195,7 +197,7 @@ def transcribe(self, audio_file: Union[str, BinaryIO], language: Optional[str] =
         filename = "audio.mp3"
 
     # Create multipart request
-    files = {"file": (filename, file_content, "audio/mpeg")}
+    files = {"file": (filename, file_content, _guess_audio_content_type(filename))}
     data = {"model": self.get_model_name()}
 
     if language:
@@ -233,7 +235,7 @@ async def atranscribe(self, audio_file: Union[str, BinaryIO], language: Optional
         file_content = audio_file.read()
         filename = "audio.mp3"
 
-    files = {"file": (filename, file_content, "audio/mpeg")}
+    files = {"file": (filename, file_content, _guess_audio_content_type(filename))}
     data = {"model": self.get_model_name()}
 
     # Use async_client

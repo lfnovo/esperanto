@@ -2,12 +2,12 @@
 """Tests for deprecation warnings on .models property."""
 
 import warnings
-from unittest.mock import MagicMock, patch
+
 import pytest
 
 from esperanto.common_types import Model
-from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.embedding.base import EmbeddingModel
+from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.reranker.base import RerankerModel
 from esperanto.providers.stt.base import SpeechToTextModel
 from esperanto.providers.tts.base import TextToSpeechModel
@@ -45,7 +45,7 @@ class TestLanguageModelDeprecation:
         # Check that accessing .models raises a deprecation warning
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -118,7 +118,7 @@ class TestEmbeddingModelDeprecation:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -155,7 +155,7 @@ class TestRerankerModelDeprecation:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -189,7 +189,7 @@ class TestSTTModelDeprecation:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -227,7 +227,7 @@ class TestTTSModelDeprecation:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models
+            model.models
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -264,7 +264,7 @@ class TestDeprecationMessage:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models
+            model.models
 
             message = str(w[0].message)
             assert "custom-provider" in message
@@ -297,7 +297,7 @@ class TestDeprecationMessage:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models
+            model.models
 
             message = str(w[0].message)
             assert "AIFactory.get_provider_models" in message
@@ -378,7 +378,7 @@ class TestWarningStackLevel:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            models = model.models  # This line should be in the warning
+            model.models
 
             assert len(w) == 1
             # The warning should have been raised from this test file, not from base.py

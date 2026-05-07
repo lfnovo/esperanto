@@ -1,8 +1,7 @@
 """Response types for Esperanto."""
 
 import re
-import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -159,12 +158,26 @@ class Message(BaseModel):
         if not isinstance(data, dict):
             data = to_dict(data)
 
+        # If a separate 'thinking' field is provided (e.g., from Ollama thinking models),
+        # merge it into content using <think> tags so that Message.thinking and
+        # Message.cleaned_content properties work consistently across all providers.
         # Convert mock objects to strings for content field
         if "content" in data and data["content"] is not None:
             try:
                 data["content"] = str(data["content"])
             except Exception:
                 pass
+
+        # If a separate 'thinking' field is provided (e.g., from Ollama thinking models),
+        # merge it into content using <think> tags so that Message.thinking and
+        # Message.cleaned_content properties work consistently across all providers.
+        thinking = data.pop("thinking", None)
+        if thinking:
+            content = data.get("content") or ""
+            if content:
+                data["content"] = f"<think>{thinking}</think>\n\n{content}"
+            else:
+                data["content"] = f"<think>{thinking}</think>"
 
         # Convert dict tool_calls to ToolCall objects for backward compatibility
         if "tool_calls" in data and data["tool_calls"]:
