@@ -128,3 +128,182 @@ class TestCreateTextToSpeech:
             model_name="tts-1",
             api_key="sk-test",
         )
+
+
+class TestCreateLanguage:
+    """Tests for create_language config dict dispatch.
+
+    LLM providers receive ``config`` as a single kwarg (passthrough pattern);
+    the base ``LanguageModel.__post_init__`` is responsible for unpacking
+    ``api_key``/``base_url`` onto instance attributes.
+    """
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_config_dict_forwarded_unchanged(self, mock_import):
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_language(
+            "openai",
+            "gpt-4o",
+            config={"api_key": "sk-test", "base_url": "https://custom.api/v1"},
+        )
+
+        mock_cls.assert_called_once_with(
+            model_name="gpt-4o",
+            config={"api_key": "sk-test", "base_url": "https://custom.api/v1"},
+        )
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_none_config_becomes_empty_dict(self, mock_import):
+        """``config=None`` must reach the provider as an empty dict."""
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_language("openai", "gpt-4o")
+
+        mock_cls.assert_called_once_with(model_name="gpt-4o", config={})
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_create_llm_alias_forwards_config(self, mock_import):
+        """The deprecated ``create_llm`` alias preserves the config dict."""
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            AIFactory.create_llm(
+                "openai",
+                "gpt-4o",
+                config={"api_key": "sk-test", "base_url": "https://custom.api/v1"},
+            )
+
+        llm_warnings = [
+            x for x in w
+            if issubclass(x.category, DeprecationWarning) and "create_llm" in str(x.message)
+        ]
+        assert len(llm_warnings) == 1
+
+        mock_cls.assert_called_once_with(
+            model_name="gpt-4o",
+            config={"api_key": "sk-test", "base_url": "https://custom.api/v1"},
+        )
+
+
+class TestCreateEmbedding:
+    """Tests for create_embedding config dict dispatch (passthrough pattern)."""
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_config_dict_forwarded_unchanged(self, mock_import):
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_embedding(
+            "openai",
+            "text-embedding-3-small",
+            config={"api_key": "sk-test", "base_url": "https://custom.api/v1"},
+        )
+
+        mock_cls.assert_called_once_with(
+            model_name="text-embedding-3-small",
+            config={"api_key": "sk-test", "base_url": "https://custom.api/v1"},
+        )
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_none_config_becomes_empty_dict(self, mock_import):
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_embedding("openai", "text-embedding-3-small")
+
+        mock_cls.assert_called_once_with(
+            model_name="text-embedding-3-small", config={}
+        )
+
+
+class TestCreateReranker:
+    """Tests for create_reranker config dict dispatch (passthrough pattern)."""
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_config_dict_forwarded_unchanged(self, mock_import):
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_reranker(
+            "jina",
+            "jina-reranker-v2-base-multilingual",
+            config={"api_key": "jina-test", "base_url": "https://custom.api/v1"},
+        )
+
+        mock_cls.assert_called_once_with(
+            model_name="jina-reranker-v2-base-multilingual",
+            config={"api_key": "jina-test", "base_url": "https://custom.api/v1"},
+        )
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_none_config_becomes_empty_dict(self, mock_import):
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_reranker("jina")
+
+        mock_cls.assert_called_once_with(model_name=None, config={})
+
+
+class TestCreateSpeechToText:
+    """Tests for create_speech_to_text config dict dispatch.
+
+    STT dispatch unpacks ``**config`` as direct kwargs (mirrors TTS); the
+    provider ``__init__``/``__post_init__`` is responsible for honoring them.
+    """
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_config_dict_unpacked_to_kwargs(self, mock_import):
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_speech_to_text(
+            "openai",
+            model_name="whisper-1",
+            config={"api_key": "sk-test", "base_url": "https://custom.api/v1"},
+        )
+
+        mock_cls.assert_called_once_with(
+            model_name="whisper-1",
+            api_key="sk-test",
+            base_url="https://custom.api/v1",
+        )
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_none_config_passes_only_model_name(self, mock_import):
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        AIFactory.create_speech_to_text("openai", model_name="whisper-1")
+
+        mock_cls.assert_called_once_with(model_name="whisper-1")
+
+    @patch.object(AIFactory, "_import_provider_class")
+    def test_create_stt_alias_forwards_config(self, mock_import):
+        """The deprecated ``create_stt`` alias correctly forwards config."""
+        mock_cls = MagicMock()
+        mock_import.return_value = mock_cls
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            AIFactory.create_stt(
+                "openai",
+                model_name="whisper-1",
+                config={"api_key": "sk-test"},
+            )
+
+        stt_warnings = [
+            x for x in w
+            if issubclass(x.category, DeprecationWarning) and "create_stt" in str(x.message)
+        ]
+        assert len(stt_warnings) == 1
+
+        mock_cls.assert_called_once_with(
+            model_name="whisper-1",
+            api_key="sk-test",
+        )
