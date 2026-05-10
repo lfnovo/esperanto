@@ -20,6 +20,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -27,6 +28,8 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [ElevenLabs](./elevenlabs.md) | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
+
+*Novita is available as a built-in OpenAI-compatible LLM profile. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY`. See [OpenAI-Compatible](./openai-compatible.md) for the shared setup path.
 
 ## Quick Selection Guide
 
@@ -313,6 +316,7 @@ Require API keys, pay-per-use:
 - [Perplexity](./perplexity.md)
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
+- [Novita](./openai-compatible.md) (OpenAI-compatible profile)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
 - [ElevenLabs](./elevenlabs.md)
