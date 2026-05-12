@@ -676,3 +676,33 @@ class TestExtraBody:
         payload = model.async_client.post.call_args[1]["json"]
         assert payload["top_k"] == 40
         assert payload["guided_json"] == {}
+
+    def test_extra_body_cannot_override_stream(self):
+        """`stream` is reserved — extra_body cannot flip request mode from the response-parsing branch."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        # Caller asked for non-streaming, but tries to flip via extra_body.
+        model.chat_complete(self.MESSAGES, stream=False, extra_body={"stream": True, "top_k": 40})
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["stream"] is False  # request mode preserved
+        assert payload["top_k"] == 40  # benign extras still pass through
+
+    @pytest.mark.asyncio
+    async def test_extra_body_cannot_override_stream_async(self):
+        """Async counterpart: `stream` is reserved on async path too."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        await model.achat_complete(
+            self.MESSAGES, stream=False, extra_body={"stream": True, "top_k": 40}
+        )
+
+        payload = model.async_client.post.call_args[1]["json"]
+        assert payload["stream"] is False
+        assert payload["top_k"] == 40

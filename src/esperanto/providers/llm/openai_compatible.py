@@ -354,6 +354,14 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         # Per-call extras shallow-merge over instance-level extras; per-call wins on collision.
         # payload.update runs after core payload is built, so extra_body keys override anything
         # already set (including model, messages) — intentional power-user escape hatch.
+        # Exception: `stream` is stripped because the response-parsing branch is chosen by
+        # `should_stream` (a Python-side variable), so letting extra_body flip the wire value
+        # would desync request mode from response parsing.
+        if "stream" in merged_extra_body:
+            logger.debug(
+                "Dropping 'stream' from extra_body to keep request mode in sync with response parsing"
+            )
+            merged_extra_body = {k: v for k, v in merged_extra_body.items() if k != "stream"}
         payload.update(merged_extra_body)
 
         response = self.client.post(
@@ -485,6 +493,14 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         # Per-call extras shallow-merge over instance-level extras; per-call wins on collision.
         # payload.update runs after core payload is built, so extra_body keys override anything
         # already set (including model, messages) — intentional power-user escape hatch.
+        # Exception: `stream` is stripped because the response-parsing branch is chosen by
+        # `should_stream` (a Python-side variable), so letting extra_body flip the wire value
+        # would desync request mode from response parsing.
+        if "stream" in merged_extra_body:
+            logger.debug(
+                "Dropping 'stream' from extra_body to keep request mode in sync with response parsing"
+            )
+            merged_extra_body = {k: v for k, v in merged_extra_body.items() if k != "stream"}
         payload.update(merged_extra_body)
 
         response = await self.async_client.post(
