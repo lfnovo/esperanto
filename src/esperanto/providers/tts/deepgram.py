@@ -197,9 +197,14 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
 
         audio_bytes = response.content
 
+        # When `container` is set, the audio bytes are wrapped (e.g. ogg-encapsulated
+        # opus); the on-the-wire MIME reflects the container, not the codec.
+        container = kwargs.get("container")
+        content_type = f"audio/{container}" if container and container != "none" else f"audio/{encoding}"
+
         audio_response = AudioResponse(
             audio_data=audio_bytes,
-            content_type=f"audio/{encoding}",
+            content_type=content_type,
             model=voice,
             voice=voice,
             provider="deepgram",
@@ -237,9 +242,14 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
 
         audio_bytes = response.content
 
+        # When `container` is set, the audio bytes are wrapped (e.g. ogg-encapsulated
+        # opus); the on-the-wire MIME reflects the container, not the codec.
+        container = kwargs.get("container")
+        content_type = f"audio/{container}" if container and container != "none" else f"audio/{encoding}"
+
         audio_response = AudioResponse(
             audio_data=audio_bytes,
-            content_type=f"audio/{encoding}",
+            content_type=content_type,
             model=voice,
             voice=voice,
             provider="deepgram",

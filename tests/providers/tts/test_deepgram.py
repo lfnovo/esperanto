@@ -120,6 +120,23 @@ def test_generate_speech_encoding_override(tts_model):
     assert response.content_type == "audio/wav"
 
 
+def test_generate_speech_container_overrides_content_type(tts_model):
+    """When container is set, content_type advertises the container MIME (not the inner codec)."""
+    response = tts_model.generate_speech(
+        text="Hello world",
+        voice="aura-2-thalia-en",
+        encoding="opus",
+        container="ogg",
+    )
+
+    call_args = tts_model.client.post.call_args
+    params = call_args[1]["params"]
+    assert params["encoding"] == "opus"
+    assert params["container"] == "ogg"
+    # The bytes are ogg-wrapped opus on the wire, so the MIME must reflect the container.
+    assert response.content_type == "audio/ogg"
+
+
 @pytest.mark.asyncio
 async def test_agenerate_speech(tts_model, mock_audio_bytes):
     """Async generate_speech behaves identically to sync version."""

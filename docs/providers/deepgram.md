@@ -81,7 +81,7 @@ asyncio.run(main())
 
 ## Parameters
 
-All extra keyword arguments to `generate_speech` / `agenerate_speech` are forwarded as Deepgram query parameters:
+The following keyword arguments to `generate_speech` / `agenerate_speech` are forwarded as Deepgram query parameters (other keyword arguments are ignored):
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
