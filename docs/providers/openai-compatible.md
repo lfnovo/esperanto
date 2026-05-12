@@ -521,6 +521,56 @@ response = tts.generate_speech(
 
 ## Advanced Features
 
+### Sending Provider-Specific Extras
+
+Some OpenAI-compatible servers (vLLM, llama.cpp, text-generation-webui, etc.) accept request body fields that are not part of the OpenAI spec, such as `top_k`, `min_p`, `repetition_penalty`, or `guided_json` for structured generation. You can pass these via `extra_body`.
+
+**Instance-level extras** — applied to every request made by this model instance:
+
+```python
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_language(
+    "openai-compatible",
+    "meta-llama/Llama-3-70b",
+    config={
+        "base_url": "http://localhost:8000/v1",
+        "extra_body": {"top_k": 40, "repetition_penalty": 1.1},
+    },
+)
+
+response = model.chat_complete(messages)  # top_k and repetition_penalty included
+```
+
+**Per-call extras** — applied only to that specific call, passed as a keyword argument:
+
+```python
+# Use guided_json for structured output via vLLM
+schema = {"type": "object", "properties": {"name": {"type": "string"}}}
+response = model.chat_complete(messages, extra_body={"guided_json": schema})
+```
+
+**Merge semantics** — when both instance-level and per-call extras are provided, they are shallow-merged with the per-call value winning on key collision:
+
+```python
+model = AIFactory.create_language(
+    "openai-compatible",
+    "my-model",
+    config={
+        "base_url": "http://localhost:8000/v1",
+        "extra_body": {"top_k": 40},  # default for all calls
+    },
+)
+
+# This call uses top_k=99 (per-call overrides) and guided_json from per-call
+response = model.chat_complete(
+    messages,
+    extra_body={"top_k": 99, "guided_json": schema},
+)
+```
+
+Passing `extra_body=None` or `extra_body={}` at call time leaves the instance-level extras unchanged.
+
 ### Multi-Endpoint Configuration
 
 Use different endpoints for different capabilities:
