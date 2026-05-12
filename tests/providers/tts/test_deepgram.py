@@ -95,6 +95,17 @@ def test_generate_speech_voice_override(tts_model):
     assert params["model"] == "aura-2-orpheus-en"
 
 
+def test_generate_speech_voice_defaults_to_model_name(mock_httpx_clients):
+    """When voice is omitted, the provider falls back to self.model_name (not a hard-coded default)."""
+    model = DeepgramTextToSpeechModel(api_key="test-key", model_name="aura-2-orpheus-en")
+    model.client, model.async_client = mock_httpx_clients
+
+    model.generate_speech(text="Hello world")
+
+    params = model.client.post.call_args[1]["params"]
+    assert params["model"] == "aura-2-orpheus-en"
+
+
 def test_generate_speech_encoding_override(tts_model):
     """Encoding override sends encoding=wav and response content_type=audio/wav."""
     response = tts_model.generate_speech(text="Hello world", voice="aura-2-thalia-en", encoding="wav")

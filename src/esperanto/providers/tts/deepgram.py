@@ -175,10 +175,11 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
     def generate_speech(
         self,
         text: str,
-        voice: str = DEFAULT_MODEL,
+        voice: Optional[str] = None,
         output_file: Optional[Union[str, Path]] = None,
         **kwargs: Any,
     ) -> AudioResponse:
+        voice = voice or self.model_name
         encoding = kwargs.get("encoding", self.DEFAULT_ENCODING)
 
         params: Dict[str, Any] = {"model": voice, "encoding": encoding}
@@ -214,10 +215,11 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
     async def agenerate_speech(
         self,
         text: str,
-        voice: str = DEFAULT_MODEL,
+        voice: Optional[str] = None,
         output_file: Optional[Union[str, Path]] = None,
         **kwargs: Any,
     ) -> AudioResponse:
+        voice = voice or self.model_name
         encoding = kwargs.get("encoding", self.DEFAULT_ENCODING)
 
         params: Dict[str, Any] = {"model": voice, "encoding": encoding}
@@ -255,4 +257,7 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
         return dict(DEEPGRAM_VOICES)
 
     def _get_models(self) -> List[Model]:
-        return []
+        return [
+            Model(id=voice_id, owned_by="deepgram", context_window=None)
+            for voice_id in DEEPGRAM_VOICES
+        ]
