@@ -200,7 +200,7 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
         audio_response = AudioResponse(
             audio_data=audio_bytes,
             content_type=f"audio/{encoding}",
-            model=self.model_name,
+            model=voice,
             voice=voice,
             provider="deepgram",
         )
@@ -240,7 +240,7 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
         audio_response = AudioResponse(
             audio_data=audio_bytes,
             content_type=f"audio/{encoding}",
-            model=self.model_name,
+            model=voice,
             voice=voice,
             provider="deepgram",
         )

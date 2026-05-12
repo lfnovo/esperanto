@@ -87,8 +87,12 @@ def test_generate_speech_default(tts_model, mock_audio_bytes):
 
 
 def test_generate_speech_voice_override(tts_model):
-    """Voice override sends model=aura-2-orpheus-en in the query string."""
-    tts_model.generate_speech(text="Hello world", voice="aura-2-orpheus-en")
+    """Voice override sends model=aura-2-orpheus-en in the query string and AudioResponse.model reports the actually-used voice."""
+    response = tts_model.generate_speech(text="Hello world", voice="aura-2-orpheus-en")
+
+    # AudioResponse.model must match what we actually sent upstream, not the instance default.
+    assert response.model == "aura-2-orpheus-en"
+    assert response.voice == "aura-2-orpheus-en"
 
     call_args = tts_model.client.post.call_args
     params = call_args[1]["params"]
