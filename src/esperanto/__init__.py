@@ -121,6 +121,11 @@ try:
 except ImportError:
     MistralSpeechToTextModel = None  # type: ignore[assignment,misc]
 
+try:
+    from esperanto.providers.tts.deepgram import DeepgramTextToSpeechModel
+except ImportError:
+    DeepgramTextToSpeechModel = None  # type: ignore[assignment,misc]
+
 # Store all provider classes
 __provider_classes = {
     'AnthropicLanguageModel': AnthropicLanguageModel,
@@ -143,6 +148,7 @@ __provider_classes = {
     "VertexTextToSpeechModel": VertexTextToSpeechModel,
     "MistralTextToSpeechModel": MistralTextToSpeechModel,
     "MistralSpeechToTextModel": MistralSpeechToTextModel,
+    "DeepgramTextToSpeechModel": DeepgramTextToSpeechModel,
 }
 
 # Get list of available provider classes (excluding None values)
