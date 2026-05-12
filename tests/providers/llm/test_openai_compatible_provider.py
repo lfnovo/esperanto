@@ -1,7 +1,7 @@
 """Tests for OpenAI-compatible language model provider."""
 
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -475,3 +475,204 @@ class TestOpenAICompatibleLanguageModel:
         model._response_format_unsupported = True
         kwargs = model._get_api_kwargs()
         assert "response_format" not in kwargs
+
+
+def _make_mock_response(content="Hello!"):
+    """Build a minimal mock chat completion HTTP response."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "id": "chatcmpl-test",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": "stop",
+            }
+        ],
+        "created": 1234567890,
+        "model": "test-model",
+        "usage": {"completion_tokens": 5, "prompt_tokens": 10, "total_tokens": 15},
+    }
+    return mock_response
+
+
+class TestExtraBody:
+    """Tests for extra_body passthrough in chat_complete / achat_complete."""
+
+    MESSAGES = [{"role": "user", "content": "hi"}]
+
+    def _model(self, **kwargs):
+        return OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080",
+            **kwargs,
+        )
+
+    # ------------------------------------------------------------------ #
+    # Sync                                                                 #
+    # ------------------------------------------------------------------ #
+
+    def test_instance_extra_body_sent_in_payload(self):
+        """Instance-level extra_body keys appear in the outgoing JSON payload."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["top_k"] == 40
+        assert payload["model"] is not None
+        assert payload["messages"] == self.MESSAGES
+
+    def test_per_call_extra_body_sent_in_payload(self):
+        """Per-call extra_body keys appear in the outgoing JSON payload."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES, extra_body={"guided_json": {}})
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["guided_json"] == {}
+
+    def test_merge_semantics_per_call_wins(self):
+        """Per-call extra_body wins on key collision with instance-level extras."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES, extra_body={"top_k": 99, "guided_json": {}})
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["top_k"] == 99
+        assert payload["guided_json"] == {}
+
+    def test_none_per_call_uses_only_instance_extras(self):
+        """Passing extra_body=None leaves only instance-level extras in payload."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES, extra_body=None)
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["top_k"] == 40
+
+    def test_empty_per_call_uses_only_instance_extras(self):
+        """Passing extra_body={} leaves only instance-level extras in payload."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES, extra_body={})
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["top_k"] == 40
+
+    def test_no_extra_body_at_all(self):
+        """With no instance or per-call extra_body, payload contains only standard keys."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        payload = model.client.post.call_args[1]["json"]
+        assert "top_k" not in payload
+        assert "guided_json" not in payload
+
+    def test_streaming_inherits_merged_extras(self):
+        """Streaming chat_complete includes merged extra_body in the outgoing payload."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+
+        mock_resp = Mock()
+        mock_resp.status_code = 200
+        mock_resp.iter_text.return_value = iter([
+            'data: {"id":"c","choices":[{"index":0,"delta":{"content":"hi","role":"assistant"},"finish_reason":null}],"created":1,"model":"m"}\n',
+            "data: [DONE]\n",
+        ])
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        gen = model.chat_complete(self.MESSAGES, stream=True, extra_body={"guided_json": {}})
+        list(gen)  # exhaust generator to ensure post was called
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["top_k"] == 40
+        assert payload["guided_json"] == {}
+
+    # ------------------------------------------------------------------ #
+    # Async                                                                #
+    # ------------------------------------------------------------------ #
+
+    @pytest.mark.asyncio
+    async def test_async_instance_extra_body_sent_in_payload(self):
+        """Async: instance-level extra_body keys appear in the outgoing JSON payload."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+        mock_resp = _make_mock_response()
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        await model.achat_complete(self.MESSAGES)
+
+        payload = model.async_client.post.call_args[1]["json"]
+        assert payload["top_k"] == 40
+
+    @pytest.mark.asyncio
+    async def test_async_per_call_extra_body_sent_in_payload(self):
+        """Async: per-call extra_body keys appear in the outgoing JSON payload."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        await model.achat_complete(self.MESSAGES, extra_body={"guided_json": {}})
+
+        payload = model.async_client.post.call_args[1]["json"]
+        assert payload["guided_json"] == {}
+
+    @pytest.mark.asyncio
+    async def test_async_merge_semantics_per_call_wins(self):
+        """Async: per-call extra_body wins on key collision with instance-level extras."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+        mock_resp = _make_mock_response()
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        await model.achat_complete(self.MESSAGES, extra_body={"top_k": 99, "guided_json": {}})
+
+        payload = model.async_client.post.call_args[1]["json"]
+        assert payload["top_k"] == 99
+        assert payload["guided_json"] == {}
+
+    @pytest.mark.asyncio
+    async def test_async_streaming_inherits_merged_extras(self):
+        """Async streaming: merged extra_body appears in the outgoing payload."""
+        model = self._model(config={"extra_body": {"top_k": 40}})
+
+        mock_resp = Mock()
+        mock_resp.status_code = 200
+
+        async def _aiter():
+            yield 'data: {"id":"c","choices":[{"index":0,"delta":{"content":"hi","role":"assistant"},"finish_reason":null}],"created":1,"model":"m"}\n'
+            yield "data: [DONE]\n"
+
+        mock_resp.aiter_text = _aiter
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        gen = await model.achat_complete(self.MESSAGES, stream=True, extra_body={"guided_json": {}})
+        async for _ in gen:
+            pass
+
+        payload = model.async_client.post.call_args[1]["json"]
+        assert payload["top_k"] == 40
+        assert payload["guided_json"] == {}
