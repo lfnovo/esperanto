@@ -14,6 +14,9 @@ from typing import (
 )
 
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
+from esperanto.common_types.validation import (
+    validate_tool_calls as _validate_tool_calls,
+)
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.providers.llm.profiles import OpenAICompatibleProfile, get_profile
 from esperanto.utils.logging import logger
@@ -114,6 +117,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         # Apply profile feature flags after parent init
         if self._profile and not self._profile.supports_response_format:
             self._response_format_unsupported = True
+        self._instance_extra_body: Dict[str, Any] = self._config.get("extra_body") or {}
 
     def _is_likely_lmstudio(self) -> bool:
         """Check if this endpoint is likely LM Studio based on port.
@@ -317,6 +321,89 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         error_str = str(error)
         return _RESPONSE_FORMAT_ERROR in error_str
 
+    # Keys in extra_body that we silently strip before merging into the payload.
+    # These collide with first-class Esperanto behaviour and would desync state
+    # between the wire request and Python-side bookkeeping:
+    #   - `stream` selects the response-parsing branch (Python-side `should_stream`).
+    #   - `tools`/`tool_choice`/`parallel_tool_calls` are resolved up-front via the
+    #     dedicated kwargs and used by the response-time validator, so overriding
+    #     them via extra_body would make validation check against a stale tool set.
+    # Everything else (e.g. `model`, `messages`) is left as-is — power-user override.
+    _RESERVED_EXTRA_BODY_KEYS = frozenset(
+        {"stream", "tools", "tool_choice", "parallel_tool_calls"}
+    )
+
+    def _strip_reserved_extras(
+        self, merged_extra_body: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Drop reserved keys from extra_body with a debug log per dropped key."""
+        reserved_hits = self._RESERVED_EXTRA_BODY_KEYS.intersection(merged_extra_body)
+        if not reserved_hits:
+            return merged_extra_body
+        for key in reserved_hits:
+            logger.debug(
+                "Dropping reserved key %r from extra_body; use the dedicated argument instead",
+                key,
+            )
+        return {k: v for k, v in merged_extra_body.items() if k not in reserved_hits}
+
+    def _make_chat_request(
+        self,
+        messages: List[Dict[str, Any]],
+        should_stream: bool,
+        resolved_tools: Optional[List[Tool]],
+        resolved_tool_choice: Optional[Union[str, Dict[str, Any]]],
+        resolved_parallel: Optional[bool],
+        do_validate_tool_calls: bool,
+        max_tokens: Optional[int],
+        temperature: Optional[float],
+        top_p: Optional[float],
+        merged_extra_body: Dict[str, Any],
+    ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
+        payload: Dict[str, Any] = {
+            "model": self.get_model_name(),
+            "messages": messages,
+            "stream": should_stream,
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            ),
+        }
+        if resolved_tools:
+            payload["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            payload["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            payload["parallel_tool_calls"] = resolved_parallel
+        # Per-call extras shallow-merge over instance-level extras; per-call wins on
+        # collision. payload.update runs after the core payload is built, so extra_body
+        # keys override anything already set (e.g. model, messages) — intentional power-
+        # user escape hatch. Reserved keys (stream + tool-related) are stripped first;
+        # see _RESERVED_EXTRA_BODY_KEYS for the rationale.
+        payload.update(self._strip_reserved_extras(merged_extra_body))
+
+        response = self.client.post(
+            f"{self.base_url}/chat/completions",
+            headers=self._get_headers(),
+            json=payload,
+        )
+        self._handle_error(response)
+
+        if should_stream:
+            return (
+                self._normalize_chunk(chunk_data)
+                for chunk_data in self._parse_sse_stream(response)
+            )
+
+        result = self._normalize_response(response.json())
+        if do_validate_tool_calls and resolved_tools:
+            for choice in result.choices:
+                if choice.message.tool_calls:
+                    _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+        return result
+
     def chat_complete(
         self,
         messages: List[Dict[str, Any]],
@@ -328,6 +415,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
+        *,
+        extra_body: Optional[Dict[str, Any]] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request with retry for unsupported response_format.
 
@@ -352,31 +441,101 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             max_tokens: Per-call override for max_tokens. If None, uses instance value.
             temperature: Per-call override for temperature. If None, uses instance value.
             top_p: Per-call override for top_p. If None, uses instance value.
+            extra_body: Additional top-level keys to merge into the request payload.
+                Per-call extras shallow-merge over instance-level extras from
+                config={'extra_body': {...}}; per-call wins on key collision.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+        should_stream = stream if stream is not None else self.streaming
+        is_reasoning_model = self._is_reasoning_model()
+
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
+        if is_reasoning_model:
+            messages = self._transform_messages_for_o1([{**msg} for msg in messages])
+
+        merged_extra_body = {**self._instance_extra_body, **(extra_body or {})}
+
         try:
-            return super().chat_complete(
-                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
-                max_tokens=max_tokens, temperature=temperature, top_p=top_p,
+            return self._make_chat_request(
+                messages, should_stream, resolved_tools, resolved_tool_choice, resolved_parallel,
+                validate_tool_calls, max_tokens, temperature, top_p, merged_extra_body,
             )
         except RuntimeError as e:
-            # Check if it's a response_format error and we haven't already disabled it
             if self._is_response_format_error(e) and not self._response_format_unsupported:
                 logger.debug(
                     "Endpoint doesn't support json_object response_format, retrying without it"
                 )
-                # Mark this endpoint as not supporting response_format
                 self._response_format_unsupported = True
-                # Retry without response_format
-                return super().chat_complete(
-                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
-                    max_tokens=max_tokens, temperature=temperature, top_p=top_p,
+                return self._make_chat_request(
+                    messages, should_stream, resolved_tools, resolved_tool_choice, resolved_parallel,
+                    validate_tool_calls, max_tokens, temperature, top_p, merged_extra_body,
                 )
             raise
+
+    async def _amake_chat_request(
+        self,
+        messages: List[Dict[str, Any]],
+        should_stream: bool,
+        resolved_tools: Optional[List[Tool]],
+        resolved_tool_choice: Optional[Union[str, Dict[str, Any]]],
+        resolved_parallel: Optional[bool],
+        do_validate_tool_calls: bool,
+        max_tokens: Optional[int],
+        temperature: Optional[float],
+        top_p: Optional[float],
+        merged_extra_body: Dict[str, Any],
+    ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
+        payload: Dict[str, Any] = {
+            "model": self.get_model_name(),
+            "messages": messages,
+            "stream": should_stream,
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            ),
+        }
+        if resolved_tools:
+            payload["tools"] = self._convert_tools_to_openai(resolved_tools)
+        if resolved_tool_choice is not None:
+            payload["tool_choice"] = resolved_tool_choice
+        if resolved_parallel is not None:
+            payload["parallel_tool_calls"] = resolved_parallel
+        # Per-call extras shallow-merge over instance-level extras; per-call wins on
+        # collision. payload.update runs after the core payload is built, so extra_body
+        # keys override anything already set (e.g. model, messages) — intentional power-
+        # user escape hatch. Reserved keys (stream + tool-related) are stripped first;
+        # see _RESERVED_EXTRA_BODY_KEYS for the rationale.
+        payload.update(self._strip_reserved_extras(merged_extra_body))
+
+        response = await self.async_client.post(
+            f"{self.base_url}/chat/completions",
+            headers=self._get_headers(),
+            json=payload,
+        )
+        self._handle_error(response)
+
+        if should_stream:
+            async def generate():
+                async for chunk_data in self._parse_sse_stream_async(response):
+                    yield self._normalize_chunk(chunk_data)
+            return generate()
+
+        result = self._normalize_response(response.json())
+        if do_validate_tool_calls and resolved_tools:
+            for choice in result.choices:
+                if choice.message.tool_calls:
+                    _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+        return result
 
     async def achat_complete(
         self,
@@ -389,6 +548,8 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
+        *,
+        extra_body: Optional[Dict[str, Any]] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request with retry for unsupported response_format.
 
@@ -413,29 +574,42 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             max_tokens: Per-call override for max_tokens. If None, uses instance value.
             temperature: Per-call override for temperature. If None, uses instance value.
             top_p: Per-call override for top_p. If None, uses instance value.
+            extra_body: Additional top-level keys to merge into the request payload.
+                Per-call extras shallow-merge over instance-level extras from
+                config={'extra_body': {...}}; per-call wins on key collision.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
             if streaming. When the model calls tools, the response message will
             have tool_calls populated.
         """
+        self._warn_if_validate_with_streaming(validate_tool_calls, stream)
+        should_stream = stream if stream is not None else self.streaming
+        is_reasoning_model = self._is_reasoning_model()
+
+        resolved_tools = self._resolve_tools(tools)
+        resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_parallel = self._resolve_parallel_tool_calls(parallel_tool_calls)
+
+        if is_reasoning_model:
+            messages = self._transform_messages_for_o1([{**msg} for msg in messages])
+
+        merged_extra_body = {**self._instance_extra_body, **(extra_body or {})}
+
         try:
-            return await super().achat_complete(
-                messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
-                max_tokens=max_tokens, temperature=temperature, top_p=top_p,
+            return await self._amake_chat_request(
+                messages, should_stream, resolved_tools, resolved_tool_choice, resolved_parallel,
+                validate_tool_calls, max_tokens, temperature, top_p, merged_extra_body,
             )
         except RuntimeError as e:
-            # Check if it's a response_format error and we haven't already disabled it
             if self._is_response_format_error(e) and not self._response_format_unsupported:
                 logger.debug(
                     "Endpoint doesn't support json_object response_format, retrying without it"
                 )
-                # Mark this endpoint as not supporting response_format
                 self._response_format_unsupported = True
-                # Retry without response_format
-                return await super().achat_complete(
-                    messages, stream, tools, tool_choice, parallel_tool_calls, validate_tool_calls,
-                    max_tokens=max_tokens, temperature=temperature, top_p=top_p,
+                return await self._amake_chat_request(
+                    messages, should_stream, resolved_tools, resolved_tool_choice, resolved_parallel,
+                    validate_tool_calls, max_tokens, temperature, top_p, merged_extra_body,
                 )
             raise
 
