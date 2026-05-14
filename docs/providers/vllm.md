@@ -120,6 +120,15 @@ for chunk in model.chat_complete(messages, stream=True, extra_body={"top_k": 40}
     print(chunk.choices[0].delta.content or "", end="", flush=True)
 ```
 
+## Reserved Keys in `extra_body`
+
+Some keys are stripped from `extra_body` before being sent to vLLM and must be passed via the dedicated arguments instead:
+
+- `stream` — use the `stream=` argument on `chat_complete` / `achat_complete`. The response-parsing branch is chosen from that argument, so flipping the wire value via `extra_body` would desync request mode from parsing.
+- `tools`, `tool_choice`, `parallel_tool_calls` — use the `tools=` / `tool_choice=` / `parallel_tool_calls=` arguments. Tool-call validation (when `validate_tool_calls=True`) checks responses against the resolved tool set, so overriding via `extra_body` would validate against the wrong schema.
+
+If you include any of these inside `extra_body`, they are dropped with a debug log; everything else passes through unchanged.
+
 ## See Also
 
 - [OpenAI-Compatible Provider](./openai-compatible.md) — full `extra_body` docs and other advanced features

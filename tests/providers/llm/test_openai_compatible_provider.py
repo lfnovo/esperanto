@@ -706,3 +706,109 @@ class TestExtraBody:
         payload = model.async_client.post.call_args[1]["json"]
         assert payload["stream"] is False
         assert payload["top_k"] == 40
+
+    # ------------------------------------------------------------------ #
+    # Reserved tool-related keys                                          #
+    # ------------------------------------------------------------------ #
+
+    def _tool(self, name="get_weather"):
+        """Build a minimal Tool for tests."""
+        from esperanto.common_types import Tool, ToolFunction
+
+        return Tool(
+            type="function",
+            function=ToolFunction(
+                name=name,
+                description="A test tool",
+                parameters={
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            ),
+        )
+
+    def test_extra_body_cannot_override_tools(self):
+        """`tools` is reserved — extra_body cannot replace the resolved tool set."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        resolved_tool = self._tool("get_weather")
+        rogue_tools = [{"type": "function", "function": {"name": "rogue"}}]
+
+        model.chat_complete(
+            self.MESSAGES,
+            tools=[resolved_tool],
+            extra_body={"tools": rogue_tools, "top_k": 40},
+        )
+
+        payload = model.client.post.call_args[1]["json"]
+        # Resolved tool wins over the extra_body override.
+        assert len(payload["tools"]) == 1
+        assert payload["tools"][0]["function"]["name"] == "get_weather"
+        # Benign extras still pass through.
+        assert payload["top_k"] == 40
+
+    def test_extra_body_cannot_override_tool_choice(self):
+        """`tool_choice` is reserved — overriding via extra_body is stripped."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        resolved_tool = self._tool()
+
+        model.chat_complete(
+            self.MESSAGES,
+            tools=[resolved_tool],
+            tool_choice="required",
+            extra_body={"tool_choice": "none", "top_k": 40},
+        )
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["tool_choice"] == "required"
+        assert payload["top_k"] == 40
+
+    def test_extra_body_cannot_override_parallel_tool_calls(self):
+        """`parallel_tool_calls` is reserved — overriding via extra_body is stripped."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        resolved_tool = self._tool()
+
+        model.chat_complete(
+            self.MESSAGES,
+            tools=[resolved_tool],
+            parallel_tool_calls=False,
+            extra_body={"parallel_tool_calls": True, "top_k": 40},
+        )
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["parallel_tool_calls"] is False
+        assert payload["top_k"] == 40
+
+    @pytest.mark.asyncio
+    async def test_async_extra_body_cannot_override_tools(self):
+        """Async: `tools` is reserved on async path too."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        resolved_tool = self._tool("get_weather")
+        rogue_tools = [{"type": "function", "function": {"name": "rogue"}}]
+
+        await model.achat_complete(
+            self.MESSAGES,
+            tools=[resolved_tool],
+            extra_body={"tools": rogue_tools, "top_k": 40},
+        )
+
+        payload = model.async_client.post.call_args[1]["json"]
+        assert len(payload["tools"]) == 1
+        assert payload["tools"][0]["function"]["name"] == "get_weather"
+        assert payload["top_k"] == 40

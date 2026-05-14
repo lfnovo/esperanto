@@ -571,6 +571,13 @@ response = model.chat_complete(
 
 Passing `extra_body=None` or `extra_body={}` at call time leaves the instance-level extras unchanged.
 
+**Reserved keys** — a small set of keys is stripped from `extra_body` before merging into the payload, because Esperanto already manages them via dedicated arguments and allowing an override would desync the request from the response-handling logic:
+
+- `stream` — controlled by the `stream=` argument; the response-parsing branch is selected from that, so flipping the wire value via `extra_body` would mismatch parsing.
+- `tools`, `tool_choice`, `parallel_tool_calls` — controlled by the `tools=` / `tool_choice=` / `parallel_tool_calls=` arguments; the tool-call validator (`validate_tool_calls=True`) checks responses against the resolved tool set, so overriding via `extra_body` would validate against the wrong schema.
+
+If you pass any of these inside `extra_body`, they are dropped with a debug log. Use the dedicated arguments instead.
+
 ### Multi-Endpoint Configuration
 
 Use different endpoints for different capabilities:

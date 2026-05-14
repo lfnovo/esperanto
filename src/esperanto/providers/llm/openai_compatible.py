@@ -321,6 +321,32 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         error_str = str(error)
         return _RESPONSE_FORMAT_ERROR in error_str
 
+    # Keys in extra_body that we silently strip before merging into the payload.
+    # These collide with first-class Esperanto behaviour and would desync state
+    # between the wire request and Python-side bookkeeping:
+    #   - `stream` selects the response-parsing branch (Python-side `should_stream`).
+    #   - `tools`/`tool_choice`/`parallel_tool_calls` are resolved up-front via the
+    #     dedicated kwargs and used by the response-time validator, so overriding
+    #     them via extra_body would make validation check against a stale tool set.
+    # Everything else (e.g. `model`, `messages`) is left as-is — power-user override.
+    _RESERVED_EXTRA_BODY_KEYS = frozenset(
+        {"stream", "tools", "tool_choice", "parallel_tool_calls"}
+    )
+
+    def _strip_reserved_extras(
+        self, merged_extra_body: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Drop reserved keys from extra_body with a debug log per dropped key."""
+        reserved_hits = self._RESERVED_EXTRA_BODY_KEYS.intersection(merged_extra_body)
+        if not reserved_hits:
+            return merged_extra_body
+        for key in reserved_hits:
+            logger.debug(
+                "Dropping reserved key %r from extra_body; use the dedicated argument instead",
+                key,
+            )
+        return {k: v for k, v in merged_extra_body.items() if k not in reserved_hits}
+
     def _make_chat_request(
         self,
         messages: List[Dict[str, Any]],
@@ -351,18 +377,12 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             payload["tool_choice"] = resolved_tool_choice
         if resolved_parallel is not None:
             payload["parallel_tool_calls"] = resolved_parallel
-        # Per-call extras shallow-merge over instance-level extras; per-call wins on collision.
-        # payload.update runs after core payload is built, so extra_body keys override anything
-        # already set (including model, messages) — intentional power-user escape hatch.
-        # Exception: `stream` is stripped because the response-parsing branch is chosen by
-        # `should_stream` (a Python-side variable), so letting extra_body flip the wire value
-        # would desync request mode from response parsing.
-        if "stream" in merged_extra_body:
-            logger.debug(
-                "Dropping 'stream' from extra_body to keep request mode in sync with response parsing"
-            )
-            merged_extra_body = {k: v for k, v in merged_extra_body.items() if k != "stream"}
-        payload.update(merged_extra_body)
+        # Per-call extras shallow-merge over instance-level extras; per-call wins on
+        # collision. payload.update runs after the core payload is built, so extra_body
+        # keys override anything already set (e.g. model, messages) — intentional power-
+        # user escape hatch. Reserved keys (stream + tool-related) are stripped first;
+        # see _RESERVED_EXTRA_BODY_KEYS for the rationale.
+        payload.update(self._strip_reserved_extras(merged_extra_body))
 
         response = self.client.post(
             f"{self.base_url}/chat/completions",
@@ -490,18 +510,12 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             payload["tool_choice"] = resolved_tool_choice
         if resolved_parallel is not None:
             payload["parallel_tool_calls"] = resolved_parallel
-        # Per-call extras shallow-merge over instance-level extras; per-call wins on collision.
-        # payload.update runs after core payload is built, so extra_body keys override anything
-        # already set (including model, messages) — intentional power-user escape hatch.
-        # Exception: `stream` is stripped because the response-parsing branch is chosen by
-        # `should_stream` (a Python-side variable), so letting extra_body flip the wire value
-        # would desync request mode from response parsing.
-        if "stream" in merged_extra_body:
-            logger.debug(
-                "Dropping 'stream' from extra_body to keep request mode in sync with response parsing"
-            )
-            merged_extra_body = {k: v for k, v in merged_extra_body.items() if k != "stream"}
-        payload.update(merged_extra_body)
+        # Per-call extras shallow-merge over instance-level extras; per-call wins on
+        # collision. payload.update runs after the core payload is built, so extra_body
+        # keys override anything already set (e.g. model, messages) — intentional power-
+        # user escape hatch. Reserved keys (stream + tool-related) are stripped first;
+        # see _RESERVED_EXTRA_BODY_KEYS for the rationale.
+        payload.update(self._strip_reserved_extras(merged_extra_body))
 
         response = await self.async_client.post(
             f"{self.base_url}/chat/completions",
