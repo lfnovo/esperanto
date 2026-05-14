@@ -159,6 +159,11 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
 
         self._create_http_clients()
 
+    @property
+    def provider(self) -> str:
+        """Provider name (lowercase). Matches the OpenAI / Azure / xAI TTS pattern."""
+        return self.PROVIDER
+
     def _speak_url(self) -> str:
         """Build the /v1/speak endpoint URL.
 
@@ -192,43 +197,52 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
         output_file: Optional[Union[str, Path]] = None,
         **kwargs: Any,
     ) -> AudioResponse:
-        voice = voice or self.model_name
-        encoding = kwargs.get("encoding", self.DEFAULT_ENCODING)
+        try:
+            voice = voice or self.model_name
+            encoding = kwargs.get("encoding", self.DEFAULT_ENCODING)
 
-        params: Dict[str, Any] = {"model": voice, "encoding": encoding}
-        for param in ("container", "sample_rate", "bit_rate", "speed"):
-            if param in kwargs:
-                params[param] = kwargs[param]
+            params: Dict[str, Any] = {"model": voice, "encoding": encoding}
+            for param in ("container", "sample_rate", "bit_rate", "speed"):
+                if param in kwargs:
+                    params[param] = kwargs[param]
 
-        response = self.client.post(
-            self._speak_url(),
-            headers=self._get_headers(),
-            json={"text": text},
-            params=params,
-        )
-        self._handle_error(response)
+            response = self.client.post(
+                self._speak_url(),
+                headers=self._get_headers(),
+                json={"text": text},
+                params=params,
+            )
+            self._handle_error(response)
 
-        audio_bytes = response.content
+            audio_bytes = response.content
 
-        # When `container` is set, the audio bytes are wrapped (e.g. ogg-encapsulated
-        # opus); the on-the-wire MIME reflects the container, not the codec.
-        container = kwargs.get("container")
-        content_type = f"audio/{container}" if container and container != "none" else f"audio/{encoding}"
+            # When `container` is set, the audio bytes are wrapped (e.g. ogg-encapsulated
+            # opus); the on-the-wire MIME reflects the container, not the codec.
+            container = kwargs.get("container")
+            content_type = f"audio/{container}" if container and container != "none" else f"audio/{encoding}"
 
-        audio_response = AudioResponse(
-            audio_data=audio_bytes,
-            content_type=content_type,
-            model=voice,
-            voice=voice,
-            provider="deepgram",
-        )
+            audio_response = AudioResponse(
+                audio_data=audio_bytes,
+                content_type=content_type,
+                model=voice,
+                voice=voice,
+                provider="deepgram",
+            )
 
-        if output_file:
-            output_path = Path(output_file)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_bytes(audio_bytes)
+            if output_file:
+                output_path = Path(output_file)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_bytes(audio_bytes)
 
-        return audio_response
+            return audio_response
+        except RuntimeError:
+            # _handle_error already raised the canonical "Deepgram API error: ..." —
+            # re-raise as-is so the message isn't double-wrapped.
+            raise
+        except Exception as e:
+            # Transport / filesystem / unexpected errors get wrapped to keep the
+            # public surface RuntimeError-only, matching the OpenAI/ElevenLabs pattern.
+            raise RuntimeError(f"Failed to generate speech: {e}") from e
 
     async def agenerate_speech(
         self,
@@ -237,43 +251,48 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
         output_file: Optional[Union[str, Path]] = None,
         **kwargs: Any,
     ) -> AudioResponse:
-        voice = voice or self.model_name
-        encoding = kwargs.get("encoding", self.DEFAULT_ENCODING)
+        try:
+            voice = voice or self.model_name
+            encoding = kwargs.get("encoding", self.DEFAULT_ENCODING)
 
-        params: Dict[str, Any] = {"model": voice, "encoding": encoding}
-        for param in ("container", "sample_rate", "bit_rate", "speed"):
-            if param in kwargs:
-                params[param] = kwargs[param]
+            params: Dict[str, Any] = {"model": voice, "encoding": encoding}
+            for param in ("container", "sample_rate", "bit_rate", "speed"):
+                if param in kwargs:
+                    params[param] = kwargs[param]
 
-        response = await self.async_client.post(
-            self._speak_url(),
-            headers=self._get_headers(),
-            json={"text": text},
-            params=params,
-        )
-        self._handle_error(response)
+            response = await self.async_client.post(
+                self._speak_url(),
+                headers=self._get_headers(),
+                json={"text": text},
+                params=params,
+            )
+            self._handle_error(response)
 
-        audio_bytes = response.content
+            audio_bytes = response.content
 
-        # When `container` is set, the audio bytes are wrapped (e.g. ogg-encapsulated
-        # opus); the on-the-wire MIME reflects the container, not the codec.
-        container = kwargs.get("container")
-        content_type = f"audio/{container}" if container and container != "none" else f"audio/{encoding}"
+            # When `container` is set, the audio bytes are wrapped (e.g. ogg-encapsulated
+            # opus); the on-the-wire MIME reflects the container, not the codec.
+            container = kwargs.get("container")
+            content_type = f"audio/{container}" if container and container != "none" else f"audio/{encoding}"
 
-        audio_response = AudioResponse(
-            audio_data=audio_bytes,
-            content_type=content_type,
-            model=voice,
-            voice=voice,
-            provider="deepgram",
-        )
+            audio_response = AudioResponse(
+                audio_data=audio_bytes,
+                content_type=content_type,
+                model=voice,
+                voice=voice,
+                provider="deepgram",
+            )
 
-        if output_file:
-            output_path = Path(output_file)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_bytes(audio_bytes)
+            if output_file:
+                output_path = Path(output_file)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_bytes(audio_bytes)
 
-        return audio_response
+            return audio_response
+        except RuntimeError:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate speech: {e}") from e
 
     @property
     def available_voices(self) -> Dict[str, Voice]:

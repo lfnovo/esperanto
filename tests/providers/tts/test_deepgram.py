@@ -2,6 +2,7 @@
 import os
 from unittest.mock import AsyncMock, Mock
 
+import httpx
 import pytest
 
 from esperanto.providers.tts.deepgram import DEEPGRAM_VOICES, DeepgramTextToSpeechModel
@@ -176,6 +177,28 @@ def test_missing_api_key_raises_value_error():
     finally:
         if original is not None:
             os.environ[env_key] = original
+
+
+def test_provider_property_returns_deepgram(tts_model):
+    """`model.provider` is exposed as a lowercase property (matches OpenAI/Azure/xAI TTS)."""
+    assert tts_model.provider == "deepgram"
+
+
+def test_transport_error_wrapped_as_runtime_error(tts_model):
+    """Transport-level httpx errors surface as RuntimeError, not raw httpx exceptions."""
+    tts_model.client.post.side_effect = httpx.ConnectError("connection refused")
+
+    with pytest.raises(RuntimeError, match="Failed to generate speech"):
+        tts_model.generate_speech(text="Hello world", voice="aura-2-thalia-en")
+
+
+@pytest.mark.asyncio
+async def test_async_transport_error_wrapped_as_runtime_error(tts_model):
+    """Async transport-level httpx errors surface as RuntimeError."""
+    tts_model.async_client.post.side_effect = httpx.ConnectError("connection refused")
+
+    with pytest.raises(RuntimeError, match="Failed to generate speech"):
+        await tts_model.agenerate_speech(text="Hello world", voice="aura-2-thalia-en")
 
 
 def test_error_response_raises_runtime_error(tts_model):
