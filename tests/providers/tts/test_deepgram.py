@@ -192,6 +192,34 @@ def test_error_response_raises_runtime_error(tts_model):
         tts_model.generate_speech(text="Hello world", voice="aura-2-thalia-en")
 
 
+@pytest.mark.parametrize(
+    "configured_base_url",
+    [
+        "https://api.deepgram.com",
+        "https://api.deepgram.com/",
+        "https://api.deepgram.com/v1",
+        "https://api.deepgram.com/v1/",
+        # Custom host where the caller pre-pended /v1 (regression for /v1/v1/speak).
+        "https://my-proxy.example.com/v1",
+    ],
+)
+def test_base_url_normalization_avoids_duplicate_v1(mock_httpx_clients, configured_base_url):
+    """base_url variants with or without trailing /v1 all resolve to a single /v1/speak."""
+    model = DeepgramTextToSpeechModel(
+        api_key="test-key",
+        model_name="aura-2-thalia-en",
+        base_url=configured_base_url,
+    )
+    model.client, model.async_client = mock_httpx_clients
+
+    model.generate_speech(text="Hello world", voice="aura-2-thalia-en")
+
+    called_url = model.client.post.call_args[0][0]
+    # /v1 appears exactly once.
+    assert called_url.count("/v1") == 1
+    assert called_url.endswith("/v1/speak")
+
+
 def test_available_voices_returns_dict():
     """available_voices returns a non-empty dict of Voice objects."""
     model = DeepgramTextToSpeechModel(api_key="test-key")

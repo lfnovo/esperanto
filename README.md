@@ -144,7 +144,7 @@ pip install "langchain_deepseek>=0.1.3"
 | Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ❌                | ✅             | ✅             | ❌        |
-| Deepgram     | ❌          | ❌               | ❌                | ✅             | ❌             | ❌        |
+| Deepgram     | ❌          | ❌               | ❌                | ✅             | ✅             | ❌        |
 | Azure OpenAI | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 | Mistral      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |

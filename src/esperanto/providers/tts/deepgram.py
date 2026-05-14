@@ -150,9 +150,22 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
         )
 
         if self.base_url:
+            # Strip trailing slashes, then strip a trailing /v1 segment if the caller
+            # already included it (Deepgram's published docs sometimes show the host
+            # with /v1, sometimes without). Endpoint composition always re-adds /v1.
             self.base_url = self.base_url.rstrip("/")
+            if self.base_url.endswith("/v1"):
+                self.base_url = self.base_url[: -len("/v1")]
 
         self._create_http_clients()
+
+    def _speak_url(self) -> str:
+        """Build the /v1/speak endpoint URL.
+
+        Centralized so the sync and async paths cannot drift, and so the /v1
+        prefix is composed in exactly one place after base_url normalization.
+        """
+        return f"{self.base_url}/v1/speak"
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -188,7 +201,7 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
                 params[param] = kwargs[param]
 
         response = self.client.post(
-            f"{self.base_url}/v1/speak",
+            self._speak_url(),
             headers=self._get_headers(),
             json={"text": text},
             params=params,
@@ -233,7 +246,7 @@ class DeepgramTextToSpeechModel(TextToSpeechModel):
                 params[param] = kwargs[param]
 
         response = await self.async_client.post(
-            f"{self.base_url}/v1/speak",
+            self._speak_url(),
             headers=self._get_headers(),
             json={"text": text},
             params=params,
