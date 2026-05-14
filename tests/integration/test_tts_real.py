@@ -277,6 +277,38 @@ class TestMistralTTS:
 
 
 # =============================================================================
+# Deepgram Tests
+# =============================================================================
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("DEEPGRAM_API_KEY"),
+    reason="DEEPGRAM_API_KEY not configured",
+)
+class TestDeepgramTTS:
+    """Real integration tests for Deepgram text-to-speech."""
+
+    def test_sync_generate_speech(self):
+        """Test sync speech generation."""
+        model = AIFactory.create_text_to_speech("deepgram", "aura-2-thalia-en")
+        response = model.generate_speech(TEST_TEXT)
+        assert response.audio_data
+        assert response.content_type.startswith("audio/")
+
+    def test_async_agenerate_speech(self):
+        """Test async speech generation."""
+        model = AIFactory.create_text_to_speech("deepgram", "aura-2-thalia-en")
+
+        async def _run() -> object:
+            return await model.agenerate_speech(TEST_TEXT)
+
+        response = asyncio.run(_run())
+        assert response.audio_data
+        assert response.content_type.startswith("audio/")
+
+
+# =============================================================================
 # OpenAI-Compatible Tests
 # =============================================================================
 
