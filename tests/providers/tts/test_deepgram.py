@@ -179,6 +179,22 @@ def test_missing_api_key_raises_value_error():
             os.environ[env_key] = original
 
 
+def test_factory_get_provider_models_for_deepgram():
+    """AIFactory.get_provider_models('deepgram') returns the full static catalog.
+
+    Regression test: without a PROVIDER_MODELS_REGISTRY entry this raises
+    ValueError("Provider 'deepgram' not supported for model discovery").
+    """
+    from esperanto import AIFactory
+
+    models = AIFactory.get_provider_models("deepgram")
+
+    assert len(models) == len(DEEPGRAM_VOICES)
+    ids = {m.id for m in models}
+    assert ids == set(DEEPGRAM_VOICES.keys())
+    assert all(m.owned_by == "deepgram" for m in models)
+
+
 def test_provider_property_returns_deepgram(tts_model):
     """`model.provider` is exposed as a lowercase property (matches OpenAI/Azure/xAI TTS)."""
     assert tts_model.provider == "deepgram"
