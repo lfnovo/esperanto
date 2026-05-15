@@ -63,6 +63,7 @@ class AIFactory:
             "azure": "esperanto.providers.tts.azure:AzureTextToSpeechModel",
             "xai": "esperanto.providers.tts.xai:XAITextToSpeechModel",
             "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
+            "deepgram": "esperanto.providers.tts.deepgram:DeepgramTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
