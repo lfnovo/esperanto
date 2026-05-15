@@ -25,14 +25,14 @@ class VertexEmbeddingModel(EmbeddingModel):
         super().__init__(**kwargs)
         
         # Set base URL for Vertex AI
-        self.base_url = f"https://{self.location}-aiplatform.googleapis.com/v1"
+        self.base_url = f"https://{self.location}-aiplatform.googleapis.com/v1".rstrip("/")
         
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
         
         # Cache for access token
-        self._access_token = None
-        self._token_expiry = 0
+        self._access_token: Optional[str] = None
+        self._token_expiry: float = 0
         
         # Update config with model_name if provided
         if "model_name" in kwargs:

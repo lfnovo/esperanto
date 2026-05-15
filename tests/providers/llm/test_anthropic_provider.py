@@ -1,11 +1,16 @@
-import io
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from esperanto.common_types import (
+    FunctionCall,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
+)
 from esperanto.providers.llm.anthropic import AnthropicLanguageModel
-from esperanto.utils.logging import logger
 
 
 def test_provider_name(anthropic_model):
@@ -129,7 +134,7 @@ def test_to_langchain(anthropic_model):
 
 def test_to_langchain_with_base_url(anthropic_model):
     anthropic_model.base_url = "https://custom.anthropic.com"
-    langchain_model = anthropic_model.to_langchain()
+    anthropic_model.to_langchain()
     # Check that base URL configuration is preserved
     assert anthropic_model.base_url == "https://custom.anthropic.com"
 
@@ -159,6 +164,7 @@ def mock_stream_events():
 def test_chat_complete_streaming():
     """Test streaming chat completion."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.anthropic import AnthropicLanguageModel
     
     # Create fresh model instance without fixtures
@@ -198,6 +204,7 @@ def test_chat_complete_streaming():
 async def test_achat_complete_streaming():
     """Test async streaming chat completion."""
     from unittest.mock import Mock
+
     from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 
     # Create fresh model instance without fixtures
@@ -398,17 +405,32 @@ def test_top_p_used_when_temperature_not_set():
     assert "temperature" not in payload
 
 
+def test_temperature_drops_top_p_with_debug_log(anthropic_model, caplog):
+    """When both temperature and top_p are set, top_p is silently dropped with a DEBUG log."""
+    import logging
+
+    anthropic_model.top_p = 0.95  # fixture already has temperature=0.7
+
+    messages = [{"role": "user", "content": "Hello!"}]
+
+    with caplog.at_level(logging.DEBUG, logger="esperanto.providers.llm.anthropic"):
+        anthropic_model.chat_complete(messages)
+
+    call_args = anthropic_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert "temperature" in json_payload
+    assert "top_p" not in json_payload
+
+    assert any(
+        "top_p" in record.message and "Anthropic" in record.message
+        for record in caplog.records
+        if record.levelno == logging.DEBUG
+    )
+
+
 # =============================================================================
 # Tool Calling Tests
 # =============================================================================
-
-from esperanto.common_types import (
-    Tool,
-    ToolFunction,
-    ToolCall,
-    FunctionCall,
-    ToolCallValidationError,
-)
 
 
 @pytest.fixture
@@ -917,6 +939,58 @@ class TestToolCallValidation:
             model.chat_complete(messages, tools=sample_tools, validate_tool_calls=True)
 
 
+class TestParameterOverrides:
+    """Tests for per-call max_tokens, temperature, top_p overrides."""
+
+    def test_max_tokens_override(self, anthropic_model):
+        """Per-call max_tokens overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        anthropic_model.chat_complete(messages, max_tokens=500)
+        json_payload = anthropic_model.client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 500
+
+    def test_temperature_override(self, anthropic_model):
+        """Per-call temperature overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        anthropic_model.chat_complete(messages, temperature=0.2)
+        json_payload = anthropic_model.client.post.call_args[1]["json"]
+        assert json_payload["temperature"] == 0.2
+
+    def test_top_p_override_when_temperature_not_set(self, mock_anthropic_client):
+        """Per-call top_p reaches the payload only when instance temperature is None.
+
+        Anthropic rejects requests with both temperature and top_p, so the provider
+        drops top_p when temperature is set (mutual-exclusivity rule).
+        """
+        model = AnthropicLanguageModel(
+            api_key="test-key",
+            model_name="claude-3-opus-20240229",
+            temperature=None,
+        )
+        model.client, model.async_client = mock_anthropic_client
+        messages = [{"role": "user", "content": "Hello"}]
+        model.chat_complete(messages, top_p=0.7)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload.get("top_p") == 0.7
+        assert "temperature" not in json_payload
+
+    def test_instance_defaults_when_no_overrides(self, anthropic_model):
+        """Regression guard: omitting overrides uses instance-level values."""
+        messages = [{"role": "user", "content": "Hello"}]
+        anthropic_model.chat_complete(messages)
+        json_payload = anthropic_model.client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 850
+        assert json_payload["temperature"] == 0.7
+
+    @pytest.mark.asyncio
+    async def test_async_max_tokens_override(self, anthropic_model):
+        """Async: per-call max_tokens overrides the instance default."""
+        messages = [{"role": "user", "content": "Hello"}]
+        await anthropic_model.achat_complete(messages, max_tokens=500)
+        json_payload = anthropic_model.async_client.post.call_args[1]["json"]
+        assert json_payload["max_tokens"] == 500
+
+
 class TestStreamingToolCalls:
     """Tests for streaming with tool calls."""
 
@@ -938,8 +1012,8 @@ class TestStreamingToolCalls:
         assert chunk is not None
         assert chunk.choices[0].delta.tool_calls is not None
         assert len(chunk.choices[0].delta.tool_calls) == 1
-        # tool_calls are converted to ToolCall objects by the DeltaMessage validator
         tool_call = chunk.choices[0].delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
         assert tool_call.id == "toolu_abc123"
         assert tool_call.function.name == "get_weather"
 
@@ -958,8 +1032,8 @@ class TestStreamingToolCalls:
 
         assert chunk is not None
         assert chunk.choices[0].delta.tool_calls is not None
-        # tool_calls are converted to ToolCall objects by the DeltaMessage validator
         tool_call = chunk.choices[0].delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
         # For delta updates, id and name are empty (only arguments are sent incrementally)
         assert tool_call.id == ""
         assert tool_call.function.name == ""

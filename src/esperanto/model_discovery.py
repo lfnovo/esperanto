@@ -66,7 +66,7 @@ def get_openai_models(
         raise ValueError("OpenAI API key not found. Provide api_key or set OPENAI_API_KEY environment variable.")
 
     # Set defaults
-    base_url = base_url or "https://api.openai.com/v1"
+    base_url = base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1"
 
     # Check cache
     cache_key = _create_cache_key("openai", api_key=api_key, base_url=base_url, model_type=model_type)
@@ -961,6 +961,38 @@ def get_transformers_models(
     return []
 
 
+def get_deepgram_models(
+    api_key: Optional[str] = None,
+) -> List[Model]:
+    """Get available models from Deepgram TTS.
+
+    Deepgram does not expose a /models endpoint for the Aura voice family, so
+    this returns the static catalog maintained in the provider module. Each
+    voice id is also a model id (e.g. "aura-2-thalia-en").
+
+    Args:
+        api_key: Deepgram API key (not used, kept for registry signature
+            consistency with other discovery functions).
+
+    Returns:
+        List of known Deepgram TTS models.
+    """
+    cache_key = _create_cache_key("deepgram")
+    cached_models = _model_cache.get(cache_key)
+    if cached_models is not None:
+        return cached_models
+
+    # Lazy import to avoid a model_discovery <-> providers circular import.
+    from esperanto.providers.tts.deepgram import DEEPGRAM_VOICES
+
+    models = [
+        Model(id=voice_id, owned_by="deepgram", context_window=None)
+        for voice_id in DEEPGRAM_VOICES
+    ]
+    _model_cache.set(cache_key, models)
+    return models
+
+
 # Provider registry mapping provider names to discovery functions
 PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "openai": get_openai_models,
@@ -979,4 +1011,5 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "voyage": get_voyage_models,
     "azure": get_azure_models,
     "transformers": get_transformers_models,
+    "deepgram": get_deepgram_models,
 }

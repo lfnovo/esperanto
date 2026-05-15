@@ -52,6 +52,7 @@ class AIFactory:
             "openai-compatible": "esperanto.providers.stt.openai_compatible:OpenAICompatibleSpeechToTextModel",
             "azure": "esperanto.providers.stt.azure:AzureSpeechToTextModel",
             "google": "esperanto.providers.stt.google:GoogleSpeechToTextModel",
+            "mistral": "esperanto.providers.stt.mistral:MistralSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
@@ -60,6 +61,9 @@ class AIFactory:
             "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
             "openai-compatible": "esperanto.providers.tts.openai_compatible:OpenAICompatibleTextToSpeechModel",
             "azure": "esperanto.providers.tts.azure:AzureTextToSpeechModel",
+            "xai": "esperanto.providers.tts.xai:XAITextToSpeechModel",
+            "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
+            "deepgram": "esperanto.providers.tts.deepgram:DeepgramTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",

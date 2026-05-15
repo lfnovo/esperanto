@@ -1,12 +1,11 @@
 """Tests for the Vertex AI LLM provider."""
 import json
 import os
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 from esperanto.common_types import (
-    FunctionCall,
     Tool,
     ToolCall,
     ToolFunction,
@@ -692,8 +691,8 @@ class TestStreamingWithTools:
         delta = result.choices[0].delta
         assert delta.tool_calls is not None
         assert len(delta.tool_calls) == 1
-        # Streaming tool_calls are ToolCall objects due to Message validation
         tool_call = delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
         assert tool_call.function.name == "get_weather"
 
     def test_streaming_chat_complete_with_tools(
@@ -800,7 +799,7 @@ class TestCredentials:
                 "google.oauth2.service_account.Credentials.from_service_account_file",
                 return_value=mock_creds,
             ) as mock_from_file:
-                model = VertexLanguageModel(
+                VertexLanguageModel(
                     model_name="gemini-2.0-flash",
                     credentials_file="/explicit/sa.json",
                 )
@@ -945,11 +944,10 @@ class TestLangChainIntegration:
                     create=True,
                 ):
                     # Patch the import inside to_langchain
-                    import importlib
                     lc_module = MagicMock()
                     lc_module.ChatGoogleGenerativeAI = mock_lc_class
                     with patch.dict("sys.modules", {"langchain_google_genai": lc_module}):
-                        result = model.to_langchain()
+                        model.to_langchain()
                         mock_lc_class.assert_called_once()
                         call_kwargs = mock_lc_class.call_args[1]
                         assert call_kwargs["model"] == "gemini-2.0-flash"

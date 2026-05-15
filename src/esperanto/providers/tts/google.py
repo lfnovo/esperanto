@@ -4,7 +4,7 @@ import io
 import os
 import wave
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import httpx
 
@@ -47,7 +47,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
             )
 
         # Set base URL
-        base_host = os.getenv("GEMINI_API_BASE_URL") or "https://generativelanguage.googleapis.com"
+        base_host = (os.getenv("GEMINI_API_BASE_URL") or "https://generativelanguage.googleapis.com").rstrip("/")
         self.base_url = f"{base_host}/v1beta"
 
         # Initialize HTTP clients with configurable timeout
@@ -325,6 +325,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -397,6 +400,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -487,6 +493,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -569,6 +578,9 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
+            "systemInstruction": {
+                "parts": [{"text": "Read aloud the following text."}]
+            },
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {

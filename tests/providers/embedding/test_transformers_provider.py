@@ -1,5 +1,9 @@
 """Tests for the Transformers embedding model provider."""
 
+import importlib.metadata
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from esperanto.factory import AIFactory
@@ -103,3 +107,59 @@ def test_quantization():
     embeddings = model.embed(["Test text"])
     assert len(embeddings) == 1
     assert len(embeddings[0]) == 768
+
+
+def _mock_metadata_version(name: str) -> str:
+    if name == "bitsandbytes":
+        return "0.42.0"
+    return importlib.metadata.version(name)
+
+
+@pytest.mark.parametrize(
+    "quantize, expected_4bit, expected_8bit",
+    [
+        ("4bit", True, False),
+        ("8bit", False, True),
+    ],
+)
+def test_quantization_uses_bits_and_bytes_config(quantize, expected_4bit, expected_8bit):
+    """Test that quantization passes a BitsAndBytesConfig with the correct flags to from_pretrained."""
+    from transformers import BitsAndBytesConfig
+
+    from esperanto.providers.embedding.transformers import TransformersEmbeddingModel
+
+    mock_bnb = MagicMock()
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    bnb_modules = {
+        "bitsandbytes": mock_bnb,
+        "bitsandbytes.nn": mock_bnb.nn,
+        "bitsandbytes.functional": mock_bnb.functional,
+    }
+
+    with (
+        patch.dict(sys.modules, bnb_modules),
+        # 4bit path triggers a bnb version check in BitsAndBytesConfig.__post_init__;
+        # patching unconditionally is harmless for the 8bit path.
+        patch("importlib.metadata.version", side_effect=_mock_metadata_version),
+        patch(
+            "esperanto.providers.embedding.transformers.AutoModel.from_pretrained",
+            return_value=mock_model,
+        ) as mock_from_pretrained,
+        patch(
+            "esperanto.providers.embedding.transformers.AutoTokenizer.from_pretrained",
+            return_value=mock_tokenizer,
+        ),
+    ):
+        TransformersEmbeddingModel(
+            model_name="bert-base-uncased",
+            device="cpu",
+            quantize=quantize,
+        )
+
+        call_kwargs = mock_from_pretrained.call_args.kwargs
+        assert "quantization_config" in call_kwargs
+        bnb_config = call_kwargs["quantization_config"]
+        assert isinstance(bnb_config, BitsAndBytesConfig)
+        assert bnb_config.load_in_4bit is expected_4bit
+        assert bnb_config.load_in_8bit is expected_8bit

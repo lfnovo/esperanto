@@ -2,7 +2,7 @@
 
 import os
 from typing import List
-from unittest.mock import AsyncMock, Mock, call, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -738,3 +738,88 @@ async def test_vertex_aembed(vertex_embedding_model):
     texts = ["Hello, world!"]
     embeddings = await vertex_embedding_model.aembed(texts)
     assert embeddings == [[0.1, 0.2, 0.3]]
+
+
+# Null embedding guard tests — OpenAI
+def test_openai_embed_null_embedding_raises():
+    """embed() raises RuntimeError with index when response has null embedding."""
+    model = OpenAIEmbeddingModel(api_key="test-key")
+    null_response = {
+        "data": [
+            {"embedding": [0.1, 0.2, 0.3], "index": 0},
+            {"embedding": None, "index": 1},
+        ]
+    }
+    client = Mock()
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = null_response
+    client.post.return_value = response
+    model.client = client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        model.embed(["text one", "text two"])
+    assert "1" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_openai_aembed_null_embedding_raises():
+    """aembed() raises RuntimeError with index when response has null embedding."""
+    model = OpenAIEmbeddingModel(api_key="test-key")
+    null_response = {
+        "data": [
+            {"embedding": None, "index": 0},
+        ]
+    }
+    async_client = AsyncMock()
+    async_response = AsyncMock()
+    async_response.status_code = 200
+    async_response.json = Mock(return_value=null_response)
+    async_client.post.return_value = async_response
+    model.async_client = async_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await model.aembed(["text one"])
+    assert "0" in str(exc_info.value)
+
+
+# Null embedding guard tests — Ollama
+def test_ollama_embed_null_embedding_raises(ollama_embedding_model):
+    """embed() raises RuntimeError with index when response has null embedding."""
+    null_response = {
+        "model": "mxbai-embed-large",
+        "embeddings": [[0.1, 0.2, 0.3], None],
+    }
+
+    def mock_post(url, **kwargs):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = null_response
+        return response
+
+    ollama_embedding_model.client.post.side_effect = mock_post
+
+    with pytest.raises(RuntimeError) as exc_info:
+        ollama_embedding_model.embed(["text one", "text two"])
+    assert "1" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_ollama_aembed_null_embedding_raises(ollama_embedding_model):
+    """aembed() raises RuntimeError with index when response has null embedding."""
+    null_response = {
+        "model": "mxbai-embed-large",
+        "embeddings": [None],
+    }
+
+    async def mock_async_post(url, **kwargs):
+        response = AsyncMock()
+        response.status_code = 200
+        response.json = Mock(return_value=null_response)
+        return response
+
+    ollama_embedding_model.async_client.post.side_effect = mock_async_post
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await ollama_embedding_model.aembed(["text one"])
+    assert "0" in str(exc_info.value)

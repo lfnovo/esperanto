@@ -51,7 +51,7 @@ class GroqLanguageModel(LanguageModel):
             raise ValueError("Groq API key not found")
 
         # Set base URL for Groq's OpenAI-compatible API
-        self.base_url = "https://api.groq.com/openai/v1"
+        self.base_url = "https://api.groq.com/openai/v1".rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -219,10 +219,27 @@ class GroqLanguageModel(LanguageModel):
                     except json.JSONDecodeError:
                         continue
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
+
+        # Track per-call explicit overrides so the magic-default skip below
+        # does not silently drop them (issue #102 + cubic feedback).
+        max_tokens_explicit = max_tokens is not None
+
+        if max_tokens is not None:
+            config["max_tokens"] = max_tokens
+        if temperature is not None:
+            config["temperature"] = temperature
+        if top_p is not None:
+            config["top_p"] = top_p
 
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
@@ -237,8 +254,9 @@ class GroqLanguageModel(LanguageModel):
                 "tool_choice",
                 "parallel_tool_calls",
             ]:
-                # Skip max_tokens if it's the default value (850)
-                if key == "max_tokens" and value == 850:
+                # Skip max_tokens if it's the instance default (850) and was not
+                # explicitly supplied as a per-call override.
+                if key == "max_tokens" and value == 850 and not max_tokens_explicit:
                     continue
                 kwargs[key] = value
 
@@ -266,6 +284,9 @@ class GroqLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -295,6 +316,9 @@ class GroqLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         should_stream = stream if stream is not None else self.streaming
 
         # Resolve tool configuration
@@ -307,7 +331,12 @@ class GroqLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -348,6 +377,9 @@ class GroqLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -377,6 +409,9 @@ class GroqLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         should_stream = stream if stream is not None else self.streaming
 
         # Resolve tool configuration
@@ -389,7 +424,12 @@ class GroqLanguageModel(LanguageModel):
             "model": self.get_model_name(),
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            ),
         }
 
         # Add tool-related parameters if configured

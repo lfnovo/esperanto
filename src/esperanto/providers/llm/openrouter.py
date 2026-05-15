@@ -1,6 +1,5 @@
 """OpenRouter language model implementation."""
 
-import json
 import os
 from dataclasses import dataclass
 from typing import (
@@ -45,9 +44,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
                 self.base_url = self.config["base_url"]
 
         # Initialize OpenRouter-specific configuration
-        self.base_url = self.base_url or os.getenv(
+        self.base_url = (self.base_url or os.getenv(
             "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-        )
+        )).rstrip("/")
         self.api_key = self.api_key or os.getenv("OPENROUTER_API_KEY")
 
         if not self.api_key:
@@ -74,40 +73,49 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             try:
                 error_data = response.json()
                 error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
-            except Exception as e:
+            except Exception:
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"OpenAI API error: {error_message}")
 
     def _make_http_request(self, payload: Dict[str, Any]) -> Any:
         """Make HTTP request in OpenRouter's expected format."""
-        # OpenRouter expects data as JSON string, not json parameter
         headers = self._get_headers()
-        
+
         response = self.client.post(
             f"{self.base_url}/chat/completions",
             headers=headers,
-            data=json.dumps(payload)  # Use data= instead of json=
+            json=payload
         )
         self._handle_error(response)
         return response
 
     async def _make_async_http_request(self, payload: Dict[str, Any]) -> Any:
         """Make async HTTP request in OpenRouter's expected format."""
-        # OpenRouter expects data as JSON string, not json parameter
         response = await self.async_client.post(
             f"{self.base_url}/chat/completions",
             headers=self._get_headers(),
-            data=json.dumps(payload)  # Use data= instead of json=
+            json=payload
         )
         self._handle_error(response)
         return response
 
-    def _get_api_kwargs(self, exclude_stream: bool = False) -> Dict[str, Any]:
+    def _get_api_kwargs(
+        self,
+        exclude_stream: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
 
         Note: OpenRouter doesn't support JSON response format for non-OpenAI models.
         """
-        kwargs = super()._get_api_kwargs(exclude_stream)
+        kwargs = super()._get_api_kwargs(
+            exclude_stream,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
 
         # Remove response_format for non-OpenAI models
         model = self.get_model_name().lower()
@@ -124,6 +132,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request using OpenRouter-specific HTTP format.
 
@@ -154,6 +165,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
@@ -174,7 +188,12 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            ),
         }
 
         # Add tool-related parameters if configured
@@ -210,6 +229,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request using OpenRouter-specific HTTP format.
 
@@ -240,6 +262,9 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = model_name.startswith("o1") or model_name.startswith("o3") or model_name.startswith("o4")
@@ -260,7 +285,12 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             "model": model_name,
             "messages": messages,
             "stream": should_stream,
-            **self._get_api_kwargs(exclude_stream=True),
+            **self._get_api_kwargs(
+                exclude_stream=True,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            ),
         }
 
         # Add tool-related parameters if configured

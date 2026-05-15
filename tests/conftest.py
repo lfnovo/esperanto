@@ -245,3 +245,69 @@ def groq_model(mock_groq_client):
     )
     model.client = mock_groq_client
     return model
+
+
+_PROVIDER_ENV_VARS = [
+    "OPENAI_API_KEY",
+    "OPENAI_BASE_URL",
+    "OPENAI_API_VERSION",
+    "ANTHROPIC_API_KEY",
+    "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_ENDPOINT",
+    "AZURE_OPENAI_API_VERSION",
+    "AZURE_OPENAI_API_KEY_LLM",
+    "AZURE_OPENAI_ENDPOINT_LLM",
+    "AZURE_OPENAI_API_VERSION_LLM",
+    "AZURE_OPENAI_API_KEY_STT",
+    "AZURE_OPENAI_ENDPOINT_STT",
+    "AZURE_OPENAI_API_VERSION_STT",
+    "AZURE_OPENAI_API_KEY_TTS",
+    "AZURE_OPENAI_ENDPOINT_TTS",
+    "AZURE_OPENAI_API_VERSION_TTS",
+    "OPENAI_COMPATIBLE_BASE_URL",
+    "OPENAI_COMPATIBLE_API_KEY",
+    "OPENAI_COMPATIBLE_BASE_URL_LLM",
+    "OPENAI_COMPATIBLE_API_KEY_LLM",
+    "OPENAI_COMPATIBLE_BASE_URL_STT",
+    "OPENAI_COMPATIBLE_API_KEY_STT",
+    "OPENAI_COMPATIBLE_BASE_URL_TTS",
+    "OPENAI_COMPATIBLE_API_KEY_TTS",
+    "OPENAI_COMPATIBLE_BASE_URL_EMBEDDING",
+    "OPENAI_COMPATIBLE_API_KEY_EMBEDDING",
+    "MISTRAL_API_KEY",
+    "GROQ_API_KEY",
+    "GOOGLE_API_KEY",
+    "GEMINI_API_KEY",
+    "GEMINI_API_BASE_URL",
+    "VERTEX_PROJECT",
+    "GOOGLE_CLOUD_PROJECT",
+    "VERTEX_LOCATION",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    "OLLAMA_BASE_URL",
+    "OLLAMA_API_BASE",
+    "PERPLEXITY_API_KEY",
+    "OPENROUTER_API_KEY",
+    "XAI_API_KEY",
+    "XAI_BASE_URL",
+    "VOYAGE_API_KEY",
+    "JINA_API_KEY",
+    "ELEVENLABS_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "DASHSCOPE_API_KEY",
+    "MINIMAX_API_KEY",
+]
+
+
+@pytest.fixture(autouse=True)
+def _clean_provider_env(request, monkeypatch):
+    """Scrub provider env vars before each test to prevent local credentials
+    from leaking into provider tests (see #144 / PR #152).
+
+    EXCEPTION: tests marked with ``@pytest.mark.release`` deliberately need
+    real provider credentials in order to make actual API calls. Skip the
+    cleanup for those so the release suite (``uv run pytest -m release``)
+    can find the keys it needs."""
+    if request.node.get_closest_marker("release"):
+        return
+    for var in _PROVIDER_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)

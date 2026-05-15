@@ -1,11 +1,10 @@
 """Test cases for Jina reranker provider."""
 
-import os
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
-from esperanto.common_types.reranker import RerankResponse, RerankResult
+from esperanto.common_types.reranker import RerankResponse
 from esperanto.providers.reranker.jina import JinaRerankerModel
 
 

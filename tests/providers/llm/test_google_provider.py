@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from esperanto.common_types import (
-    FunctionCall,
     Tool,
     ToolCall,
     ToolFunction,
@@ -159,7 +158,7 @@ def mock_httpx_clients(mock_google_chat_response, mock_google_models_response, m
 
     def mock_post_side_effect(url, **kwargs):
         if "generateContent" in url:
-            json_payload = kwargs.get("json", {})
+            kwargs.get("json", {})
             if "streamGenerateContent" in url:
                 return make_response(200, stream_lines=mock_google_chat_stream_chunks)
             else:
@@ -173,7 +172,7 @@ def mock_httpx_clients(mock_google_chat_response, mock_google_models_response, m
 
     async def mock_async_post_side_effect(url, **kwargs):
         if "generateContent" in url:
-            json_payload = kwargs.get("json", {})
+            kwargs.get("json", {})
             if "streamGenerateContent" in url:
                 return make_async_response(200, stream_lines=mock_google_chat_stream_chunks)
             else:
@@ -718,8 +717,8 @@ class TestStreamingWithTools:
         delta = result.choices[0].delta
         assert delta.tool_calls is not None
         assert len(delta.tool_calls) == 1
-        # Streaming tool_calls are ToolCall objects due to Message validation
         tool_call = delta.tool_calls[0]
+        assert isinstance(tool_call, ToolCall)
         assert tool_call.function.name == "get_weather"
 
     def test_streaming_chat_complete_with_tools(self, sample_tools, mock_google_stream_with_tool_call):
@@ -760,3 +759,27 @@ class TestErrorHandling:
         messages = [{"role": "user", "content": "Hello"}]
         with pytest.raises(RuntimeError, match="Google API error"):
             google_model.chat_complete(messages)
+
+
+# =============================================================================
+# LangChain Conversion Tests
+# =============================================================================
+
+
+def test_google_langchain_conversion():
+    pytest.importorskip("langchain_google_genai")
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    model = GoogleLanguageModel(
+        api_key="test-key",
+        model_name="gemini-1.5-pro",
+        temperature=0.7,
+        max_tokens=100,
+        top_p=0.9,
+    )
+    langchain_model = model.to_langchain()
+    assert isinstance(langchain_model, ChatGoogleGenerativeAI)
+    assert langchain_model.model == "gemini-1.5-pro"
+    assert langchain_model.temperature == 0.7
+    assert langchain_model.max_output_tokens == 100
+    assert langchain_model.top_p == 0.9
