@@ -64,7 +64,7 @@ model = AIFactory.create_language("google", "gemini-2.0-flash")
 embedder = AIFactory.create_embedding("google", "text-embedding-004")
 
 # Text-to-speech
-speaker = AIFactory.create_text_to_speech("google", "gemini-2.5-flash-preview-tts")
+speaker = AIFactory.create_text_to_speech("google", "gemini-3.1-flash-tts-preview")
 ```
 
 ### Direct Instantiation
@@ -89,7 +89,7 @@ embedder = GoogleEmbeddingModel(
 # Text-to-speech
 tts = GoogleTextToSpeech(
     api_key="your-api-key",
-    model_name="gemini-2.5-flash-preview-tts"
+    model_name="gemini-3.1-flash-tts-preview"
 )
 ```
 
@@ -410,7 +410,7 @@ from esperanto.factory import AIFactory
 
 speaker = AIFactory.create_text_to_speech(
     "google",
-    "gemini-2.5-flash-preview-tts",
+    "gemini-3.1-flash-tts-preview",
     config={
         "timeout": 300.0  # 5 minutes timeout
     }
@@ -423,7 +423,7 @@ speaker = AIFactory.create_text_to_speech(
 from esperanto.factory import AIFactory
 
 # Create text-to-speech model
-model = AIFactory.create_text_to_speech("google", "gemini-2.5-flash-preview-tts")
+model = AIFactory.create_text_to_speech("google", "gemini-3.1-flash-tts-preview")
 
 # Generate speech
 response = model.generate_speech(
@@ -486,7 +486,7 @@ print(f"Generated multi-speaker dialogue with {len(speaker_configs)} voices")
 
 ```python
 async def create_dialogue():
-    model = AIFactory.create_text_to_speech("google", "gemini-2.5-flash-preview-tts")
+    model = AIFactory.create_text_to_speech("google", "gemini-3.1-flash-tts-preview")
 
     interview_text = """
     Interviewer: Welcome to our tech podcast. Today we're discussing AI.
