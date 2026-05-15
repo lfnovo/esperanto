@@ -78,6 +78,16 @@ When normalizing collections of items returned by providers (transcription segme
 
 **Origin:** Issue #146, 2026-05-03.
 
+### Unsupported Response Fields Stay `None`
+
+When a provider's native endpoint genuinely doesn't return the data required to populate a common-type field (timestamped segments, word-level timing, speaker diarization, etc.), leave the field as `None` and document the provider as "unsupported" for that feature in its CLAUDE.md. Do not synthesize the data via prompt-engineering, regex over free-text responses, or heuristic aggregation (e.g. splitting on punctuation, fixed-N-second windows). Fabricated data looks structured at the type level but its accuracy and stability are not — downstream consumers who trust the field's contract get burned silently.
+
+**Why:** Provider Parity demands that consumers can read a normalized field with confidence in its shape. A heuristic-derived `segments` list is type-indistinguishable from a real one, but the user only learns it's fake when timestamps drift, aggregation boundaries surprise them, or a provider release silently changes the underlying free-text. `None` is the honest signal: "this provider can't honor the feature; reach for a different provider if you need it."
+
+**Scope:** Mapping any provider response into Esperanto's common-type fields (`TranscriptionResponse`, `RerankResponse`, `ChatCompletion`, etc.). Pairs with **Demand-Driven Abstraction Extension** (don't pre-build aggregation logic) and the "graceful degradation when needed" provider-parity guidance. If a future native endpoint or model upgrade starts returning the structured data, populate the field then — but never before.
+
+**Origin:** Issue #185, 2026-05-12.
+
 ## Provider Tiers
 
 Not all providers require the same level of implementation effort. We classify them into tiers:
