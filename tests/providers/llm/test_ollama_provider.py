@@ -949,3 +949,56 @@ def test_ollama_to_langchain_custom_keep_alive():
     langchain_model = model.to_langchain()
 
     assert langchain_model.keep_alive == "30m"
+
+
+# =============================================================================
+# Vision/Multimodal Content Tests
+# =============================================================================
+
+
+def test_convert_messages_with_image_content(ollama_model):
+    """Test that _convert_messages_for_ollama extracts images from content arrays."""
+    messages = [
+        {"role": "user", "content": [
+            {"type": "text", "text": "What is in this image?"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc123base64data"}},
+        ]}
+    ]
+    converted = ollama_model._convert_messages_for_ollama(messages)
+    assert len(converted) == 1
+    assert converted[0]["role"] == "user"
+    assert converted[0]["content"] == "What is in this image?"
+    assert converted[0]["images"] == ["abc123base64data"]
+
+
+def test_convert_messages_multiple_images(ollama_model):
+    """Test extracting multiple images from content array."""
+    messages = [
+        {"role": "user", "content": [
+            {"type": "text", "text": "Compare these"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,img1data"}},
+            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,img2data"}},
+        ]}
+    ]
+    converted = ollama_model._convert_messages_for_ollama(messages)
+    assert converted[0]["images"] == ["img1data", "img2data"]
+    assert converted[0]["content"] == "Compare these"
+
+
+def test_convert_messages_string_content_unchanged(ollama_model):
+    """Backward compatibility: string content should still work."""
+    messages = [{"role": "user", "content": "Hello!"}]
+    converted = ollama_model._convert_messages_for_ollama(messages)
+    assert converted[0] == {"role": "user", "content": "Hello!"}
+
+
+def test_convert_messages_text_only_content_array(ollama_model):
+    """Content array with only text parts should not have images field."""
+    messages = [
+        {"role": "user", "content": [
+            {"type": "text", "text": "Just text"},
+        ]}
+    ]
+    converted = ollama_model._convert_messages_for_ollama(messages)
+    assert converted[0]["content"] == "Just text"
+    assert "images" not in converted[0]

@@ -13,6 +13,11 @@ from esperanto.common_types import (
     validate_tool_call,
     validate_tool_calls,
 )
+from esperanto.utils.vision import (
+    create_image_message,
+    encode_image_base64,
+    image_to_content_part,
+)
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.llm.profiles import OpenAICompatibleProfile
@@ -174,6 +179,10 @@ __all__ = [
     "validate_tool_call",
     "validate_tool_calls",
     "find_tool_by_name",
+    # Vision utilities
+    "encode_image_base64",
+    "image_to_content_part",
+    "create_image_message",
     # Profiles
     "OpenAICompatibleProfile",
 ] + provider_classes
