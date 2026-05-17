@@ -102,9 +102,7 @@ def __post_init__(self):
 
 ### Response Construction
 
-Build `TranscriptionResponse` from API results. The patterns below mirror
-the helpers in `base.py` and `mistral.py` — copy them verbatim rather than
-assuming any given key is present in the provider payload.
+Build `TranscriptionResponse` from API results:
 
 ```python
 from esperanto.common_types import (
@@ -113,37 +111,24 @@ from esperanto.common_types import (
     TranscriptionUsage,
 )
 
+# Map provider-specific segments (if any) into TranscriptionSegment.
 # Per-item escape hatch: provider-specific extras go in `metadata`, not as
-# first-class fields. Use `.get(...)` (or `if key in segment`) for every
-# optional field — providers vary in which segment fields they return
-# (e.g. Whisper has `avg_logprob`; Mistral has `confidence`, `speaker`).
-SEGMENT_METADATA_KEYS = ("avg_logprob",)  # provider-specific tuple
-
-raw_segments = api_response.get("segments") or []
+# first-class fields.
 segments = [
     TranscriptionSegment(
-        text=raw.get("text", ""),
-        start=float(raw.get("start", 0.0)),
-        end=float(raw.get("end", 0.0)),
-        # Dict comp + `if key in raw` produces `{}` when no extras are
-        # present, and `or None` then collapses that to `None`.
-        metadata={k: raw[k] for k in SEGMENT_METADATA_KEYS if k in raw}
-        or None,
+        text=raw["text"],
+        start=float(raw["start"]),
+        end=float(raw["end"]),
+        metadata={"avg_logprob": raw["avg_logprob"]} or None,
     )
-    for raw in raw_segments
+    for raw in api_response.get("segments") or []
 ] or None
 
-# `usage` must be `None` when the provider omits the block entirely.
-usage_data = api_response.get("usage")
-usage = (
-    TranscriptionUsage(
-        input_seconds=usage_data.get("prompt_audio_seconds"),
-        input_tokens=usage_data.get("prompt_tokens"),
-        output_tokens=usage_data.get("completion_tokens"),
-        total_tokens=usage_data.get("total_tokens"),
-    )
-    if usage_data
-    else None
+usage = TranscriptionUsage(
+    input_seconds=api_response["usage"].get("prompt_audio_seconds"),
+    input_tokens=api_response["usage"].get("prompt_tokens"),
+    output_tokens=api_response["usage"].get("completion_tokens"),
+    total_tokens=api_response["usage"].get("total_tokens"),
 )
 
 return TranscriptionResponse(
@@ -232,15 +217,20 @@ the provider's real capabilities.
 - Inherits segment + duration mapping from `OpenAISpeechToTextModel` — no
   Groq-specific overrides needed
 
-### Azure Speech Service
+### Azure OpenAI Whisper
 
-- Uses Speech SDK or REST API
-- Different authentication (subscription key + region)
-- Supports real-time streaming (beyond file transcription)
-- Different response format than others
-- Like OpenAI, Esperanto always sends `response_format="verbose_json"` so
-  segments and duration come back automatically (Azure's Whisper deployments
-  accept the same request shape)
+- Uses Azure-hosted OpenAI Whisper deployments via the REST `/audio/transcriptions`
+  endpoint (NOT the native Azure Speech Service, which is a separate product
+  with its own SDK, `Ocp-Apim-Subscription-Key` auth, and streaming protocol).
+- Authentication: `api-key` header (Azure OpenAI flavor), resolved from
+  `AZURE_OPENAI_API_KEY_STT` / `AZURE_OPENAI_API_KEY` env vars or
+  `config["api_key"]`.
+- URL is built from `{azure_endpoint}/openai/deployments/{deployment_name}/audio/transcriptions?api-version={api_version}`,
+  so `model_name` is the *deployment name*, not the underlying model.
+- Same OpenAI Whisper response shape, including `verbose_json` (segments,
+  duration, language). Esperanto always sends `response_format="verbose_json"`
+  so callers get the segments + duration for free.
+- Same file size/format limits as OpenAI (25 MB, MP3/MP4/MPEG/MPGA/M4A/WAV/WEBM).
 
 ### Mistral Voxtral
 
