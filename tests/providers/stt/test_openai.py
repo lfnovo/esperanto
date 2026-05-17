@@ -164,7 +164,9 @@ def test_openai_transcribe(audio_file, mock_httpx_clients):
     assert "files" in call_args[1]
     assert "data" in call_args[1]
     assert call_args[1]["data"]["model"] == "whisper-1"
-    
+    # Verbose JSON is auto-requested so segments are returned.
+    assert call_args[1]["data"]["response_format"] == "verbose_json"
+
     # Check response
     assert isinstance(response, TranscriptionResponse)
     assert response.text == "This is a test transcription"
@@ -195,7 +197,8 @@ async def test_openai_atranscribe(audio_file, mock_httpx_clients):
     assert "files" in call_args[1]
     assert "data" in call_args[1]
     assert call_args[1]["data"]["model"] == "whisper-1"
-    
+    assert call_args[1]["data"]["response_format"] == "verbose_json"
+
     # Check response
     assert isinstance(response, TranscriptionResponse)
     assert response.text == "This is a test transcription"
@@ -354,3 +357,173 @@ async def test_openai_atranscribe_wav_content_type(wav_file, mock_httpx_clients)
     content_type = call_args[1]["files"]["file"][2]
     assert content_type == _guess_audio_content_type(wav_file)
     assert content_type.startswith("audio/")
+
+
+# ---------------------------------------------------------------------------
+# verbose_json / segments tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_openai_verbose_response():
+    """Realistic Whisper verbose_json payload with segments + duration."""
+    return {
+        "task": "transcribe",
+        "language": "english",
+        "duration": 3.14,
+        "text": "Hello world. This is a test.",
+        "segments": [
+            {
+                "id": 0,
+                "seek": 0,
+                "start": 0.0,
+                "end": 1.5,
+                "text": "Hello world.",
+                "tokens": [50364, 2425, 1002, 13, 50464],
+                "temperature": 0.0,
+                "avg_logprob": -0.25,
+                "compression_ratio": 1.1,
+                "no_speech_prob": 0.01,
+            },
+            {
+                "id": 1,
+                "seek": 150,
+                "start": 1.5,
+                "end": 3.14,
+                "text": " This is a test.",
+                "tokens": [50464, 639, 307, 257, 1500, 13, 50628],
+                "temperature": 0.0,
+                "avg_logprob": -0.18,
+                "compression_ratio": 1.05,
+                "no_speech_prob": 0.0,
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def mock_verbose_httpx_clients(mock_openai_verbose_response):
+    """Mock httpx clients returning the verbose_json payload."""
+    from unittest.mock import Mock
+
+    client = Mock()
+    async_client = AsyncMock()
+
+    def make_response(status_code, data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = data
+        return response
+
+    def make_async_response(status_code, data):
+        response = AsyncMock()
+        response.status_code = status_code
+        response.json = Mock(return_value=data)
+        return response
+
+    def post_side_effect(url, **kwargs):
+        if url.endswith("/audio/transcriptions"):
+            return make_response(200, mock_openai_verbose_response)
+        return make_response(404, {"error": "Not found"})
+
+    async def async_post_side_effect(url, **kwargs):
+        if url.endswith("/audio/transcriptions"):
+            return make_async_response(200, mock_openai_verbose_response)
+        return make_async_response(404, {"error": "Not found"})
+
+    client.post.side_effect = post_side_effect
+    async_client.post.side_effect = async_post_side_effect
+
+    return client, async_client
+
+
+def test_openai_transcribe_maps_segments(audio_file, mock_verbose_httpx_clients):
+    """Verbose JSON segments are mapped to TranscriptionSegment instances."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is not None
+    assert len(response.segments) == 2
+    first = response.segments[0]
+    assert first.text == "Hello world."
+    assert first.start == 0.0
+    assert first.end == 1.5
+
+
+def test_openai_transcribe_segment_metadata_extras(audio_file, mock_verbose_httpx_clients):
+    """Whisper-specific per-segment extras land in segment.metadata."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is not None
+    first_metadata = response.segments[0].metadata
+    assert first_metadata is not None
+    assert first_metadata["avg_logprob"] == -0.25
+    assert first_metadata["compression_ratio"] == 1.1
+    assert first_metadata["no_speech_prob"] == 0.01
+    assert first_metadata["temperature"] == 0.0
+    assert first_metadata["tokens"] == [50364, 2425, 1002, 13, 50464]
+    assert first_metadata["id"] == 0
+    assert first_metadata["seek"] == 0
+
+
+def test_openai_transcribe_populates_duration(audio_file, mock_verbose_httpx_clients):
+    """Duration from verbose_json populates TranscriptionResponse.duration."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.duration == pytest.approx(3.14)
+
+
+def test_openai_transcribe_populates_language(audio_file, mock_verbose_httpx_clients):
+    """Detected language from verbose_json populates TranscriptionResponse.language."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.language == "english"
+
+
+def test_openai_transcribe_leaves_usage_none(audio_file, mock_verbose_httpx_clients):
+    """Whisper API does not return token usage; usage stays None."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.usage is None
+
+
+@pytest.mark.asyncio
+async def test_openai_atranscribe_maps_segments(audio_file, mock_verbose_httpx_clients):
+    """Async path also maps segments + duration + language."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = await model.atranscribe(audio_file)
+
+    assert response.segments is not None
+    assert len(response.segments) == 2
+    assert response.duration == pytest.approx(3.14)
+    assert response.language == "english"
+    # Verbose JSON is still requested on the async path.
+    call_args = model.async_client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "verbose_json"
+
+
+def test_openai_transcribe_no_segments_in_response(audio_file, mock_httpx_clients):
+    """When the provider returns no segments (legacy mock), segments stays None."""
+    model = OpenAISpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is None
+    assert response.duration is None

@@ -6,11 +6,25 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 import httpx
 
-from esperanto.common_types import TranscriptionResponse
+from esperanto.common_types import (
+    TranscriptionResponse,
+    TranscriptionSegment,
+    TranscriptionUsage,
+)
 from esperanto.providers.stt.base import (
     Model,
     SpeechToTextModel,
     _guess_audio_content_type,
+)
+
+# Mistral-specific per-segment fields routed through TranscriptionSegment.metadata
+# rather than promoted to first-class fields. See ARCHITECTURE.md
+# ("Per-item Metadata Escape Hatch").
+_MISTRAL_SEGMENT_METADATA_KEYS = (
+    "id",
+    "confidence",
+    "speaker",
+    "language",
 )
 
 
@@ -71,6 +85,51 @@ class MistralSpeechToTextModel(SpeechToTextModel):
             data["prompt"] = prompt
         return data
 
+    @staticmethod
+    def _build_usage(usage_data: Optional[Dict[str, Any]]) -> Optional[TranscriptionUsage]:
+        """Map Mistral's usage payload into TranscriptionUsage, or return None."""
+        if not usage_data:
+            return None
+        return TranscriptionUsage(
+            input_seconds=usage_data.get("prompt_audio_seconds"),
+            input_tokens=usage_data.get("prompt_tokens"),
+            output_tokens=usage_data.get("completion_tokens"),
+            total_tokens=usage_data.get("total_tokens"),
+        )
+
+    def _build_response(self, response_data: Dict[str, Any]) -> TranscriptionResponse:
+        """Build a TranscriptionResponse from a Mistral Voxtral payload."""
+        raw_segments = response_data.get("segments") or []
+        segments: Optional[List[TranscriptionSegment]] = None
+        if raw_segments:
+            segments = [
+                TranscriptionSegment(
+                    text=segment.get("text", ""),
+                    start=float(segment.get("start", 0.0)),
+                    end=float(segment.get("end", 0.0)),
+                    metadata={
+                        key: segment[key]
+                        for key in _MISTRAL_SEGMENT_METADATA_KEYS
+                        if key in segment
+                    }
+                    or None,
+                )
+                for segment in raw_segments
+            ]
+
+        duration_raw = response_data.get("duration")
+        duration = float(duration_raw) if duration_raw is not None else None
+
+        return TranscriptionResponse(
+            text=response_data["text"],
+            language=response_data.get("language"),
+            duration=duration,
+            usage=self._build_usage(response_data.get("usage")),
+            model=self.get_model_name(),
+            provider=self.provider,
+            segments=segments,
+        )
+
     def transcribe(
         self,
         audio_file: Union[str, BinaryIO],
@@ -102,12 +161,7 @@ class MistralSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=response_data.get("language"),
-            model=self.get_model_name(),
-            provider=self.provider,
-        )
+        return self._build_response(response_data)
 
     async def atranscribe(
         self,
@@ -140,9 +194,4 @@ class MistralSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=response_data.get("language"),
-            model=self.get_model_name(),
-            provider=self.provider,
-        )
+        return self._build_response(response_data)

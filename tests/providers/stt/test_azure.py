@@ -227,3 +227,171 @@ def test_azure_missing_api_key():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="Azure OpenAI API key not found"):
             AzureSpeechToTextModel(api_key=None)
+
+
+# ---------------------------------------------------------------------------
+# verbose_json / segments tests (Azure parity with OpenAI)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_azure_verbose_response():
+    """Realistic Azure-OpenAI Whisper verbose_json payload."""
+    return {
+        "task": "transcribe",
+        "language": "english",
+        "duration": 4.2,
+        "text": "Hello from Azure.",
+        "segments": [
+            {
+                "id": 0,
+                "seek": 0,
+                "start": 0.0,
+                "end": 2.1,
+                "text": "Hello from",
+                "tokens": [50364, 2425, 490],
+                "temperature": 0.0,
+                "avg_logprob": -0.22,
+                "compression_ratio": 1.0,
+                "no_speech_prob": 0.01,
+            },
+            {
+                "id": 1,
+                "seek": 210,
+                "start": 2.1,
+                "end": 4.2,
+                "text": " Azure.",
+                "tokens": [50464, 21036, 13],
+                "temperature": 0.0,
+                "avg_logprob": -0.30,
+                "compression_ratio": 1.05,
+                "no_speech_prob": 0.02,
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def mock_verbose_httpx_clients(mock_azure_verbose_response):
+    """Mock httpx sync/async clients returning the verbose payload."""
+    client = Mock()
+    async_client = AsyncMock()
+
+    def make_response(status_code, data):
+        r = Mock()
+        r.status_code = status_code
+        r.json.return_value = data
+        return r
+
+    def make_async_response(status_code, data):
+        r = AsyncMock()
+        r.status_code = status_code
+        r.json = Mock(return_value=data)
+        return r
+
+    def post_side_effect(url, **kwargs):
+        if "audio/transcriptions" in url:
+            return make_response(200, mock_azure_verbose_response)
+        return make_response(404, {"error": {"message": "Not found"}})
+
+    async def async_post_side_effect(url, **kwargs):
+        if "audio/transcriptions" in url:
+            return make_async_response(200, mock_azure_verbose_response)
+        return make_async_response(404, {"error": {"message": "Not found"}})
+
+    client.post.side_effect = post_side_effect
+    async_client.post.side_effect = async_post_side_effect
+
+    return client, async_client
+
+
+def test_azure_transcribe_requests_verbose_json(audio_file, mock_httpx_clients):
+    """Azure auto-opts into response_format=verbose_json, like OpenAI."""
+    model = AzureSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "verbose_json"
+
+
+@pytest.mark.asyncio
+async def test_azure_atranscribe_requests_verbose_json(audio_file, mock_httpx_clients):
+    """Async path also auto-opts into response_format=verbose_json."""
+    model = AzureSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    await model.atranscribe(audio_file)
+
+    call_args = model.async_client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "verbose_json"
+
+
+def test_azure_transcribe_maps_segments(audio_file, mock_verbose_httpx_clients):
+    """Azure segments are mapped to TranscriptionSegment instances."""
+    model = AzureSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is not None
+    assert len(response.segments) == 2
+    assert response.segments[0].text == "Hello from"
+    assert response.segments[0].start == 0.0
+    assert response.segments[0].end == 2.1
+
+
+def test_azure_transcribe_segment_metadata_extras(audio_file, mock_verbose_httpx_clients):
+    """Whisper-specific per-segment extras land in segment.metadata."""
+    model = AzureSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is not None
+    md = response.segments[0].metadata
+    assert md is not None
+    assert md["avg_logprob"] == -0.22
+    assert md["compression_ratio"] == 1.0
+    assert md["no_speech_prob"] == 0.01
+    assert md["temperature"] == 0.0
+    assert md["tokens"] == [50364, 2425, 490]
+
+
+def test_azure_transcribe_populates_duration_and_language(
+    audio_file, mock_verbose_httpx_clients
+):
+    """Duration and detected language from verbose_json are mapped."""
+    model = AzureSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.duration == pytest.approx(4.2)
+    assert response.language == "english"
+
+
+def test_azure_transcribe_no_segments_in_response(audio_file, mock_httpx_clients):
+    """Plain {'text': ...} response leaves segments / duration as None."""
+    model = AzureSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is None
+    assert response.duration is None
+
+
+@pytest.mark.asyncio
+async def test_azure_atranscribe_maps_segments(audio_file, mock_verbose_httpx_clients):
+    """Async path also maps segments + duration + language."""
+    model = AzureSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = await model.atranscribe(audio_file)
+
+    assert response.segments is not None
+    assert len(response.segments) == 2
+    assert response.duration == pytest.approx(4.2)
+    assert response.language == "english"

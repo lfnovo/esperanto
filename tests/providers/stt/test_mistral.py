@@ -306,3 +306,165 @@ async def test_mistral_atranscribe_wav_content_type(wav_file, mock_httpx_clients
     content_type = call_args[1]["files"]["file"][2]
     assert content_type == _guess_audio_content_type(wav_file)
     assert content_type.startswith("audio/")
+
+
+# ---------------------------------------------------------------------------
+# segments / usage tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_mistral_verbose_response():
+    """Realistic Mistral transcription payload with segments and usage."""
+    return {
+        "text": "Bonjour le monde. Ceci est un test.",
+        "model": "voxtral-mini-latest",
+        "language": "fr",
+        "segments": [
+            {
+                "id": 0,
+                "start": 0.0,
+                "end": 1.4,
+                "text": "Bonjour le monde.",
+                "confidence": 0.97,
+                "speaker": "speaker_0",
+                "language": "fr",
+            },
+            {
+                "id": 1,
+                "start": 1.4,
+                "end": 3.2,
+                "text": " Ceci est un test.",
+                "confidence": 0.92,
+                "speaker": "speaker_0",
+                "language": "fr",
+            },
+        ],
+        "usage": {
+            "prompt_audio_seconds": 3.2,
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "total_tokens": 30,
+        },
+    }
+
+
+@pytest.fixture
+def mock_verbose_httpx_clients(mock_mistral_verbose_response):
+    """Mock httpx sync/async clients returning the verbose payload."""
+    client = Mock()
+    async_client = AsyncMock()
+
+    def make_response(status_code, data):
+        r = Mock()
+        r.status_code = status_code
+        r.json.return_value = data
+        return r
+
+    def make_async_response(status_code, data):
+        r = AsyncMock()
+        r.status_code = status_code
+        r.json = Mock(return_value=data)
+        return r
+
+    def post_side_effect(url, **kwargs):
+        if url.endswith("/audio/transcriptions"):
+            return make_response(200, mock_mistral_verbose_response)
+        return make_response(404, {"error": {"message": "Not found"}})
+
+    async def async_post_side_effect(url, **kwargs):
+        if url.endswith("/audio/transcriptions"):
+            return make_async_response(200, mock_mistral_verbose_response)
+        return make_async_response(404, {"error": {"message": "Not found"}})
+
+    client.post.side_effect = post_side_effect
+    async_client.post.side_effect = async_post_side_effect
+
+    return client, async_client
+
+
+def test_mistral_transcribe_does_not_request_verbose_json(audio_file, mock_httpx_clients):
+    """Mistral natively returns segments; we must NOT set response_format."""
+    model = MistralSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert "response_format" not in call_args[1]["data"]
+
+
+def test_mistral_transcribe_maps_segments(audio_file, mock_verbose_httpx_clients):
+    """Segment list is mapped to TranscriptionSegment instances."""
+    model = MistralSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is not None
+    assert len(response.segments) == 2
+    first = response.segments[0]
+    assert first.text == "Bonjour le monde."
+    assert first.start == 0.0
+    assert first.end == 1.4
+
+
+def test_mistral_transcribe_segment_metadata_extras(audio_file, mock_verbose_httpx_clients):
+    """Mistral-specific extras (confidence, speaker, language) land in metadata."""
+    model = MistralSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is not None
+    md = response.segments[0].metadata
+    assert md is not None
+    assert md["confidence"] == 0.97
+    assert md["speaker"] == "speaker_0"
+    assert md["language"] == "fr"
+    assert md["id"] == 0
+
+
+def test_mistral_transcribe_populates_usage(audio_file, mock_verbose_httpx_clients):
+    """Usage is mapped to TranscriptionUsage with input_seconds + token counts."""
+    model = MistralSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.usage is not None
+    assert response.usage.input_seconds == pytest.approx(3.2)
+    assert response.usage.input_tokens == 10
+    assert response.usage.output_tokens == 20
+    assert response.usage.total_tokens == 30
+
+
+def test_mistral_transcribe_no_segments_in_response(audio_file, mock_httpx_clients):
+    """Existing legacy mock has empty segments list -> response.segments is None."""
+    # mock_transcription_response from the default fixture has "segments": [],
+    # which the provider should normalize to None.
+    model = MistralSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    assert response.segments is None
+
+
+@pytest.mark.asyncio
+async def test_mistral_atranscribe_maps_segments_and_usage(
+    audio_file, mock_verbose_httpx_clients
+):
+    """Async path also maps segments + usage."""
+    model = MistralSpeechToTextModel(api_key="test-key")
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = await model.atranscribe(audio_file)
+
+    assert response.segments is not None
+    assert len(response.segments) == 2
+    assert response.usage is not None
+    assert response.usage.input_seconds == pytest.approx(3.2)
+    # Negative: still no response_format override on the async path.
+    call_args = model.async_client.post.call_args
+    assert "response_format" not in call_args[1]["data"]

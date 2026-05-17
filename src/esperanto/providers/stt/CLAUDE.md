@@ -105,16 +105,55 @@ def __post_init__(self):
 Build `TranscriptionResponse` from API results:
 
 ```python
-from esperanto.common_types import TranscriptionResponse
+from esperanto.common_types import (
+    TranscriptionResponse,
+    TranscriptionSegment,
+    TranscriptionUsage,
+)
+
+# Map provider-specific segments (if any) into TranscriptionSegment.
+# Per-item escape hatch: provider-specific extras go in `metadata`, not as
+# first-class fields.
+segments = [
+    TranscriptionSegment(
+        text=raw["text"],
+        start=float(raw["start"]),
+        end=float(raw["end"]),
+        metadata={"avg_logprob": raw["avg_logprob"]} or None,
+    )
+    for raw in api_response.get("segments") or []
+] or None
+
+usage = TranscriptionUsage(
+    input_seconds=api_response["usage"].get("prompt_audio_seconds"),
+    input_tokens=api_response["usage"].get("prompt_tokens"),
+    output_tokens=api_response["usage"].get("completion_tokens"),
+    total_tokens=api_response["usage"].get("total_tokens"),
+)
 
 return TranscriptionResponse(
     text=api_response["text"],
     language=api_response.get("language"),  # if available
-    duration=audio_duration,  # if available
-    segments=segments,  # if available (timestamped segments)
-    words=words,  # if available (word-level timestamps)
+    duration=api_response.get("duration"),  # if available
+    segments=segments,                       # None when provider has no segments
+    usage=usage,                             # None when provider has no usage block
+    model=self.get_model_name(),
+    provider=self.provider,
 )
 ```
+
+#### Hot-Swap-First Defaults
+
+For Whisper-family providers (OpenAI, Groq, Azure), Esperanto always requests
+`response_format="verbose_json"` in `_get_api_kwargs()` so callers get segments
+and duration without any opt-in. Mistral and other providers that natively
+return segments must NOT set `response_format`.
+
+#### Unsupported Response Fields Stay None
+
+Providers that don't return segments (ElevenLabs, Google) leave `segments=None`.
+Do NOT synthesize segments from `text` alone — that would lie to callers about
+the provider's real capabilities.
 
 ## Integration
 
@@ -158,6 +197,8 @@ return TranscriptionResponse(
 - Max file size: 25MB
 - Returns language, duration, and segments with timestamps
 - Supports prompt for context and spelling hints
+- Esperanto always sends `response_format="verbose_json"` so segments/duration
+  come back without callers having to opt in
 
 ### Google Speech-to-Text
 
@@ -173,6 +214,8 @@ return TranscriptionResponse(
 - OpenAI-compatible API format
 - Same file size/format limits as OpenAI
 - Much faster than standard Whisper
+- Inherits segment + duration mapping from `OpenAISpeechToTextModel` — no
+  Groq-specific overrides needed
 
 ### Azure Speech Service
 
@@ -180,6 +223,17 @@ return TranscriptionResponse(
 - Different authentication (subscription key + region)
 - Supports real-time streaming (beyond file transcription)
 - Different response format than others
+- Like OpenAI, Esperanto always sends `response_format="verbose_json"` so
+  segments and duration come back automatically (Azure's Whisper deployments
+  accept the same request shape)
+
+### Mistral Voxtral
+
+- Natively returns segments and a `usage` block with `prompt_audio_seconds`
+- Do NOT set `response_format` — Mistral rejects unknown fields and already
+  returns the verbose shape
+- Per-segment metadata: `confidence`, `speaker`, `language` (all mapped into
+  `segment.metadata`)
 
 ## Common Implementation Patterns
 
