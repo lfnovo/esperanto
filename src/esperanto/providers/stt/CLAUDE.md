@@ -102,7 +102,9 @@ def __post_init__(self):
 
 ### Response Construction
 
-Build `TranscriptionResponse` from API results:
+Build `TranscriptionResponse` from API results. The patterns below mirror
+the helpers in `base.py` and `mistral.py` — copy them verbatim rather than
+assuming any given key is present in the provider payload.
 
 ```python
 from esperanto.common_types import (
@@ -111,24 +113,37 @@ from esperanto.common_types import (
     TranscriptionUsage,
 )
 
-# Map provider-specific segments (if any) into TranscriptionSegment.
 # Per-item escape hatch: provider-specific extras go in `metadata`, not as
-# first-class fields.
+# first-class fields. Use `.get(...)` (or `if key in segment`) for every
+# optional field — providers vary in which segment fields they return
+# (e.g. Whisper has `avg_logprob`; Mistral has `confidence`, `speaker`).
+SEGMENT_METADATA_KEYS = ("avg_logprob",)  # provider-specific tuple
+
+raw_segments = api_response.get("segments") or []
 segments = [
     TranscriptionSegment(
-        text=raw["text"],
-        start=float(raw["start"]),
-        end=float(raw["end"]),
-        metadata={"avg_logprob": raw["avg_logprob"]} or None,
+        text=raw.get("text", ""),
+        start=float(raw.get("start", 0.0)),
+        end=float(raw.get("end", 0.0)),
+        # Dict comp + `if key in raw` produces `{}` when no extras are
+        # present, and `or None` then collapses that to `None`.
+        metadata={k: raw[k] for k in SEGMENT_METADATA_KEYS if k in raw}
+        or None,
     )
-    for raw in api_response.get("segments") or []
+    for raw in raw_segments
 ] or None
 
-usage = TranscriptionUsage(
-    input_seconds=api_response["usage"].get("prompt_audio_seconds"),
-    input_tokens=api_response["usage"].get("prompt_tokens"),
-    output_tokens=api_response["usage"].get("completion_tokens"),
-    total_tokens=api_response["usage"].get("total_tokens"),
+# `usage` must be `None` when the provider omits the block entirely.
+usage_data = api_response.get("usage")
+usage = (
+    TranscriptionUsage(
+        input_seconds=usage_data.get("prompt_audio_seconds"),
+        input_tokens=usage_data.get("prompt_tokens"),
+        output_tokens=usage_data.get("completion_tokens"),
+        total_tokens=usage_data.get("total_tokens"),
+    )
+    if usage_data
+    else None
 )
 
 return TranscriptionResponse(
