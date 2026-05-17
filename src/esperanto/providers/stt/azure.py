@@ -9,10 +9,13 @@ import httpx
 from esperanto.common_types import (
     Model,
     TranscriptionResponse,
-    TranscriptionSegment,
 )
-from esperanto.providers.stt.base import SpeechToTextModel, _guess_audio_content_type
-from esperanto.providers.stt.openai import _WHISPER_SEGMENT_METADATA_KEYS
+from esperanto.providers.stt.base import (
+    _WHISPER_SEGMENT_METADATA_KEYS,
+    SpeechToTextModel,
+    _build_transcription_response,
+    _guess_audio_content_type,
+)
 
 
 @dataclass
@@ -137,34 +140,12 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         language: Optional[str] = None,
     ) -> TranscriptionResponse:
         """Build a TranscriptionResponse from an Azure OpenAI Whisper ``verbose_json`` payload."""
-        raw_segments = response_data.get("segments") or []
-        segments: Optional[List[TranscriptionSegment]] = None
-        if raw_segments:
-            segments = [
-                TranscriptionSegment(
-                    text=segment.get("text", ""),
-                    start=float(segment.get("start", 0.0)),
-                    end=float(segment.get("end", 0.0)),
-                    metadata={
-                        key: segment[key]
-                        for key in _WHISPER_SEGMENT_METADATA_KEYS
-                        if key in segment
-                    }
-                    or None,
-                )
-                for segment in raw_segments
-            ]
-
-        duration_raw = response_data.get("duration")
-        duration = float(duration_raw) if duration_raw is not None else None
-
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=response_data.get("language") or language,
-            duration=duration,
+        return _build_transcription_response(
+            response_data,
             model=self.deployment_name,
             provider=self.provider,
-            segments=segments,
+            metadata_keys=_WHISPER_SEGMENT_METADATA_KEYS,
+            language_fallback=language,
         )
 
     def transcribe(

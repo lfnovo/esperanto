@@ -6,27 +6,13 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 import httpx
 
-from esperanto.common_types import (
-    TranscriptionResponse,
-    TranscriptionSegment,
-)
+from esperanto.common_types import TranscriptionResponse
 from esperanto.providers.stt.base import (
+    _WHISPER_SEGMENT_METADATA_KEYS,
     Model,
     SpeechToTextModel,
+    _build_transcription_response,
     _guess_audio_content_type,
-)
-
-# Whisper-specific per-segment fields that are surfaced via TranscriptionSegment.metadata
-# rather than promoted to first-class fields. See ARCHITECTURE.md
-# ("Per-item Metadata Escape Hatch").
-_WHISPER_SEGMENT_METADATA_KEYS = (
-    "id",
-    "seek",
-    "tokens",
-    "temperature",
-    "avg_logprob",
-    "compression_ratio",
-    "no_speech_prob",
 )
 
 
@@ -129,34 +115,12 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         language: Optional[str] = None,
     ) -> TranscriptionResponse:
         """Build a TranscriptionResponse from a Whisper ``verbose_json`` payload."""
-        raw_segments = response_data.get("segments") or []
-        segments: Optional[List[TranscriptionSegment]] = None
-        if raw_segments:
-            segments = [
-                TranscriptionSegment(
-                    text=segment.get("text", ""),
-                    start=float(segment.get("start", 0.0)),
-                    end=float(segment.get("end", 0.0)),
-                    metadata={
-                        key: segment[key]
-                        for key in _WHISPER_SEGMENT_METADATA_KEYS
-                        if key in segment
-                    }
-                    or None,
-                )
-                for segment in raw_segments
-            ]
-
-        duration_raw = response_data.get("duration")
-        duration = float(duration_raw) if duration_raw is not None else None
-
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=response_data.get("language") or language,
-            duration=duration,
+        return _build_transcription_response(
+            response_data,
             model=self.get_model_name(),
             provider=self.provider,
-            segments=segments,
+            metadata_keys=_WHISPER_SEGMENT_METADATA_KEYS,
+            language_fallback=language,
         )
 
     def transcribe(
