@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-05-22
+
 ### Added
 
 - **STT segments + Whisper/Voxtral usage** — Speech-to-text responses now carry
