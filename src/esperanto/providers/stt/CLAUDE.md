@@ -113,22 +113,30 @@ from esperanto.common_types import (
 
 # Map provider-specific segments (if any) into TranscriptionSegment.
 # Per-item escape hatch: provider-specific extras go in `metadata`, not as
-# first-class fields.
+# first-class fields. Use defensive key access — providers vary in which
+# per-segment fields they return (e.g. Mistral has no `avg_logprob`).
+_METADATA_KEYS = ("avg_logprob", "compression_ratio", "no_speech_prob")
 segments = [
     TranscriptionSegment(
-        text=raw["text"],
-        start=float(raw["start"]),
-        end=float(raw["end"]),
-        metadata={"avg_logprob": raw["avg_logprob"]} or None,
+        text=raw.get("text", ""),
+        start=float(raw.get("start", 0.0)),
+        end=float(raw.get("end", 0.0)),
+        metadata={k: raw[k] for k in _METADATA_KEYS if k in raw} or None,
     )
     for raw in api_response.get("segments") or []
 ] or None
 
-usage = TranscriptionUsage(
-    input_seconds=api_response["usage"].get("prompt_audio_seconds"),
-    input_tokens=api_response["usage"].get("prompt_tokens"),
-    output_tokens=api_response["usage"].get("completion_tokens"),
-    total_tokens=api_response["usage"].get("total_tokens"),
+# Many providers omit `usage` entirely — guard before indexing.
+usage_data = api_response.get("usage")
+usage = (
+    TranscriptionUsage(
+        input_seconds=usage_data.get("prompt_audio_seconds"),
+        input_tokens=usage_data.get("prompt_tokens"),
+        output_tokens=usage_data.get("completion_tokens"),
+        total_tokens=usage_data.get("total_tokens"),
+    )
+    if usage_data
+    else None
 )
 
 return TranscriptionResponse(
