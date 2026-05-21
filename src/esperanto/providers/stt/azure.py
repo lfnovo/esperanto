@@ -6,8 +6,16 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 import httpx
 
-from esperanto.common_types import Model, TranscriptionResponse
-from esperanto.providers.stt.base import SpeechToTextModel, _guess_audio_content_type
+from esperanto.common_types import (
+    Model,
+    TranscriptionResponse,
+)
+from esperanto.providers.stt.base import (
+    _WHISPER_SEGMENT_METADATA_KEYS,
+    SpeechToTextModel,
+    _build_transcription_response,
+    _guess_audio_content_type,
+)
 
 
 @dataclass
@@ -107,6 +115,39 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Get the model name (deployment name for Azure)."""
         return self.deployment_name
 
+    def _get_api_kwargs(
+        self, language: Optional[str] = None, prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Get kwargs for the Azure OpenAI Whisper request.
+
+        Always requests ``verbose_json`` so segments and duration are returned,
+        matching the OpenAI provider's Hot-Swap-First Defaults behavior. Azure
+        OpenAI Whisper accepts the same request shape as OpenAI Whisper.
+        """
+        data: Dict[str, Any] = {
+            "model": self.deployment_name,
+            "response_format": "verbose_json",
+        }
+        if language:
+            data["language"] = language
+        if prompt:
+            data["prompt"] = prompt
+        return data
+
+    def _build_response(
+        self,
+        response_data: Dict[str, Any],
+        language: Optional[str] = None,
+    ) -> TranscriptionResponse:
+        """Build a TranscriptionResponse from an Azure OpenAI Whisper ``verbose_json`` payload."""
+        return _build_transcription_response(
+            response_data,
+            model=self.deployment_name,
+            provider=self.provider,
+            metadata_keys=_WHISPER_SEGMENT_METADATA_KEYS,
+            language_fallback=language,
+        )
+
     def transcribe(
         self,
         audio_file: Union[str, BinaryIO],
@@ -116,12 +157,8 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Transcribe audio using Azure OpenAI."""
         url = self._build_url("audio/transcriptions")
 
-        # Prepare API kwargs
-        data = {"model": self.deployment_name}
-        if language:
-            data["language"] = language
-        if prompt:
-            data["prompt"] = prompt
+        # Prepare API kwargs (always requests verbose_json)
+        data = self._get_api_kwargs(language=language, prompt=prompt)
 
         # Handle file input
         if isinstance(audio_file, str):
@@ -148,12 +185,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # Azure doesn't return detected language
-            model=self.deployment_name,
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)
 
     async def atranscribe(
         self,
@@ -164,12 +196,8 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Async transcribe audio using Azure OpenAI."""
         url = self._build_url("audio/transcriptions")
 
-        # Prepare API kwargs
-        data = {"model": self.deployment_name}
-        if language:
-            data["language"] = language
-        if prompt:
-            data["prompt"] = prompt
+        # Prepare API kwargs (always requests verbose_json)
+        data = self._get_api_kwargs(language=language, prompt=prompt)
 
         # Handle file input
         if isinstance(audio_file, str):
@@ -196,9 +224,4 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # Azure doesn't return detected language
-            model=self.deployment_name,
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)

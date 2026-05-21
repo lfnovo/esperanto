@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **STT segments + Whisper/Voxtral usage** — Speech-to-text responses now carry
+  timestamped segments and STT-specific usage on `TranscriptionResponse`. Two
+  new common types are exported from `esperanto.common_types`:
+  - `TranscriptionSegment` (`text`, `start`, `end`, optional
+    `metadata: Dict[str, Any]`) — the per-item metadata escape hatch holds
+    provider-specific extras such as `avg_logprob`, `compression_ratio`,
+    `no_speech_prob`, `confidence`, and `speaker`, so the top-level interface
+    stays uniform across providers.
+  - `TranscriptionUsage` (`input_seconds`, `input_tokens`, `output_tokens`,
+    `total_tokens`) — STT-aware usage with `input_seconds` for audio billing,
+    distinct from the LLM `Usage` type.
+  `TranscriptionResponse` gains a `segments: Optional[List[TranscriptionSegment]]`
+  field (defaults to `None`). For Whisper-family providers (OpenAI, Groq,
+  Azure), Esperanto now automatically requests `response_format=verbose_json`
+  in the underlying HTTP call so callers receive segments and `duration`
+  without any extra configuration ("Hot-Swap-First Defaults"). Mistral
+  natively returns segments and a `usage` block with `prompt_audio_seconds` —
+  both are now mapped onto the response. ElevenLabs and Google leave
+  `segments=None` (they don't return them and Esperanto never synthesizes
+  segments from text alone, per the "Unsupported Response Fields Stay `None`"
+  principle). Resolves #146 (Whisper-family segments + usage) and #193
+  (Azure parity). (#146, #193)
+
+### Changed
+
+- **`TranscriptionResponse.usage` is now `Optional[TranscriptionUsage]`** (was
+  `Optional[Usage]`, the LLM token-usage type). No existing STT provider in
+  Esperanto populated `usage` before this release, so callers reading from
+  STT responses are not affected in practice. New STT-specific fields
+  (`input_seconds`) are only available on the new type.
+
 ## [2.21.0] - 2026-05-15
 
 ### Added

@@ -269,6 +269,23 @@ async def transcribe_async():
     print(f"Language: {response.language}")
 ```
 
+**Example - Segments and Duration:**
+
+Groq inherits OpenAI's `verbose_json` behavior, so segments and duration come
+back automatically:
+
+```python
+response = model.transcribe("audio.mp3")
+
+print(f"Duration: {response.duration:.2f}s")
+
+if response.segments:
+    for segment in response.segments:
+        print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {segment.text}")
+        # Per-segment Whisper extras (avg_logprob, compression_ratio, etc.)
+        # live in segment.metadata.
+```
+
 **Example - Batch Processing:**
 
 ```python

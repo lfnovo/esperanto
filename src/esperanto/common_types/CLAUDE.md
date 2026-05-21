@@ -7,7 +7,7 @@ Shared type definitions and response models used across all provider types.
 - **`model.py`**: `Model` dataclass representing AI model metadata (id, owner, context_window)
 - **`response.py`**: Chat completion response types (`ChatCompletion`, `ChatCompletionChunk`, `Message`, `Choice`, `Usage`) and tool types (`Tool`, `ToolFunction`, `ToolCall`, `FunctionCall`)
 - **`task_type.py`**: `EmbeddingTaskType` enum for task-aware embeddings
-- **`stt.py`**: `TranscriptionResponse` for speech-to-text results
+- **`stt.py`**: `TranscriptionResponse`, `TranscriptionSegment`, and `TranscriptionUsage` for speech-to-text results
 - **`tts.py`**: `AudioResponse` and `Voice` for text-to-speech
 - **`reranker.py`**: `RerankResponse` and `RerankResult` for document reranking
 - **`exceptions.py`**: `ToolCallValidationError` for tool call validation failures
@@ -142,9 +142,31 @@ STT providers return `TranscriptionResponse` (stt.py):
 
 - `text`: str (transcribed text)
 - `language`: Optional[str] (detected/specified language)
-- `duration`: Optional[float] (audio duration)
-- `segments`: Optional[List] (timestamped segments)
-- `words`: Optional[List] (word-level timestamps)
+- `duration`: Optional[float] (audio duration in seconds)
+- `segments`: Optional[List[TranscriptionSegment]] (timestamped segments — `None`
+  when the provider doesn't return them; never synthesized from `text`)
+- `usage`: Optional[TranscriptionUsage] (STT-specific usage with
+  `input_seconds` + token counts; `None` when the provider doesn't return one)
+
+`TranscriptionSegment` (stt.py) carries one timestamped span:
+
+- `text`: str (segment text)
+- `start`: float (start time in seconds)
+- `end`: float (end time in seconds)
+- `metadata`: Optional[Dict[str, Any]] (provider-specific extras such as
+  `avg_logprob`, `compression_ratio`, `confidence`, `speaker` — per-item escape
+  hatch so provider-specific fields don't leak into the top-level interface)
+
+`TranscriptionUsage` (stt.py) is the STT-aware usage type:
+
+- `input_seconds`: Optional[float] (audio seconds billed — unique to STT)
+- `input_tokens`: Optional[int] (prompt tokens, when applicable)
+- `output_tokens`: Optional[int] (completion tokens, when applicable)
+- `total_tokens`: Optional[int] (total tokens, when applicable)
+
+Note: `TranscriptionResponse.usage` is `TranscriptionUsage`, not the LLM `Usage`
+type — STT providers historically left usage `None`, so this type tightening
+is safe in practice.
 
 ### Reranker Response
 
