@@ -8,8 +8,10 @@ import httpx
 
 from esperanto.common_types import TranscriptionResponse
 from esperanto.providers.stt.base import (
+    _WHISPER_SEGMENT_METADATA_KEYS,
     Model,
     SpeechToTextModel,
+    _build_transcription_response,
     _guess_audio_content_type,
 )
 
@@ -89,9 +91,15 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
     def _get_api_kwargs(
         self, language: Optional[str] = None, prompt: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Get kwargs for API calls."""
-        kwargs = {
+        """Get kwargs for API calls.
+
+        Always requests ``verbose_json`` so that segments and duration are returned,
+        per Esperanto's Hot-Swap-First Defaults principle. Users don't have to know
+        the per-provider response_format quirk to get consistent output.
+        """
+        kwargs: Dict[str, Any] = {
             "model": self.get_model_name(),
+            "response_format": "verbose_json",
         }
 
         if language:
@@ -100,6 +108,20 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
             kwargs["prompt"] = prompt
 
         return kwargs
+
+    def _build_response(
+        self,
+        response_data: Dict[str, Any],
+        language: Optional[str] = None,
+    ) -> TranscriptionResponse:
+        """Build a TranscriptionResponse from a Whisper ``verbose_json`` payload."""
+        return _build_transcription_response(
+            response_data,
+            model=self.get_model_name(),
+            provider=self.provider,
+            metadata_keys=_WHISPER_SEGMENT_METADATA_KEYS,
+            language_fallback=language,
+        )
 
     def transcribe(
         self,
@@ -135,12 +157,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # OpenAI doesn't return detected language
-            model=self.get_model_name(),
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)
 
     async def atranscribe(
         self,
@@ -176,9 +193,4 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # OpenAI doesn't return detected language
-            model=self.get_model_name(),
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)

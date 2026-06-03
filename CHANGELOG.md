@@ -7,8 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-05-22
+
 ### Added
 
+- **STT segments + Whisper/Voxtral usage** — Speech-to-text responses now carry
+  timestamped segments and STT-specific usage on `TranscriptionResponse`. Two
+  new common types are exported from `esperanto.common_types`:
+  - `TranscriptionSegment` (`text`, `start`, `end`, optional
+    `metadata: Dict[str, Any]`) — the per-item metadata escape hatch holds
+    provider-specific extras such as `avg_logprob`, `compression_ratio`,
+    `no_speech_prob`, `confidence`, and `speaker`, so the top-level interface
+    stays uniform across providers.
+  - `TranscriptionUsage` (`input_seconds`, `input_tokens`, `output_tokens`,
+    `total_tokens`) — STT-aware usage with `input_seconds` for audio billing,
+    distinct from the LLM `Usage` type.
+  `TranscriptionResponse` gains a `segments: Optional[List[TranscriptionSegment]]`
+  field (defaults to `None`). For Whisper-family providers (OpenAI, Groq,
+  Azure), Esperanto now automatically requests `response_format=verbose_json`
+  in the underlying HTTP call so callers receive segments and `duration`
+  without any extra configuration ("Hot-Swap-First Defaults"). Mistral
+  natively returns segments and a `usage` block with `prompt_audio_seconds` —
+  both are now mapped onto the response. ElevenLabs and Google leave
+  `segments=None` (they don't return them and Esperanto never synthesizes
+  segments from text alone, per the "Unsupported Response Fields Stay `None`"
+  principle). Resolves #146 (Whisper-family segments + usage) and #193
+  (Azure parity). (#146, #193)
+
+### Changed
+
+- **`TranscriptionResponse.usage` is now `Optional[TranscriptionUsage]`** (was
+  `Optional[Usage]`, the LLM token-usage type). No existing STT provider in
+  Esperanto populated `usage` before this release, so callers reading from
+  STT responses are not affected in practice. New STT-specific fields
+  (`input_seconds`) are only available on the new type.
+
+## [2.21.0] - 2026-05-15
+
+### Added
+
+- **Deepgram TTS provider** — first-class `DeepgramTextToSpeechModel` for Deepgram's Aura model family. Supports the Aura-2 voice catalog across English, Spanish, French, German, Italian, Japanese, and Dutch, plus Aura-1 legacy English voices. Authenticates via `DEEPGRAM_API_KEY` (header form `Authorization: Token …`). Sync (`generate_speech`) and async (`agenerate_speech`) parity, encoding/container/sample_rate/bit_rate/speed query-param passthrough (with `container` driving the response `content_type` MIME), and a 2000-char input limit per request. Accessible via `AIFactory.create_text_to_speech("deepgram", "aura-2-thalia-en")`. (#50)
+- **`extra_body` passthrough on `OpenAICompatibleLanguageModel`** — instance-level via `config={"extra_body": {...}}` (applied to every request) and per-call via the new keyword-only `extra_body=` argument on `chat_complete` / `achat_complete`. Per-call extras shallow-merge over instance-level (per-call wins on key collision). Esperanto stays neutral: no validation, no interpretation — the merged dict is injected into the top-level outgoing JSON payload as-is, so the upstream server (vLLM, LocalAI, etc.) sees `top_k`, `min_p`, `repetition_penalty`, `guided_json`, and any other server-specific extras directly. A small set of reserved keys is silently stripped from `extra_body` because they have first-class arguments and overriding them via `extra_body` would desync the wire request from Python-side state: `stream` (controls the response-parsing branch via the `stream=` argument) and `tools` / `tool_choice` / `parallel_tool_calls` (used by the tool-call validator against the resolved tool set). Scoped to the openai-compatible class only; first-class providers keep their explicit param surfaces. New `docs/providers/vllm.md` covers the typical vLLM recipe. (#70)
 - **Real-API release tests for STT, TTS, and reranker** — `tests/integration/test_stt_real.py`, `tests/integration/test_tts_real.py`, and `tests/integration/test_reranker_real.py` cover all providers per type. Tests are gated with `@pytest.mark.release` and excluded from the default `uv run pytest` run; invoke with `uv run pytest -m release`. (#169)
 - **Per-call `max_tokens`, `temperature`, `top_p` overrides** — `chat_complete()` and `achat_complete()` now accept `max_tokens`, `temperature`, and `top_p` keyword arguments that override the instance-level values for a single request. Supported by all LLM providers. For Anthropic, `top_p` is silently dropped when `temperature` is also set, consistent with the mutual-exclusivity rule enforced by that provider's API.
 - **Real-API embedding integration tests** — `tests/integration/test_embedding_real.py` covers all embedding providers (OpenAI, Google, Vertex AI, Azure, Jina, Voyage, Mistral, Transformers, Ollama, OpenRouter, OpenAI-Compatible) with sync, async, and batch embed tests. Task-type translation tested for Google and Jina (native task param). Gated by `@pytest.mark.release`; excluded from default test runs.
@@ -19,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`ARCHITECTURE.md` — new principle "Unsupported Response Fields Stay `None`".** When a provider's native endpoint doesn't return the data required for a common-type field (timestamped segments, word-level timing, speaker diarization, etc.), leave the field as `None` and document the provider as "unsupported"; do not synthesize via prompt-engineering or heuristic aggregation. Pairs with **Per-item Metadata Escape Hatch** and **Demand-Driven Abstraction Extension**. Originates from issue #185. (#195)
+- **Cross-provider config-dict propagation test suite.** New `tests/providers/test_config_dict_propagation.py` and additions to `tests/test_factory.py` verify that `config={"api_key": ..., "base_url": ...}` reaches every provider's constructor across both direct instantiation and `AIFactory.create_*()`. 38 parametrized tests cover LLM, embedding, reranker, STT, and TTS providers (including provider-specific quirks like Google's hardcoded base_url and Azure's `azure_endpoint`). Closes #91. (#192)
 - **Google embedding default model updated from `text-embedding-004` to `gemini-embedding-001`** — `text-embedding-004` was removed from the Google `v1beta` API. `gemini-embedding-001` is the current recommended model (3072-dimensional output; override with `model_name=` if you need 768-d vectors from `text-embedding-005`). (#177)
 - **Test-infrastructure cleanup** — mocked integration tests removed from `tests/integration/` (moved to per-provider test files under `tests/providers/`). A `release` pytest marker introduced: real-API tests are now tagged `@pytest.mark.release`, excluded from the default `uv run pytest` run, and invoked explicitly with `uv run pytest -m release` before each release. Unique `to_langchain()` coverage previously in `tests/integration/` moved to the corresponding per-provider test files. (#166, #141)
 - **Ollama `num_ctx` default lowered from 128,000 to 8,192.** The previous 128K default caused out-of-memory errors on consumer GPUs with 8 GB VRAM. 8,192 tokens works reliably on common hardware while still being large enough for typical chat workloads. Override with `config={"num_ctx": N}` when you need a larger context window. (#107)
@@ -35,7 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Google TTS prompt format** — Added a `systemInstruction` to the Gemini TTS request payload so raw text is accepted by the current API. Previously, the API rejected bare `contents` text with "Model tried to generate text, but it should only be used for TTS". (#178)
+- **Google TTS default model switched to `gemini-3.1-flash-tts-preview` (was `gemini-2.5-flash-preview-tts`).** The previous default now returns HTTP 500 INTERNAL from Google's API on every request, regardless of payload shape. The new default works on bare text but rejects the `systemInstruction` quirk from #178, so the payload field is now gated to the legacy `gemini-2.5-*` family via `_needs_system_instruction(model_name)`. Pass `model_name="gemini-2.5-flash-preview-tts"` explicitly to keep the legacy quirk wired up. Applied across all 4 payload sites (sync/async × single-voice/multi-speaker). (#198)
+- **`AIFactory.get_provider_models()` accepts a nested `config={...}` dict** matching the provider-creation factory methods. Previously, passing `config={"api_key": ..., "base_url": ...}` was silently dropped, so OpenAI model discovery against custom base URLs (LiteLLM proxies, vLLM, local OpenAI-compatible servers) fell back to `https://api.openai.com/v1/models`. Direct keyword arguments still take precedence over nested config. (#103, #125)
+- **Google TTS prompt format** — Added a `systemInstruction` to the Gemini TTS request payload so raw text is accepted by the legacy `gemini-2.5-*` API. Previously, the API rejected bare `contents` text with "Model tried to generate text, but it should only be used for TTS". Superseded by #198 for the new default model. (#178)
 - **`_guess_audio_content_type` returns `audio/mpeg` for `.webm`, `.mp4`, `.mpeg` files** — an explicit extension allowlist now maps these video-container extensions to their correct audio MIME types (`audio/webm`, `audio/mp4`, `audio/mpeg`) instead of the generic `audio/mpeg` fallback. (#160)
 - **OpenRouter providers send malformed request bodies** — both the LLM and embedding OpenRouter providers were posting payloads via httpx's `data=json.dumps(payload)` instead of `json=payload`. In httpx, `data=` with a string is treated as a form-encoded body (Content-Type `application/x-www-form-urlencoded`), so requests carried JSON bytes with the wrong content type. The four affected call sites now use `json=payload`, which serializes the dict and sets `Content-Type: application/json` automatically. Tests updated to assert on the `json` kwarg so a regression would fail loudly. (#127)
 - **`TransformersEmbeddingModel` quantization not applied** — `_initialize_model` was constructing a `quantization_config` dict with `load_in_4bit` / `load_in_8bit` and spreading it as top-level kwargs to `AutoModel.from_pretrained`, an API form that recent transformers versions deprecated in favor of a `BitsAndBytesConfig` object. The provider now constructs `BitsAndBytesConfig(load_in_4bit=..., load_in_8bit=...)` and passes it via `quantization_config=`. Added mocked unit tests (parametrized over 4bit/8bit) that fail if the config stops reaching `from_pretrained`. (#129)

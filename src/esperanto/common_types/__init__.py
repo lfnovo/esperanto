@@ -16,7 +16,7 @@ from .response import (
     ToolFunction,
     Usage,
 )
-from .stt import TranscriptionResponse
+from .stt import TranscriptionResponse, TranscriptionSegment, TranscriptionUsage
 from .task_type import EmbeddingTaskType
 from .tts import AudioResponse
 from .validation import find_tool_by_name, validate_tool_call, validate_tool_calls
@@ -42,6 +42,8 @@ __all__ = [
     "find_tool_by_name",
     # Other types
     "TranscriptionResponse",
+    "TranscriptionSegment",
+    "TranscriptionUsage",
     "AudioResponse",
     "Model",
     "EmbeddingTaskType",

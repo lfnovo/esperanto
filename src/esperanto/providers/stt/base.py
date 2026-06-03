@@ -5,9 +5,14 @@ import pathlib
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO, Dict, List, Optional, Union
+from typing import Any, BinaryIO, Dict, List, Optional, Sequence, Union
 
-from esperanto.common_types import Model, TranscriptionResponse
+from esperanto.common_types import (
+    Model,
+    TranscriptionResponse,
+    TranscriptionSegment,
+    TranscriptionUsage,
+)
 from esperanto.utils.connect import HttpConnectionMixin
 
 _AUDIO_CONTAINER_EXTENSIONS = {
@@ -17,6 +22,19 @@ _AUDIO_CONTAINER_EXTENSIONS = {
     ".mpga": "audio/mpeg",
     ".m4a": "audio/mp4",
 }
+
+# Whisper model-family per-segment fields surfaced via TranscriptionSegment.metadata
+# rather than promoted to first-class fields. Reused by OpenAI, Groq (inherited),
+# and Azure providers. See ARCHITECTURE.md ("Per-item Metadata Escape Hatch").
+_WHISPER_SEGMENT_METADATA_KEYS = (
+    "id",
+    "seek",
+    "tokens",
+    "temperature",
+    "avg_logprob",
+    "compression_ratio",
+    "no_speech_prob",
+)
 
 
 def _guess_audio_content_type(filename: Optional[str]) -> str:
@@ -34,6 +52,63 @@ def _guess_audio_content_type(filename: Optional[str]) -> str:
     if mime_type and mime_type.startswith("audio/"):
         return mime_type
     return "audio/mpeg"
+
+
+def _build_transcription_response(
+    response_data: Dict[str, Any],
+    *,
+    model: str,
+    provider: str,
+    metadata_keys: Sequence[str],
+    usage: Optional[TranscriptionUsage] = None,
+    language_fallback: Optional[str] = None,
+) -> TranscriptionResponse:
+    """Map a verbose transcription payload into a :class:`TranscriptionResponse`.
+
+    Handles the common shape returned by Whisper-family providers (OpenAI,
+    Groq, Azure) and Mistral Voxtral. Each provider only needs to supply its
+    own ``metadata_keys`` tuple and (for Mistral) a pre-built ``usage`` object.
+
+    - ``segments`` is mapped into a list of :class:`TranscriptionSegment` with
+      provider-specific per-segment extras routed through ``segment.metadata``
+      per ARCHITECTURE.md ("Per-item Metadata Escape Hatch").
+    - ``duration`` is cast to float when present, ``None`` otherwise.
+    - ``language`` falls back to ``language_fallback`` (typically the
+      caller-supplied input language) when the provider doesn't echo a
+      detected language.
+    - ``usage`` is passed through verbatim; providers without an STT usage
+      block simply leave it ``None``.
+    """
+    raw_segments = response_data.get("segments") or []
+    segments: Optional[List[TranscriptionSegment]] = None
+    if raw_segments:
+        segments = [
+            TranscriptionSegment(
+                text=segment.get("text", ""),
+                start=float(segment.get("start", 0.0)),
+                end=float(segment.get("end", 0.0)),
+                metadata={
+                    key: segment[key]
+                    for key in metadata_keys
+                    if key in segment
+                }
+                or None,
+            )
+            for segment in raw_segments
+        ]
+
+    duration_raw = response_data.get("duration")
+    duration = float(duration_raw) if duration_raw is not None else None
+
+    return TranscriptionResponse(
+        text=response_data["text"],
+        language=response_data.get("language") or language_fallback,
+        duration=duration,
+        usage=usage,
+        model=model,
+        provider=provider,
+        segments=segments,
+    )
 
 
 @dataclass

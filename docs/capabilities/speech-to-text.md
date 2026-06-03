@@ -119,26 +119,30 @@ result = transcriber.transcribe("audio.mp3")
 
 ### Verbose JSON Format
 
-Get detailed information including timestamps:
+Whisper-family providers (OpenAI, Groq, Azure) auto-opt-in to verbose JSON so
+that segments and duration are always available on the returned
+`TranscriptionResponse`. You don't need to pass any config:
 
 ```python
-transcriber = AIFactory.create_speech_to_text(
-    "openai", "whisper-1",
-    config={"response_format": "verbose_json"}
-)
+transcriber = AIFactory.create_speech_to_text("openai", "whisper-1")
+response = transcriber.transcribe("audio.mp3")
 
-result = transcriber.transcribe("audio.mp3")
-# Returns:
-# {
-#   "text": "Full transcription...",
-#   "language": "en",
-#   "duration": 125.5,
-#   "segments": [
-#     {"start": 0.0, "end": 3.2, "text": "First segment"},
-#     ...
-#   ]
-# }
+print(response.text)        # Full transcription
+print(response.language)    # "english" (detected)
+print(response.duration)    # 125.5 (seconds)
+
+# Timestamped segments are populated automatically
+if response.segments:
+    for segment in response.segments:
+        print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {segment.text}")
+        # Whisper-specific extras live in segment.metadata:
+        # avg_logprob, compression_ratio, no_speech_prob, temperature, tokens, id, seek
 ```
+
+Mistral natively returns segments as well, and exposes per-audio billing on
+`response.usage.input_seconds`. Providers that don't return segments
+(ElevenLabs, Google) leave `response.segments` as `None` — Esperanto never
+synthesizes segments from text alone.
 
 ### Subtitle Formats
 

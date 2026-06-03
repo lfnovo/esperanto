@@ -341,6 +341,25 @@ async def transcribe_batch():
         print(f"{audio_file}: {response.text[:100]}...")
 ```
 
+**Example - Segments and Duration:**
+
+Azure's Whisper deployments return the same `verbose_json` shape as OpenAI.
+Esperanto requests it automatically, so you get timestamped segments and
+duration without any extra configuration:
+
+```python
+response = model.transcribe("meeting.mp3")
+
+print(f"Duration: {response.duration:.2f}s")
+print(f"Language: {response.language}")
+
+if response.segments:
+    for segment in response.segments:
+        print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {segment.text}")
+        # Whisper extras (avg_logprob, compression_ratio, no_speech_prob,
+        # temperature, tokens, id, seek) live in segment.metadata.
+```
+
 ### Text-to-Speech
 
 **Available Models:**

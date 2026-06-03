@@ -138,6 +138,7 @@ Each release-gated test class is `skipif`-gated on the env vars its provider nee
 | Jina | `JINA_API_KEY` |
 | Voyage | `VOYAGE_API_KEY` |
 | ElevenLabs | `ELEVENLABS_API_KEY` |
+| Deepgram | `DEEPGRAM_API_KEY` |
 | Transformers (local reranker) | none — gates on `sentence-transformers` package being installed |
 | OpenAI-compatible (LiteLLM, vLLM, Together, etc.) | `OPENAI_COMPATIBLE_BASE_URL[_LLM/_EMBEDDING/_STT/_TTS]` (required); `OPENAI_COMPATIBLE_API_KEY[_*]` (optional — local servers like LiteLLM may not need auth; cloud-hosted ones like Together do) |
 
