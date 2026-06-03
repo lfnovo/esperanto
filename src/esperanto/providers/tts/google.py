@@ -10,17 +10,30 @@ import httpx
 
 from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
+DEFAULT_MODEL = "gemini-3.1-flash-tts-preview"
+# Legacy gemini-2.5-* TTS models reject bare `contents` text with
+# "Model tried to generate text" unless a systemInstruction is attached.
+# Newer gemini-3.x models reject systemInstruction with
+# "Developer instruction is not enabled for this model".
+# So the field has to be conditional on the model family.
+_LEGACY_MODEL_PREFIX = "gemini-2.5"
+
+
+def _needs_system_instruction(model_name: str) -> bool:
+    """Return True when the model family requires a systemInstruction field."""
+    return bool(model_name) and model_name.startswith(_LEGACY_MODEL_PREFIX)
+
 
 class GoogleTextToSpeechModel(TextToSpeechModel):
     """Google GenAI Text-to-Speech provider implementation.
-    
+
     Uses the Gemini API for text-to-speech generation.
     Supports single voice and multi-speaker conversations.
     """
-    
+
     def __init__(
         self,
-        model_name: str = "gemini-2.5-flash-preview-tts",
+        model_name: str = DEFAULT_MODEL,
         base_url: Optional[str] = None,
         **kwargs
     ) -> None:
@@ -71,7 +84,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "gemini-2.5-flash-preview-tts"
+        return DEFAULT_MODEL
 
     @property
     def provider(self) -> str:
@@ -291,8 +304,14 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
     def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
+            Model(id=DEFAULT_MODEL, owned_by="Google", context_window=None),
             Model(
                 id="gemini-2.5-flash-preview-tts",
+                owned_by="Google",
+                context_window=None,
+            ),
+            Model(
+                id="gemini-2.5-pro-preview-tts",
                 owned_by="Google",
                 context_window=None,
             ),
@@ -325,9 +344,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
-            "systemInstruction": {
-                "parts": [{"text": "Read aloud the following text."}]
-            },
+            # systemInstruction is added below for legacy gemini-2.5-* models only.
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -340,6 +357,11 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
             },
             "model": model_name,
         }
+
+        if _needs_system_instruction(model_name):
+            payload["systemInstruction"] = {
+                "parts": [{"text": "Read aloud the following text."}]
+            }
 
         # Make HTTP request
         response = self.client.post(
@@ -400,9 +422,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
-            "systemInstruction": {
-                "parts": [{"text": "Read aloud the following text."}]
-            },
+            # systemInstruction is added below for legacy gemini-2.5-* models only.
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -415,6 +435,11 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
             },
             "model": model_name,
         }
+
+        if _needs_system_instruction(model_name):
+            payload["systemInstruction"] = {
+                "parts": [{"text": "Read aloud the following text."}]
+            }
 
         # Make async HTTP request
         response = await self.async_client.post(
@@ -493,9 +518,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
-            "systemInstruction": {
-                "parts": [{"text": "Read aloud the following text."}]
-            },
+            # systemInstruction is added below for legacy gemini-2.5-* models only.
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -506,6 +529,11 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
             },
             "model": model_name,
         }
+
+        if _needs_system_instruction(model_name):
+            payload["systemInstruction"] = {
+                "parts": [{"text": "Read aloud the following text."}]
+            }
 
         # Make HTTP request
         response = self.client.post(
@@ -578,9 +606,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                     "text": text
                 }]
             }],
-            "systemInstruction": {
-                "parts": [{"text": "Read aloud the following text."}]
-            },
+            # systemInstruction is added below for legacy gemini-2.5-* models only.
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -591,6 +617,11 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
             },
             "model": model_name,
         }
+
+        if _needs_system_instruction(model_name):
+            payload["systemInstruction"] = {
+                "parts": [{"text": "Read aloud the following text."}]
+            }
 
         # Make async HTTP request
         response = await self.async_client.post(

@@ -95,9 +95,48 @@ asyncio.run(main())
 TranscriptionResponse(
     text="Transcribed text here",
     language="en",       # detected language from Mistral
+    duration=12.4,        # audio duration in seconds (when provided)
     model="voxtral-mini-latest",
     provider="mistral",
+    segments=[
+        TranscriptionSegment(
+            text="Transcribed text here",
+            start=0.0,
+            end=12.4,
+            metadata={
+                "id": 0,
+                "confidence": 0.95,
+                "speaker": "speaker_0",
+                "language": "en",
+            },
+        ),
+        # ... more segments
+    ],
+    usage=TranscriptionUsage(
+        input_seconds=12.4,   # audio seconds billed (Mistral-specific)
+        input_tokens=120,
+        output_tokens=80,
+        total_tokens=200,
+    ),
 )
+```
+
+### Iterating over segments
+
+Mistral natively returns timestamped segments. Esperanto exposes them on
+`response.segments` so you can render captions, build subtitles, or extract
+per-speaker turns:
+
+```python
+response = transcriber.transcribe("interview.mp3")
+
+if response.segments:
+    for segment in response.segments:
+        speaker = segment.metadata.get("speaker") if segment.metadata else None
+        print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {speaker}: {segment.text}")
+
+if response.usage and response.usage.input_seconds:
+    print(f"Billed for {response.usage.input_seconds:.2f}s of audio")
 ```
 
 ## Error Handling

@@ -63,6 +63,7 @@ class AIFactory:
             "azure": "esperanto.providers.tts.azure:AzureTextToSpeechModel",
             "xai": "esperanto.providers.tts.xai:XAITextToSpeechModel",
             "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
+            "deepgram": "esperanto.providers.tts.deepgram:DeepgramTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
@@ -218,6 +219,13 @@ class AIFactory:
         """
         # Import here to avoid circular imports
         from esperanto.model_discovery import PROVIDER_MODELS_REGISTRY
+
+        missing_config = object()
+        nested_config = config.pop("config", missing_config)
+        if nested_config is not missing_config and nested_config is not None:
+            if not isinstance(nested_config, dict):
+                raise TypeError("config must be a dictionary when provided")
+            config = {**nested_config, **config}
 
         # Normalize provider name to lowercase
         provider = provider.lower().replace("_", "-")
