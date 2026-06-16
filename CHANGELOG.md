@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.23.0] - 2026-06-16
+
+### Added
+
+- **Cohere provider (LLM, Embedding, Reranker)** — Cohere is now a first-class
+  provider across three capabilities, integrated via its native v2 API
+  (`/v2/chat`, `/v2/embed`, `/v2/rerank`) rather than an OpenAI-compatible
+  profile, because its differentiators (`documents`-based RAG, citations,
+  `input_type` embeddings, native tool format) are not exposed on the
+  compatibility endpoint. Authentication is shared via `COHERE_API_KEY`.
+  - **LLM** (`AIFactory.create_language("cohere", "command-a-03-2025")`):
+    chat, streaming, and tool calling. Esperanto's `top_p` maps to Cohere's
+    `p`. Cohere-specific RAG fields (`documents`, `citation_options`,
+    `connectors`) pass through via `config` without changing the universal
+    `chat_complete` surface; returned citations are not surfaced on
+    `ChatCompletion` in this version (out of scope).
+  - **Embedding** (`AIFactory.create_embedding("cohere", "embed-v4.0")`):
+    `input_type`-aware (default `search_document`, configurable per-call), with
+    automatic batching to Cohere's 96-texts-per-request limit.
+  - **Reranker** (`AIFactory.create_reranker("cohere", "rerank-v4.0-pro")`):
+    maps `top_k` to Cohere's `top_n`, returns a normalized `RerankResponse`.
+  - **Model discovery**: `AIFactory.get_provider_models("cohere")` lists chat,
+    embed, and rerank models live via `/v1/models`, tagged by Esperanto type.
+  All three capabilities ship with mocked-API unit tests and documentation in
+  `docs/providers/cohere.md`. (#110)
+
 ## [2.22.0] - 2026-05-22
 
 ### Added

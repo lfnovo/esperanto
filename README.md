@@ -50,6 +50,7 @@ Whether you're building a quick prototype or a production application serving mi
   - MiniMax (MiniMax-M2.5)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
+  - Cohere (LLM, Embeddings, Reranking)
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Reranking Support**: Universal reranking interface for improving search relevance
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
@@ -150,6 +151,7 @@ pip install "langchain_deepseek>=0.1.3"
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
+| Cohere       | ✅          | ✅               | ✅                | ❌             | ❌             | ✅        |
 | xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
 | DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
@@ -259,6 +261,7 @@ for model in local_models:
 - **Ollama** - Fetches locally available models
 - **Jina** - Returns hardcoded list of embedding/reranking models
 - **Voyage** - Returns hardcoded list of embedding/reranking models
+- **Cohere** - Fetches LLM/embedding/reranking models via API
 - **And more...**
 
 > **Note**: This is the recommended way to discover models. The `.models` property on provider instances is deprecated and will be removed in version 3.0.
