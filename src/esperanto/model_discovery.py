@@ -6,7 +6,7 @@ models from providers without instantiating provider classes.
 
 import hashlib
 import os
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional
 
 import httpx
 
@@ -993,6 +993,112 @@ def get_deepgram_models(
     return models
 
 
+def get_cohere_models(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> List[Model]:
+    """Get available models from Cohere.
+
+    Covers all Cohere capabilities (chat, embed, rerank) via the /v1/models
+    endpoint. The ``endpoints`` array on each model is used to tag its Esperanto
+    type.
+
+    Args:
+        api_key: Cohere API key (or COHERE_API_KEY env var)
+        base_url: Base URL for API (default: https://api.cohere.com)
+
+    Returns:
+        List of available models
+
+    Raises:
+        ValueError: If API key is not provided
+        RuntimeError: If API request fails
+    """
+    api_key = api_key or os.getenv("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "Cohere API key not found. Provide api_key or set COHERE_API_KEY environment variable."
+        )
+
+    base_url = (base_url or "https://api.cohere.com").rstrip("/")
+
+    cache_key = _create_cache_key("cohere", api_key=api_key, base_url=base_url)
+    cached_models = _model_cache.get(cache_key)
+    if cached_models is not None:
+        return cached_models
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    # Map a Cohere model's supported endpoints to an Esperanto model type.
+    endpoint_to_type: Dict[
+        str, Literal["language", "embedding", "text_to_speech", "speech_to_text", "reranker"]
+    ] = {
+        "chat": "language",
+        "embed": "embedding",
+        "rerank": "reranker",
+        "generate": "language",
+        "classify": "language",
+    }
+
+    try:
+        all_models = []
+        page_token = None
+
+        # Cohere paginates /v1/models via next_page_token; follow every page.
+        while True:
+            params: Dict[str, Any] = {"page_size": 1000}
+            if page_token:
+                params["page_token"] = page_token
+
+            response = httpx.get(
+                f"{base_url}/v1/models",
+                headers=headers,
+                params=params,
+                timeout=60.0,
+            )
+
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get("message", f"HTTP {response.status_code}")
+                except Exception:
+                    error_message = f"HTTP {response.status_code}: {response.text}"
+                raise RuntimeError(f"Cohere API error: {error_message}")
+
+            models_data = response.json()
+
+            for model in models_data.get("models", []):
+                model_id = model.get("name")
+                if not model_id:
+                    continue
+                model_type = None
+                for endpoint in model.get("endpoints", []):
+                    if endpoint in endpoint_to_type:
+                        model_type = endpoint_to_type[endpoint]
+                        break
+                all_models.append(
+                    Model(
+                        id=model_id,
+                        owned_by="cohere",
+                        context_window=model.get("context_length"),
+                        type=model_type,
+                    )
+                )
+
+            page_token = models_data.get("next_page_token")
+            if not page_token:
+                break
+
+        _model_cache.set(cache_key, all_models)
+        return all_models
+
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"Failed to fetch Cohere models: {e}")
+
+
 # Provider registry mapping provider names to discovery functions
 PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "openai": get_openai_models,
@@ -1012,4 +1118,5 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "azure": get_azure_models,
     "transformers": get_transformers_models,
     "deepgram": get_deepgram_models,
+    "cohere": get_cohere_models,
 }

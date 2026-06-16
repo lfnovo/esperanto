@@ -15,6 +15,7 @@ from esperanto.model_discovery import (
     _create_cache_key,
     _model_cache,
     get_anthropic_models,
+    get_cohere_models,
     get_google_models,
     get_openai_compatible_models,
     get_openai_models,
@@ -255,6 +256,79 @@ class TestGoogleDiscovery:
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="Google API key not found"):
                 get_google_models()
+
+
+class TestCohereDiscovery:
+    """Test Cohere model discovery."""
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_cohere_models_success(self, mock_get):
+        """Test successful Cohere model discovery with endpoint-based typing."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "models": [
+                {"name": "command-a-03-2025", "endpoints": ["chat"], "context_length": 256000},
+                {"name": "embed-v4.0", "endpoints": ["embed"]},
+                {"name": "rerank-v4.0-pro", "endpoints": ["rerank"]},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_cohere_models(api_key="test-key")
+
+        assert len(models) == 3
+        assert all(isinstance(m, Model) for m in models)
+        by_id = {m.id: m for m in models}
+        assert by_id["command-a-03-2025"].type == "language"
+        assert by_id["embed-v4.0"].type == "embedding"
+        assert by_id["rerank-v4.0-pro"].type == "reranker"
+
+    def test_get_cohere_models_no_api_key(self):
+        """Test that ValueError is raised when API key is missing."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="Cohere API key not found"):
+                get_cohere_models()
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_cohere_models_with_env_var(self, mock_get):
+        """Test that the Cohere API key from the environment reaches the request."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"models": []}
+        mock_get.return_value = mock_response
+
+        with patch.dict(os.environ, {"COHERE_API_KEY": "env-key"}):
+            get_cohere_models()
+
+        headers = mock_get.call_args.kwargs["headers"]
+        assert headers["Authorization"] == "Bearer env-key"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_cohere_models_paginates(self, mock_get):
+        """Test that all pages are followed via next_page_token."""
+        _model_cache.clear()
+        page1 = MagicMock()
+        page1.status_code = 200
+        page1.json.return_value = {
+            "models": [{"name": "command-a-03-2025", "endpoints": ["chat"]}],
+            "next_page_token": "tok2",
+        }
+        page2 = MagicMock()
+        page2.status_code = 200
+        page2.json.return_value = {
+            "models": [{"name": "embed-v4.0", "endpoints": ["embed"]}],
+        }
+        mock_get.side_effect = [page1, page2]
+
+        models = get_cohere_models(api_key="test-key")
+
+        assert mock_get.call_count == 2
+        assert {m.id for m in models} == {"command-a-03-2025", "embed-v4.0"}
+        # Second call carries the page token from the first response.
+        assert mock_get.call_args_list[1].kwargs["params"]["page_token"] == "tok2"
 
     @patch("esperanto.model_discovery.httpx.get")
     def test_get_google_models_with_env_var(self, mock_get):

@@ -31,6 +31,7 @@ class AIFactory:
             "mistral": "esperanto.providers.llm.mistral:MistralLanguageModel",
             # deepseek: handled via OpenAICompatibleProfile (see profiles.py)
             "vertex": "esperanto.providers.llm.vertex:VertexLanguageModel",
+            "cohere": "esperanto.providers.llm.cohere:CohereLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
@@ -44,6 +45,7 @@ class AIFactory:
             "azure": "esperanto.providers.embedding.azure:AzureEmbeddingModel",
             "jina": "esperanto.providers.embedding.jina:JinaEmbeddingModel",
             "openrouter": "esperanto.providers.embedding.openrouter:OpenRouterEmbeddingModel",
+            "cohere": "esperanto.providers.embedding.cohere:CohereEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
@@ -69,6 +71,7 @@ class AIFactory:
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
             "voyage": "esperanto.providers.reranker.voyage:VoyageRerankerModel",
             "transformers": "esperanto.providers.reranker.transformers:TransformersRerankerModel",
+            "cohere": "esperanto.providers.reranker.cohere:CohereRerankerModel",
         },
     }
 

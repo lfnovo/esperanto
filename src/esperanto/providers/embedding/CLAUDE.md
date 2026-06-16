@@ -12,6 +12,7 @@ Embedding provider implementations for text-to-vector conversion.
 - **`mistral.py`**: Mistral embedding models
 - **`jina.py`**: Jina AI embedding models
 - **`voyage.py`**: Voyage AI embedding models
+- **`cohere.py`**: Cohere embedding models (native v2 API, input_type-aware, 96-text auto-batching)
 - **`openrouter.py`**: OpenRouter embedding API
 - **`vertex.py`**: Google Vertex AI embeddings
 - **`transformers.py`**: Local HuggingFace transformers models (BERT, sentence-transformers, etc.)

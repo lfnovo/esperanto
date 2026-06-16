@@ -24,6 +24,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Voyage](./voyage.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| [Cohere](./cohere.md) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | [ElevenLabs](./elevenlabs.md) | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
@@ -135,12 +136,14 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 **Enterprise:**
 - **[Azure](./azure.md)**: text-embedding-3-large, text-embedding-3-small (private cloud)
 - **[Vertex AI](./vertex.md)**: text-embedding-004 (Google Cloud)
+- **[Cohere](./cohere.md)**: embed-v4.0 (input_type-aware, enterprise-grade)
 
 #### Reranking
 
 **All Reranking Providers:**
 - **[Jina](./jina.md)**: Multilingual (100+ languages), production-ready
 - **[Voyage](./voyage.md)**: rerank-2, rerank-1 (high accuracy)
+- **[Cohere](./cohere.md)**: rerank-v4.0-pro, rerank-v3.5 (high accuracy)
 - **[Transformers](./transformers.md)**: Universal support (any CrossEncoder model), local/offline
 
 **Best for Multilingual:**
@@ -315,6 +318,7 @@ Require API keys, pay-per-use:
 - [OpenRouter](./openrouter.md)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
+- [Cohere](./cohere.md)
 - [ElevenLabs](./elevenlabs.md)
 
 ### Cloud Enterprise Providers
