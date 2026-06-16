@@ -6,7 +6,7 @@ models from providers without instantiating provider classes.
 
 import hashlib
 import os
-from typing import Callable, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional
 
 import httpx
 
@@ -1044,41 +1044,53 @@ def get_cohere_models(
     }
 
     try:
-        response = httpx.get(
-            f"{base_url}/v1/models",
-            headers=headers,
-            params={"page_size": 1000},
-            timeout=60.0,
-        )
-
-        if response.status_code >= 400:
-            try:
-                error_data = response.json()
-                error_message = error_data.get("message", f"HTTP {response.status_code}")
-            except Exception:
-                error_message = f"HTTP {response.status_code}: {response.text}"
-            raise RuntimeError(f"Cohere API error: {error_message}")
-
-        models_data = response.json()
-
         all_models = []
-        for model in models_data.get("models", []):
-            model_id = model.get("name")
-            if not model_id:
-                continue
-            model_type = None
-            for endpoint in model.get("endpoints", []):
-                if endpoint in endpoint_to_type:
-                    model_type = endpoint_to_type[endpoint]
-                    break
-            all_models.append(
-                Model(
-                    id=model_id,
-                    owned_by="cohere",
-                    context_window=model.get("context_length"),
-                    type=model_type,
-                )
+        page_token = None
+
+        # Cohere paginates /v1/models via next_page_token; follow every page.
+        while True:
+            params: Dict[str, Any] = {"page_size": 1000}
+            if page_token:
+                params["page_token"] = page_token
+
+            response = httpx.get(
+                f"{base_url}/v1/models",
+                headers=headers,
+                params=params,
+                timeout=60.0,
             )
+
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get("message", f"HTTP {response.status_code}")
+                except Exception:
+                    error_message = f"HTTP {response.status_code}: {response.text}"
+                raise RuntimeError(f"Cohere API error: {error_message}")
+
+            models_data = response.json()
+
+            for model in models_data.get("models", []):
+                model_id = model.get("name")
+                if not model_id:
+                    continue
+                model_type = None
+                for endpoint in model.get("endpoints", []):
+                    if endpoint in endpoint_to_type:
+                        model_type = endpoint_to_type[endpoint]
+                        break
+                all_models.append(
+                    Model(
+                        id=model_id,
+                        owned_by="cohere",
+                        context_window=model.get("context_length"),
+                        type=model_type,
+                    )
+                )
+
+            page_token = models_data.get("next_page_token")
+            if not page_token:
+                break
 
         _model_cache.set(cache_key, all_models)
         return all_models

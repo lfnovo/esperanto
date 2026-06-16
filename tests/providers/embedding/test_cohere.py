@@ -22,7 +22,11 @@ def _make_model(config=None, batches=None):
     """
     if batches is None:
         batches = [[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]]
-    model = CohereEmbeddingModel(model_name="embed-v4.0", api_key="test-key", config=config or {})
+    # Avoid creating real httpx clients we immediately discard for mocks.
+    with patch.object(CohereEmbeddingModel, "_create_http_clients", lambda self: None):
+        model = CohereEmbeddingModel(
+            model_name="embed-v4.0", api_key="test-key", config=config or {}
+        )
 
     sync_calls = {"i": 0}
     async_calls = {"i": 0}

@@ -20,9 +20,11 @@ def _mock_rerank_response():
 
 
 def _make_model(config=None):
-    model = CohereRerankerModel(
-        model_name="rerank-v4.0-pro", api_key="test-key", config=config or {}
-    )
+    # Avoid creating real httpx clients we immediately discard for mocks.
+    with patch.object(CohereRerankerModel, "_create_http_clients", lambda self: None):
+        model = CohereRerankerModel(
+            model_name="rerank-v4.0-pro", api_key="test-key", config=config or {}
+        )
     mock_client = Mock()
     mock_async_client = AsyncMock()
 
@@ -120,4 +122,8 @@ class TestCohereReranker:
         result = await reranker.arerank("query", ["best match", "worst match", "middle match"])
         assert isinstance(result, RerankResponse)
         assert len(result.results) == 3
+        # Async parsing must map documents from the original list by index.
+        assert result.results[0].document == "best match"
+        assert result.results[1].document == "middle match"
+        assert result.results[2].document == "worst match"
         reranker.async_client.post.assert_awaited_once()

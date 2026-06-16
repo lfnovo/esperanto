@@ -50,7 +50,11 @@ STREAM_LINES = [
 
 
 def _make_model(response_data=NON_STREAM_RESPONSE, config=None):
-    model = CohereLanguageModel(model_name="command-a-03-2025", api_key="test-key", config=config or {})
+    # Avoid creating real httpx clients we immediately discard for mocks.
+    with patch.object(CohereLanguageModel, "_create_http_clients", lambda self: None):
+        model = CohereLanguageModel(
+            model_name="command-a-03-2025", api_key="test-key", config=config or {}
+        )
 
     def post(url, **kwargs):
         resp = Mock()
