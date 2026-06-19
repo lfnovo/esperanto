@@ -100,7 +100,7 @@ class DeepgramSpeechToTextModel(SpeechToTextModel):
         if raw_utterances:
             segments = [
                 TranscriptionSegment(
-                    text=u.get("text", ""),
+                    text=u.get("transcript", ""),
                     start=float(u.get("start", 0.0)),
                     end=float(u.get("end", 0.0)),
                     metadata={
