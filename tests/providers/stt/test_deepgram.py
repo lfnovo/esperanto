@@ -57,7 +57,7 @@ def mock_verbose_response():
                 {
                     "start": 0.0,
                     "end": 1.5,
-                    "text": "Hello world.",
+                    "transcript": "Hello world.",
                     "channel": 0,
                     "confidence": 0.97,
                     "id": "utt-001",
@@ -66,7 +66,7 @@ def mock_verbose_response():
                 {
                     "start": 1.5,
                     "end": 3.5,
-                    "text": "This is a test.",
+                    "transcript": "This is a test.",
                     "channel": 0,
                     "confidence": 0.95,
                     "id": "utt-002",
