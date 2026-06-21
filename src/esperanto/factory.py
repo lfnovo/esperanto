@@ -55,6 +55,7 @@ class AIFactory:
             "azure": "esperanto.providers.stt.azure:AzureSpeechToTextModel",
             "google": "esperanto.providers.stt.google:GoogleSpeechToTextModel",
             "mistral": "esperanto.providers.stt.mistral:MistralSpeechToTextModel",
+            "deepgram": "esperanto.providers.stt.deepgram:DeepgramSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
