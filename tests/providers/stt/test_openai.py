@@ -527,3 +527,82 @@ def test_openai_transcribe_no_segments_in_response(audio_file, mock_httpx_client
 
     assert response.segments is None
     assert response.duration is None
+
+
+# ---------------------------------------------------------------------------
+# gpt-4o-transcribe / gpt-4o-mini-transcribe family tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_gpt4o_transcribe_response():
+    """Plain JSON response returned by gpt-4o-*-transcribe models (no segments/duration)."""
+    return {"text": "Hello from gpt-4o transcribe."}
+
+
+@pytest.fixture
+def mock_gpt4o_httpx_clients(mock_gpt4o_transcribe_response):
+    """Mock httpx clients returning the plain gpt-4o-transcribe payload."""
+    from unittest.mock import Mock
+
+    client = Mock()
+    async_client = AsyncMock()
+
+    def make_response(status_code, data):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = data
+        return response
+
+    def make_async_response(status_code, data):
+        response = AsyncMock()
+        response.status_code = status_code
+        response.json = Mock(return_value=data)
+        return response
+
+    def post_side_effect(url, **kwargs):
+        if url.endswith("/audio/transcriptions"):
+            return make_response(200, mock_gpt4o_transcribe_response)
+        return make_response(404, {"error": "Not found"})
+
+    async def async_post_side_effect(url, **kwargs):
+        if url.endswith("/audio/transcriptions"):
+            return make_async_response(200, mock_gpt4o_transcribe_response)
+        return make_async_response(404, {"error": "Not found"})
+
+    client.post.side_effect = post_side_effect
+    async_client.post.side_effect = async_post_side_effect
+
+    return client, async_client
+
+
+def test_gpt4o_transcribe_sends_json_response_format(audio_file, mock_gpt4o_httpx_clients):
+    """gpt-4o-transcribe must send response_format='json', not 'verbose_json'."""
+    model = OpenAISpeechToTextModel(api_key="test-key", model_name="gpt-4o-transcribe")
+    model.client, model.async_client = mock_gpt4o_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "json"
+    assert call_args[1]["data"]["model"] == "gpt-4o-transcribe"
+    assert isinstance(response, TranscriptionResponse)
+    assert response.text == "Hello from gpt-4o transcribe."
+    assert response.segments is None
+    assert response.duration is None
+
+
+def test_gpt4o_mini_transcribe_sends_json_response_format(audio_file, mock_gpt4o_httpx_clients):
+    """gpt-4o-mini-transcribe must send response_format='json', not 'verbose_json'."""
+    model = OpenAISpeechToTextModel(api_key="test-key", model_name="gpt-4o-mini-transcribe")
+    model.client, model.async_client = mock_gpt4o_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "json"
+    assert call_args[1]["data"]["model"] == "gpt-4o-mini-transcribe"
+    assert isinstance(response, TranscriptionResponse)
+    assert response.text == "Hello from gpt-4o transcribe."
+    assert response.segments is None
+    assert response.duration is None

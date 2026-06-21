@@ -93,13 +93,17 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
     ) -> Dict[str, Any]:
         """Get kwargs for API calls.
 
-        Always requests ``verbose_json`` so that segments and duration are returned,
-        per Esperanto's Hot-Swap-First Defaults principle. Users don't have to know
-        the per-provider response_format quirk to get consistent output.
+        Requests ``verbose_json`` for Whisper-family models so segments and
+        duration are returned without any opt-in. For gpt-4o-*-transcribe
+        models, which do not support ``verbose_json``, falls back to ``json``;
+        those models return no segments or duration (fields stay ``None``).
         """
+        model_name = self.get_model_name()
+        is_transcribe_family = model_name.startswith("gpt-4o") and model_name.endswith("-transcribe")
+        response_format = "json" if is_transcribe_family else "verbose_json"
         kwargs: Dict[str, Any] = {
-            "model": self.get_model_name(),
-            "response_format": "verbose_json",
+            "model": model_name,
+            "response_format": response_format,
         }
 
         if language:
