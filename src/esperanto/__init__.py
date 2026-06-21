@@ -141,37 +141,6 @@ try:
 except ImportError:
     CohereRerankerModel = None  # type: ignore[assignment,misc]
 
-# Store all provider classes
-__provider_classes = {
-    'AnthropicLanguageModel': AnthropicLanguageModel,
-    'GoogleLanguageModel': GoogleLanguageModel,
-    'OpenAILanguageModel': OpenAILanguageModel,
-    'OpenAICompatibleLanguageModel': OpenAICompatibleLanguageModel,
-    'OpenRouterLanguageModel': OpenRouterLanguageModel,
-    'XAILanguageModel': XAILanguageModel,
-    'OpenAIEmbeddingModel': OpenAIEmbeddingModel,
-    'GoogleEmbeddingModel': GoogleEmbeddingModel,
-    "AzureEmbeddingModel": AzureEmbeddingModel,
-    "OllamaEmbeddingModel": OllamaEmbeddingModel,
-    "OllamaLanguageModel": OllamaLanguageModel,
-    "AzureLanguageModel": AzureLanguageModel,
-    "MistralLanguageModel": MistralLanguageModel,
-    "DeepSeekLanguageModel": DeepSeekLanguageModel,
-    "GroqLanguageModel": GroqLanguageModel,
-    "VertexLanguageModel": VertexLanguageModel,
-    "VertexEmbeddingModel": VertexEmbeddingModel,
-    "VertexTextToSpeechModel": VertexTextToSpeechModel,
-    "MistralTextToSpeechModel": MistralTextToSpeechModel,
-    "MistralSpeechToTextModel": MistralSpeechToTextModel,
-    "DeepgramTextToSpeechModel": DeepgramTextToSpeechModel,
-    "CohereLanguageModel": CohereLanguageModel,
-    "CohereEmbeddingModel": CohereEmbeddingModel,
-    "CohereRerankerModel": CohereRerankerModel,
-}
-
-# Get list of available provider classes (excluding None values)
-provider_classes = [name for name, cls in __provider_classes.items() if cls is not None]
-
 # Import factory after defining providers
 from esperanto.factory import AIFactory  # noqa: E402
 
@@ -194,7 +163,29 @@ __all__ = [
     "find_tool_by_name",
     # Profiles
     "OpenAICompatibleProfile",
-] + provider_classes
-
-# Make provider classes available at module level
-globals().update({k: v for k, v in __provider_classes.items() if v is not None})
+    # Provider classes
+    "AnthropicLanguageModel",
+    "GoogleLanguageModel",
+    "OllamaLanguageModel",
+    "OpenAILanguageModel",
+    "OpenAICompatibleLanguageModel",
+    "OpenRouterLanguageModel",
+    "XAILanguageModel",
+    "OpenAIEmbeddingModel",
+    "GoogleEmbeddingModel",
+    "OllamaEmbeddingModel",
+    "AzureEmbeddingModel",
+    "AzureLanguageModel",
+    "MistralLanguageModel",
+    "DeepSeekLanguageModel",
+    "GroqLanguageModel",
+    "VertexLanguageModel",
+    "VertexEmbeddingModel",
+    "VertexTextToSpeechModel",
+    "MistralTextToSpeechModel",
+    "MistralSpeechToTextModel",
+    "DeepgramTextToSpeechModel",
+    "CohereLanguageModel",
+    "CohereEmbeddingModel",
+    "CohereRerankerModel",
+]
