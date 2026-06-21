@@ -17,6 +17,7 @@ Language model (LLM) provider implementations for chat completion APIs.
 - **`perplexity.py`**: Perplexity AI models
 - **`openrouter.py`**: OpenRouter unified API
 - **`vertex.py`**: Google Vertex AI
+- **`cohere.py`**: Cohere models (native v2 chat API, documents/citations passthrough)
 - **`openai_compatible.py`**: Generic OpenAI-compatible API provider (for custom endpoints)
 
 ## Patterns
