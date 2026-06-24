@@ -46,9 +46,8 @@ Open an issue with:
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Run the tests (`uv run pytest -v`)
-5. Run the linter (`uv run ruff check .`)
-6. Commit your changes using [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, etc.)
-7. Push and open a Pull Request
+5. Commit your changes using [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, etc.) — pre-commit hooks run `ruff check` and `mypy` automatically on commit
+6. Push and open a Pull Request
 
 #### PR Guidelines
 
@@ -79,7 +78,19 @@ If you need the `transformers` extra (for local model support):
 uv sync --group dev --extra transformers
 ```
 
-3. Run tests:
+3. Activate the pre-commit hooks:
+```bash
+pre-commit install
+```
+
+To run all hooks manually against the whole codebase:
+```bash
+pre-commit run --all-files
+```
+
+The hooks run `ruff check` and `mypy src/esperanto` — the same commands enforced in `.github/workflows/lint.yml`. They delegate to `uv run` so they use the exact versions from `pyproject.toml`.
+
+4. Run tests:
 ```bash
 uv run pytest -v
 ```
