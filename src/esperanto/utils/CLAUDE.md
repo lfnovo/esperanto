@@ -9,6 +9,7 @@ Utility modules providing cross-cutting functionality for all providers.
 - **`ssl.py`**: `SSLMixin` for configurable SSL verification
 - **`model_cache.py`**: `ModelCache` for caching provider model lists with TTL
 - **`logging.py`**: Logger configuration for Esperanto
+- **`vision.py`**: Vision utilities for multimodal message construction (image encoding, content parts, message building)
 
 ## Patterns
 
@@ -280,6 +281,32 @@ def discover_openai_models(api_key: str = None) -> List[Model]:
 - **Memory growth**: No max size - can grow unbounded if many providers/keys used
 - **Expiration check**: Happens on access - expired entries stay in memory until accessed
 - **Cache key collisions**: Use unique keys (include API key hash)
+
+### Vision Utilities (vision.py)
+
+Provides helper functions for building multimodal messages with images in OpenAI content-array format. This format is the universal standard — providers that need different formats (Anthropic, Google, Vertex, Ollama) convert from it in their respective `_prepare_messages()` / `_format_messages()` methods.
+
+**Functions:**
+
+- `encode_image_base64(file_path)` → `(base64_data, mime_type)` — reads image file, returns base64 + detected MIME
+- `image_to_content_part(source, mime_type=None, detail=None)` → dict — accepts file path, URL, or raw base64; returns `{"type": "image_url", "image_url": {"url": "..."}}`
+- `create_image_message(image_source, prompt, ...)` → dict — builds complete `{"role": "user", "content": [text_part, image_part]}`
+
+**Usage:**
+
+```python
+from esperanto.utils.vision import create_image_message
+from esperanto import AIFactory
+
+model = AIFactory.create_language("openai", "gpt-4o")
+message = create_image_message("/path/to/image.png", prompt="Describe this image.")
+response = model.chat_complete([message])
+```
+
+**Provider Support:**
+
+- **Pass-through** (natively support content arrays): OpenAI, Groq, Mistral, Azure, xAI, Perplexity, OpenRouter, DeepSeek, OpenAI-compatible
+- **Auto-converted**: Anthropic (`_convert_content_to_anthropic`), Google (`_convert_content_parts_to_google`), Vertex (`_convert_content_parts_to_vertex`), Ollama (inline in `_convert_messages_for_ollama`)
 
 ## When Adding New Mixins
 

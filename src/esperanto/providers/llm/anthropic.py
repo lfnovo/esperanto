@@ -265,12 +265,73 @@ class AnthropicLanguageModel(LanguageModel):
 
             else:
                 # Regular user or assistant message
+                converted_content = self._convert_content_to_anthropic(
+                    msg.get("content", "")
+                )
                 formatted_messages.append({
                     "role": "assistant" if role == "assistant" else "user",
-                    "content": msg.get("content", ""),
+                    "content": converted_content,
                 })
 
         return system_message, formatted_messages
+
+    def _convert_content_to_anthropic(
+        self, content: Any
+    ) -> Union[str, List[Dict[str, Any]]]:
+        """Convert message content from OpenAI format to Anthropic format.
+
+        Handles both simple string content and content arrays with
+        text and image_url parts.
+
+        Args:
+            content: Either a string or a list of content parts in OpenAI format.
+
+        Returns:
+            Either a string (for simple text) or a list of Anthropic content blocks.
+        """
+        if isinstance(content, str):
+            return content
+        if not isinstance(content, list):
+            return str(content) if content else ""
+
+        # Convert content array from OpenAI format to Anthropic format
+        anthropic_parts: List[Dict[str, Any]] = []
+        for part in content:
+            part_type = part.get("type", "")
+
+            if part_type == "text":
+                anthropic_parts.append({
+                    "type": "text",
+                    "text": part.get("text", ""),
+                })
+
+            elif part_type == "image_url":
+                image_url_data = part.get("image_url", {})
+                url = image_url_data.get("url", "")
+
+                if url.startswith("data:"):
+                    # Parse data URI: data:image/jpeg;base64,/9j/...
+                    header, _, b64_data = url.partition(",")
+                    media_type = header.split(":")[1].split(";")[0]
+                    anthropic_parts.append({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": b64_data,
+                        },
+                    })
+                else:
+                    # URL-based image
+                    anthropic_parts.append({
+                        "type": "image",
+                        "source": {
+                            "type": "url",
+                            "url": url,
+                        },
+                    })
+
+        return anthropic_parts if anthropic_parts else ""
 
     def _normalize_response(self, response_data: Dict[str, Any]) -> ChatCompletion:
         """Normalize Anthropic response to our format.

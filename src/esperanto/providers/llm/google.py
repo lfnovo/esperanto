@@ -237,18 +237,68 @@ class GoogleLanguageModel(LanguageModel):
                 formatted.append({"role": "model", "parts": parts})
 
             elif role == "user":
+                parts = self._convert_content_parts_to_google(content)
                 formatted.append({
                     "role": "user",
-                    "parts": [{"text": content or ""}]
+                    "parts": parts,
                 })
 
             elif role == "assistant":
+                parts = self._convert_content_parts_to_google(content)
                 formatted.append({
                     "role": "model",
-                    "parts": [{"text": content or ""}]
+                    "parts": parts,
                 })
 
         return formatted, system_instruction
+
+    def _convert_content_parts_to_google(
+        self, content: Any
+    ) -> List[Dict[str, Any]]:
+        """Convert message content from OpenAI format to Google parts format.
+
+        Args:
+            content: Either a string or a list of content parts in OpenAI format.
+
+        Returns:
+            List of Google-format parts.
+        """
+        if isinstance(content, str):
+            return [{"text": content}] if content else [{"text": ""}]
+        if not isinstance(content, list):
+            return [{"text": str(content) if content else ""}]
+
+        parts: List[Dict[str, Any]] = []
+        for part in content:
+            part_type = part.get("type", "")
+
+            if part_type == "text":
+                parts.append({"text": part.get("text", "")})
+
+            elif part_type == "image_url":
+                image_url_data = part.get("image_url", {})
+                url = image_url_data.get("url", "")
+
+                if url.startswith("data:"):
+                    # Parse data URI: data:image/jpeg;base64,/9j/...
+                    header, _, b64_data = url.partition(",")
+                    mime_type = header.split(":")[1].split(";")[0]
+                    parts.append({
+                        "inlineData": {
+                            "mimeType": mime_type,
+                            "data": b64_data,
+                        }
+                    })
+                else:
+                    # URL-based image
+                    parts.append({
+                        "fileData": {
+                            "mimeType": "image/jpeg",
+                            "fileUri": url,
+                        }
+                    })
+
+        return parts if parts else [{"text": ""}]
 
     def _create_generation_config(
         self,

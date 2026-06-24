@@ -996,3 +996,110 @@ class TestLangChainIntegration:
             with patch.dict("sys.modules", {"langchain_google_genai": None}):
                 with pytest.raises(ImportError, match="langchain_google_genai"):
                     model.to_langchain()
+
+
+class TestConvertContentPartsToVertex:
+    """Tests for _convert_content_parts_to_vertex method."""
+
+    def test_string_content(self, vertex_model):
+        """Test converting string content."""
+        result = vertex_model._convert_content_parts_to_vertex("Hello")
+        assert result == [{"text": "Hello"}]
+
+    def test_empty_string(self, vertex_model):
+        """Test converting empty string."""
+        result = vertex_model._convert_content_parts_to_vertex("")
+        assert result == [{"text": ""}]
+
+    def test_none_content(self, vertex_model):
+        """Test converting None content."""
+        result = vertex_model._convert_content_parts_to_vertex(None)
+        assert result == [{"text": ""}]
+
+    def test_text_part(self, vertex_model):
+        """Test converting text part in list."""
+        content = [{"type": "text", "text": "Describe this image."}]
+        result = vertex_model._convert_content_parts_to_vertex(content)
+        assert result == [{"text": "Describe this image."}]
+
+    def test_base64_image_to_inline_data(self, vertex_model):
+        """Test converting base64 image_url to inlineData."""
+        content = [
+            {
+                "type": "image_url",
+                "image_url": {"url": "data:image/png;base64,iVBORw0KGgo="},
+            }
+        ]
+        result = vertex_model._convert_content_parts_to_vertex(content)
+        assert len(result) == 1
+        assert "inlineData" in result[0]
+        assert result[0]["inlineData"]["mimeType"] == "image/png"
+        assert result[0]["inlineData"]["data"] == "iVBORw0KGgo="
+
+    def test_url_image_to_file_data(self, vertex_model):
+        """Test converting URL image_url to fileData."""
+        content = [
+            {
+                "type": "image_url",
+                "image_url": {"url": "https://example.com/image.jpg"},
+            }
+        ]
+        result = vertex_model._convert_content_parts_to_vertex(content)
+        assert len(result) == 1
+        assert "fileData" in result[0]
+        assert result[0]["fileData"]["mimeType"] == "image/jpeg"
+        assert result[0]["fileData"]["fileUri"] == "https://example.com/image.jpg"
+
+    def test_mixed_text_and_image(self, vertex_model):
+        """Test converting mixed text and image content."""
+        content = [
+            {"type": "text", "text": "What is in this image?"},
+            {
+                "type": "image_url",
+                "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQ"},
+            },
+        ]
+        result = vertex_model._convert_content_parts_to_vertex(content)
+        assert len(result) == 2
+        assert result[0] == {"text": "What is in this image?"}
+        assert result[1]["inlineData"]["mimeType"] == "image/jpeg"
+        assert result[1]["inlineData"]["data"] == "/9j/4AAQ"
+
+    def test_empty_list(self, vertex_model):
+        """Test converting empty list returns fallback."""
+        result = vertex_model._convert_content_parts_to_vertex([])
+        assert result == [{"text": ""}]
+
+
+class TestVisionMessageFormatting:
+    """Tests for formatting messages with image content."""
+
+    def test_format_messages_with_image_content(self, vertex_model):
+        """Test that _format_messages handles image content arrays correctly."""
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Describe this image."},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/png;base64,iVBORw0KGgo="
+                        },
+                    },
+                ],
+            }
+        ]
+        formatted, system_instruction = vertex_model._format_messages(messages)
+        assert len(formatted) == 1
+        assert formatted[0]["role"] == "user"
+        parts = formatted[0]["parts"]
+        assert len(parts) == 2
+        assert parts[0] == {"text": "Describe this image."}
+        assert parts[1]["inlineData"]["mimeType"] == "image/png"
+
+    def test_format_messages_string_content_still_works(self, vertex_model):
+        """Test that regular string content still works after vision changes."""
+        messages = [{"role": "user", "content": "Hello"}]
+        formatted, _ = vertex_model._format_messages(messages)
+        assert formatted[0]["parts"] == [{"text": "Hello"}]
