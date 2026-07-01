@@ -146,6 +146,21 @@ try:
 except ImportError:
     CohereRerankerModel = None  # type: ignore[assignment,misc]
 
+try:
+    from esperanto.providers.embedding.ppq import PPQEmbeddingModel
+except ImportError:
+    PPQEmbeddingModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.stt.ppq import PPQSpeechToTextModel
+except ImportError:
+    PPQSpeechToTextModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.tts.ppq import PPQTextToSpeechModel
+except ImportError:
+    PPQTextToSpeechModel = None  # type: ignore[assignment,misc]
+
 # Import factory after defining providers
 from esperanto.factory import AIFactory  # noqa: E402
 
@@ -194,4 +209,7 @@ __all__ = [
     "CohereLanguageModel",
     "CohereEmbeddingModel",
     "CohereRerankerModel",
+    "PPQEmbeddingModel",
+    "PPQSpeechToTextModel",
+    "PPQTextToSpeechModel",
 ]

@@ -2,19 +2,19 @@
 
 ## Overview
 
-[PayPerQ](https://ppq.ai) (PPQ) is a pay-as-you-go AI gateway that exposes hundreds of language models from many labs (OpenAI, Anthropic, Google, xAI, Qwen, DeepSeek, Mistral, and more) through a single OpenAI-compatible API. Instead of subscriptions, usage is billed per request, so a single API key gives access to the full catalog.
+[PayPerQ](https://ppq.ai) (PPQ) is a pay-as-you-go AI gateway that exposes hundreds of models from many labs (OpenAI, Anthropic, Google, xAI, Qwen, DeepSeek, Mistral, and more) through a single OpenAI-compatible API. Instead of subscriptions, usage is billed per request, so a single API key gives access to language, embedding, speech-to-text, and text-to-speech models.
 
 **Supported Capabilities:**
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
 | Language Models (LLM) | ✅ | Full catalog of chat models via a single key |
-| Embeddings | ❌ | Not available via profile (use OpenAI-Compatible) |
+| Embeddings | ✅ | `openai/text-embedding-3-small`, `openai/text-embedding-3-large` |
 | Reranking | ❌ | Not available |
-| Speech-to-Text | ❌ | Not available |
-| Text-to-Speech | ❌ | Not available |
+| Speech-to-Text | ✅ | Deepgram Nova (`nova-3`, `nova-2`) |
+| Text-to-Speech | ✅ | Deepgram Aura + ElevenLabs voices |
 
-**Official Documentation:** https://ppq.ai
+**Official Documentation:** https://ppq.ai/api-docs
 
 ## Prerequisites
 
@@ -34,30 +34,30 @@
 PPQ_API_KEY="sk-..."
 
 # Custom base URL (optional)
-PPQ_BASE_URL="https://api.ppq.ai"
+PPQ_BASE_URL="https://api.ppq.ai/v1"
 ```
 
-**Default base URL:** `https://api.ppq.ai`
+**Default base URL:** `https://api.ppq.ai/v1`
 
-## Quick Start
+> Note: PayPerQ's chat endpoint is also reachable at the API root
+> (`https://api.ppq.ai/chat/completions`). The embedding and audio endpoints
+> live under `/v1`, so Esperanto uses `https://api.ppq.ai/v1` as the base URL
+> for every capability, which the chat endpoint also serves.
+
+## Language Models
 
 ```python
 from esperanto.factory import AIFactory
 
-# Create a PayPerQ model
-model = AIFactory.create_language("ppq", "claude-sonnet-5")
+model = AIFactory.create_language("ppq", "claude-sonnet-5")  # or "auto", "gpt-5.4-mini", ...
 
-# Chat completion
 messages = [{"role": "user", "content": "Explain quantum computing"}]
 response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
-## Available Models
-
-PayPerQ proxies hundreds of models. Pass any model `id` returned by the
-`GET https://api.ppq.ai/models` endpoint (or listed in the dashboard) as the
-model name. A few examples:
+PayPerQ proxies hundreds of chat models. Pass any model `id` returned by
+`GET https://api.ppq.ai/models` (or listed in the dashboard). Examples:
 
 | Model | Provider | Best For |
 |-------|----------|----------|
@@ -65,18 +65,10 @@ model name. A few examples:
 | `gpt-5.4-mini` | OpenAI | Fast, cost-effective tasks |
 | `claude-sonnet-5` | Anthropic | Balanced performance, long context |
 | `claude-haiku-4.5` | Anthropic | Low-latency, cheap tasks |
-| `gemini-3-flash-preview` | Google | Fast multimodal tasks |
-
-> The catalog changes frequently. Use `AIFactory.get_provider_models("ppq")`
-> or the `/models` endpoint to discover what is currently available.
-
-## Features
 
 ### Streaming
 
 ```python
-model = AIFactory.create_language("ppq", "claude-sonnet-5")
-
 for chunk in model.chat_complete(messages, stream=True):
     print(chunk.choices[0].delta.content, end="")
 ```
@@ -90,8 +82,8 @@ model = AIFactory.create_language(
 )
 ```
 
-> JSON mode / `response_format` support depends on the underlying model that
-> PayPerQ routes to. Most OpenAI and Anthropic models support it.
+> JSON mode / `response_format` and tool-calling support depend on the specific
+> model PayPerQ routes to. Most OpenAI and Anthropic models support both.
 
 ### Tool Calling
 
@@ -105,34 +97,59 @@ tools = [
         parameters={"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}
     ))
 ]
-
 response = model.chat_complete(messages, tools=tools)
 ```
 
-### Async Support
+## Embeddings
 
 ```python
-response = await model.achat_complete(messages)
+embedder = AIFactory.create_embedding("ppq", "openai/text-embedding-3-small")
+vectors = embedder.embed(["Hello world", "How are you?"])
+print(len(vectors[0]))  # 1536
 ```
+
+Available models: `openai/text-embedding-3-small` (default),
+`openai/text-embedding-3-large`.
+
+## Speech-to-Text
+
+```python
+stt = AIFactory.create_speech_to_text("ppq", "nova-3")
+transcription = stt.transcribe("audio.mp3")
+print(transcription.text)
+```
+
+Available models: `nova-3` (default), `nova-2` (Deepgram Nova).
+
+## Text-to-Speech
+
+```python
+tts = AIFactory.create_text_to_speech("ppq", "deepgram_aura_2")
+tts.generate_speech(
+    "Hello from PayPerQ.",
+    voice="aura-2-thalia-en",
+    output_file="hello.mp3",
+)
+```
+
+Available models: `deepgram_aura_2` (default), `eleven_multilingual_v2`,
+`eleven_flash_v2_5`. Deepgram Aura voices include `aura-2-thalia-en`,
+`aura-2-arcas-en`, `aura-2-andromeda-en`, `aura-2-helena-en`,
+`aura-2-apollo-en`, and `aura-2-aries-en`.
 
 ## Configuration
 
 ```python
-# With explicit API key
-model = AIFactory.create_language(
-    "ppq", "claude-sonnet-5",
-    config={"api_key": "your-key"}
-)
+# Explicit API key
+model = AIFactory.create_language("ppq", "claude-sonnet-5", config={"api_key": "your-key"})
 
-# With custom base URL
-model = AIFactory.create_language(
-    "ppq", "claude-sonnet-5",
-    config={"base_url": "https://api.ppq.ai"}
-)
+# Custom base URL (e.g. a proxy)
+model = AIFactory.create_language("ppq", "claude-sonnet-5", config={"base_url": "https://api.ppq.ai/v1"})
 ```
 
 ## Notes
 
-- PayPerQ exposes an OpenAI-compatible endpoint (`/chat/completions`, `/models`) at the root of `https://api.ppq.ai` (no `/v1` suffix), so all standard Esperanto LLM features (streaming, tool calling, JSON mode) work with models that support them.
-- Because PayPerQ aggregates many providers, feature support (JSON mode, tool calling, reasoning) depends on the specific model you select, not on PayPerQ itself.
-- `AIFactory.get_provider_models("ppq")` returns the full catalog, which currently includes non-chat models (e.g. image/video). Filter by the model `id` you intend to use for text generation.
+- All PayPerQ capabilities use OpenAI-compatible endpoints under `https://api.ppq.ai/v1`, so standard Esperanto features (streaming, tool calling, JSON mode) work with models that support them.
+- The language provider is implemented via Esperanto's OpenAI-compatible profile system; embeddings, STT, and TTS are thin provider classes over the OpenAI-compatible implementations. All four resolve under the `ppq` provider name.
+- Because PayPerQ aggregates many upstream providers, per-model feature support depends on the model you select, not on PayPerQ itself.
+- `GET https://api.ppq.ai/models` lists the chat catalog; embedding/STT/TTS model ids are documented above and in the [API docs](https://ppq.ai/api-docs).

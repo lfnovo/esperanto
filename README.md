@@ -48,7 +48,7 @@ Whether you're building a quick prototype or a production application serving mi
   - DeepSeek (deepseek-chat)
   - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
   - MiniMax (MiniMax-M2.5)
-  - PayPerQ / PPQ (pay-as-you-go gateway to hundreds of models)
+  - PayPerQ / PPQ (pay-as-you-go gateway: LLM, Embedding, STT, TTS)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
   - Cohere (LLM, Embeddings, Reranking)
@@ -157,7 +157,7 @@ pip install "langchain_deepseek>=0.1.3"
 | DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
-| PayPerQ (PPQ)| ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| PayPerQ (PPQ)| ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
 
@@ -177,11 +177,11 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['anthropic', 'azure', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'vertex', 'xai'],
-#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter'],
-#     'reranker': ['jina', 'voyage', 'transformers'],
-#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure', 'google'],
-#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure', 'deepgram']
+#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'vertex', 'xai'],
+#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter', 'cohere', 'ppq'],
+#     'reranker': ['jina', 'voyage', 'transformers', 'cohere'],
+#     'speech_to_text': ['openai', 'groq', 'elevenlabs', 'openai-compatible', 'azure', 'google', 'mistral', 'deepgram', 'ppq'],
+#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible', 'azure', 'xai', 'mistral', 'deepgram', 'ppq']
 # }
 
 # Create model instances

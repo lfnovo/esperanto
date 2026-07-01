@@ -9,14 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **PayPerQ (PPQ) language provider** — PayPerQ is now selectable via
-  `AIFactory.create_language("ppq", "claude-sonnet-5")`. PPQ is a
+- **PayPerQ (PPQ) provider (LLM, Embedding, STT, TTS)** — PayPerQ is a
   pay-as-you-go gateway exposing hundreds of models from many labs through a
-  single OpenAI-compatible endpoint. Added as a built-in
-  `OpenAICompatibleProfile` (base URL `https://api.ppq.ai`, `PPQ_API_KEY`,
-  optional `PPQ_BASE_URL`, default model `auto`), so it inherits streaming,
-  tool calling, and JSON mode from the OpenAI-compatible implementation. Ships
-  with profile unit tests and provider docs.
+  single OpenAI-compatible API, authenticated with `PPQ_API_KEY` (optional
+  `PPQ_BASE_URL` override). All four capabilities resolve under the `ppq`
+  provider name:
+  - `AIFactory.create_language("ppq", "claude-sonnet-5")` — added as a built-in
+    `OpenAICompatibleProfile` (default model `auto`), inheriting streaming,
+    tool calling, and JSON mode.
+  - `AIFactory.create_embedding("ppq", "openai/text-embedding-3-small")`
+  - `AIFactory.create_speech_to_text("ppq", "nova-3")` (Deepgram Nova)
+  - `AIFactory.create_text_to_speech("ppq", "deepgram_aura_2")` (Deepgram Aura /
+    ElevenLabs voices)
+
+  Embedding/STT/TTS are thin classes over the OpenAI-compatible implementations
+  (base URL `https://api.ppq.ai/v1`). Ships with unit tests and provider docs.
 
 ## [2.24.0] - 2026-06-23
 
