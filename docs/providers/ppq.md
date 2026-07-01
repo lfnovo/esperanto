@@ -57,7 +57,7 @@ print(response.choices[0].message.content)
 ```
 
 PayPerQ proxies hundreds of chat models. Pass any model `id` returned by
-`GET https://api.ppq.ai/models` (or listed in the dashboard). Examples:
+`GET https://api.ppq.ai/v1/models` (or listed in the dashboard). Examples:
 
 | Model | Provider | Best For |
 |-------|----------|----------|
@@ -82,8 +82,9 @@ model = AIFactory.create_language(
 )
 ```
 
-> JSON mode / `response_format` and tool-calling support depend on the specific
-> model PayPerQ routes to. Most OpenAI and Anthropic models support both.
+> PayPerQ forwards `response_format` and tool definitions to the selected model.
+> Support is broad — OpenAI, Anthropic, and most other models honor both — though
+> a few upstream open-weight models may ignore them.
 
 ### Tool Calling
 
@@ -152,4 +153,4 @@ model = AIFactory.create_language("ppq", "claude-sonnet-5", config={"base_url": 
 - All PayPerQ capabilities use OpenAI-compatible endpoints under `https://api.ppq.ai/v1`, so standard Esperanto features (streaming, tool calling, JSON mode) work with models that support them.
 - The language provider is implemented via Esperanto's OpenAI-compatible profile system; embeddings, STT, and TTS are thin provider classes over the OpenAI-compatible implementations. All four resolve under the `ppq` provider name.
 - Because PayPerQ aggregates many upstream providers, per-model feature support depends on the model you select, not on PayPerQ itself.
-- `GET https://api.ppq.ai/models` lists the chat catalog; embedding/STT/TTS model ids are documented above and in the [API docs](https://ppq.ai/api-docs).
+- `GET https://api.ppq.ai/v1/models` lists the chat catalog; embedding/STT/TTS model ids are documented above and in the [API docs](https://ppq.ai/api-docs).
