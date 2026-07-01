@@ -81,6 +81,15 @@ class TestProfileRegistry:
         assert profile.api_key_env == "DASHSCOPE_API_KEY"
         assert profile.default_model == "qwen-plus"
 
+    def test_get_ppq_profile(self):
+        profile = get_profile("ppq")
+        assert profile is not None
+        assert profile.name == "ppq"
+        assert profile.base_url == "https://api.ppq.ai"
+        assert profile.api_key_env == "PPQ_API_KEY"
+        assert profile.default_model == "auto"
+        assert profile.display_name == "PayPerQ"
+
     def test_get_unknown_profile_returns_none(self):
         assert get_profile("unknown-provider") is None
 
@@ -292,6 +301,33 @@ class TestProfileBehavior:
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="MiniMax API key not found"):
                 AIFactory.create_language("minimax", "MiniMax-M2.5")
+
+    def test_ppq_creation(self):
+        model = AIFactory.create_language(
+            "ppq", "gpt-5.4-mini", config={"api_key": "test-key"}
+        )
+        assert model.provider == "ppq"
+        assert model.base_url == "https://api.ppq.ai"
+        assert model._get_default_model() == "auto"
+
+    def test_ppq_env_var(self):
+        with patch.dict(os.environ, {"PPQ_API_KEY": "env-key"}, clear=False):
+            model = AIFactory.create_language("ppq", "claude-sonnet-5")
+            assert model.api_key == "env-key"
+
+    def test_ppq_env_var_base_url(self):
+        with patch.dict(
+            os.environ,
+            {"PPQ_API_KEY": "key", "PPQ_BASE_URL": "https://proxy.ppq.ai"},
+            clear=False,
+        ):
+            model = AIFactory.create_language("ppq", "auto")
+            assert model.base_url == "https://proxy.ppq.ai"
+
+    def test_ppq_missing_api_key_raises(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="PayPerQ API key not found"):
+                AIFactory.create_language("ppq", "auto")
 
     def test_xai_response_format_stripped(self):
         model = AIFactory.create_language(
