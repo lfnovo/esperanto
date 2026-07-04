@@ -309,6 +309,43 @@ class TestDeepgramTTS:
 
 
 # =============================================================================
+# OpenRouter Tests
+# =============================================================================
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("OPENROUTER_API_KEY"),
+    reason="OPENROUTER_API_KEY not configured",
+)
+class TestOpenRouterTTS:
+    """Real integration tests for OpenRouter text-to-speech.
+
+    Uses the provider defaults (``microsoft/mai-voice-2`` + ``en-US-AvaNeural``),
+    which exercises the zero-config path end to end.
+    """
+
+    def test_sync_generate_speech(self):
+        """Test sync speech generation with default model and voice."""
+        model = AIFactory.create_text_to_speech("openrouter")
+        response = model.generate_speech(TEST_TEXT)
+        assert response.audio_data
+        assert response.content_type.startswith("audio/")
+        assert response.provider == "openrouter"
+
+    def test_async_agenerate_speech(self):
+        """Test async speech generation with default model and voice."""
+        model = AIFactory.create_text_to_speech("openrouter")
+
+        async def _run() -> object:
+            return await model.agenerate_speech(TEST_TEXT)
+
+        response = asyncio.run(_run())
+        assert response.audio_data
+        assert response.content_type.startswith("audio/")
+
+
+# =============================================================================
 # OpenAI-Compatible Tests
 # =============================================================================
 
