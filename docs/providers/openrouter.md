@@ -285,8 +285,9 @@ OpenRouter exposes an OpenAI-compatible speech endpoint (`POST /api/v1/audio/spe
 that accepts `model`, `input`, `voice`, and `response_format`. Model names follow
 OpenRouter's `vendor/model` convention.
 
-**Available models** (from `?output_modalities=speech`, discoverable via
-`AIFactory.get_provider_models("openrouter")` for TTS):
+**Available models** — OpenRouter lists dedicated speech models under its
+`?output_modalities=speech` filter (they do **not** appear in the unfiltered
+`/models` list that `AIFactory.get_provider_models("openrouter")` returns):
 - `microsoft/mai-voice-2` (default)
 - `x-ai/grok-voice-tts-1.0`
 - `google/gemini-3.1-flash-tts-preview`

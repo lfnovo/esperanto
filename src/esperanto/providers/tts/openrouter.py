@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+from esperanto.utils.logging import logger
+
 from .base import AudioResponse, Model, Voice
 from .openai import OpenAITextToSpeechModel
 
@@ -108,8 +110,9 @@ class OpenRouterTextToSpeechModel(OpenAITextToSpeechModel):
 
         Uses OpenRouter's ``output_modalities=speech`` filter, which surfaces the
         dedicated text-to-speech models (these do not appear in the unfiltered
-        ``/models`` listing). Returns an empty list if the endpoint is
-        unreachable.
+        ``/models`` listing). Logs and returns an empty list if discovery fails,
+        so a transient/auth/network error surfaces in logs rather than silently
+        masquerading as "no models available".
         """
         try:
             response = self.client.get(
@@ -126,7 +129,8 @@ class OpenRouterTextToSpeechModel(OpenAITextToSpeechModel):
                 )
                 for model in response.json().get("data", [])
             ]
-        except Exception:
+        except Exception as e:
+            logger.info(f"Failed to discover OpenRouter speech models: {e}")
             return []
 
     @property

@@ -214,14 +214,15 @@ def test_generate_speech_uses_explicit_model():
     client.post.return_value = resp
     model.client = client
 
-    model.generate_speech(text="Hi", voice="alloy")
+    # This test only asserts model passthrough; voice defaults to the provider default.
+    model.generate_speech(text="Hi")
     assert client.post.call_args[1]["json"]["model"] == "mistralai/voxtral-mini-tts-2603"
 
 
 def test_generate_speech_saves_to_file(tts_model, tmp_path):
     """Test speech generation saves to file when output_file is specified."""
     output_file = tmp_path / "output.mp3"
-    tts_model.generate_speech(text="Hello", voice="alloy", output_file=output_file)
+    tts_model.generate_speech(text="Hello", voice="en-US-AvaNeural", output_file=output_file)
     assert output_file.exists()
     assert output_file.read_bytes() == b"mock audio data for testing"
 
@@ -234,20 +235,20 @@ def test_generate_speech_api_error(tts_model):
     tts_model.client.post.side_effect = lambda *a, **kw: error_response
 
     with pytest.raises(RuntimeError, match="Failed to generate speech"):
-        tts_model.generate_speech(text="Hello", voice="alloy")
+        tts_model.generate_speech(text="Hello", voice="en-US-AvaNeural")
 
 
 @pytest.mark.asyncio
 async def test_agenerate_speech(tts_model):
     """Test asynchronous speech generation."""
-    response = await tts_model.agenerate_speech(text="Hello world", voice="echo")
+    response = await tts_model.agenerate_speech(text="Hello world", voice="en-US-EmmaNeural")
 
     tts_model.async_client.post.assert_called_once()
     call_args = tts_model.async_client.post.call_args
     assert call_args[0][0] == "https://openrouter.ai/api/v1/audio/speech"
 
     json_payload = call_args[1]["json"]
-    assert json_payload["voice"] == "echo"
+    assert json_payload["voice"] == "en-US-EmmaNeural"
     assert json_payload["input"] == "Hello world"
 
     assert response.audio_data == b"mock audio data for testing"
@@ -258,6 +259,6 @@ async def test_agenerate_speech(tts_model):
 async def test_agenerate_speech_saves_to_file(tts_model, tmp_path):
     """Test async speech generation saves to file."""
     output_file = tmp_path / "async_output.mp3"
-    await tts_model.agenerate_speech(text="Hello", voice="alloy", output_file=output_file)
+    await tts_model.agenerate_speech(text="Hello", voice="en-US-AvaNeural", output_file=output_file)
     assert output_file.exists()
     assert output_file.read_bytes() == b"mock audio data for testing"
