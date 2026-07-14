@@ -1,0 +1,55 @@
+src/esperanto/providers/llm/azure.py
+  s_ba01133bce787c::t_b2a360bf038499 38,449,575
+src/esperanto/providers/llm/google.py
+  s_ba01133bce787c::t_b2a360bf038499 39,522,798
+src/esperanto/providers/llm/groq.py
+  s_ba01133bce787c::t_b2a360bf038499 37,388,498
+src/esperanto/providers/llm/anthropic.py
+  s_ba01133bce787c::t_b2a360bf038499 41,757,873
+src/esperanto/providers/llm/ollama.py
+  s_ba01133bce787c::t_b2a360bf038499 39,380,500
+src/esperanto/providers/llm/structured_output.py
+  s_ba01133bce787c::t_043af72d4f2e46 227-228,252-285
+  s_ba01133bce787c::t_c56cc8e745d791 178,180
+  s_ba01133bce787c::t_636e535c4f156a 229-251
+  s_ba01133bce787c::t_d3daf17793ace0 6,11
+src/esperanto/providers/llm/openai.py
+  s_ba01133bce787c::t_b2a360bf038499 37,436,558
+src/esperanto/providers/llm/openrouter.py
+  s_ba01133bce787c::t_b2a360bf038499 28,278,396
+  s_ba01133bce787c::t_d4e3ff05d63ad1 29
+  s_ba01133bce787c::t_559972b427b53b 260-264
+  s_ba01133bce787c::t_4aaae2520b219b 108-129
+  s_ba01133bce787c::t_b0bde15e0482f9 374-378
+src/esperanto/providers/llm/mistral.py
+  s_ba01133bce787c::t_b2a360bf038499 41,396,507
+src/esperanto/providers/llm/perplexity.py
+  s_ba01133bce787c::t_b2a360bf038499 38,412,529
+src/esperanto/providers/llm/vertex.py
+  s_ba01133bce787c::t_53cf6e60c789a9 40
+  s_ba01133bce787c::t_520d9b93b5caf3 636,842
+src/esperanto/common_types/response.py
+  s_ba01133bce787c::t_d2fa18a42a9d7c 109-112
+  s_ba01133bce787c::t_670a3597153d83 313-324
+  s_ba01133bce787c::t_4fb63408425800 325
+src/esperanto/providers/llm/openai_compatible.py
+  s_ba01133bce787c::t_b2a360bf038499 24,429,588
+  s_ba01133bce787c::t_0ba7ada0d4d363 25
+  s_ba01133bce787c::t_4c2f3dcc558c7d 342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "4fc078c44f2b3f405f87e4ad46e21caaa6283af4",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
