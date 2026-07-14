@@ -1,0 +1,18 @@
+# One-time setup:
+#   pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        language: system
+        entry: uv run ruff check --force-exclude
+        types_or: [python, pyi]
+
+      - id: mypy
+        name: mypy
+        language: system
+        entry: uv run mypy
+        args: [src/esperanto]
+        types_or: [python, pyi]
+        pass_filenames: false
