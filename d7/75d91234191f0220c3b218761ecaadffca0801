@@ -1,0 +1,22 @@
+ARCHITECTURE.md
+  s_ba01133bce787c::t_7495260b372fcc 172-182
+docs/providers/README.md
+  s_ba01133bce787c::t_53f8f30c6dbb75 212
+  s_ba01133bce787c::t_da989eeb7cfeff 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "d775d91234191f0220c3b218761ecaadffca0801",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
