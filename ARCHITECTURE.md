@@ -169,6 +169,17 @@ Before implementing a new provider, ask yourself:
 
 When in doubt, open an issue. We'd rather discuss the design upfront than review a PR that doesn't align with these principles.
 
+### Provider Notability Bar
+
+Esperanto attracts provider-addition PRs, some primarily for the contributor's own visibility. We accept providers that are **real, operating services with a public API and demonstrable adoption** — not vanity listings, pre-launch products, or endpoints without a genuine user base. The bar scales with maintenance cost:
+
+- **Profile-based (OpenAI-compatible) providers** — a low bar. Cost is a few lines of config in `profiles.py` and no dedicated code path, so a working public OpenAI-compatible endpoint from a real company/service is enough. (This is how DeepSeek, xAI, DashScope, MiniMax, and Novita were added.)
+- **First-class provider classes** — a higher bar. These carry ongoing maintenance (custom request/response handling, provider-specific bugs, test surface), so they need meaningful adoption or a genuinely distinct API that many users need — not just novelty.
+
+When a provider's legitimacy isn't obvious, open an issue and link evidence (official docs, funding/company info, community usage) before implementing. This keeps the decision consistent and the provider list trustworthy rather than a directory of every endpoint that wanted a backlink.
+
+**Origin:** Recurring vanity-PR pattern surfaced during PR review, 2026-07-14.
+
 ## Architecture Overview
 
 ### Provider Pattern
