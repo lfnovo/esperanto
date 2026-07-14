@@ -109,6 +109,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 
 **Multiple Models Access:**
 - **[OpenRouter](./openrouter.md)**: 100+ models from various providers
+- **[Novita](./openai-compatible.md)**: 200+ open-source models (OpenAI-compatible profile)
 
 **Local Deployment:**
 - **[Ollama](./ollama.md)**: Llama, Mistral, Qwen, etc.
@@ -208,6 +209,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [xAI](./xai.md) | ✅ | ❌ | ✅ | 128K |
 | [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
 | [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 204K |
+| [Novita](./openai-compatible.md) | ✅ | ✅ | ✅ | Model-dependent |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ✅ | Varies |
 | [Ollama](./ollama.md) | ✅ | ❌ | ✅ | Model-dependent |
 | [OpenAI-Compatible](./openai-compatible.md) | ✅ | ⚠️ | ⚠️ | Endpoint-dependent |
