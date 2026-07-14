@@ -21,7 +21,8 @@ from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.providers.llm.profiles import OpenAICompatibleProfile, get_profile
 from esperanto.providers.llm.structured_output import (
     ResolvedStructuredOutput,
-    parse_structured_output_content,
+    apply_structured_output,
+    is_json_schema_unsupported_error,
     resolve_structured_output,
 )
 from esperanto.utils.logging import logger
@@ -338,17 +339,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
 
     def _is_json_schema_unsupported_error(self, error: Exception) -> bool:
         """Check whether an error clearly indicates json_schema is unsupported."""
-        error_str = str(error).lower()
-        if "json_schema" not in error_str:
-            return False
-        unsupported_patterns = [
-            "not support",
-            "unsupported",
-            "must be 'text'",
-            'must be "text"',
-            "not implemented",
-        ]
-        return any(pattern in error_str for pattern in unsupported_patterns)
+        return is_json_schema_unsupported_error(error)
 
     # Keys in extra_body that we silently strip before merging into the payload.
     # These collide with first-class Esperanto behaviour and would desync state
@@ -435,9 +426,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             self.structured,
             allow_string_json_alias=True,
         )
-        if resolved_structured and resolved_structured.is_schema_mode:
-            parsed = parse_structured_output_content(result.content, resolved_structured)
-            result = result.model_copy(update={"structured": parsed})
+        result = apply_structured_output(result, resolved_structured)
         return result
 
     def chat_complete(
@@ -596,9 +585,7 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
             self.structured,
             allow_string_json_alias=True,
         )
-        if resolved_structured and resolved_structured.is_schema_mode:
-            parsed = parse_structured_output_content(result.content, resolved_structured)
-            result = result.model_copy(update={"structured": parsed})
+        result = apply_structured_output(result, resolved_structured)
         return result
 
     async def achat_complete(

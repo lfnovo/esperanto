@@ -3,11 +3,12 @@
 import json
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union, cast
 
 from pydantic import BaseModel, ValidationError
 
 from esperanto.common_types.exceptions import StructuredOutputValidationError
+from esperanto.common_types.response import ChatCompletion
 
 
 @dataclass(frozen=True)
@@ -174,8 +175,9 @@ def parse_structured_output_content(
 
     schema_source = resolved.schema_source
     if _is_pydantic_model_class(schema_source):
+        model_cls = cast(Type[BaseModel], schema_source)
         try:
-            return schema_source.model_validate(parsed)
+            return model_cls.model_validate(parsed)
         except ValidationError as exc:
             errors = [str(err) for err in exc.errors()]
             raise StructuredOutputValidationError(
@@ -222,3 +224,62 @@ def parse_structured_output_content(
         schema_name=schema_name,
         errors=["Unsupported schema configuration for parsing"],
     )
+
+
+_SCHEMA_UNSUPPORTED_PATTERNS = (
+    "not support",
+    "unsupported",
+    "must be 'text'",
+    'must be "text"',
+    "not implemented",
+)
+
+
+def is_json_schema_unsupported_error(error: Exception) -> bool:
+    """Whether an error clearly indicates the endpoint can't do ``json_schema``.
+
+    Shared across OpenAI-compatible providers (and OpenRouter) so the
+    "schema mode not supported" signal is detected identically everywhere,
+    letting providers raise one clear message instead of leaking the raw
+    upstream error.
+    """
+    error_str = str(error).lower()
+    if "json_schema" not in error_str:
+        return False
+    return any(pattern in error_str for pattern in _SCHEMA_UNSUPPORTED_PATTERNS)
+
+
+def apply_structured_output(
+    result: ChatCompletion,
+    resolved: Optional[ResolvedStructuredOutput],
+) -> ChatCompletion:
+    """Populate ``message.structured`` on each choice for schema mode.
+
+    Centralizes the schema-mode gate and the tool-calls guard so every provider
+    behaves identically: when the model returns tool calls instead of JSON
+    content, parsing is skipped and ``structured`` is left as ``None`` (rather
+    than crashing on empty content). Parsing runs per-choice, so multi-choice
+    (``n>1``) responses each carry their own parsed object, surfaced at the top
+    level via ``ChatCompletion.structured`` (first choice). No-op when not in
+    schema mode or there are no choices.
+    """
+    if not (resolved and resolved.is_schema_mode) or not result.choices:
+        return result
+
+    new_choices = []
+    changed = False
+    for choice in result.choices:
+        message = choice.message
+        # Tool-calls guard: a schema-mode response that returns tool calls has
+        # no JSON content to parse — leave structured as None instead of raising.
+        if message.tool_calls:
+            new_choices.append(choice)
+            continue
+        parsed = parse_structured_output_content(message.content, resolved)
+        new_message = message.model_copy(update={"structured": parsed})
+        new_choices.append(choice.model_copy(update={"message": new_message}))
+        changed = True
+
+    if not changed:
+        return result
+    return result.model_copy(update={"choices": new_choices})

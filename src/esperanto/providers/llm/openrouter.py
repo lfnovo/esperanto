@@ -25,7 +25,8 @@ from esperanto.common_types.validation import (
 from esperanto.providers.llm.openai import OpenAILanguageModel
 from esperanto.providers.llm.structured_output import (
     ResolvedStructuredOutput,
-    parse_structured_output_content,
+    apply_structured_output,
+    is_json_schema_unsupported_error,
     resolve_structured_output,
 )
 
@@ -103,6 +104,28 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         )
         self._handle_error(response)
         return response
+
+    def _raise_if_schema_unsupported(
+        self,
+        error: Exception,
+        resolved_structured: Optional[ResolvedStructuredOutput],
+    ) -> None:
+        """Re-raise a clear error when the model rejects schema-driven output.
+
+        OpenRouter routes to many models, not all of which accept
+        ``response_format={"type": "json_schema"}``. Rather than leaking the raw
+        upstream error, surface a message that names the cause and the fix.
+        """
+        if (
+            resolved_structured
+            and resolved_structured.is_schema_mode
+            and is_json_schema_unsupported_error(error)
+        ):
+            raise RuntimeError(
+                f"Model '{self.get_model_name()}' does not support schema-driven "
+                "structured output (json_schema) via OpenRouter. Use a model that "
+                "supports it, or switch to structured={'type': 'json_object'}."
+            ) from error
 
     def _get_api_kwargs(
         self,
@@ -234,7 +257,11 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             payload["parallel_tool_calls"] = resolved_parallel
 
         # Make HTTP request using OpenRouter format
-        response = self._make_http_request(payload)
+        try:
+            response = self._make_http_request(payload)
+        except RuntimeError as e:
+            self._raise_if_schema_unsupported(e, resolved_structured)
+            raise
 
         if should_stream:
             return (self._normalize_chunk(chunk_data) for chunk_data in self._parse_sse_stream(response))
@@ -248,9 +275,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
-        if resolved_structured and resolved_structured.is_schema_mode:
-            parsed = parse_structured_output_content(result.content, resolved_structured)
-            result = result.model_copy(update={"structured": parsed})
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
@@ -346,7 +371,11 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             payload["parallel_tool_calls"] = resolved_parallel
 
         # Make async HTTP request using OpenRouter format
-        response = await self._make_async_http_request(payload)
+        try:
+            response = await self._make_async_http_request(payload)
+        except RuntimeError as e:
+            self._raise_if_schema_unsupported(e, resolved_structured)
+            raise
 
         if should_stream:
             async def generate():
@@ -364,9 +393,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
-        if resolved_structured and resolved_structured.is_schema_mode:
-            parsed = parse_structured_output_content(result.content, resolved_structured)
-            result = result.model_copy(update={"structured": parsed})
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 

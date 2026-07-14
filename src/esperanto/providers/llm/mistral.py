@@ -38,7 +38,7 @@ from esperanto.common_types.validation import (
 from esperanto.providers.llm.base import LanguageModel
 from esperanto.providers.llm.structured_output import (
     ResolvedStructuredOutput,
-    parse_structured_output_content,
+    apply_structured_output,
     resolve_structured_output,
 )
 
@@ -393,10 +393,7 @@ class MistralLanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
-        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
-        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
-            parsed = parse_structured_output_content(result.content, resolved_structured)
-            result = result.model_copy(update={"structured": parsed})
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
@@ -507,10 +504,7 @@ class MistralLanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
-        has_tool_calls = any(choice.message.tool_calls for choice in result.choices)
-        if resolved_structured and resolved_structured.is_schema_mode and not has_tool_calls:
-            parsed = parse_structured_output_content(result.content, resolved_structured)
-            result = result.model_copy(update={"structured": parsed})
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
