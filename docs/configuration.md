@@ -145,6 +145,13 @@ MINIMAX_API_KEY=...
 
 → **[Full MiniMax Setup Guide](./providers/minimax.md)**
 
+#### Z.ai
+```bash
+ZAI_API_KEY=...
+```
+
+→ **[Full Z.ai Setup Guide](./providers/zai.md)**
+
 #### OpenRouter
 ```bash
 OPENROUTER_API_KEY=...

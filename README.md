@@ -48,6 +48,7 @@ Whether you're building a quick prototype or a production application serving mi
   - DeepSeek (deepseek-chat)
   - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
   - MiniMax (MiniMax-M2.5)
+  - Z.ai (GLM models: glm-5.2, glm-4.5-flash)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
   - Cohere (LLM, Embeddings, Reranking)
@@ -155,6 +156,7 @@ pip install "langchain_deepseek>=0.1.3"
 | xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
 | DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| Z.ai         | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
@@ -175,7 +177,7 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['anthropic', 'azure', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai'],
+#     'language': ['anthropic', 'azure', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai', 'zai'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
 #     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure', 'google'],
