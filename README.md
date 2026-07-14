@@ -756,7 +756,7 @@ Notes:
 - OpenRouter schema mode is pass-through and model/provider-dependent; unsupported schema requests are surfaced directly (no silent fallback).
 - xAI and Perplexity schema mode are pass-through and model/provider-dependent; unsupported schema requests are surfaced directly (no silent fallback).
 - Anthropic schema mode uses `output_config.format` under the hood and requires a recent model (Opus 4.5+, Sonnet 4.5+, or Haiku 4.5); strict tool-use schema enforcement is a separate feature and is not part of this v1 rollout.
-- Cohere schema mode uses the native Cohere v2 `response_format` (`{"type": "json_object", "schema": ...}`); `to_langchain()` does not carry schema mode — use `.with_structured_output()` on the returned LangChain model.
+- Cohere schema mode uses the native Cohere v2 `response_format` (`{"type": "json_object", "schema": ...}`); `to_langchain()` does not carry schema mode — use `.with_structured_output()` on the returned LangChain model. Cohere does not allow structured output combined with `tools` or RAG `documents`/`connectors` — Esperanto raises a clear `ValueError` for those combinations.
 
 ## LangChain Integration 🔗
 
