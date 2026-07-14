@@ -103,6 +103,16 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         owned_by="Novita",
         display_name="Novita",
     ),
+    "zai": OpenAICompatibleProfile(
+        name="zai",
+        base_url="https://api.z.ai/api/paas/v4",
+        api_key_env="ZAI_API_KEY",
+        base_url_env="ZAI_BASE_URL",
+        default_model="glm-5.2",
+        model_prefix_filter="glm",
+        owned_by="Z.ai",
+        display_name="Z.ai",
+    ),
 }
 
 _USER_PROFILES: Dict[str, OpenAICompatibleProfile] = {}

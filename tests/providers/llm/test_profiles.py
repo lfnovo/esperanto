@@ -90,6 +90,15 @@ class TestProfileRegistry:
         assert profile.api_key_env == "NOVITA_API_KEY"
         assert profile.default_model == "moonshotai/kimi-k2.5"
 
+    def test_get_zai_profile(self):
+        profile = get_profile("zai")
+        assert profile is not None
+        assert profile.name == "zai"
+        assert profile.base_url == "https://api.z.ai/api/paas/v4"
+        assert profile.api_key_env == "ZAI_API_KEY"
+        assert profile.default_model == "glm-5.2"
+        assert profile.model_prefix_filter == "glm"
+
     def test_get_unknown_profile_returns_none(self):
         assert get_profile("unknown-provider") is None
 
@@ -322,6 +331,33 @@ class TestProfileBehavior:
             with pytest.raises(ValueError, match="MiniMax API key not found"):
                 AIFactory.create_language("minimax", "MiniMax-M2.5")
 
+    def test_zai_creation(self):
+        model = AIFactory.create_language(
+            "zai", "glm-5.2", config={"api_key": "test-key"}
+        )
+        assert model.provider == "zai"
+        assert model.base_url == "https://api.z.ai/api/paas/v4"
+        assert model._get_default_model() == "glm-5.2"
+
+    def test_zai_env_var(self):
+        with patch.dict(os.environ, {"ZAI_API_KEY": "env-key"}, clear=False):
+            model = AIFactory.create_language("zai", "glm-5.2")
+            assert model.api_key == "env-key"
+
+    def test_zai_env_var_base_url(self):
+        with patch.dict(
+            os.environ,
+            {"ZAI_API_KEY": "key", "ZAI_BASE_URL": "https://custom.z.ai/api/paas/v4"},
+            clear=False,
+        ):
+            model = AIFactory.create_language("zai", "glm-5.2")
+            assert model.base_url == "https://custom.z.ai/api/paas/v4"
+
+    def test_zai_missing_api_key_raises(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match=r"Z\.ai API key not found"):
+                AIFactory.create_language("zai", "glm-5.2")
+
     def test_xai_response_format_stripped(self):
         model = AIFactory.create_language(
             "xai",
@@ -353,6 +389,29 @@ class TestProfileBehavior:
         assert len(models) == 2
         assert all(m.id.startswith("grok") for m in models)
         assert all(m.owned_by == "X.AI" for m in models)
+
+    def test_zai_model_prefix_filter(self):
+        """Z.ai profile filters models to glm-* prefix."""
+        model = AIFactory.create_language(
+            "zai", "glm-5.2", config={"api_key": "test-key"}
+        )
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"id": "glm-5.2", "owned_by": "zai"},
+                {"id": "glm-4.5-flash", "owned_by": "zai"},
+                {"id": "some-other-model", "owned_by": "zai"},
+            ]
+        }
+        mock_client = Mock()
+        mock_client.get.return_value = mock_response
+        model.client = mock_client
+
+        models = model._get_models()
+        assert len(models) == 2
+        assert all(m.id.startswith("glm") for m in models)
+        assert all(m.owned_by == "Z.ai" for m in models)
 
 
 # =============================================================================

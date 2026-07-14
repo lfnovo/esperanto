@@ -145,6 +145,7 @@ Each release-gated test class is `skipif`-gated on the env vars its provider nee
 | OpenRouter | `OPENROUTER_API_KEY` |
 | Perplexity | `PERPLEXITY_API_KEY` (note: tool-calling tests skip — Perplexity API doesn't support tools) |
 | MiniMax | `MINIMAX_API_KEY` |
+| Z.ai | `ZAI_API_KEY` |
 | DashScope (Qwen) | `DASHSCOPE_API_KEY` |
 | Jina | `JINA_API_KEY` |
 | Voyage | `VOYAGE_API_KEY` |
