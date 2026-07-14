@@ -1,0 +1,25 @@
+src/esperanto/providers/llm/cohere.py
+  s_ba01133bce787c::t_5a885efb089cd2 206
+  s_ba01133bce787c::t_e1bd17f7aa722e 237-249
+  s_ba01133bce787c::t_7666451acfa196 608-616,626,652
+  s_ba01133bce787c::t_ff70f410665bc5 39-43
+  s_ba01133bce787c::t_2bcecae1b9d990 537-545,555,581
+  s_ba01133bce787c::t_68b7f9a5497ca5 582
+  s_ba01133bce787c::t_bf9c9e9f40c63c 653
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "9ccdab4c97f18804254a67adaf41aee5f956e73a",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
