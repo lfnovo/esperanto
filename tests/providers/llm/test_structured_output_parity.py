@@ -20,8 +20,10 @@ from esperanto.providers.llm.groq import GroqLanguageModel
 from esperanto.providers.llm.mistral import MistralLanguageModel
 from esperanto.providers.llm.ollama import OllamaLanguageModel
 from esperanto.providers.llm.openai import OpenAILanguageModel
+from esperanto.providers.llm.openai_compatible import OpenAICompatibleLanguageModel
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 from esperanto.providers.llm.perplexity import PerplexityLanguageModel
+from esperanto.providers.llm.vertex import VertexLanguageModel
 
 
 class Capital(BaseModel):
@@ -197,6 +199,35 @@ def _build_cohere(response_data):
     return model
 
 
+def _build_openai_compatible(response_data):
+    model = OpenAICompatibleLanguageModel(
+        api_key="test-key",
+        base_url="http://localhost:8080/v1",
+        model_name="test-model",
+    )
+    model.client = _mock_client(response_data)
+    model.async_client = AsyncMock()
+    return model
+
+
+def _build_vertex(response_data):
+    with patch.object(
+        VertexLanguageModel,
+        "_load_credentials",
+        lambda self: setattr(self, "_credentials", None),
+    ):
+        model = VertexLanguageModel(
+            model_name="gemini-2.0-flash",
+            vertex_project="test-project",
+            vertex_location="us-central1",
+        )
+    # Shadow token retrieval persistently (calls happen during chat_complete).
+    model._get_access_token = lambda: "tok"
+    model.client = _mock_client(response_data)
+    model.async_client = AsyncMock()
+    return model
+
+
 # (name, builder, native_response_dict)
 PARITY_PROVIDERS = [
     ("openai", _build_openai, _openai_style_response(CAPITAL_JSON)),
@@ -205,8 +236,10 @@ PARITY_PROVIDERS = [
     ("mistral", _build_mistral, _openai_style_response(CAPITAL_JSON)),
     ("perplexity", _build_perplexity, _openai_style_response(CAPITAL_JSON)),
     ("openrouter", _build_openrouter, _openai_style_response(CAPITAL_JSON)),
+    ("openai_compatible", _build_openai_compatible, _openai_style_response(CAPITAL_JSON)),
     ("anthropic", _build_anthropic, _anthropic_response(CAPITAL_JSON)),
     ("google", _build_google, _google_response(CAPITAL_JSON)),
+    ("vertex", _build_vertex, _google_response(CAPITAL_JSON)),
     ("ollama", _build_ollama, _ollama_response(CAPITAL_JSON)),
     ("cohere", _build_cohere, _cohere_response(CAPITAL_JSON)),
 ]

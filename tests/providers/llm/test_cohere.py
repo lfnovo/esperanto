@@ -347,3 +347,48 @@ class TestCohereStructuredOutput:
         assert isinstance(response.structured, CityInfo)
         assert response.structured.city == "Berlin"
         assert response.structured.country == "Germany"
+
+    def test_structured_with_tools_rejected(self):
+        """Cohere rejects response_format + tools; fail clearly client-side."""
+        model = _make_model()
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+        tools = [
+            Tool(
+                type="function",
+                function=ToolFunction(
+                    name="get_weather",
+                    description="Get weather",
+                    parameters={"type": "object", "properties": {}},
+                ),
+            )
+        ]
+        with pytest.raises(ValueError, match="combined with tools"):
+            model.chat_complete(
+                [{"role": "user", "content": "Capital?"}], tools=tools
+            )
+
+    def test_structured_with_documents_rejected(self):
+        """Cohere rejects response_format + documents (RAG); fail clearly."""
+        model = _make_model(config={"documents": [{"text": "some doc"}]})
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+        with pytest.raises(ValueError, match="combined with documents"):
+            model.chat_complete([{"role": "user", "content": "Capital?"}])
+
+    @pytest.mark.asyncio
+    async def test_structured_with_tools_rejected_async(self):
+        model = _make_model()
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+        tools = [
+            Tool(
+                type="function",
+                function=ToolFunction(
+                    name="get_weather",
+                    description="Get weather",
+                    parameters={"type": "object", "properties": {}},
+                ),
+            )
+        ]
+        with pytest.raises(ValueError, match="combined with tools"):
+            await model.achat_complete(
+                [{"role": "user", "content": "Capital?"}], tools=tools
+            )

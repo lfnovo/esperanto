@@ -124,7 +124,8 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             raise RuntimeError(
                 f"Model '{self.get_model_name()}' does not support schema-driven "
                 "structured output (json_schema) via OpenRouter. Use a model that "
-                "supports it, or switch to structured={'type': 'json_object'}."
+                "supports it (json_object mode is also only honored on OpenAI "
+                "models via OpenRouter)."
             ) from error
 
     def _get_api_kwargs(

@@ -57,7 +57,7 @@ Whether you're building a quick prototype or a production application serving mi
 - **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
-- **Structured Output**: JSON mode + schema-driven outputs across all LLM providers (OpenAI, Azure, OpenAI-compatible, Google, Vertex, Anthropic, Groq, Mistral, Ollama, OpenRouter, Perplexity, Cohere)
+- **Structured Output**: JSON mode + schema-driven outputs across all LLM providers (OpenAI, Azure, OpenAI-compatible, Google, Vertex, Anthropic, Groq, Mistral, Ollama, OpenRouter, Perplexity, xAI, Cohere)
 - **LangChain Integration**: Easy conversion to LangChain chat models
 
 ## 📚 Documentation

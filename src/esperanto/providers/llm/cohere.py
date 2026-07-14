@@ -194,6 +194,35 @@ class CohereLanguageModel(LanguageModel):
 
         return formatted
 
+    def _reject_incompatible_structured(
+        self,
+        resolved_structured: Optional[ResolvedStructuredOutput],
+        tools: Optional[List[Tool]],
+    ) -> None:
+        """Reject structured output combined with tools or RAG documents.
+
+        Cohere's v2 chat API does not support ``response_format`` together with
+        the ``tools`` or ``documents``/``connectors`` parameters — such a request
+        fails upstream. We surface a clear error client-side instead.
+        """
+        if not resolved_structured:
+            return
+        rag_fields = [
+            field
+            for field in ("documents", "connectors")
+            if self._config.get(field) is not None
+        ]
+        if tools:
+            raise ValueError(
+                "Cohere does not support structured output (response_format) "
+                "combined with tools. Use one or the other."
+            )
+        if rag_fields:
+            raise ValueError(
+                "Cohere does not support structured output (response_format) "
+                f"combined with {'/'.join(rag_fields)}. Use one or the other."
+            )
+
     def _create_request_payload(
         self,
         messages: List[Dict[str, Any]],
@@ -543,6 +572,7 @@ class CohereLanguageModel(LanguageModel):
                 "structured type 'json_schema' is not supported with streaming. "
                 "Set stream=False."
             )
+        self._reject_incompatible_structured(resolved_structured, resolved_tools)
 
         payload = self._create_request_payload(
             messages,
@@ -614,6 +644,7 @@ class CohereLanguageModel(LanguageModel):
                 "structured type 'json_schema' is not supported with streaming. "
                 "Set stream=False."
             )
+        self._reject_incompatible_structured(resolved_structured, resolved_tools)
 
         payload = self._create_request_payload(
             messages,
