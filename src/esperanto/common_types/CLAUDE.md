@@ -54,8 +54,15 @@ Message(
     role="user",  # or "assistant", "system"
     function_call=None,  # Optional function call
     tool_calls=None,     # Optional tool calls
+    structured=None,     # Optional parsed structured output (schema mode)
 )
 ```
+
+`Message.structured` is the source of truth for schema-driven structured output
+(a validated Pydantic instance or parsed dict). `ChatCompletion.structured` is a
+read-only `@property` that mirrors `content` — it surfaces
+`choices[0].message.structured` — so multi-choice (`n>1`) responses each keep
+their own parsed value on the choice.
 
 ### Message Thinking Properties
 

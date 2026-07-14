@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Schema-driven structured outputs across all LLM providers** — set
+  `config={"structured": {"type": "json_schema", "schema": MyPydanticModel}}`
+  (or a JSON Schema dict) and read the parsed, validated result from
+  `response.structured`. Works consistently across OpenAI, Azure, OpenAI-compatible
+  (incl. profile providers like DeepSeek/xAI/DashScope/MiniMax), Google (Gemini),
+  Vertex AI, Anthropic (`output_config.format`), Groq, Mistral, Ollama, OpenRouter,
+  Perplexity, and Cohere. The parsed object is the source of truth on each choice's
+  message (`choices[i].message.structured`), surfaced at the top level via
+  `response.structured` (mirrors `content`), so multi-choice (`n>1`) responses each
+  carry their own parsed value. Schema mode is non-streaming in v1
+  (`stream=True` raises `ValueError`); providers/models that can't honor a
+  `json_schema` request fail fast with a clear error rather than silently degrading.
+  (#95)
+
 ## [2.24.0] - 2026-06-23
 
 ### Added

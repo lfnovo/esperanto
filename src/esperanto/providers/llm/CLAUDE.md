@@ -82,11 +82,33 @@ Streaming is handled differently by provider:
 
 ### Structured Output
 
-Providers support structured output via `self.structured` parameter:
+Providers support structured output via `self.structured` parameter. Both JSON
+mode (`{"type": "json_object"}`) and schema mode
+(`{"type": "json_schema", "schema": <Pydantic class or JSON Schema dict>}`) are
+supported. Shared machinery lives in `structured_output.py`:
 
-- OpenAI: Uses `response_format` parameter
-- Google: Uses `generation_config` with schema
-- Anthropic: Not natively supported (returns JSON as string)
+- `resolve_structured_output()` normalizes `self.structured` into a
+  `ResolvedStructuredOutput` (canonical OpenAI-shaped `response_format`).
+- `apply_structured_output(result, resolved)` centralizes the schema-mode gate,
+  the tool-calls guard (skip parsing when the model returned tool calls), and
+  per-choice parsing; it sets `message.structured` on each choice.
+- `parse_structured_output_content()` validates content (Pydantic `model_validate`
+  or `jsonschema` for dict schemas), raising `StructuredOutputValidationError`.
+- `is_json_schema_unsupported_error()` detects "endpoint can't do json_schema"
+  errors so providers raise one clear message.
+
+Per-provider request shape (schema mode):
+
+- OpenAI / Azure / Groq / Mistral / Perplexity / OpenRouter / OpenAI-compatible:
+  `response_format={"type": "json_schema", ...}`
+- Google / Vertex: `generationConfig.responseJsonSchema`
+- Anthropic: `output_config.format` (native, requires Opus 4.5+/Sonnet 4.5+/Haiku 4.5)
+- Ollama: `format=<schema dict>`
+- Cohere: `response_format={"type": "json_object", "schema": ...}`
+
+The parsed object is exposed at `response.structured` (a property mirroring
+`content`, reading `choices[0].message.structured`). Schema mode is non-streaming
+in v1 (`stream=True` raises `ValueError`).
 
 ## Integration
 

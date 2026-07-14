@@ -57,7 +57,7 @@ Whether you're building a quick prototype or a production application serving mi
 - **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
-- **Structured Output**: JSON mode + schema-driven outputs (OpenAI, Azure, OpenAI-compatible, Google, Vertex, Anthropic)
+- **Structured Output**: JSON mode + schema-driven outputs across all LLM providers (OpenAI, Azure, OpenAI-compatible, Google, Vertex, Anthropic, Groq, Mistral, Ollama, OpenRouter, Perplexity, Cohere)
 - **LangChain Integration**: Easy conversion to LangChain chat models
 
 ## 📚 Documentation
@@ -723,7 +723,7 @@ response = model.chat_complete(messages)
 # Response will be in JSON format
 ```
 
-Schema-driven structured output is also supported for OpenAI, Azure OpenAI, OpenAI-compatible, Google (Gemini), Vertex AI, Anthropic, OpenRouter (model-dependent), Groq, Mistral, xAI (model-dependent), Perplexity (model-dependent), and Ollama providers:
+Schema-driven structured output is also supported for OpenAI, Azure OpenAI, OpenAI-compatible, Google (Gemini), Vertex AI, Anthropic, OpenRouter (model-dependent), Groq, Mistral, xAI (model-dependent), Perplexity (model-dependent), Ollama, and Cohere providers:
 
 ```python
 from pydantic import BaseModel
@@ -755,7 +755,8 @@ Notes:
 - OpenAI-compatible endpoints fail fast if `json_schema` response format is unsupported.
 - OpenRouter schema mode is pass-through and model/provider-dependent; unsupported schema requests are surfaced directly (no silent fallback).
 - xAI and Perplexity schema mode are pass-through and model/provider-dependent; unsupported schema requests are surfaced directly (no silent fallback).
-- Anthropic schema mode uses `output_config.format` under the hood; strict tool-use schema enforcement is a separate feature and is not part of this v1 rollout.
+- Anthropic schema mode uses `output_config.format` under the hood and requires a recent model (Opus 4.5+, Sonnet 4.5+, or Haiku 4.5); strict tool-use schema enforcement is a separate feature and is not part of this v1 rollout.
+- Cohere schema mode uses the native Cohere v2 `response_format` (`{"type": "json_object", "schema": ...}`); `to_langchain()` does not carry schema mode — use `.with_structured_output()` on the returned LangChain model.
 
 ## LangChain Integration 🔗
 
