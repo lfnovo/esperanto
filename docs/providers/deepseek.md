@@ -54,21 +54,14 @@ response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
-### Direct Instantiation
+### Direct Instantiation (Deprecated)
+
+> **Note:** Direct instantiation via `DeepSeekLanguageModel` is deprecated. Use `AIFactory.create_language("deepseek", ...)` instead. DeepSeek is now implemented as an OpenAI-compatible provider profile.
 
 ```python
+# Deprecated — will emit a DeprecationWarning
 from esperanto.providers.llm.deepseek import DeepSeekLanguageModel
-
-# Create model instance
-model = DeepSeekLanguageModel(
-    api_key="your-api-key",
-    model_name="deepseek-chat"
-)
-
-# Use the model
-messages = [{"role": "user", "content": "Hello!"}]
-response = model.chat_complete(messages)
-print(response.choices[0].message.content)
+model = DeepSeekLanguageModel(api_key="your-api-key", model_name="deepseek-chat")
 ```
 
 ## Capabilities

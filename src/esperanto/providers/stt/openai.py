@@ -7,7 +7,13 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 import httpx
 
 from esperanto.common_types import TranscriptionResponse
-from esperanto.providers.stt.base import Model, SpeechToTextModel
+from esperanto.providers.stt.base import (
+    _WHISPER_SEGMENT_METADATA_KEYS,
+    Model,
+    SpeechToTextModel,
+    _build_transcription_response,
+    _guess_audio_content_type,
+)
 
 
 @dataclass
@@ -25,7 +31,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
             raise ValueError("OpenAI API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.openai.com/v1"
+        self.base_url = (self.base_url or "https://api.openai.com/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -85,9 +91,19 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
     def _get_api_kwargs(
         self, language: Optional[str] = None, prompt: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Get kwargs for API calls."""
-        kwargs = {
-            "model": self.get_model_name(),
+        """Get kwargs for API calls.
+
+        Requests ``verbose_json`` for Whisper-family models so segments and
+        duration are returned without any opt-in. For gpt-4o-*-transcribe
+        models, which do not support ``verbose_json``, falls back to ``json``;
+        those models return no segments or duration (fields stay ``None``).
+        """
+        model_name = self.get_model_name()
+        is_transcribe_family = model_name.startswith("gpt-4o") and model_name.endswith("-transcribe")
+        response_format = "json" if is_transcribe_family else "verbose_json"
+        kwargs: Dict[str, Any] = {
+            "model": model_name,
+            "response_format": response_format,
         }
 
         if language:
@@ -96,6 +112,20 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
             kwargs["prompt"] = prompt
 
         return kwargs
+
+    def _build_response(
+        self,
+        response_data: Dict[str, Any],
+        language: Optional[str] = None,
+    ) -> TranscriptionResponse:
+        """Build a TranscriptionResponse from a Whisper ``verbose_json`` payload."""
+        return _build_transcription_response(
+            response_data,
+            model=self.get_model_name(),
+            provider=self.provider,
+            metadata_keys=_WHISPER_SEGMENT_METADATA_KEYS,
+            language_fallback=language,
+        )
 
     def transcribe(
         self,
@@ -110,7 +140,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = self.client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -120,7 +150,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = self.client.post(
                 f"{self.base_url}/audio/transcriptions",
                 headers=self._get_headers(),
@@ -131,12 +161,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # OpenAI doesn't return detected language
-            model=self.get_model_name(),
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)
 
     async def atranscribe(
         self,
@@ -151,7 +176,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = await self.async_client.post(
                     f"{self.base_url}/audio/transcriptions",
                     headers=self._get_headers(),
@@ -161,7 +186,7 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = await self.async_client.post(
                 f"{self.base_url}/audio/transcriptions",
                 headers=self._get_headers(),
@@ -172,9 +197,4 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # OpenAI doesn't return detected language
-            model=self.get_model_name(),
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)

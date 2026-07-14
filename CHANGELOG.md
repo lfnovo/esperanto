@@ -7,6 +7,169 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.0] - 2026-06-23
+
+### Added
+
+- **Deepgram speech-to-text provider** — Deepgram is now selectable for STT via
+  `AIFactory.create_speech_to_text("deepgram", "nova-3")`, complementing the
+  existing Deepgram TTS provider. Posts to `/v1/listen` with `utterances=true`,
+  authenticates with the shared `DEEPGRAM_API_KEY`, and normalizes the response
+  to a `TranscriptionResponse`: `text` always, plus `segments` (built from
+  `results.utterances`, with Deepgram-specific extras — confidence, channel, id,
+  speaker — under each segment's `metadata`). When Deepgram returns no utterance
+  timing, `segments` stays `None` rather than being fabricated. Ships with
+  mocked-API unit tests. (#202)
+
+### Fixed
+
+- **OpenAI STT `gpt-4o-transcribe` compatibility** — the OpenAI STT provider no
+  longer hardcodes `response_format="verbose_json"`, which only `whisper-1`
+  accepts. It now sends `verbose_json` for the Whisper family (preserving
+  segments and duration) and `json` for the `gpt-4o-transcribe` /
+  `gpt-4o-mini-transcribe` family, which previously failed with a compatibility
+  error. When those models omit segments/duration, the corresponding
+  `TranscriptionResponse` fields stay `None`. (#204)
+- **`mypy --strict` re-exports** — the package-level `__all__` is now a static
+  literal instead of a runtime-built list, so downstream packages compiling with
+  `mypy --strict` (which implies `no_implicit_reexport`) can
+  `from esperanto import AIFactory` without "does not explicitly export
+  attribute" errors. Runtime import behavior, including graceful degradation for
+  missing optional dependencies, is unchanged. (#190)
+
+## [2.23.0] - 2026-06-16
+
+### Added
+
+- **Cohere provider (LLM, Embedding, Reranker)** — Cohere is now a first-class
+  provider across three capabilities, integrated via its native v2 API
+  (`/v2/chat`, `/v2/embed`, `/v2/rerank`) rather than an OpenAI-compatible
+  profile, because its differentiators (`documents`-based RAG, citations,
+  `input_type` embeddings, native tool format) are not exposed on the
+  compatibility endpoint. Authentication is shared via `COHERE_API_KEY`.
+  - **LLM** (`AIFactory.create_language("cohere", "command-a-03-2025")`):
+    chat, streaming, and tool calling. Esperanto's `top_p` maps to Cohere's
+    `p`. Cohere-specific RAG fields (`documents`, `citation_options`,
+    `connectors`) pass through via `config` without changing the universal
+    `chat_complete` surface; returned citations are not surfaced on
+    `ChatCompletion` in this version (out of scope).
+  - **Embedding** (`AIFactory.create_embedding("cohere", "embed-v4.0")`):
+    `input_type`-aware (default `search_document`, configurable per-call), with
+    automatic batching to Cohere's 96-texts-per-request limit.
+  - **Reranker** (`AIFactory.create_reranker("cohere", "rerank-v4.0-pro")`):
+    maps `top_k` to Cohere's `top_n`, returns a normalized `RerankResponse`.
+  - **Model discovery**: `AIFactory.get_provider_models("cohere")` lists chat,
+    embed, and rerank models live via `/v1/models`, tagged by Esperanto type.
+  All three capabilities ship with mocked-API unit tests and documentation in
+  `docs/providers/cohere.md`. (#110)
+
+## [2.22.0] - 2026-05-22
+
+### Added
+
+- **STT segments + Whisper/Voxtral usage** — Speech-to-text responses now carry
+  timestamped segments and STT-specific usage on `TranscriptionResponse`. Two
+  new common types are exported from `esperanto.common_types`:
+  - `TranscriptionSegment` (`text`, `start`, `end`, optional
+    `metadata: Dict[str, Any]`) — the per-item metadata escape hatch holds
+    provider-specific extras such as `avg_logprob`, `compression_ratio`,
+    `no_speech_prob`, `confidence`, and `speaker`, so the top-level interface
+    stays uniform across providers.
+  - `TranscriptionUsage` (`input_seconds`, `input_tokens`, `output_tokens`,
+    `total_tokens`) — STT-aware usage with `input_seconds` for audio billing,
+    distinct from the LLM `Usage` type.
+  `TranscriptionResponse` gains a `segments: Optional[List[TranscriptionSegment]]`
+  field (defaults to `None`). For Whisper-family providers (OpenAI, Groq,
+  Azure), Esperanto now automatically requests `response_format=verbose_json`
+  in the underlying HTTP call so callers receive segments and `duration`
+  without any extra configuration ("Hot-Swap-First Defaults"). Mistral
+  natively returns segments and a `usage` block with `prompt_audio_seconds` —
+  both are now mapped onto the response. ElevenLabs and Google leave
+  `segments=None` (they don't return them and Esperanto never synthesizes
+  segments from text alone, per the "Unsupported Response Fields Stay `None`"
+  principle). Resolves #146 (Whisper-family segments + usage) and #193
+  (Azure parity). (#146, #193)
+
+### Changed
+
+- **`TranscriptionResponse.usage` is now `Optional[TranscriptionUsage]`** (was
+  `Optional[Usage]`, the LLM token-usage type). No existing STT provider in
+  Esperanto populated `usage` before this release, so callers reading from
+  STT responses are not affected in practice. New STT-specific fields
+  (`input_seconds`) are only available on the new type.
+
+## [2.21.0] - 2026-05-15
+
+### Added
+
+- **Deepgram TTS provider** — first-class `DeepgramTextToSpeechModel` for Deepgram's Aura model family. Supports the Aura-2 voice catalog across English, Spanish, French, German, Italian, Japanese, and Dutch, plus Aura-1 legacy English voices. Authenticates via `DEEPGRAM_API_KEY` (header form `Authorization: Token …`). Sync (`generate_speech`) and async (`agenerate_speech`) parity, encoding/container/sample_rate/bit_rate/speed query-param passthrough (with `container` driving the response `content_type` MIME), and a 2000-char input limit per request. Accessible via `AIFactory.create_text_to_speech("deepgram", "aura-2-thalia-en")`. (#50)
+- **`extra_body` passthrough on `OpenAICompatibleLanguageModel`** — instance-level via `config={"extra_body": {...}}` (applied to every request) and per-call via the new keyword-only `extra_body=` argument on `chat_complete` / `achat_complete`. Per-call extras shallow-merge over instance-level (per-call wins on key collision). Esperanto stays neutral: no validation, no interpretation — the merged dict is injected into the top-level outgoing JSON payload as-is, so the upstream server (vLLM, LocalAI, etc.) sees `top_k`, `min_p`, `repetition_penalty`, `guided_json`, and any other server-specific extras directly. A small set of reserved keys is silently stripped from `extra_body` because they have first-class arguments and overriding them via `extra_body` would desync the wire request from Python-side state: `stream` (controls the response-parsing branch via the `stream=` argument) and `tools` / `tool_choice` / `parallel_tool_calls` (used by the tool-call validator against the resolved tool set). Scoped to the openai-compatible class only; first-class providers keep their explicit param surfaces. New `docs/providers/vllm.md` covers the typical vLLM recipe. (#70)
+- **Real-API release tests for STT, TTS, and reranker** — `tests/integration/test_stt_real.py`, `tests/integration/test_tts_real.py`, and `tests/integration/test_reranker_real.py` cover all providers per type. Tests are gated with `@pytest.mark.release` and excluded from the default `uv run pytest` run; invoke with `uv run pytest -m release`. (#169)
+- **Per-call `max_tokens`, `temperature`, `top_p` overrides** — `chat_complete()` and `achat_complete()` now accept `max_tokens`, `temperature`, and `top_p` keyword arguments that override the instance-level values for a single request. Supported by all LLM providers. For Anthropic, `top_p` is silently dropped when `temperature` is also set, consistent with the mutual-exclusivity rule enforced by that provider's API.
+- **Real-API embedding integration tests** — `tests/integration/test_embedding_real.py` covers all embedding providers (OpenAI, Google, Vertex AI, Azure, Jina, Voyage, Mistral, Transformers, Ollama, OpenRouter, OpenAI-Compatible) with sync, async, and batch embed tests. Task-type translation tested for Google and Jina (native task param). Gated by `@pytest.mark.release`; excluded from default test runs.
+- **Mistral TTS provider** — `MistralTextToSpeechModel` using the Voxtral (`voxtral-mini-tts-2603`) model. Supports `pcm`, `wav`, `mp3`, `flac`, and `opus` response formats. Reuses the existing `MISTRAL_API_KEY` environment variable. Voice discovery via `available_voices` calls `GET /v1/audio/voices`.
+- **Mistral Speech-to-Text provider** — new `MistralSpeechToTextModel` supporting `voxtral-mini-latest` (default) and `voxtral-small-latest`. Unlike OpenAI Whisper, Mistral returns the detected language in the response body, which is surfaced as `TranscriptionResponse.language`. Accessible via `AIFactory.create_speech_to_text("mistral")`.
+- **`TranscriptionResponse.provider`** — STT responses now expose the originating provider name as an optional field, matching the existing `AudioResponse.provider` field. All STT providers (`openai`, `elevenlabs`, `azure`) already passed this kwarg, but Pydantic was silently dropping it. Existing callers continue to work unchanged. (#126)
+- **Release-gated integration tests for chat completion** — Added `tests/integration/test_chat_completion_real.py` with sync/async and streaming coverage across all LLM providers (OpenAI, Anthropic, Google, Vertex, Azure, Mistral, Ollama, Groq, OpenRouter, Perplexity, DeepSeek, xAI, DashScope, MiniMax).
+
+### Changed
+
+- **`ARCHITECTURE.md` — new principle "Unsupported Response Fields Stay `None`".** When a provider's native endpoint doesn't return the data required for a common-type field (timestamped segments, word-level timing, speaker diarization, etc.), leave the field as `None` and document the provider as "unsupported"; do not synthesize via prompt-engineering or heuristic aggregation. Pairs with **Per-item Metadata Escape Hatch** and **Demand-Driven Abstraction Extension**. Originates from issue #185. (#195)
+- **Cross-provider config-dict propagation test suite.** New `tests/providers/test_config_dict_propagation.py` and additions to `tests/test_factory.py` verify that `config={"api_key": ..., "base_url": ...}` reaches every provider's constructor across both direct instantiation and `AIFactory.create_*()`. 38 parametrized tests cover LLM, embedding, reranker, STT, and TTS providers (including provider-specific quirks like Google's hardcoded base_url and Azure's `azure_endpoint`). Closes #91. (#192)
+- **Google embedding default model updated from `text-embedding-004` to `gemini-embedding-001`** — `text-embedding-004` was removed from the Google `v1beta` API. `gemini-embedding-001` is the current recommended model (3072-dimensional output; override with `model_name=` if you need 768-d vectors from `text-embedding-005`). (#177)
+- **Test-infrastructure cleanup** — mocked integration tests removed from `tests/integration/` (moved to per-provider test files under `tests/providers/`). A `release` pytest marker introduced: real-API tests are now tagged `@pytest.mark.release`, excluded from the default `uv run pytest` run, and invoked explicitly with `uv run pytest -m release` before each release. Unique `to_langchain()` coverage previously in `tests/integration/` moved to the corresponding per-provider test files. (#166, #141)
+- **Ollama `num_ctx` default lowered from 128,000 to 8,192.** The previous 128K default caused out-of-memory errors on consumer GPUs with 8 GB VRAM. 8,192 tokens works reliably on common hardware while still being large enough for typical chat workloads. Override with `config={"num_ctx": N}` when you need a larger context window. (#107)
+- **Lint and type-check the codebase clean.** Ruff (`ruff check .`) and mypy (`mypy src/esperanto`) now report zero errors. Most fixes are type-only and do not change runtime behavior. Notable structural changes:
+  - `HttpConnectionMixin` now declares `client: httpx.Client` and `async_client: httpx.AsyncClient` as non-Optional. The `Optional[Client] = None` dataclass fields previously redeclared on every provider base class have been removed; clients are still assigned by `_create_http_clients()` during `__post_init__`, so the runtime contract is unchanged.
+  - Removed a duplicate `_get_default_model` definition in the Mistral provider (returned the same value as the original).
+- **CI: lint/type-check job.** Pull requests now run `ruff check` and `mypy` via a new `.github/workflows/lint.yml` workflow.
+- **`types-jsonschema`** added to dev dependencies so `jsonschema` is properly type-checked.
+- **Ruff exclusions:** `notebooks/`, `.harny/`, and `examples/` are now excluded from lint runs (the first two are gitignored scratch directories; `examples/` contains illustrative scripts).
+
+### Removed
+
+- **CI: `claude-code-review` workflow** removed entirely. The workflow file `.github/workflows/claude-code-review.yml` is deleted. `cubic-dev-ai` covers automated PR review; the `claude.yml` workflow remains for `@claude` mentions in comments. Closes #138.
+
+### Fixed
+
+- **Google TTS default model switched to `gemini-3.1-flash-tts-preview` (was `gemini-2.5-flash-preview-tts`).** The previous default now returns HTTP 500 INTERNAL from Google's API on every request, regardless of payload shape. The new default works on bare text but rejects the `systemInstruction` quirk from #178, so the payload field is now gated to the legacy `gemini-2.5-*` family via `_needs_system_instruction(model_name)`. Pass `model_name="gemini-2.5-flash-preview-tts"` explicitly to keep the legacy quirk wired up. Applied across all 4 payload sites (sync/async × single-voice/multi-speaker). (#198)
+- **`AIFactory.get_provider_models()` accepts a nested `config={...}` dict** matching the provider-creation factory methods. Previously, passing `config={"api_key": ..., "base_url": ...}` was silently dropped, so OpenAI model discovery against custom base URLs (LiteLLM proxies, vLLM, local OpenAI-compatible servers) fell back to `https://api.openai.com/v1/models`. Direct keyword arguments still take precedence over nested config. (#103, #125)
+- **Google TTS prompt format** — Added a `systemInstruction` to the Gemini TTS request payload so raw text is accepted by the legacy `gemini-2.5-*` API. Previously, the API rejected bare `contents` text with "Model tried to generate text, but it should only be used for TTS". Superseded by #198 for the new default model. (#178)
+- **`_guess_audio_content_type` returns `audio/mpeg` for `.webm`, `.mp4`, `.mpeg` files** — an explicit extension allowlist now maps these video-container extensions to their correct audio MIME types (`audio/webm`, `audio/mp4`, `audio/mpeg`) instead of the generic `audio/mpeg` fallback. (#160)
+- **OpenRouter providers send malformed request bodies** — both the LLM and embedding OpenRouter providers were posting payloads via httpx's `data=json.dumps(payload)` instead of `json=payload`. In httpx, `data=` with a string is treated as a form-encoded body (Content-Type `application/x-www-form-urlencoded`), so requests carried JSON bytes with the wrong content type. The four affected call sites now use `json=payload`, which serializes the dict and sets `Content-Type: application/json` automatically. Tests updated to assert on the `json` kwarg so a regression would fail loudly. (#127)
+- **`TransformersEmbeddingModel` quantization not applied** — `_initialize_model` was constructing a `quantization_config` dict with `load_in_4bit` / `load_in_8bit` and spreading it as top-level kwargs to `AutoModel.from_pretrained`, an API form that recent transformers versions deprecated in favor of a `BitsAndBytesConfig` object. The provider now constructs `BitsAndBytesConfig(load_in_4bit=..., load_in_8bit=...)` and passes it via `quantization_config=`. Added mocked unit tests (parametrized over 4bit/8bit) that fail if the config stops reaching `from_pretrained`. (#129)
+- **`tests/test_deprecation_warnings.py` — 8 tests asserted on warnings without ever triggering them.** Each test created a model instance, then entered a `warnings.catch_warnings(record=True)` block but never accessed the deprecated `.models` property inside the block, so the recorded list was always empty and `assert len(w) == 1` always failed. The tests now bind the instance to a variable and call `model.models` inside the `with` block, so the deprecation warning is actually captured. The file is also added back into the gated test scope (`.github/workflows/test.yml` and the `CLAUDE.md` validator command), and the "known-broken tests" note in `CLAUDE.md` is removed since it no longer applies. (#130)
+- **Streaming providers passed `list[dict]` to `DeltaMessage.tool_calls` (typed `list[ToolCall]`).** Four streaming LLM providers (Anthropic, Google, Vertex, Ollama) constructed `DeltaMessage(tool_calls=...)` with raw dicts. Pydantic was coercing them to `ToolCall` via field validators at runtime, so tests passed, but the type contract was wrong — downstream consumers couldn't safely call `delta.tool_calls[0].function.name`. All four streaming normalizers now build proper `ToolCall(id=..., type=..., function=FunctionCall(...), index=...)` objects, mirroring the non-streaming path in each provider. The four `# type: ignore[arg-type/list-item]` stopgaps and their TODO comments are removed. Tests assert `isinstance(tool_call, ToolCall)` so a regression would fail loudly. (#128)
+- **Embedding providers crash with opaque TypeError on null values from OpenAI-compatible endpoints.** When an upstream embeddings endpoint returns `null` for a vector (or an element within a vector) — typical of llama.cpp `llama-server` when the input is too short or contains only special tokens — the response-parsing list comprehensions called `float(None)`, which raised `TypeError` and was re-wrapped as a generic `RuntimeError: Failed to generate embeddings: ...`. Affected providers: `openai`, `openai_compatible`, `azure`, `ollama`, `mistral`, `voyage`, `jina` (and by inheritance `openrouter`, `deepseek`, `xai`, etc.). Each now enumerates the response, detects null embeddings, empty vectors, or null elements, and raises a clear `RuntimeError` that names the input index and suggests filtering very short inputs. Jina previously silently skipped null embeddings (data loss); it now raises consistent with the rest. (#119)
+
+## [2.20.1] - 2026-04-13
+
+### Fixed
+
+- **Ollama thinking models return empty content** — Models like Qwen 3.5 that return a separate `thinking` field in the JSON response (instead of inline `<think>` tags) now have their thinking content correctly merged into the response. Use `message.cleaned_content` for the actual response and `message.thinking` for the reasoning trace. (#112)
+- **Trailing slash in base URL causes double-slash and 301 redirect** — All providers now strip trailing slashes from `base_url` during HTTP client initialization, preventing double-slash URLs (e.g., `http://localhost:11434//api/chat`) that caused silent failures with empty responses. (#113)
+
+## [2.20.0] - 2026-03-21
+
+### Added
+
+- **OpenAI-compatible provider profiles** — config-driven virtual providers that eliminate the need for separate Python classes for each OpenAI-compatible endpoint. Add a new provider with 6 lines of config instead of a new file. Users can also register custom profiles at runtime via `AIFactory.register_openai_compatible_profile()`.
+- **DashScope (Qwen) provider** — Alibaba Cloud's Qwen models via OpenAI-compatible profile (`qwen-turbo`, `qwen-plus`, `qwen-max`).
+- **MiniMax provider** — MiniMax models via OpenAI-compatible profile (`MiniMax-M2.5`, `MiniMax-M2.5-highspeed` with 204K context).
+- **`OpenAICompatibleProfile`** exported from `esperanto` for custom provider registration.
+- **`ARCHITECTURE.md`** — design principles and contributor guide for the project.
+- **`CONTRIBUTING.md`** — rewritten with practical guidance, provider addition checklist, and link to ARCHITECTURE.md.
+
+### Changed
+
+- **DeepSeek and xAI providers migrated to profiles** — both now use `OpenAICompatibleLanguageModel` configured by profile data instead of dedicated provider classes. The factory API is unchanged: `AIFactory.create_language("deepseek", ...)` works exactly as before.
+- **`OpenAICompatibleLanguageModel._normalize_response` now extracts tool calls** — previously tool_calls in API responses were silently dropped. This was a pre-existing bug that surfaced during the migration.
+
+### Deprecated
+
+- **`DeepSeekLanguageModel` direct instantiation** — use `AIFactory.create_language("deepseek", ...)` instead. Direct import still works but emits `DeprecationWarning`.
+- **`XAILanguageModel` direct instantiation** — use `AIFactory.create_language("xai", ...)` instead. Direct import still works but emits `DeprecationWarning`.
+
 ## [2.19.7] - 2026-03-11
 
 ### Fixed

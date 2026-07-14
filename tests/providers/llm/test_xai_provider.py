@@ -8,10 +8,14 @@ from esperanto.common_types import (
     StructuredOutputValidationError,
     Tool,
     ToolCall,
-    ToolCallValidationError,
     ToolFunction,
 )
 from esperanto.providers.llm.xai import XAILanguageModel
+
+# Suppress the specific XAI deprecation warning throughout this module
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:XAILanguageModel is deprecated:DeprecationWarning"
+)
 
 
 def test_provider_name():
@@ -397,3 +401,30 @@ class TestToolCallValidation:
         )
 
         assert response.choices[0].message.tool_calls is not None
+
+
+# =============================================================================
+# LangChain Conversion Tests
+# =============================================================================
+
+
+def test_xai_langchain_conversion():
+    pytest.importorskip("langchain_openai")
+    from langchain_openai import ChatOpenAI
+
+    model = XAILanguageModel(
+        api_key="test-key",
+        model_name="gpt-3.5-turbo",
+        temperature=0.7,
+        max_tokens=100,
+        streaming=True,
+        top_p=0.9,
+    )
+    langchain_model = model.to_langchain()
+    assert isinstance(langchain_model, ChatOpenAI)
+    assert langchain_model.model_name == "gpt-3.5-turbo"
+    assert langchain_model.temperature == 0.7
+    assert langchain_model.max_tokens == 100
+    assert langchain_model.streaming is True
+    assert langchain_model.top_p == 0.9
+    assert langchain_model.openai_api_base == "https://api.x.ai/v1"

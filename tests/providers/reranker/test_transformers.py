@@ -1,12 +1,12 @@
 """Comprehensive tests for universal Transformers reranker provider with 4-strategy architecture."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import torch
-import numpy as np
+from unittest.mock import Mock, patch
 
+import pytest
+import torch
+
+from esperanto.common_types.reranker import RerankResponse
 from esperanto.providers.reranker.transformers import TransformersRerankerModel
-from esperanto.common_types.reranker import RerankResponse, RerankResult
 
 
 class TestTransformersRerankerStrategyDetection:
@@ -558,11 +558,11 @@ class TestTransformersRerankerInputValidation:
              patch('esperanto.providers.reranker.transformers.AutoTokenizer'):
             
             mock_model = Mock()
-            mock_tokenizer = Mock() 
+            Mock() 
             mock_model_class.from_pretrained.return_value = mock_model
             
             # Test default (False)
-            reranker = TransformersRerankerModel(model_name="jinaai/jina-reranker-v2-base-multilingual")
+            TransformersRerankerModel(model_name="jinaai/jina-reranker-v2-base-multilingual")
             
             # Verify trust_remote_code=False was used
             mock_model_class.from_pretrained.assert_called_with(
@@ -574,7 +574,7 @@ class TestTransformersRerankerInputValidation:
             
             # Test explicit True
             mock_model_class.reset_mock()
-            reranker_trust = TransformersRerankerModel(
+            TransformersRerankerModel(
                 model_name="jinaai/jina-reranker-v2-base-multilingual",
                 trust_remote_code=True
             )

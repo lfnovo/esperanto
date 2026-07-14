@@ -1,11 +1,12 @@
 """Tests for the Transformers embedding model provider with advanced features."""
 
-import pytest
-import numpy as np
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
-from esperanto.factory import AIFactory
+import numpy as np
+import pytest
+
 from esperanto.common_types.task_type import EmbeddingTaskType
+from esperanto.factory import AIFactory
 
 
 @pytest.fixture

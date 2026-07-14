@@ -17,11 +17,14 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Mistral](./mistral.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | [DeepSeek](./deepseek.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Perplexity](./perplexity.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Voyage](./voyage.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| [Cohere](./cohere.md) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | [ElevenLabs](./elevenlabs.md) | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
@@ -133,12 +136,14 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 **Enterprise:**
 - **[Azure](./azure.md)**: text-embedding-3-large, text-embedding-3-small (private cloud)
 - **[Vertex AI](./vertex.md)**: text-embedding-004 (Google Cloud)
+- **[Cohere](./cohere.md)**: embed-v4.0 (input_type-aware, enterprise-grade)
 
 #### Reranking
 
 **All Reranking Providers:**
 - **[Jina](./jina.md)**: Multilingual (100+ languages), production-ready
 - **[Voyage](./voyage.md)**: rerank-2, rerank-1 (high accuracy)
+- **[Cohere](./cohere.md)**: rerank-v4.0-pro, rerank-v3.5 (high accuracy)
 - **[Transformers](./transformers.md)**: Universal support (any CrossEncoder model), local/offline
 
 **Best for Multilingual:**
@@ -197,7 +202,9 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Mistral](./mistral.md) | ✅ | ✅ | ✅ | 128K |
 | [DeepSeek](./deepseek.md) | ✅ | ✅ | ✅ | 64K |
 | [Perplexity](./perplexity.md) | ✅ | ✅ | ❌ | 32K |
-| [xAI](./xai.md) | ✅ | ✅ | ✅ | 128K |
+| [xAI](./xai.md) | ✅ | ❌ | ✅ | 128K |
+| [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
+| [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 204K |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ✅ | Varies |
 | [Ollama](./ollama.md) | ✅ | ❌ | ✅ | Model-dependent |
 | [OpenAI-Compatible](./openai-compatible.md) | ✅ | ⚠️ | ⚠️ | Endpoint-dependent |
@@ -304,11 +311,14 @@ Require API keys, pay-per-use:
 - [Groq](./groq.md)
 - [Mistral](./mistral.md)
 - [DeepSeek](./deepseek.md)
+- [DashScope (Qwen)](./dashscope.md)
+- [MiniMax](./minimax.md)
 - [Perplexity](./perplexity.md)
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
+- [Cohere](./cohere.md)
 - [ElevenLabs](./elevenlabs.md)
 
 ### Cloud Enterprise Providers

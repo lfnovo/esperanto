@@ -316,6 +316,29 @@ async def transcribe_async():
     print(f"Language: {response.language}")
 ```
 
+**Example - Segments and Duration:**
+
+OpenAI Whisper returns timestamped segments by default. Esperanto always
+requests `response_format=verbose_json`, so callers get them without any extra
+configuration:
+
+```python
+response = model.transcribe("audio.mp3")
+
+print(f"Duration: {response.duration:.2f}s")
+print(f"Language: {response.language}")
+
+if response.segments:
+    for segment in response.segments:
+        print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {segment.text}")
+        # Per-segment provider extras (avg_logprob, compression_ratio,
+        # no_speech_prob, temperature, tokens, id, seek) live in metadata.
+        if segment.metadata:
+            confidence_signal = segment.metadata.get("avg_logprob")
+            if confidence_signal is not None:
+                print(f"  avg_logprob: {confidence_signal:.3f}")
+```
+
 ### Text-to-Speech
 
 **Available Models:**

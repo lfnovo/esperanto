@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import httpx
 
@@ -58,6 +58,8 @@ class AzureTextToSpeechModel(TextToSpeechModel):
             os.getenv("AZURE_OPENAI_ENDPOINT_TTS") or
             os.getenv("AZURE_OPENAI_ENDPOINT")
         )
+        if self.azure_endpoint:
+            self.azure_endpoint = self.azure_endpoint.rstrip("/")
 
         self.api_version = (
             self._config.get("api_version") or
@@ -91,14 +93,14 @@ class AzureTextToSpeechModel(TextToSpeechModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Azure API requests."""
         return {
-            "api-key": self.api_key,  # Azure uses api-key, not Bearer
+            "api-key": self.api_key or "",  # Azure uses api-key, not Bearer
             "Content-Type": "application/json",
         }
 
     def _build_url(self, path: str) -> str:
         """Build Azure OpenAI URL with deployment name."""
         # Remove trailing slash from endpoint
-        endpoint = self.azure_endpoint.rstrip('/')
+        endpoint = (self.azure_endpoint or "").rstrip('/')
         # Azure URL pattern: {endpoint}/openai/deployments/{deployment}/{path}?api-version={version}
         return f"{endpoint}/openai/deployments/{self.deployment_name}/{path}?api-version={self.api_version}"
 

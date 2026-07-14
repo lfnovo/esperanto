@@ -3,11 +3,11 @@
 import os
 import tempfile
 import warnings
-
-import pytest
 from unittest.mock import patch
 
-from esperanto.utils.ssl import SSLMixin, SSL_VERIFY_ENV_VAR, SSL_CA_BUNDLE_ENV_VAR
+import pytest
+
+from esperanto.utils.ssl import SSL_CA_BUNDLE_ENV_VAR, SSL_VERIFY_ENV_VAR, SSLMixin
 
 
 class MockSSLModel(SSLMixin):
@@ -96,7 +96,7 @@ class TestSSLVerifyEnvironmentVariables:
         model = MockSSLModel(config={})
 
         with patch.dict(os.environ, {SSL_VERIFY_ENV_VAR: "0"}):
-            with warnings.catch_warnings(record=True) as w:
+            with warnings.catch_warnings(record=True):
                 warnings.simplefilter("always")
                 result = model._get_ssl_verify()
                 assert result is False
@@ -106,7 +106,7 @@ class TestSSLVerifyEnvironmentVariables:
         model = MockSSLModel(config={})
 
         with patch.dict(os.environ, {SSL_VERIFY_ENV_VAR: "no"}):
-            with warnings.catch_warnings(record=True) as w:
+            with warnings.catch_warnings(record=True):
                 warnings.simplefilter("always")
                 result = model._get_ssl_verify()
                 assert result is False
@@ -383,6 +383,7 @@ class TestHTTPClientCreation:
     def test_http_client_created_with_ssl_verify_false(self):
         """Test that _create_http_clients passes verify=False to httpx clients."""
         from unittest.mock import patch
+
         from esperanto.providers.llm.base import LanguageModel
 
         class TestLanguageModel(LanguageModel):
@@ -428,6 +429,7 @@ class TestHTTPClientCreation:
     def test_http_client_created_with_ca_bundle(self):
         """Test that _create_http_clients passes CA bundle path to httpx clients."""
         from unittest.mock import patch
+
         from esperanto.providers.embedding.base import EmbeddingModel
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as f:
@@ -475,6 +477,7 @@ class TestHTTPClientCreation:
     def test_http_client_created_with_ssl_verify_default(self):
         """Test that _create_http_clients passes verify=True by default."""
         from unittest.mock import patch
+
         from esperanto.providers.reranker.base import RerankerModel
 
         class TestRerankerModel(RerankerModel):

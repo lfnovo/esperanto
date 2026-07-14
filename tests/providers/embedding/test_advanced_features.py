@@ -1,14 +1,14 @@
 """Tests for advanced embedding features across providers."""
 
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
-import numpy as np
+from unittest.mock import AsyncMock, Mock, patch
 
-from esperanto.factory import AIFactory
+import numpy as np
+import pytest
+
 from esperanto.common_types.task_type import EmbeddingTaskType
-from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
+from esperanto.factory import AIFactory
 from esperanto.providers.embedding.jina import JinaEmbeddingModel
-from esperanto.providers.embedding.transformers import TransformersEmbeddingModel
+from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
 
 
 class TestFeatureDetection:
@@ -178,7 +178,7 @@ class TestGracefulDegradation:
         with patch('esperanto.providers.embedding.transformers.ADVANCED_FEATURES_AVAILABLE', False):
             with patch('esperanto.providers.embedding.transformers.logger') as mock_logger:
                 # Request advanced features without dependencies
-                model = AIFactory.create_embedding(
+                AIFactory.create_embedding(
                     provider="transformers",
                     model_name="sentence-transformers/all-MiniLM-L6-v2",
                     config={

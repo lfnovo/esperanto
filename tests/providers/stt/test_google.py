@@ -268,7 +268,7 @@ class TestGoogleSpeechToTextModel:
             model.client = client
             model.async_client = async_client
 
-            response = model.transcribe(audio_file, prompt="Focus on names")
+            model.transcribe(audio_file, prompt="Focus on names")
 
             # Verify custom prompt was included in request
             call_args = client.post.call_args

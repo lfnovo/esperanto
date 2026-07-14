@@ -1,0 +1,11 @@
+# CHANGELOG.md is append-only under [Unreleased]: every PR adds a bullet at the
+# bottom of its section. Without union merge, two parallel PRs that both add a
+# bullet to the same section produce a textbook three-way merge conflict even
+# though both changes are independent. The `merge=union` driver tells git to
+# combine both sides' added lines instead of conflicting.
+#
+# Edge cases that still conflict (both rare):
+#   - two PRs editing the same existing line
+#   - two PRs renaming/restructuring the same section heading
+# In either case, fall back to a manual rebase + resolve.
+CHANGELOG.md merge=union

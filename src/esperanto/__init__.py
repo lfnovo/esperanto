@@ -15,6 +15,7 @@ from esperanto.common_types import (
 )
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.profiles import OpenAICompatibleProfile
 from esperanto.providers.stt.base import SpeechToTextModel
 from esperanto.providers.tts.base import TextToSpeechModel
 
@@ -22,121 +23,131 @@ from esperanto.providers.tts.base import TextToSpeechModel
 try:
     from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 except ImportError:
-    AnthropicLanguageModel = None
+    AnthropicLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.google import GoogleLanguageModel
 except ImportError:
-    GoogleLanguageModel = None
+    GoogleLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.ollama import OllamaLanguageModel
 except ImportError:
-    OllamaLanguageModel = None
+    OllamaLanguageModel = None  # type: ignore[assignment,misc]
 
 
 try:
     from esperanto.providers.llm.openai import OpenAILanguageModel
 except ImportError:
-    OpenAILanguageModel = None
+    OpenAILanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.openai_compatible import OpenAICompatibleLanguageModel
 except ImportError:
-    OpenAICompatibleLanguageModel = None
+    OpenAICompatibleLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 except ImportError:
-    OpenRouterLanguageModel = None
+    OpenRouterLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.xai import XAILanguageModel
 except ImportError:
-    XAILanguageModel = None
+    XAILanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
 except ImportError:
-    OpenAIEmbeddingModel = None
+    OpenAIEmbeddingModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.embedding.google import GoogleEmbeddingModel
 except ImportError:
-    GoogleEmbeddingModel = None
+    GoogleEmbeddingModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
 except ImportError:
-    OllamaEmbeddingModel = None
+    OllamaEmbeddingModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.embedding.azure import AzureEmbeddingModel
 except ImportError:
-    AzureEmbeddingModel = None
+    AzureEmbeddingModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.azure import AzureLanguageModel
 except ImportError:
-    AzureLanguageModel = None
+    AzureLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.mistral import MistralLanguageModel
 except ImportError:
-    MistralLanguageModel = None
+    MistralLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.deepseek import DeepSeekLanguageModel
 except ImportError:
-    DeepSeekLanguageModel = None
+    DeepSeekLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.groq import GroqLanguageModel
 except ImportError:
-    GroqLanguageModel = None
+    GroqLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.embedding.vertex import VertexEmbeddingModel
 except ImportError:
-    VertexEmbeddingModel = None
+    VertexEmbeddingModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.llm.vertex import VertexLanguageModel
 except ImportError:
-    VertexLanguageModel = None
+    VertexLanguageModel = None  # type: ignore[assignment,misc]
 
 try:
     from esperanto.providers.tts.vertex import VertexTextToSpeechModel
 except ImportError:
-    VertexTextToSpeechModel = None
+    VertexTextToSpeechModel = None  # type: ignore[assignment,misc]
 
-# Store all provider classes
-__provider_classes = {
-    'AnthropicLanguageModel': AnthropicLanguageModel,
-    'GoogleLanguageModel': GoogleLanguageModel,
-    'OpenAILanguageModel': OpenAILanguageModel,
-    'OpenAICompatibleLanguageModel': OpenAICompatibleLanguageModel,
-    'OpenRouterLanguageModel': OpenRouterLanguageModel,
-    'XAILanguageModel': XAILanguageModel,
-    'OpenAIEmbeddingModel': OpenAIEmbeddingModel,
-    'GoogleEmbeddingModel': GoogleEmbeddingModel,
-    "AzureEmbeddingModel": AzureEmbeddingModel,
-    "OllamaEmbeddingModel": OllamaEmbeddingModel,
-    "OllamaLanguageModel": OllamaLanguageModel,
-    "AzureLanguageModel": AzureLanguageModel,
-    "MistralLanguageModel": MistralLanguageModel,
-    "DeepSeekLanguageModel": DeepSeekLanguageModel,
-    "GroqLanguageModel": GroqLanguageModel,
-    "VertexLanguageModel": VertexLanguageModel,
-    "VertexEmbeddingModel": VertexEmbeddingModel,
-    "VertexTextToSpeechModel": VertexTextToSpeechModel
-}
+try:
+    from esperanto.providers.tts.mistral import MistralTextToSpeechModel
+except ImportError:
+    MistralTextToSpeechModel = None  # type: ignore[assignment,misc]
 
-# Get list of available provider classes (excluding None values)
-provider_classes = [name for name, cls in __provider_classes.items() if cls is not None]
+try:
+    from esperanto.providers.stt.mistral import MistralSpeechToTextModel
+except ImportError:
+    MistralSpeechToTextModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.tts.deepgram import DeepgramTextToSpeechModel
+except ImportError:
+    DeepgramTextToSpeechModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.stt.deepgram import DeepgramSpeechToTextModel
+except ImportError:
+    DeepgramSpeechToTextModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.llm.cohere import CohereLanguageModel
+except ImportError:
+    CohereLanguageModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.embedding.cohere import CohereEmbeddingModel
+except ImportError:
+    CohereEmbeddingModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.reranker.cohere import CohereRerankerModel
+except ImportError:
+    CohereRerankerModel = None  # type: ignore[assignment,misc]
 
 # Import factory after defining providers
-from esperanto.factory import AIFactory
+from esperanto.factory import AIFactory  # noqa: E402
 
 __all__ = [
     # Factory
@@ -155,7 +166,32 @@ __all__ = [
     "validate_tool_call",
     "validate_tool_calls",
     "find_tool_by_name",
-] + provider_classes
-
-# Make provider classes available at module level
-globals().update({k: v for k, v in __provider_classes.items() if v is not None})
+    # Profiles
+    "OpenAICompatibleProfile",
+    # Provider classes
+    "AnthropicLanguageModel",
+    "GoogleLanguageModel",
+    "OllamaLanguageModel",
+    "OpenAILanguageModel",
+    "OpenAICompatibleLanguageModel",
+    "OpenRouterLanguageModel",
+    "XAILanguageModel",
+    "OpenAIEmbeddingModel",
+    "GoogleEmbeddingModel",
+    "OllamaEmbeddingModel",
+    "AzureEmbeddingModel",
+    "AzureLanguageModel",
+    "MistralLanguageModel",
+    "DeepSeekLanguageModel",
+    "GroqLanguageModel",
+    "VertexLanguageModel",
+    "VertexEmbeddingModel",
+    "VertexTextToSpeechModel",
+    "MistralTextToSpeechModel",
+    "MistralSpeechToTextModel",
+    "DeepgramTextToSpeechModel",
+    "DeepgramSpeechToTextModel",
+    "CohereLanguageModel",
+    "CohereEmbeddingModel",
+    "CohereRerankerModel",
+]

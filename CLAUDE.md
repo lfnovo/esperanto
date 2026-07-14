@@ -245,10 +245,55 @@ All providers use utility mixins:
 - **Check types**: `uv run mypy src/esperanto`
 - **Format code**: `uv run black src/ tests/`
 
+## For Automated Agents
+
+If you are an automated coding agent (harny, Claude Code in headless mode, etc.) running against this repo, read this section before deciding what to validate.
+
+### Validator command
+
+The single command to confirm a change is acceptable:
+
+```bash
+uv sync --all-extras && uv run pytest tests/providers tests/unit tests/common_types tests/test_deprecation_warnings.py -q --no-cov
+```
+
+This runs ~895 tests (mocked, no real API calls) in roughly 70 seconds. Pass = exit 0. The same scope is gated in CI via `.github/workflows/test.yml`.
+
+For a stricter local check that mirrors CI, also run:
+
+```bash
+uv run ruff check .
+uv run mypy src/esperanto
+```
+
+Both are clean on `main` and gated on every PR by `.github/workflows/lint.yml`. If you introduce a new ruff or mypy error, fix it before opening the PR.
+
+### Integration tests
+
+`tests/integration/` requires real provider API keys and external network. Always exclude from automated runs unless the user has explicitly set up credentials and asked for it.
+
+### Release tests
+
+Real-API tests live in `tests/integration/` and are gated by the `release` pytest marker. Run them with:
+
+```bash
+uv run pytest -m release
+```
+
+These tests cost real money (they make actual API calls to provider endpoints) and require provider keys set in a `.env` file at the repo root. CI does not run them — they are a local-only ritual intended to be executed by a maintainer before publishing a release. Never include them in automated agent validation runs.
+
+### Other notes
+
+- The `notebooks/` directory is local-only (gitignored). If you see modifications there, leave them alone — they aren't part of the project.
+- Do not commit `.env`, `google-credentials.json`, or any other credential file. The `.gitignore` covers the common cases but always double-check before staging.
+
 ## Critical Principles
 
-1. **Consistency > Features**: If a feature can't be consistent across providers, reconsider
-2. **Interface First**: Design interfaces before implementing providers
-3. **Test Driven**: Write tests as you implement, run frequently
-4. **Documentation**: Keep both human and AI docs in sync with code
-5. **Provider Parity**: New features should work across multiple providers when possible
+See @ARCHITECTURE.md for the full design principles. The key rules:
+
+1. **Provider Parity**: New features MUST work across all (or most) providers. Partial implementations are not acceptable — they break the core promise of a provider-agnostic interface.
+2. **Consistency > Features**: If a feature can't be consistent across providers, reconsider. We'd rather ship later with full support than early with partial support.
+3. **Interface First**: Design interfaces before implementing providers.
+4. **Provider Tiers**: Not every provider needs its own class. OpenAI-compatible providers should use `OpenAICompatibleLanguageModel` unless they have fundamentally different APIs. See ARCHITECTURE.md for tier definitions.
+5. **Test Driven**: Write tests as you implement, run frequently. Every feature must be tested across all affected providers.
+6. **Documentation**: Keep both human and AI docs in sync with code.

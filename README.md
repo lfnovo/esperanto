@@ -46,8 +46,11 @@ Whether you're building a quick prototype or a production application serving mi
   - Azure OpenAI (Chat, Embedding, Whisper, TTS)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
+  - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
+  - MiniMax (MiniMax-M2.5)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
+  - Cohere (LLM, Embeddings, Reranking)
 - **Embedding Support**: Multiple embedding providers for vector representations
 - **Reranking Support**: Universal reranking interface for improving search relevance
 - **Speech-to-Text Support**: Transcribe audio using multiple providers
@@ -142,12 +145,16 @@ pip install "langchain_deepseek>=0.1.3"
 | Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | ElevenLabs   | ❌          | ❌               | ❌                | ✅             | ✅             | ❌        |
+| Deepgram     | ❌          | ❌               | ❌                | ❌             | ✅             | ❌        |
 | Azure OpenAI | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 | Mistral      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
-| xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| Cohere       | ✅          | ✅               | ✅                | ❌             | ❌             | ✅        |
+| xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
+| DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
@@ -168,11 +175,11 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['openai', 'openai-compatible', 'anthropic', 'google', 'groq', 'ollama', 'openrouter', 'xai', 'perplexity', 'azure', 'mistral', 'deepseek'],
-#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina'],
+#     'language': ['anthropic', 'azure', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai'],
+#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter'],
 #     'reranker': ['jina', 'voyage', 'transformers'],
-#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure'],
-#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure']
+#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure', 'google'],
+#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure', 'deepgram']
 # }
 
 # Create model instances
@@ -254,6 +261,7 @@ for model in local_models:
 - **Ollama** - Fetches locally available models
 - **Jina** - Returns hardcoded list of embedding/reranking models
 - **Voyage** - Returns hardcoded list of embedding/reranking models
+- **Cohere** - Fetches LLM/embedding/reranking models via API
 - **And more...**
 
 > **Note**: This is the recommended way to discover models. The `.models` property on provider instances is deprecated and will be removed in version 3.0.

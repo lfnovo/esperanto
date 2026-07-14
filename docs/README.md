@@ -38,6 +38,7 @@ Complete setup guides for each provider:
 - [Jina](./providers/jina.md) - Advanced embeddings & reranking
 - [Voyage](./providers/voyage.md) - Specialized retrieval
 - [ElevenLabs](./providers/elevenlabs.md) - Premium voice quality
+- [Deepgram](./providers/deepgram.md) - Aura TTS voices
 
 **Enterprise Providers:**
 - [Azure OpenAI](./providers/azure.md) - Enterprise compliance

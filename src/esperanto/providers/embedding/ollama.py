@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 import httpx
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
+from esperanto.utils import validate_and_decode_embedding
 
 
 class OllamaEmbeddingModel(EmbeddingModel):
@@ -19,7 +20,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             self.base_url
             or os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")
             or "http://localhost:11434"
-        )
+        ).rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -90,11 +91,9 @@ class OllamaEmbeddingModel(EmbeddingModel):
             self._handle_error(response)
 
             response_data = response.json()
-            # Convert embeddings to regular floats
-            results = [
-                [float(value) for value in embedding]
-                for embedding in response_data["embeddings"]
-            ]
+            results = []
+            for idx, embedding in enumerate(response_data["embeddings"]):
+                results.append(validate_and_decode_embedding(idx, embedding))
             return results
         except Exception as e:
             raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
@@ -144,11 +143,9 @@ class OllamaEmbeddingModel(EmbeddingModel):
             self._handle_error(response)
 
             response_data = response.json()
-            # Convert embeddings to regular floats
-            results = [
-                [float(value) for value in embedding]
-                for embedding in response_data["embeddings"]
-            ]
+            results = []
+            for idx, embedding in enumerate(response_data["embeddings"]):
+                results.append(validate_and_decode_embedding(idx, embedding))
             return results
         except Exception as e:
             raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e

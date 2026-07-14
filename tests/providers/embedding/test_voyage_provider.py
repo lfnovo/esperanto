@@ -169,8 +169,60 @@ def test_text_cleaning(voyage_model):
     """Test that newlines in texts are replaced with spaces."""
     texts = ["Hello\nWorld", "Test\nText"]
     voyage_model.embed(texts)
-    
+
     # Check that the input was cleaned
     call_args = voyage_model.client.post.call_args
     json_payload = call_args[1]["json"]
     assert json_payload["input"] == ["Hello World", "Test Text"]
+
+
+def test_embed_null_embedding_raises():
+    """embed() raises RuntimeError with index when response has null embedding."""
+    model = VoyageEmbeddingModel(api_key="test-key")
+    null_response = {
+        "data": [
+            {"embedding": [0.1, 0.2, 0.3]},
+            {"embedding": None},
+        ],
+        "model": "voyage-3-large",
+    }
+    mock_client = Mock()
+
+    def mock_post(url, **kwargs):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = null_response
+        return mock_response
+
+    mock_client.post.side_effect = mock_post
+    model.client = mock_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        model.embed(["text one", "text two"])
+    assert "1" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_aembed_null_embedding_raises():
+    """aembed() raises RuntimeError with index when response has null embedding."""
+    model = VoyageEmbeddingModel(api_key="test-key")
+    null_response = {
+        "data": [
+            {"embedding": None},
+        ],
+        "model": "voyage-3-large",
+    }
+    mock_async_client = AsyncMock()
+
+    async def mock_async_post(url, **kwargs):
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = Mock(return_value=null_response)
+        return mock_response
+
+    mock_async_client.post.side_effect = mock_async_post
+    model.async_client = mock_async_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await model.aembed(["text one"])
+    assert "0" in str(exc_info.value)

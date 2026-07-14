@@ -1,12 +1,17 @@
-import os
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 from pydantic import BaseModel
-from esperanto.providers.llm.mistral import MistralLanguageModel
+
 from esperanto.common_types import (
-    ChatCompletion, Choice, Message, Usage,
-    StructuredOutputValidationError, Tool, ToolFunction, ToolCall, ToolCallValidationError
+    StructuredOutputValidationError,
+    Tool,
+    ToolCall,
+    ToolCallValidationError,
+    ToolFunction,
 )
+from esperanto.providers.llm.mistral import MistralLanguageModel
+
 
 @pytest.fixture
 def mock_httpx_response():

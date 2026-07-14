@@ -1,8 +1,8 @@
 """Tests for the OpenAI-compatible STT provider."""
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock
 from io import BytesIO
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from esperanto.providers.stt.openai_compatible import OpenAICompatibleSpeechToTextModel
 
@@ -254,7 +254,7 @@ def test_transcribe_with_language_and_prompt(stt_model, tmp_path):
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
 
-    response = stt_model.transcribe(
+    stt_model.transcribe(
         str(audio_file),
         language="en",
         prompt="This is a technical discussion"

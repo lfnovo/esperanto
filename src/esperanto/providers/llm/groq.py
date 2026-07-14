@@ -56,7 +56,7 @@ class GroqLanguageModel(LanguageModel):
             raise ValueError("Groq API key not found")
 
         # Set base URL for Groq's OpenAI-compatible API
-        self.base_url = "https://api.groq.com/openai/v1"
+        self.base_url = "https://api.groq.com/openai/v1".rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -228,10 +228,24 @@ class GroqLanguageModel(LanguageModel):
         self,
         exclude_stream: bool = False,
         resolved_structured: Optional[ResolvedStructuredOutput] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args."""
         kwargs = {}
         config = self.get_completion_kwargs()
+
+        # Track per-call explicit overrides so the magic-default skip below
+        # does not silently drop them (issue #102 + cubic feedback).
+        max_tokens_explicit = max_tokens is not None
+
+        if max_tokens is not None:
+            config["max_tokens"] = max_tokens
+        if temperature is not None:
+            config["temperature"] = temperature
+        if top_p is not None:
+            config["top_p"] = top_p
 
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
@@ -246,8 +260,9 @@ class GroqLanguageModel(LanguageModel):
                 "tool_choice",
                 "parallel_tool_calls",
             ]:
-                # Skip max_tokens if it's the default value (850)
-                if key == "max_tokens" and value == 850:
+                # Skip max_tokens if it's the instance default (850) and was not
+                # explicitly supplied as a per-call override.
+                if key == "max_tokens" and value == 850 and not max_tokens_explicit:
                     continue
                 kwargs[key] = value
 
@@ -276,6 +291,9 @@ class GroqLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -305,6 +323,9 @@ class GroqLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         should_stream = stream if stream is not None else self.streaming
         resolved_structured = resolve_structured_output(
             self.structured,
@@ -330,6 +351,9 @@ class GroqLanguageModel(LanguageModel):
             **self._get_api_kwargs(
                 exclude_stream=True,
                 resolved_structured=resolved_structured,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 
@@ -376,6 +400,9 @@ class GroqLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -405,6 +432,9 @@ class GroqLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         should_stream = stream if stream is not None else self.streaming
         resolved_structured = resolve_structured_output(
             self.structured,
@@ -430,6 +460,9 @@ class GroqLanguageModel(LanguageModel):
             **self._get_api_kwargs(
                 exclude_stream=True,
                 resolved_structured=resolved_structured,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 
@@ -502,7 +535,7 @@ class GroqLanguageModel(LanguageModel):
         if not model_name:
             raise ValueError("Model name must be set to use Langchain integration.")
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "model": model_name,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,

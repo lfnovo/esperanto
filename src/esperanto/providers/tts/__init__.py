@@ -11,5 +11,6 @@ __all__ += [
     "OpenAITextToSpeechModel",
     "ElevenLabsTextToSpeechModel",
     "GoogleTextToSpeechModel",
-    "OpenAICompatibleTextToSpeechModel"
+    "OpenAICompatibleTextToSpeechModel",
+    "XAITextToSpeechModel",
 ]

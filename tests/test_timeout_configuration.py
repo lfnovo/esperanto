@@ -1,10 +1,11 @@
 """Tests for timeout configuration functionality."""
 
 import os
-import pytest
 from unittest.mock import patch
 
-from esperanto.utils.timeout import TimeoutMixin, DEFAULT_TIMEOUTS, TIMEOUT_ENV_VARS
+import pytest
+
+from esperanto.utils.timeout import DEFAULT_TIMEOUTS, TIMEOUT_ENV_VARS, TimeoutMixin
 
 
 class MockTimeoutModel(TimeoutMixin):

@@ -25,12 +25,13 @@ class AIFactory:
             "groq": "esperanto.providers.llm.groq:GroqLanguageModel",
             "ollama": "esperanto.providers.llm.ollama:OllamaLanguageModel",
             "openrouter": "esperanto.providers.llm.openrouter:OpenRouterLanguageModel",
-            "xai": "esperanto.providers.llm.xai:XAILanguageModel",
+            # xai: handled via OpenAICompatibleProfile (see profiles.py)
             "perplexity": "esperanto.providers.llm.perplexity:PerplexityLanguageModel",
             "azure": "esperanto.providers.llm.azure:AzureLanguageModel",
             "mistral": "esperanto.providers.llm.mistral:MistralLanguageModel",
-            "deepseek": "esperanto.providers.llm.deepseek:DeepSeekLanguageModel",
+            # deepseek: handled via OpenAICompatibleProfile (see profiles.py)
             "vertex": "esperanto.providers.llm.vertex:VertexLanguageModel",
+            "cohere": "esperanto.providers.llm.cohere:CohereLanguageModel",
         },
         "embedding": {
             "openai": "esperanto.providers.embedding.openai:OpenAIEmbeddingModel",
@@ -44,6 +45,7 @@ class AIFactory:
             "azure": "esperanto.providers.embedding.azure:AzureEmbeddingModel",
             "jina": "esperanto.providers.embedding.jina:JinaEmbeddingModel",
             "openrouter": "esperanto.providers.embedding.openrouter:OpenRouterEmbeddingModel",
+            "cohere": "esperanto.providers.embedding.cohere:CohereEmbeddingModel",
         },
         "speech_to_text": {
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
@@ -52,6 +54,8 @@ class AIFactory:
             "openai-compatible": "esperanto.providers.stt.openai_compatible:OpenAICompatibleSpeechToTextModel",
             "azure": "esperanto.providers.stt.azure:AzureSpeechToTextModel",
             "google": "esperanto.providers.stt.google:GoogleSpeechToTextModel",
+            "mistral": "esperanto.providers.stt.mistral:MistralSpeechToTextModel",
+            "deepgram": "esperanto.providers.stt.deepgram:DeepgramSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
@@ -60,11 +64,15 @@ class AIFactory:
             "vertex": "esperanto.providers.tts.vertex:VertexTextToSpeechModel",
             "openai-compatible": "esperanto.providers.tts.openai_compatible:OpenAICompatibleTextToSpeechModel",
             "azure": "esperanto.providers.tts.azure:AzureTextToSpeechModel",
+            "xai": "esperanto.providers.tts.xai:XAITextToSpeechModel",
+            "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
+            "deepgram": "esperanto.providers.tts.deepgram:DeepgramTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
             "voyage": "esperanto.providers.reranker.voyage:VoyageRerankerModel",
             "transformers": "esperanto.providers.reranker.transformers:TransformersRerankerModel",
+            "cohere": "esperanto.providers.reranker.cohere:CohereRerankerModel",
         },
     }
 
@@ -88,9 +96,15 @@ class AIFactory:
 
         provider = provider.lower().replace("_", "-")
         if provider not in cls._provider_modules[service_type]:
+            # Include profile names in the error for language providers
+            supported = list(cls._provider_modules[service_type].keys())
+            if service_type == "language":
+                from esperanto.providers.llm.profiles import get_all_profile_names
+
+                supported = sorted(set(supported) | get_all_profile_names())
             raise ValueError(
                 f"Provider '{provider}' not supported for {service_type}. "
-                f"Supported providers: {list(cls._provider_modules[service_type].keys())}"
+                f"Supported providers: {supported}"
             )
 
         module_path = cls._provider_modules[service_type][provider]
@@ -120,10 +134,43 @@ class AIFactory:
             Dict[str, List[str]]: A dictionary where keys are model types (language, embedding, speech_to_text, text_to_speech)
                 and values are lists of available provider names.
         """
-        return {
+        from esperanto.providers.llm.profiles import get_all_profile_names
+
+        result = {
             model_type: list(providers.keys())
             for model_type, providers in cls._provider_modules.items()
         }
+        # Merge OpenAI-compatible profile names into language providers
+        result["language"] = sorted(
+            set(result.get("language", [])) | get_all_profile_names()
+        )
+        return result
+
+    @classmethod
+    def register_openai_compatible_profile(cls, profile) -> None:
+        """Register an OpenAI-compatible provider profile.
+
+        Once registered, the profile's name can be used as the provider argument
+        in create_language().
+
+        Args:
+            profile: An OpenAICompatibleProfile instance.
+
+        Example:
+            >>> from esperanto.providers.llm.profiles import OpenAICompatibleProfile
+            >>> AIFactory.register_openai_compatible_profile(
+            ...     OpenAICompatibleProfile(
+            ...         name="together",
+            ...         base_url="https://api.together.xyz/v1",
+            ...         api_key_env="TOGETHER_API_KEY",
+            ...         default_model="meta-llama/Llama-3-70b-chat-hf",
+            ...     )
+            ... )
+            >>> model = AIFactory.create_language("together", "meta-llama/Llama-3-70b-chat-hf")
+        """
+        from esperanto.providers.llm.profiles import register_profile
+
+        register_profile(profile)
 
     @classmethod
     def get_provider_models(
@@ -177,6 +224,13 @@ class AIFactory:
         # Import here to avoid circular imports
         from esperanto.model_discovery import PROVIDER_MODELS_REGISTRY
 
+        missing_config = object()
+        nested_config = config.pop("config", missing_config)
+        if nested_config is not missing_config and nested_config is not None:
+            if not isinstance(nested_config, dict):
+                raise TypeError("config must be a dictionary when provided")
+            config = {**nested_config, **config}
+
         # Normalize provider name to lowercase
         provider = provider.lower().replace("_", "-")
 
@@ -229,13 +283,29 @@ class AIFactory:
         """Create a language model instance.
 
         Args:
-            provider: Provider name
+            provider: Provider name (supports class-based providers and
+                OpenAI-compatible profiles registered via register_openai_compatible_profile)
             model_name: Name of the model to use
             config: Optional configuration for the model
 
         Returns:
             Language model instance
         """
+        from esperanto.providers.llm.profiles import get_profile
+
+        normalized = provider.lower().replace("_", "-")
+        profile = get_profile(normalized)
+        if profile:
+            from esperanto.providers.llm.openai_compatible import (
+                OpenAICompatibleLanguageModel,
+            )
+
+            merged_config = dict(config or {})
+            merged_config["_profile_name"] = normalized
+            return OpenAICompatibleLanguageModel(
+                model_name=model_name, config=merged_config
+            )
+
         provider_class = cls._import_provider_class("language", provider)
         return provider_class(model_name=model_name, config=config or {})
 

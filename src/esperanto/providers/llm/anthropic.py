@@ -1,6 +1,7 @@
 """Anthropic language model implementation."""
 
 import json
+import logging
 import os
 import time
 import uuid
@@ -40,7 +41,8 @@ from esperanto.providers.llm.structured_output import (
     parse_structured_output_content,
     resolve_structured_output,
 )
-from esperanto.utils.logging import logger
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from langchain_anthropic import ChatAnthropic
@@ -61,7 +63,7 @@ class AnthropicLanguageModel(LanguageModel):
             )
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.anthropic.com/v1"
+        self.base_url = (self.base_url or "https://api.anthropic.com/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -69,7 +71,7 @@ class AnthropicLanguageModel(LanguageModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Anthropic API requests."""
         return {
-            "x-api-key": self.api_key,
+            "x-api-key": self.api_key or "",
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
@@ -397,15 +399,6 @@ class AnthropicLanguageModel(LanguageModel):
             if block_type == "tool_use":
                 # Start of a tool call - emit the tool call info
                 block_index = event_data.get("index", 0)
-                tool_call_dict = {
-                    "index": block_index,
-                    "id": content_block.get("id", ""),
-                    "type": "function",
-                    "function": {
-                        "name": content_block.get("name", ""),
-                        "arguments": "",  # Arguments come in subsequent deltas
-                    },
-                }
                 return ChatCompletionChunk(
                     id=str(uuid.uuid4()),
                     choices=[
@@ -414,7 +407,15 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],
+                                tool_calls=[ToolCall(
+                                    id=content_block.get("id", ""),
+                                    type="function",
+                                    function=FunctionCall(
+                                        name=content_block.get("name", ""),
+                                        arguments="",
+                                    ),
+                                    index=block_index,
+                                )],
                             ),
                             finish_reason=None,
                         )
@@ -456,15 +457,6 @@ class AnthropicLanguageModel(LanguageModel):
                 # We need to include all required fields for ToolCall validation.
                 # Use empty id/name for delta updates - these are only valid as
                 # incremental updates to be accumulated by the client.
-                tool_call_dict = {
-                    "index": block_index,
-                    "id": "",  # Empty for delta updates
-                    "type": "function",
-                    "function": {
-                        "name": "",  # Empty for delta updates
-                        "arguments": partial_json,
-                    },
-                }
                 return ChatCompletionChunk(
                     id=str(uuid.uuid4()),
                     choices=[
@@ -473,7 +465,15 @@ class AnthropicLanguageModel(LanguageModel):
                             delta=DeltaMessage(
                                 content=None,
                                 role="assistant",
-                                tool_calls=[tool_call_dict],
+                                tool_calls=[ToolCall(
+                                    id="",
+                                    type="function",
+                                    function=FunctionCall(
+                                        name="",
+                                        arguments=partial_json,
+                                    ),
+                                    index=block_index,
+                                )],
                             ),
                             finish_reason=None,
                         )
@@ -566,6 +566,9 @@ class AnthropicLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         resolved_structured: Optional[ResolvedStructuredOutput] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Create request payload for Anthropic API.
 
@@ -576,16 +579,23 @@ class AnthropicLanguageModel(LanguageModel):
             tool_choice: Controls tool usage.
             parallel_tool_calls: Whether to allow parallel tool calls.
             resolved_structured: Pre-resolved structured output configuration.
+            max_tokens: Per-call override for max_tokens.
+            temperature: Per-call override for temperature.
+            top_p: Per-call override for top_p.
 
         Returns:
             Request payload dict for Anthropic API.
         """
         system_message, formatted_messages = self._prepare_messages(messages)
 
+        effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
+        effective_temperature = temperature if temperature is not None else self.temperature
+        effective_top_p = top_p if top_p is not None else self.top_p
+
         payload: Dict[str, Any] = {
             "model": self.get_model_name(),
             "messages": formatted_messages,
-            "max_tokens": self.max_tokens or 1024,
+            "max_tokens": effective_max_tokens or 1024,
         }
 
         if system_message:
@@ -593,10 +603,14 @@ class AnthropicLanguageModel(LanguageModel):
 
         # Anthropic does not allow both temperature and top_p to be set
         # Prioritize temperature if both are provided
-        if self.temperature is not None:
-            payload["temperature"] = max(0.0, min(1.0, float(self.temperature)))
-        elif self.top_p is not None:
-            payload["top_p"] = float(self.top_p)
+        if effective_temperature is not None:
+            if effective_top_p is not None:
+                logger.debug(
+                    "Dropping top_p — Anthropic recommends setting only temperature OR top_p, not both."
+                )
+            payload["temperature"] = max(0.0, min(1.0, float(effective_temperature)))
+        elif effective_top_p is not None:
+            payload["top_p"] = float(effective_top_p)
 
         if stream:
             payload["stream"] = True
@@ -636,6 +650,9 @@ class AnthropicLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -656,6 +673,19 @@ class AnthropicLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
+
+                Note: Anthropic rejects API requests where both ``temperature``
+                and ``top_p`` are set (see issue #100). When the resolved
+                payload contains both, ``top_p`` is silently dropped (with a
+                DEBUG log). Per-call values participate in the conflict on
+                the same footing as instance values — there is no per-call
+                way to disable an instance-level ``temperature``. If you need
+                to use ``top_p`` exclusively, construct the model without
+                ``temperature`` (or set ``model.temperature = None``) before
+                calling chat_complete.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -677,6 +707,11 @@ class AnthropicLanguageModel(LanguageModel):
                 "Set stream=False."
             )
 
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
@@ -689,6 +724,9 @@ class AnthropicLanguageModel(LanguageModel):
             tool_choice=resolved_tool_choice,
             parallel_tool_calls=resolved_parallel,
             resolved_structured=resolved_structured,
+            max_tokens=effective_max_tokens,
+            temperature=effective_temperature,
+            top_p=effective_top_p,
         )
 
         # Make HTTP request
@@ -730,6 +768,9 @@ class AnthropicLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -750,6 +791,19 @@ class AnthropicLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
+
+                Note: Anthropic rejects API requests where both ``temperature``
+                and ``top_p`` are set (see issue #100). When the resolved
+                payload contains both, ``top_p`` is silently dropped (with a
+                DEBUG log). Per-call values participate in the conflict on
+                the same footing as instance values — there is no per-call
+                way to disable an instance-level ``temperature``. If you need
+                to use ``top_p`` exclusively, construct the model without
+                ``temperature`` (or set ``model.temperature = None``) before
+                calling chat_complete.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -771,6 +825,11 @@ class AnthropicLanguageModel(LanguageModel):
                 "Set stream=False."
             )
 
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
@@ -783,6 +842,9 @@ class AnthropicLanguageModel(LanguageModel):
             tool_choice=resolved_tool_choice,
             parallel_tool_calls=resolved_parallel,
             resolved_structured=resolved_structured,
+            max_tokens=effective_max_tokens,
+            temperature=effective_temperature,
+            top_p=effective_top_p,
         )
 
         # Make async HTTP request
@@ -870,4 +932,4 @@ class AnthropicLanguageModel(LanguageModel):
         elif self.top_p is not None:
             kwargs["top_p"] = self.top_p
 
-        return ChatAnthropic(**kwargs)
+        return ChatAnthropic(**kwargs)  # type: ignore[arg-type]

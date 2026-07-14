@@ -54,11 +54,13 @@ def transcribe(self, audio_file: Union[str, BinaryIO], ...):
     # Process audio_data...
 ```
 
-For APIs that expect files, create multipart form data:
+For APIs that expect files, create multipart form data using `_guess_audio_content_type` (from `base.py`) to derive the MIME type from the filename rather than hardcoding it:
 
 ```python
+from esperanto.providers.stt.base import _guess_audio_content_type
+
 files = {
-    "file": ("audio.mp3", audio_data, "audio/mpeg")
+    "file": (filename, audio_data, _guess_audio_content_type(filename))
 }
 ```
 
@@ -103,16 +105,63 @@ def __post_init__(self):
 Build `TranscriptionResponse` from API results:
 
 ```python
-from esperanto.common_types import TranscriptionResponse
+from esperanto.common_types import (
+    TranscriptionResponse,
+    TranscriptionSegment,
+    TranscriptionUsage,
+)
+
+# Map provider-specific segments (if any) into TranscriptionSegment.
+# Per-item escape hatch: provider-specific extras go in `metadata`, not as
+# first-class fields. Use defensive key access — providers vary in which
+# per-segment fields they return (e.g. Mistral has no `avg_logprob`).
+_METADATA_KEYS = ("avg_logprob", "compression_ratio", "no_speech_prob")
+segments = [
+    TranscriptionSegment(
+        text=raw.get("text", ""),
+        start=float(raw.get("start", 0.0)),
+        end=float(raw.get("end", 0.0)),
+        metadata={k: raw[k] for k in _METADATA_KEYS if k in raw} or None,
+    )
+    for raw in api_response.get("segments") or []
+] or None
+
+# Many providers omit `usage` entirely — guard before indexing.
+usage_data = api_response.get("usage")
+usage = (
+    TranscriptionUsage(
+        input_seconds=usage_data.get("prompt_audio_seconds"),
+        input_tokens=usage_data.get("prompt_tokens"),
+        output_tokens=usage_data.get("completion_tokens"),
+        total_tokens=usage_data.get("total_tokens"),
+    )
+    if usage_data
+    else None
+)
 
 return TranscriptionResponse(
     text=api_response["text"],
     language=api_response.get("language"),  # if available
-    duration=audio_duration,  # if available
-    segments=segments,  # if available (timestamped segments)
-    words=words,  # if available (word-level timestamps)
+    duration=api_response.get("duration"),  # if available
+    segments=segments,                       # None when provider has no segments
+    usage=usage,                             # None when provider has no usage block
+    model=self.get_model_name(),
+    provider=self.provider,
 )
 ```
+
+#### Hot-Swap-First Defaults
+
+For Whisper-family providers (OpenAI, Groq, Azure), Esperanto always requests
+`response_format="verbose_json"` in `_get_api_kwargs()` so callers get segments
+and duration without any opt-in. Mistral and other providers that natively
+return segments must NOT set `response_format`.
+
+#### Unsupported Response Fields Stay None
+
+Providers that don't return segments (ElevenLabs, Google) leave `segments=None`.
+Do NOT synthesize segments from `text` alone — that would lie to callers about
+the provider's real capabilities.
 
 ## Integration
 
@@ -156,6 +205,8 @@ return TranscriptionResponse(
 - Max file size: 25MB
 - Returns language, duration, and segments with timestamps
 - Supports prompt for context and spelling hints
+- Esperanto always sends `response_format="verbose_json"` so segments/duration
+  come back without callers having to opt in
 
 ### Google Speech-to-Text
 
@@ -171,13 +222,31 @@ return TranscriptionResponse(
 - OpenAI-compatible API format
 - Same file size/format limits as OpenAI
 - Much faster than standard Whisper
+- Inherits segment + duration mapping from `OpenAISpeechToTextModel` — no
+  Groq-specific overrides needed
 
-### Azure Speech Service
+### Azure OpenAI Whisper
 
-- Uses Speech SDK or REST API
-- Different authentication (subscription key + region)
-- Supports real-time streaming (beyond file transcription)
-- Different response format than others
+- Uses Azure-hosted OpenAI Whisper deployments via the REST `/audio/transcriptions`
+  endpoint (NOT the native Azure Speech Service, which is a separate product
+  with its own SDK, `Ocp-Apim-Subscription-Key` auth, and streaming protocol).
+- Authentication: `api-key` header (Azure OpenAI flavor), resolved from
+  `AZURE_OPENAI_API_KEY_STT` / `AZURE_OPENAI_API_KEY` env vars or
+  `config["api_key"]`.
+- URL is built from `{azure_endpoint}/openai/deployments/{deployment_name}/audio/transcriptions?api-version={api_version}`,
+  so `model_name` is the *deployment name*, not the underlying model.
+- Same OpenAI Whisper response shape, including `verbose_json` (segments,
+  duration, language). Esperanto always sends `response_format="verbose_json"`
+  so callers get the segments + duration for free.
+- Same file size/format limits as OpenAI (25 MB, MP3/MP4/MPEG/MPGA/M4A/WAV/WEBM).
+
+### Mistral Voxtral
+
+- Natively returns segments and a `usage` block with `prompt_audio_seconds`
+- Do NOT set `response_format` — Mistral rejects unknown fields and already
+  returns the verbose shape
+- Per-segment metadata: `confidence`, `speaker`, `language` (all mapped into
+  `segment.metadata`)
 
 ## Common Implementation Patterns
 
@@ -195,7 +264,7 @@ def transcribe(self, audio_file: Union[str, BinaryIO], language: Optional[str] =
         filename = "audio.mp3"
 
     # Create multipart request
-    files = {"file": (filename, file_content, "audio/mpeg")}
+    files = {"file": (filename, file_content, _guess_audio_content_type(filename))}
     data = {"model": self.get_model_name()}
 
     if language:
@@ -233,7 +302,7 @@ async def atranscribe(self, audio_file: Union[str, BinaryIO], language: Optional
         file_content = audio_file.read()
         filename = "audio.mp3"
 
-    files = {"file": (filename, file_content, "audio/mpeg")}
+    files = {"file": (filename, file_content, _guess_audio_content_type(filename))}
     data = {"model": self.get_model_name()}
 
     # Use async_client

@@ -61,7 +61,7 @@ class GoogleLanguageModel(LanguageModel):
             )
 
         # Set base URL
-        base_host = os.getenv("GEMINI_API_BASE_URL") or "https://generativelanguage.googleapis.com"
+        base_host = (os.getenv("GEMINI_API_BASE_URL") or "https://generativelanguage.googleapis.com").rstrip("/")
         self.base_url = f"{base_host}/v1beta"
 
         # Initialize HTTP clients with configurable timeout
@@ -134,6 +134,9 @@ class GoogleLanguageModel(LanguageModel):
             ImportError: If langchain_google_genai is not installed.
         """
         try:
+            from langchain_core.language_models.chat_models import (  # noqa: F401  # availability check
+                BaseChatModel,
+            )
             from langchain_google_genai import ChatGoogleGenerativeAI
         except ImportError as e:
             raise ImportError(
@@ -271,15 +274,22 @@ class GoogleLanguageModel(LanguageModel):
     def _create_generation_config(
         self,
         resolved_structured: Optional[ResolvedStructuredOutput] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Create generation config for Google API."""
-        config = {
-            "temperature": float(self.temperature),
-            "topP": float(self.top_p),
+        effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
+        effective_temperature = temperature if temperature is not None else self.temperature
+        effective_top_p = top_p if top_p is not None else self.top_p
+
+        config: Dict[str, Any] = {
+            "temperature": float(effective_temperature),
+            "topP": float(effective_top_p),
         }
 
-        if self.max_tokens:
-            config["maxOutputTokens"] = int(self.max_tokens)
+        if effective_max_tokens:
+            config["maxOutputTokens"] = int(effective_max_tokens)
 
         if resolved_structured:
             config["responseMimeType"] = "application/json"
@@ -393,6 +403,9 @@ class GoogleLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -413,6 +426,9 @@ class GoogleLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -433,6 +449,11 @@ class GoogleLanguageModel(LanguageModel):
                 "Set stream=False."
             )
 
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
@@ -444,7 +465,12 @@ class GoogleLanguageModel(LanguageModel):
         # Prepare request payload
         payload: Dict[str, Any] = {
             "contents": formatted_messages,
-            "generationConfig": self._create_generation_config(resolved_structured),
+            "generationConfig": self._create_generation_config(
+                resolved_structured=resolved_structured,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         if system_instruction:
@@ -592,7 +618,7 @@ class GoogleLanguageModel(LanguageModel):
 
         # Extract text and tool calls from parts
         text_parts: List[str] = []
-        tool_calls_data: List[Dict[str, Any]] = []
+        tool_calls_data: List[ToolCall] = []
 
         for idx, part in enumerate(parts):
             if "text" in part:
@@ -602,15 +628,15 @@ class GoogleLanguageModel(LanguageModel):
                 func_args = fc.get("args", {})
                 arguments_str = json.dumps(func_args) if isinstance(func_args, dict) else str(func_args)
 
-                tool_calls_data.append({
-                    "index": idx,
-                    "id": f"call_{uuid.uuid4().hex[:12]}",
-                    "type": "function",
-                    "function": {
-                        "name": fc.get("name", ""),
-                        "arguments": arguments_str,
-                    },
-                })
+                tool_calls_data.append(ToolCall(
+                    index=idx,
+                    id=f"call_{uuid.uuid4().hex[:12]}",
+                    type="function",
+                    function=FunctionCall(
+                        name=fc.get("name", ""),
+                        arguments=arguments_str,
+                    ),
+                ))
 
         text_content = "".join(text_parts) if text_parts else None
 
@@ -654,6 +680,9 @@ class GoogleLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -674,6 +703,9 @@ class GoogleLanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -694,6 +726,11 @@ class GoogleLanguageModel(LanguageModel):
                 "Set stream=False."
             )
 
+        # Resolve per-call overrides
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
@@ -705,7 +742,12 @@ class GoogleLanguageModel(LanguageModel):
         # Prepare request payload
         payload: Dict[str, Any] = {
             "contents": formatted_messages,
-            "generationConfig": self._create_generation_config(resolved_structured),
+            "generationConfig": self._create_generation_config(
+                resolved_structured=resolved_structured,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
+            ),
         }
 
         if system_instruction:

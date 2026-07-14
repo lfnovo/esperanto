@@ -1,7 +1,7 @@
 """Tests for the OpenAI TTS provider."""
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock
 
 from esperanto.providers.tts.openai import OpenAITextToSpeechModel
 

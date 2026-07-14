@@ -236,8 +236,44 @@ class TestJinaEmbeddingModel:
             api_key="test-key",
             config={"late_chunking": True}
         )
-        
+
         # The method should return unchanged texts
         texts = ["very long text " * 100]
         chunked = model._apply_late_chunking(texts)
         assert chunked == texts  # No chunking applied
+
+    def test_embed_null_embedding_raises(self):
+        """embed() raises RuntimeError with index when response has null embedding."""
+        model = JinaEmbeddingModel(api_key="test-key")
+        null_response = {
+            "data": [
+                {"embedding": [0.1, 0.2, 0.3]},
+                {"embedding": None},
+            ]
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = null_response
+
+        with patch.object(model.client, "post", return_value=mock_response):
+            with pytest.raises(RuntimeError) as exc_info:
+                model.embed(["text one", "text two"])
+        assert "1" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_aembed_null_embedding_raises(self):
+        """aembed() raises RuntimeError with index when response has null embedding."""
+        model = JinaEmbeddingModel(api_key="test-key")
+        null_response = {
+            "data": [
+                {"embedding": None},
+            ]
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = null_response
+
+        with patch.object(model.async_client, "post", return_value=mock_response):
+            with pytest.raises(RuntimeError) as exc_info:
+                await model.aembed(["text one"])
+        assert "0" in str(exc_info.value)

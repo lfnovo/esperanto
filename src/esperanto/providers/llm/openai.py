@@ -56,7 +56,7 @@ class OpenAILanguageModel(LanguageModel):
             raise ValueError("OpenAI API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.openai.com/v1"
+        self.base_url = (self.base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -243,16 +243,31 @@ class OpenAILanguageModel(LanguageModel):
         self,
         exclude_stream: bool = False,
         resolved_structured: Optional[ResolvedStructuredOutput] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Get kwargs for API calls, filtering out provider-specific args.
 
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
             resolved_structured: Pre-resolved structured output configuration.
+            max_tokens: Per-call override for max_tokens.
+            temperature: Per-call override for temperature.
+            top_p: Per-call override for top_p.
         """
         kwargs = {}
         config = self.get_completion_kwargs()
+        if max_tokens is not None:
+            config["max_tokens"] = max_tokens
+        if temperature is not None:
+            config["temperature"] = temperature
+        if top_p is not None:
+            config["top_p"] = top_p
         is_reasoning_model = self._is_reasoning_model()
+        # Track per-call explicit overrides so the magic-default skip below
+        # does not silently drop them (issue #102 + cubic feedback).
+        max_tokens_explicit = max_tokens is not None
 
         # Only include non-provider-specific args that were explicitly set
         for key, value in config.items():
@@ -267,8 +282,9 @@ class OpenAILanguageModel(LanguageModel):
                 "tool_choice",
                 "parallel_tool_calls",
             ]:
-                # Skip max_tokens if it's the default value (850) and we're using an o1 model
-                if key == "max_tokens" and value == 850 and is_reasoning_model:
+                # Skip max_tokens if it's the instance default (850) on a reasoning
+                # model AND was not explicitly supplied as a per-call override.
+                if key == "max_tokens" and value == 850 and is_reasoning_model and not max_tokens_explicit:
                     continue
                 kwargs[key] = value
 
@@ -308,6 +324,9 @@ class OpenAILanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -328,6 +347,9 @@ class OpenAILanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or a Generator yielding ChatCompletionChunks
@@ -351,6 +373,10 @@ class OpenAILanguageModel(LanguageModel):
                 "Set stream=False."
             )
 
+        # Resolve per-call overrides
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
@@ -370,6 +396,9 @@ class OpenAILanguageModel(LanguageModel):
             **self._get_api_kwargs(
                 exclude_stream=True,
                 resolved_structured=resolved_structured,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 
@@ -418,6 +447,9 @@ class OpenAILanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -438,6 +470,9 @@ class OpenAILanguageModel(LanguageModel):
             validate_tool_calls: If True, validate tool call arguments against the
                 tool's JSON schema. Raises ToolCallValidationError on validation
                 failure. Requires jsonschema package.
+            max_tokens: Per-call override for max_tokens. If None, uses instance value.
+            temperature: Per-call override for temperature. If None, uses instance value.
+            top_p: Per-call override for top_p. If None, uses instance value.
 
         Returns:
             Either a ChatCompletion or an AsyncGenerator yielding ChatCompletionChunks
@@ -461,6 +496,10 @@ class OpenAILanguageModel(LanguageModel):
                 "Set stream=False."
             )
 
+        # Resolve per-call overrides
+        # Per-call values flow raw into _get_api_kwargs which tracks
+        # explicit-ness for the magic-default skip (issue #102 + cubic feedback).
+
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
@@ -480,6 +519,9 @@ class OpenAILanguageModel(LanguageModel):
             **self._get_api_kwargs(
                 exclude_stream=True,
                 resolved_structured=resolved_structured,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
             ),
         }
 
@@ -544,7 +586,7 @@ class OpenAILanguageModel(LanguageModel):
                 "Install with: uv add langchain_openai or pip install langchain_openai"
             ) from e
 
-        model_kwargs = {}
+        model_kwargs: Dict[str, Any] = {}
         resolved_structured = resolve_structured_output(
             self.structured,
             allow_string_json_alias=True,
@@ -552,7 +594,7 @@ class OpenAILanguageModel(LanguageModel):
         if resolved_structured:
             model_kwargs["response_format"] = resolved_structured.response_format
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,

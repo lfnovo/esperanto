@@ -7,6 +7,7 @@ Reranker provider implementations for relevance-based document ranking.
 - **`base.py`**: Abstract base class `RerankerModel` defining the interface
 - **`jina.py`**: Jina AI reranker models
 - **`voyage.py`**: Voyage AI reranker models
+- **`cohere.py`**: Cohere reranker models (native v2 API)
 - **`transformers.py`**: Local HuggingFace transformers reranker models
 
 ## Patterns

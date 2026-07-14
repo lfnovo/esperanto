@@ -1,11 +1,11 @@
 """Test cases for Voyage reranker provider."""
 
-import pytest
-from unittest.mock import Mock, patch
-import os
+from unittest.mock import patch
 
+import pytest
+
+from esperanto.common_types.reranker import RerankResponse
 from esperanto.providers.reranker.voyage import VoyageRerankerModel
-from esperanto.common_types.reranker import RerankResponse, RerankResult
 
 
 class TestVoyageReranker:

@@ -2,8 +2,8 @@
 
 from .base import RerankerModel
 from .jina import JinaRerankerModel
-from .voyage import VoyageRerankerModel
 from .transformers import TransformersRerankerModel
+from .voyage import VoyageRerankerModel
 
 __all__ = [
     "RerankerModel",

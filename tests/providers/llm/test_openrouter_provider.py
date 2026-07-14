@@ -1,4 +1,3 @@
-import json
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -9,7 +8,6 @@ from esperanto.common_types import (
     StructuredOutputValidationError,
     Tool,
     ToolCall,
-    ToolCallValidationError,
     ToolFunction,
 )
 from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
@@ -261,9 +259,9 @@ class TestToolCallResponse:
             messages, tools=sample_tools
         )
 
-        # Check payload included tools (OpenRouter uses data= with JSON string, not json=)
+        # Check payload included tools
         call_args = openrouter_model_with_tool_response.client.post.call_args
-        json_payload = json.loads(call_args.kwargs["data"])
+        json_payload = call_args.kwargs["json"]
         assert "tools" in json_payload
         assert len(json_payload["tools"]) == 2
 
@@ -286,9 +284,8 @@ class TestToolCallResponse:
             messages, tools=sample_tools, tool_choice="required"
         )
 
-        # OpenRouter uses data= with JSON string, not json=
         call_args = openrouter_model_with_tool_response.client.post.call_args
-        json_payload = json.loads(call_args.kwargs["data"])
+        json_payload = call_args.kwargs["json"]
         assert json_payload["tool_choice"] == "required"
 
     @pytest.mark.asyncio
@@ -300,9 +297,9 @@ class TestToolCallResponse:
             messages, tools=sample_tools
         )
 
-        # Check payload included tools (OpenRouter uses data= with JSON string, not json=)
+        # Check payload included tools
         call_args = openrouter_model_with_tool_response.async_client.post.call_args
-        json_payload = json.loads(call_args.kwargs["data"])
+        json_payload = call_args.kwargs["json"]
         assert "tools" in json_payload
 
         # Check response has tool calls
@@ -362,7 +359,7 @@ class TestStructuredOutput:
             stream=False,
         )
 
-        payload = json.loads(openrouter_model.client.post.call_args.kwargs["data"])
+        payload = openrouter_model.client.post.call_args.kwargs["json"]
         assert payload["response_format"]["type"] == "json_schema"
         assert isinstance(response.structured, OpenRouterCapitalResponse)
         assert response.structured.capital == "Paris"
@@ -394,7 +391,7 @@ class TestStructuredOutput:
         model.client = client
 
         model.chat_complete([{"role": "user", "content": "Capital?"}], stream=False)
-        payload = json.loads(model.client.post.call_args.kwargs["data"])
+        payload = model.client.post.call_args.kwargs["json"]
         assert payload["response_format"]["type"] == "json_schema"
 
     def test_chat_complete_json_schema_invalid_json_raises(self, openrouter_model):
@@ -459,3 +456,70 @@ class TestStructuredOutput:
         )
         langchain_model = model.to_langchain()
         assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"
+
+
+# =============================================================================
+# LangChain Conversion Tests
+# =============================================================================
+
+
+def test_openrouter_langchain_conversion():
+    pytest.importorskip("langchain_openai")
+    from langchain_openai import ChatOpenAI
+
+    model = OpenRouterLanguageModel(
+        api_key="test-key",
+        model_name="gpt-3.5-turbo",
+        temperature=0.7,
+        max_tokens=100,
+        streaming=True,
+        top_p=0.9,
+    )
+    langchain_model = model.to_langchain()
+    assert isinstance(langchain_model, ChatOpenAI)
+    assert langchain_model.model_name == "gpt-3.5-turbo"
+    assert langchain_model.temperature == 0.7
+    assert langchain_model.max_tokens == 100
+    assert langchain_model.streaming is True
+    assert langchain_model.top_p == 0.9
+    assert langchain_model.openai_api_base == "https://openrouter.ai/api/v1"
+
+
+class TestParameterOverrides:
+    """Per-call max_tokens, temperature, top_p override tests (issue #102)."""
+
+    def _make_model(self):
+        from unittest.mock import Mock
+        model = OpenRouterLanguageModel(api_key="test-key")
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            "id": "x", "object": "chat.completion", "created": 1, "model": "openai/gpt-3.5-turbo",
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+        client = Mock()
+        client.post.return_value = response
+        model.client = client
+        return model
+
+    def test_per_call_max_tokens_override(self):
+        """Per-call max_tokens overrides instance default."""
+        model = self._make_model()
+        model.chat_complete([{"role": "user", "content": "Hello"}], max_tokens=500)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload.get("max_tokens") == 500
+
+    def test_per_call_temperature_override(self):
+        """Per-call temperature overrides instance default."""
+        model = self._make_model()
+        model.chat_complete([{"role": "user", "content": "Hello"}], temperature=0.2)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload.get("temperature") == 0.2
+
+    def test_per_call_top_p_override(self):
+        """Per-call top_p overrides instance default."""
+        model = self._make_model()
+        model.chat_complete([{"role": "user", "content": "Hello"}], top_p=0.7)
+        json_payload = model.client.post.call_args[1]["json"]
+        assert json_payload.get("top_p") == 0.7

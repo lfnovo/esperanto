@@ -1,6 +1,5 @@
 """Tests for Message.thinking and Message.cleaned_content properties."""
 
-import pytest
 
 from esperanto.common_types import Message
 
@@ -115,6 +114,87 @@ More response"""
         # Should not have more than 2 consecutive newlines
         assert "\n\n\n" not in msg.cleaned_content
         assert "The result" in msg.cleaned_content
+
+
+class TestMessageThinkingFieldMerge:
+    """Tests for merging a separate 'thinking' field into content via <think> tags.
+
+    Some providers (e.g., Ollama) return thinking as a separate JSON field
+    instead of inline <think> tags. The Message validator merges it automatically.
+    """
+
+    def test_thinking_field_merged_with_content(self):
+        """Test that a separate thinking field is merged into content."""
+        msg = Message(
+            content="Hello",
+            role="assistant",
+            thinking="I should greet the user.",
+        )
+        assert msg.content == "<think>I should greet the user.</think>\n\nHello"
+        assert msg.thinking == "I should greet the user."
+        assert msg.cleaned_content == "Hello"
+
+    def test_thinking_field_with_empty_content(self):
+        """Test thinking field when content is empty."""
+        msg = Message(
+            content="",
+            role="assistant",
+            thinking="Some reasoning here.",
+        )
+        assert msg.content == "<think>Some reasoning here.</think>"
+        assert msg.thinking == "Some reasoning here."
+        assert msg.cleaned_content == ""
+
+    def test_thinking_field_with_none_content(self):
+        """Test thinking field when content is None."""
+        msg = Message(
+            content=None,
+            role="assistant",
+            thinking="Some reasoning here.",
+        )
+        assert msg.content == "<think>Some reasoning here.</think>"
+        assert msg.thinking == "Some reasoning here."
+
+    def test_no_thinking_field_leaves_content_unchanged(self):
+        """Test that absence of thinking field doesn't affect content."""
+        msg = Message(content="Hello", role="assistant")
+        assert msg.content == "Hello"
+        assert msg.thinking is None
+
+    def test_empty_thinking_field_leaves_content_unchanged(self):
+        """Test that empty thinking field doesn't affect content."""
+        msg = Message(content="Hello", role="assistant", thinking="")
+        assert msg.content == "Hello"
+        assert msg.thinking is None
+
+    def test_none_thinking_field_leaves_content_unchanged(self):
+        """Test that None thinking field doesn't affect content."""
+        msg = Message(content="Hello", role="assistant", thinking=None)
+        assert msg.content == "Hello"
+        assert msg.thinking is None
+
+    def test_thinking_field_with_multiline_reasoning(self):
+        """Test thinking field with multiline reasoning content."""
+        reasoning = "Step 1: Analyze the request.\nStep 2: Formulate response.\nStep 3: Reply."
+        msg = Message(
+            content="The answer is 42.",
+            role="assistant",
+            thinking=reasoning,
+        )
+        assert msg.thinking == reasoning
+        assert msg.cleaned_content == "The answer is 42."
+
+    def test_thinking_field_does_not_conflict_with_inline_tags(self):
+        """Test that thinking field works alongside inline <think> tags in content."""
+        msg = Message(
+            content="<think>Inline reasoning</think>\n\nResult",
+            role="assistant",
+            thinking="Field reasoning",
+        )
+        # The field thinking wraps the whole content
+        assert "Field reasoning" in msg.thinking
+        assert "Inline reasoning" in msg.thinking
+        assert "Result" in msg.cleaned_content
 
 
 class TestMessageThinkingIntegration:

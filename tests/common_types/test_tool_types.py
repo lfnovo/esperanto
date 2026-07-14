@@ -1,6 +1,5 @@
 """Tests for tool-related types and validation."""
 
-import json
 import pytest
 
 from esperanto.common_types import (

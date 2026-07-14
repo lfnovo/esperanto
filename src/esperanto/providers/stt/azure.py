@@ -6,8 +6,16 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 import httpx
 
-from esperanto.common_types import Model, TranscriptionResponse
-from esperanto.providers.stt.base import SpeechToTextModel
+from esperanto.common_types import (
+    Model,
+    TranscriptionResponse,
+)
+from esperanto.providers.stt.base import (
+    _WHISPER_SEGMENT_METADATA_KEYS,
+    SpeechToTextModel,
+    _build_transcription_response,
+    _guess_audio_content_type,
+)
 
 
 @dataclass
@@ -31,6 +39,8 @@ class AzureSpeechToTextModel(SpeechToTextModel):
             os.getenv("AZURE_OPENAI_ENDPOINT_STT") or
             os.getenv("AZURE_OPENAI_ENDPOINT")
         )
+        if self.azure_endpoint:
+            self.azure_endpoint = self.azure_endpoint.rstrip("/")
 
         self.api_version = (
             self._config.get("api_version") or
@@ -64,7 +74,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Azure API requests."""
         return {
-            "api-key": self.api_key,  # Azure uses api-key, not Bearer
+            "api-key": self.api_key or "",  # Azure uses api-key, not Bearer
         }
 
     def _build_url(self, path: str) -> str:
@@ -105,6 +115,39 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Get the model name (deployment name for Azure)."""
         return self.deployment_name
 
+    def _get_api_kwargs(
+        self, language: Optional[str] = None, prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Get kwargs for the Azure OpenAI Whisper request.
+
+        Always requests ``verbose_json`` so segments and duration are returned,
+        matching the OpenAI provider's Hot-Swap-First Defaults behavior. Azure
+        OpenAI Whisper accepts the same request shape as OpenAI Whisper.
+        """
+        data: Dict[str, Any] = {
+            "model": self.deployment_name,
+            "response_format": "verbose_json",
+        }
+        if language:
+            data["language"] = language
+        if prompt:
+            data["prompt"] = prompt
+        return data
+
+    def _build_response(
+        self,
+        response_data: Dict[str, Any],
+        language: Optional[str] = None,
+    ) -> TranscriptionResponse:
+        """Build a TranscriptionResponse from an Azure OpenAI Whisper ``verbose_json`` payload."""
+        return _build_transcription_response(
+            response_data,
+            model=self.deployment_name,
+            provider=self.provider,
+            metadata_keys=_WHISPER_SEGMENT_METADATA_KEYS,
+            language_fallback=language,
+        )
+
     def transcribe(
         self,
         audio_file: Union[str, BinaryIO],
@@ -114,18 +157,14 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Transcribe audio using Azure OpenAI."""
         url = self._build_url("audio/transcriptions")
 
-        # Prepare API kwargs
-        data = {"model": self.deployment_name}
-        if language:
-            data["language"] = language
-        if prompt:
-            data["prompt"] = prompt
+        # Prepare API kwargs (always requests verbose_json)
+        data = self._get_api_kwargs(language=language, prompt=prompt)
 
         # Handle file input
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = self.client.post(
                     url,
                     headers=self._get_headers(),
@@ -135,7 +174,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = self.client.post(
                 url,
                 headers=self._get_headers(),
@@ -146,12 +185,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # Azure doesn't return detected language
-            model=self.deployment_name,
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)
 
     async def atranscribe(
         self,
@@ -162,18 +196,14 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Async transcribe audio using Azure OpenAI."""
         url = self._build_url("audio/transcriptions")
 
-        # Prepare API kwargs
-        data = {"model": self.deployment_name}
-        if language:
-            data["language"] = language
-        if prompt:
-            data["prompt"] = prompt
+        # Prepare API kwargs (always requests verbose_json)
+        data = self._get_api_kwargs(language=language, prompt=prompt)
 
         # Handle file input
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = await self.async_client.post(
                     url,
                     headers=self._get_headers(),
@@ -183,7 +213,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = await self.async_client.post(
                 url,
                 headers=self._get_headers(),
@@ -194,9 +224,4 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         self._handle_error(response)
         response_data = response.json()
 
-        return TranscriptionResponse(
-            text=response_data["text"],
-            language=language,  # Azure doesn't return detected language
-            model=self.deployment_name,
-            provider=self.provider,
-        )
+        return self._build_response(response_data, language=language)

@@ -7,7 +7,11 @@ from typing import Any, BinaryIO, Dict, List, Optional, Union
 import httpx
 
 from esperanto.common_types import TranscriptionResponse
-from esperanto.providers.stt.base import Model, SpeechToTextModel
+from esperanto.providers.stt.base import (
+    Model,
+    SpeechToTextModel,
+    _guess_audio_content_type,
+)
 
 
 @dataclass
@@ -25,7 +29,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
             raise ValueError("ElevenLabs API key not found")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.elevenlabs.io/v1"
+        self.base_url = (self.base_url or "https://api.elevenlabs.io/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -33,7 +37,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for ElevenLabs API requests."""
         return {
-            "xi-api-key": self.api_key,
+            "xi-api-key": self.api_key or "",
         }
 
     def _handle_error(self, response: httpx.Response) -> None:
@@ -96,7 +100,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = self.client.post(
                     f"{self.base_url}/speech-to-text",
                     headers=self._get_headers(),
@@ -106,7 +110,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = self.client.post(
                 f"{self.base_url}/speech-to-text",
                 headers=self._get_headers(),
@@ -137,7 +141,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
         if isinstance(audio_file, str):
             # For file path, open and send as multipart form data
             with open(audio_file, "rb") as f:
-                files = {"file": (audio_file, f, "audio/mpeg")}
+                files: Dict[str, Any] = {"file": (audio_file, f, _guess_audio_content_type(audio_file))}
                 response = await self.async_client.post(
                     f"{self.base_url}/speech-to-text",
                     headers=self._get_headers(),
@@ -147,7 +151,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
         else:
             # For BinaryIO, send the file object directly
             filename = getattr(audio_file, 'name', 'audio.mp3')
-            files = {"file": (filename, audio_file, "audio/mpeg")}
+            files = {"file": (filename, audio_file, _guess_audio_content_type(filename))}
             response = await self.async_client.post(
                 f"{self.base_url}/speech-to-text",
                 headers=self._get_headers(),

@@ -11,6 +11,7 @@ from typing import (
     List,
     Optional,
     Union,
+    cast,
 )
 
 import httpx
@@ -57,7 +58,7 @@ class MistralLanguageModel(LanguageModel):
             raise ValueError("Mistral API key not found. Set MISTRAL_API_KEY environment variable.")
 
         # Set base URL
-        self.base_url = self.base_url or "https://api.mistral.ai/v1"
+        self.base_url = (self.base_url or "https://api.mistral.ai/v1").rstrip("/")
 
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
@@ -114,7 +115,11 @@ class MistralLanguageModel(LanguageModel):
                 {"id": "mistral-large-latest", "context_window": 32000, "owned_by": "mistralai"},
             ]
             return [
-                Model(id=m["id"], owned_by=m["owned_by"], context_window=m["context_window"])
+                Model(
+                    id=str(m["id"]),
+                    owned_by=str(m["owned_by"]),
+                    context_window=cast(Optional[int], m["context_window"]),
+                )
                 for m in known_models
             ]
 
@@ -247,10 +252,20 @@ class MistralLanguageModel(LanguageModel):
         self,
         exclude_stream: bool = False,
         resolved_structured: Optional[ResolvedStructuredOutput] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Get kwargs for Mistral API calls."""
         kwargs = {}
         config = self.get_completion_kwargs()
+
+        if max_tokens is not None:
+            config["max_tokens"] = max_tokens
+        if temperature is not None:
+            config["temperature"] = temperature
+        if top_p is not None:
+            config["top_p"] = top_p
 
         supported_params = ["temperature", "top_p", "max_tokens", "safe_prompt", "random_seed"]
 
@@ -283,6 +298,9 @@ class MistralLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, Generator[ChatCompletionChunk, None, None]]:
         """Send a chat completion request.
 
@@ -312,6 +330,10 @@ class MistralLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         should_stream = stream if stream is not None else self.streaming
         resolved_structured = resolve_structured_output(
             self.structured,
@@ -337,6 +359,9 @@ class MistralLanguageModel(LanguageModel):
             **self._get_api_kwargs(
                 exclude_stream=True,
                 resolved_structured=resolved_structured,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
             ),
         }
 
@@ -383,6 +408,9 @@ class MistralLanguageModel(LanguageModel):
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
         validate_tool_calls: bool = False,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
     ) -> Union[ChatCompletion, AsyncGenerator[ChatCompletionChunk, None]]:
         """Send an async chat completion request.
 
@@ -412,6 +440,10 @@ class MistralLanguageModel(LanguageModel):
         # Warn if validate_tool_calls is used with streaming
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
+        effective_max_tokens = self._resolve_max_tokens(max_tokens)
+        effective_temperature = self._resolve_temperature(temperature)
+        effective_top_p = self._resolve_top_p(top_p)
+
         should_stream = stream if stream is not None else self.streaming
         resolved_structured = resolve_structured_output(
             self.structured,
@@ -437,6 +469,9 @@ class MistralLanguageModel(LanguageModel):
             **self._get_api_kwargs(
                 exclude_stream=True,
                 resolved_structured=resolved_structured,
+                max_tokens=effective_max_tokens,
+                temperature=effective_temperature,
+                top_p=effective_top_p,
             ),
         }
 
@@ -479,10 +514,6 @@ class MistralLanguageModel(LanguageModel):
 
         return result
 
-    def _get_default_model(self) -> str:
-        """Get the default model name."""
-        return "mistral-large-latest"
-
     @property
     def provider(self) -> str:
         """Get the provider name."""
@@ -498,9 +529,9 @@ class MistralLanguageModel(LanguageModel):
                 "Install with: uv add langchain_mistralai or pip install langchain_mistralai"
             )
 
-        lc_kwargs = {
+        lc_kwargs: Dict[str, Any] = {
             "mistral_api_key": self.api_key,
-            "model": self.get_model_name(), 
+            "model": self.get_model_name(),
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
@@ -518,4 +549,4 @@ class MistralLanguageModel(LanguageModel):
 
         lc_kwargs = {k: v for k, v in lc_kwargs.items() if v is not None}
         
-        return ChatMistralAI(**lc_kwargs)
+        return ChatMistralAI(**lc_kwargs)  # type: ignore[arg-type]

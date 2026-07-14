@@ -1,17 +1,19 @@
 """Tests for the Perplexity AI language model provider."""
 
 import os
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
-from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 from esperanto.common_types import (
-    ChatCompletion, Choice, Message, Usage,
-    StructuredOutputValidationError, Tool, ToolFunction, ToolCall, ToolCallValidationError
+    StructuredOutputValidationError,
+    Tool,
+    ToolCall,
+    ToolFunction,
 )
+from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 
 
 @pytest.fixture
@@ -290,7 +292,7 @@ def test_perplexity_to_langchain_json_schema(perplexity_provider):
     assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"
 
 
-def test_perplexity_models_property(perplexity_provider):
+def test_perplexity_providers_property(perplexity_provider):
     """Test the models property (currently hardcoded)."""
     models = perplexity_provider.models
     assert isinstance(models, list)
@@ -377,7 +379,7 @@ def mock_perplexity_tool_call_response():
 
 
 @pytest.fixture
-def perplexity_model_with_tool_response(mock_perplexity_tool_call_response):
+def perplexity_provider_with_tool_response(mock_perplexity_tool_call_response):
     """Create a Perplexity model with tool call response mocked."""
     os.environ["PERPLEXITY_API_KEY"] = "test_api_key"
     model = PerplexityLanguageModel(model_name="llama-3-sonar-large-32k-online")
@@ -436,16 +438,16 @@ class TestToolConversion:
 class TestToolCallResponse:
     """Tests for handling tool call responses."""
 
-    def test_chat_complete_with_tools(self, perplexity_model_with_tool_response, sample_tools):
+    def test_chat_complete_with_tools(self, perplexity_provider_with_tool_response, sample_tools):
         """Test chat_complete with tools returns tool calls."""
         messages = [{"role": "user", "content": "What's the weather in SF?"}]
 
-        response = perplexity_model_with_tool_response.chat_complete(
+        response = perplexity_provider_with_tool_response.chat_complete(
             messages, tools=sample_tools
         )
 
         # Check payload included tools
-        call_args = perplexity_model_with_tool_response.client.post.call_args
+        call_args = perplexity_provider_with_tool_response.client.post.call_args
         json_payload = call_args[1]["json"]
         assert "tools" in json_payload
         assert len(json_payload["tools"]) == 2
@@ -461,29 +463,29 @@ class TestToolCallResponse:
         assert tool_call.function.name == "get_weather"
         assert '"location": "San Francisco"' in tool_call.function.arguments
 
-    def test_chat_complete_with_tool_choice(self, perplexity_model_with_tool_response, sample_tools):
+    def test_chat_complete_with_tool_choice(self, perplexity_provider_with_tool_response, sample_tools):
         """Test chat_complete with tool_choice parameter."""
         messages = [{"role": "user", "content": "What's the weather?"}]
 
-        perplexity_model_with_tool_response.chat_complete(
+        perplexity_provider_with_tool_response.chat_complete(
             messages, tools=sample_tools, tool_choice="required"
         )
 
-        call_args = perplexity_model_with_tool_response.client.post.call_args
+        call_args = perplexity_provider_with_tool_response.client.post.call_args
         json_payload = call_args[1]["json"]
         assert json_payload["tool_choice"] == "required"
 
     @pytest.mark.asyncio
-    async def test_achat_complete_with_tools(self, perplexity_model_with_tool_response, sample_tools):
+    async def test_achat_complete_with_tools(self, perplexity_provider_with_tool_response, sample_tools):
         """Test async chat_complete with tools returns tool calls."""
         messages = [{"role": "user", "content": "What's the weather in SF?"}]
 
-        response = await perplexity_model_with_tool_response.achat_complete(
+        response = await perplexity_provider_with_tool_response.achat_complete(
             messages, tools=sample_tools
         )
 
         # Check payload included tools
-        call_args = perplexity_model_with_tool_response.async_client.post.call_args
+        call_args = perplexity_provider_with_tool_response.async_client.post.call_args
         json_payload = call_args[1]["json"]
         assert "tools" in json_payload
 
@@ -497,7 +499,7 @@ class TestToolCallValidation:
     """Tests for tool call validation."""
 
     def test_validation_passes_for_valid_tool_call(
-        self, perplexity_model_with_tool_response, sample_tools
+        self, perplexity_provider_with_tool_response, sample_tools
     ):
         """Test that validation passes for valid tool calls."""
         pytest.importorskip("jsonschema")
@@ -505,8 +507,47 @@ class TestToolCallValidation:
         messages = [{"role": "user", "content": "What's the weather in SF?"}]
 
         # Should not raise
-        response = perplexity_model_with_tool_response.chat_complete(
+        response = perplexity_provider_with_tool_response.chat_complete(
             messages, tools=sample_tools, validate_tool_calls=True
         )
 
         assert response.choices[0].message.tool_calls is not None
+
+
+
+class TestParameterOverrides:
+    """Per-call max_tokens, temperature, top_p override tests (issue #102)."""
+
+    def _make_model(self):
+        os.environ["PERPLEXITY_API_KEY"] = "test_api_key"
+        provider = PerplexityLanguageModel(model_name="llama-3-sonar-large-32k-online")
+        provider.client = Mock()
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            "id": "x", "object": "chat.completion", "created": 1, "model": "llama-3-sonar-large-32k-online",
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+        provider.client.post.return_value = response
+        return provider
+
+    def test_max_tokens_override_with_default_value(self):
+        """Per-call max_tokens=850 must reach the API even though 850 is also the
+        instance default. Cubic regression catch on PR #164."""
+        provider = self._make_model()
+        provider.chat_complete([{"role": "user", "content": "Hello"}], max_tokens=850)
+        json_payload = provider.client.post.call_args[1]["json"]
+        assert json_payload.get("max_tokens") == 850, (
+            "Per-call max_tokens=850 must not be silently dropped by the magic-default filter"
+        )
+
+    def test_max_tokens_omitted_when_neither_set_per_call_nor_overridden(self):
+        """When the user does not pass max_tokens per-call AND the instance is at
+        the default of 850, the request should omit max_tokens."""
+        provider = self._make_model()
+        provider.chat_complete([{"role": "user", "content": "Hello"}])
+        json_payload = provider.client.post.call_args[1]["json"]
+        assert "max_tokens" not in json_payload, (
+            "Default 850 with no per-call override should be filtered out"
+        )

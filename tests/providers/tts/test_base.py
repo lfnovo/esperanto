@@ -1,11 +1,8 @@
 """Tests for the base TTS provider."""
 
-from pathlib import Path
 
-import pytest
 
 from esperanto.common_types.tts import AudioResponse, Voice
-from esperanto.providers.tts.base import TextToSpeechModel
 
 
 def test_voice_class():

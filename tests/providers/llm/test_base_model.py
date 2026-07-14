@@ -88,12 +88,16 @@ class TestLanguageModel(LanguageModel):
 
 
 def test_client_properties():
-    """Test that client properties are available in base class."""
+    """Test that client properties are populated after _create_http_clients."""
+    import httpx
+
     model = TestLanguageModel()
-    assert hasattr(model, "client")
-    assert hasattr(model, "async_client")
-    assert model.client is None  # Default value should be None
-    assert model.async_client is None  # Default value should be None
+    # Clients are not assigned until _create_http_clients() runs.
+    # Provider __post_init__ implementations call this; the base test class
+    # does not, so we invoke it explicitly here.
+    model._create_http_clients()
+    assert isinstance(model.client, httpx.Client)
+    assert isinstance(model.async_client, httpx.AsyncClient)
 
 
 def test_language_model_config():

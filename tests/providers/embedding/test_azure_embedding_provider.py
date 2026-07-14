@@ -186,3 +186,55 @@ def test_text_cleaning(azure_openai_model):
                                     "Spaces before. commas, and dots.",
                                     "Leading and trailing spaces",
                                 ]
+
+
+def test_embed_null_embedding_raises():
+    """embed() raises RuntimeError with index when response has null embedding."""
+    model = AzureEmbeddingModel(
+        api_key="test-key",
+        base_url="https://endpoint",
+        api_version="2023-05-15",
+        model_name="text-embedding-3-large",
+    )
+    null_response = {
+        "data": [
+            {"embedding": [0.1, 0.2, 0.3], "index": 0},
+            {"embedding": None, "index": 1},
+        ]
+    }
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = null_response
+    mock_client.post.return_value = mock_response
+    model.client = mock_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        model.embed(["text one", "text two"])
+    assert "1" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_aembed_null_embedding_raises():
+    """aembed() raises RuntimeError with index when response has null embedding."""
+    model = AzureEmbeddingModel(
+        api_key="test-key",
+        base_url="https://endpoint",
+        api_version="2023-05-15",
+        model_name="text-embedding-3-large",
+    )
+    null_response = {
+        "data": [
+            {"embedding": None, "index": 0},
+        ]
+    }
+    mock_async_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = null_response
+    mock_async_client.post = AsyncMock(return_value=mock_response)
+    model.async_client = mock_async_client
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await model.aembed(["text one"])
+    assert "0" in str(exc_info.value)
