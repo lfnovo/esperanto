@@ -1,0 +1,29 @@
+tests/providers/llm/test_structured_output_parity.py
+  s_ba01133bce787c::t_7ab29a34cd9a0b 1-268
+tests/integration/test_structured_output_release.py
+  s_ba01133bce787c::t_61c4b59e3171b0 1-111
+tests/unit/test_structured_output.py
+  s_ba01133bce787c::t_eb62e34bec9d49 1-14,16-267
+  s_ba01133bce787c::t_3f64e888a87b69 15
+docs/capabilities/llm.md
+  s_ba01133bce787c::t_7e3b1d0f5eb62e 209-210,212-213
+tests/providers/llm/test_cohere.py
+  s_ba01133bce787c::t_fc4c4e9e0ee5c7 6,11
+  s_ba01133bce787c::t_cb687a7f05453f 236-349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "039e9b752964f7b9648ee586190a30c5787f6ada",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
