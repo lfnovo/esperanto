@@ -3,9 +3,11 @@ import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from esperanto.common_types import (
     FunctionCall,
+    StructuredOutputValidationError,
     Tool,
     ToolCall,
     ToolCallValidationError,
@@ -380,6 +382,270 @@ def test_json_structured_output(openai_model):
     assert json_payload["response_format"] == {"type": "json_object"}
 
 
+def test_json_string_alias_structured_output(openai_model):
+    openai_model.structured = "json"
+    messages = [{"role": "user", "content": "Hello!"}]
+
+    openai_model.chat_complete(messages)
+
+    call_args = openai_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["response_format"] == {"type": "json_object"}
+
+
+class CapitalsResponse(BaseModel):
+    capitals: list[str]
+
+
+def test_json_schema_structured_output_pydantic(openai_model):
+    openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
+    messages = [{"role": "user", "content": "List capitals"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": '{"capitals": ["Paris", "Rome", "Madrid"]}',
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    response = openai_model.chat_complete(messages)
+
+    call_args = openai_model.client.post.call_args
+    json_payload = call_args[1]["json"]
+    assert json_payload["response_format"]["type"] == "json_schema"
+    assert json_payload["response_format"]["json_schema"]["name"] == "CapitalsResponse"
+    assert json_payload["response_format"]["json_schema"]["strict"] is True
+    assert isinstance(response.structured, CapitalsResponse)
+    assert response.structured.capitals == ["Paris", "Rome", "Madrid"]
+
+
+def test_json_schema_structured_output_dict_schema(openai_model):
+    schema = {
+        "type": "object",
+        "properties": {"capital": {"type": "string"}},
+        "required": ["capital"],
+    }
+    openai_model.structured = {"type": "json_schema", "schema": schema}
+    messages = [{"role": "user", "content": "Give one capital"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-456",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '{"capital": "Lisbon"}'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    response = openai_model.chat_complete(messages)
+    assert response.structured == {"capital": "Lisbon"}
+
+
+def test_json_schema_structured_output_invalid_json_raises(openai_model):
+    openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
+    messages = [{"role": "user", "content": "List capitals"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-bad",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": "not-json"},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError):
+        openai_model.chat_complete(messages)
+
+
+def test_json_schema_structured_output_dict_schema_requires_jsonschema(openai_model):
+    schema = {
+        "type": "object",
+        "properties": {"capital": {"type": "string"}},
+        "required": ["capital"],
+    }
+    openai_model.structured = {"type": "json_schema", "schema": schema}
+    messages = [{"role": "user", "content": "Give one capital"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-789",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '{"capital": "Lisbon"}'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    original_import = __import__
+
+    def selective_import(name, *args, **kwargs):
+        if name == "jsonschema":
+            raise ImportError("jsonschema not installed")
+        return original_import(name, *args, **kwargs)
+
+    with patch("builtins.__import__", side_effect=selective_import):
+        with pytest.raises(StructuredOutputValidationError, match="jsonschema is required"):
+            openai_model.chat_complete(messages)
+
+
+def test_json_schema_structured_output_streaming_not_supported(openai_model):
+    openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
+    messages = [{"role": "user", "content": "List capitals"}]
+
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        openai_model.chat_complete(messages, stream=True)
+
+
+def test_json_schema_structured_output_requires_schema(openai_model):
+    openai_model.structured = {"type": "json_schema"}
+    with pytest.raises(ValueError, match="structured\\['schema'\\] is required"):
+        openai_model._get_api_kwargs()
+
+
+def test_json_schema_structured_output_validates_schema_name(openai_model):
+    openai_model.structured = {
+        "type": "json_schema",
+        "schema": CapitalsResponse,
+        "name": "invalid schema name!",
+    }
+    with pytest.raises(ValueError, match="may only contain"):
+        openai_model._get_api_kwargs()
+
+
+def test_json_schema_structured_output_validates_root_array_items(openai_model):
+    openai_model.structured = {
+        "type": "json_schema",
+        # Root type intentionally omitted; item keywords should still be enforced.
+        "schema": {"items": {"type": "integer"}},
+    }
+    messages = [{"role": "user", "content": "Return a list"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-array",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '["1", 2]'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError, match="integer"):
+        openai_model.chat_complete(messages)
+
+
+def test_json_schema_structured_output_validates_object_type_mismatch(openai_model):
+    openai_model.structured = {
+        "type": "json_schema",
+        "schema": {
+            "type": "object",
+            "required": ["capital"],
+            "properties": {"capital": {"type": "string"}},
+        },
+    }
+    messages = [{"role": "user", "content": "Return data"}]
+
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-structured-object",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": '["Paris"]'},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "total_tokens": 30,
+        },
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    with pytest.raises(StructuredOutputValidationError, match="object"):
+        openai_model.chat_complete(messages)
+
+
 @pytest.mark.asyncio
 async def test_json_structured_output_async(openai_model):
     openai_model.structured = {"type": "json_object"}
@@ -390,6 +656,15 @@ async def test_json_structured_output_async(openai_model):
     call_args = openai_model.async_client.post.call_args
     json_payload = call_args[1]["json"]
     assert json_payload["response_format"] == {"type": "json_object"}
+
+
+@pytest.mark.asyncio
+async def test_json_schema_structured_output_streaming_not_supported_async(openai_model):
+    openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
+    messages = [{"role": "user", "content": "List capitals"}]
+
+    with pytest.raises(ValueError, match="not supported with streaming"):
+        await openai_model.achat_complete(messages, stream=True)
 
 
 def test_o1_model_transformations(openai_model):
@@ -459,6 +734,19 @@ def test_to_langchain(openai_model):
     assert langchain_model.model_name == "gpt-4"
     assert langchain_model.temperature == 1.0
     # Skip API key check since it's masked in SecretStr
+
+
+def test_to_langchain_with_dict_json_structured(openai_model):
+    openai_model.structured = {"type": "json_object"}
+    langchain_model = openai_model.to_langchain()
+    assert langchain_model.model_kwargs == {"response_format": {"type": "json_object"}}
+
+
+def test_to_langchain_with_json_schema(openai_model):
+    openai_model.structured = {"type": "json_schema", "schema": CapitalsResponse}
+    langchain_model = openai_model.to_langchain()
+    assert langchain_model.model_kwargs["response_format"]["type"] == "json_schema"
+    assert langchain_model.model_kwargs["response_format"]["json_schema"]["name"] == "CapitalsResponse"
 
 
 def test_to_langchain_with_base_url(openai_model):
@@ -1084,6 +1372,7 @@ class TestNormalizeResponse:
         assert result.choices[0].message.content == "I'll check the weather for you."
         assert result.choices[0].message.tool_calls is not None
         assert len(result.choices[0].message.tool_calls) == 1
+
 
 class TestParameterOverridesReasoningModel:
     """Per-call max_tokens=850 must be honored on reasoning models too (cubic

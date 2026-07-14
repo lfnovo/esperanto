@@ -3,10 +3,12 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from esperanto.common_types import (
     ChatCompletion,
     ChatCompletionChunk,
+    StructuredOutputValidationError,
     Tool,
     ToolFunction,
 )
@@ -231,3 +233,162 @@ class TestCohereLanguageModel:
         chunks = [c async for c in gen]
         text = "".join(c.choices[0].delta.content or "" for c in chunks)
         assert text == "Hello world"
+
+
+class CityInfo(BaseModel):
+    city: str
+    country: str
+
+
+def _structured_response(json_text: str):
+    """Build a Cohere v2 native response whose text content is ``json_text``."""
+    return {
+        "id": "chat-structured",
+        "message": {
+            "role": "assistant",
+            "content": [{"type": "text", "text": json_text}],
+        },
+        "finish_reason": "COMPLETE",
+        "usage": {"tokens": {"input_tokens": 12, "output_tokens": 8}},
+    }
+
+
+class TestCohereStructuredOutput:
+    def test_json_schema_pydantic(self):
+        model = _make_model(
+            response_data=_structured_response('{"city": "Paris", "country": "France"}')
+        )
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+
+        response = model.chat_complete([{"role": "user", "content": "Capital of France?"}])
+
+        # Request shape: json_object + schema present.
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["response_format"]["type"] == "json_object"
+        assert payload["response_format"]["schema"] == CityInfo.model_json_schema()
+
+        # Parsed structured result is a validated Pydantic instance.
+        assert isinstance(response.structured, CityInfo)
+        assert response.structured.city == "Paris"
+        assert response.structured.country == "France"
+
+    def test_json_schema_dict(self):
+        schema = {
+            "type": "object",
+            "properties": {"city": {"type": "string"}, "country": {"type": "string"}},
+            "required": ["city", "country"],
+        }
+        model = _make_model(
+            response_data=_structured_response('{"city": "Rome", "country": "Italy"}')
+        )
+        model.structured = {"type": "json_schema", "schema": schema}
+
+        response = model.chat_complete([{"role": "user", "content": "Capital of Italy?"}])
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["response_format"]["type"] == "json_object"
+        assert payload["response_format"]["schema"] == schema
+
+        assert response.structured == {"city": "Rome", "country": "Italy"}
+
+    def test_json_object_mode(self):
+        model = _make_model(
+            response_data=_structured_response('{"city": "Madrid"}')
+        )
+        model.structured = {"type": "json_object"}
+
+        response = model.chat_complete([{"role": "user", "content": "Give JSON"}])
+
+        payload = model.client.post.call_args[1]["json"]
+        assert payload["response_format"] == {"type": "json_object"}
+        assert "schema" not in payload["response_format"]
+        # json_object mode does not populate the parsed structured attribute.
+        assert response.structured is None
+
+    def test_invalid_json_raises(self):
+        model = _make_model(response_data=_structured_response("not valid json"))
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+
+        with pytest.raises(StructuredOutputValidationError):
+            model.chat_complete([{"role": "user", "content": "Capital?"}])
+
+    def test_streaming_schema_mode_raises(self):
+        model = _make_model()
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+
+        with pytest.raises(ValueError, match="not supported with streaming"):
+            model.chat_complete([{"role": "user", "content": "Capital?"}], stream=True)
+
+    @pytest.mark.asyncio
+    async def test_streaming_schema_mode_raises_async(self):
+        model = _make_model()
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+
+        with pytest.raises(ValueError, match="not supported with streaming"):
+            await model.achat_complete(
+                [{"role": "user", "content": "Capital?"}], stream=True
+            )
+
+    @pytest.mark.asyncio
+    async def test_json_schema_pydantic_async(self):
+        model = _make_model(
+            response_data=_structured_response('{"city": "Berlin", "country": "Germany"}')
+        )
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+
+        response = await model.achat_complete(
+            [{"role": "user", "content": "Capital of Germany?"}]
+        )
+
+        payload = model.async_client.post.call_args[1]["json"]
+        assert payload["response_format"]["type"] == "json_object"
+        assert "schema" in payload["response_format"]
+
+        assert isinstance(response.structured, CityInfo)
+        assert response.structured.city == "Berlin"
+        assert response.structured.country == "Germany"
+
+    def test_structured_with_tools_rejected(self):
+        """Cohere rejects response_format + tools; fail clearly client-side."""
+        model = _make_model()
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+        tools = [
+            Tool(
+                type="function",
+                function=ToolFunction(
+                    name="get_weather",
+                    description="Get weather",
+                    parameters={"type": "object", "properties": {}},
+                ),
+            )
+        ]
+        with pytest.raises(ValueError, match="combined with tools"):
+            model.chat_complete(
+                [{"role": "user", "content": "Capital?"}], tools=tools
+            )
+
+    def test_structured_with_documents_rejected(self):
+        """Cohere rejects response_format + documents (RAG); fail clearly."""
+        model = _make_model(config={"documents": [{"text": "some doc"}]})
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+        with pytest.raises(ValueError, match="combined with documents"):
+            model.chat_complete([{"role": "user", "content": "Capital?"}])
+
+    @pytest.mark.asyncio
+    async def test_structured_with_tools_rejected_async(self):
+        model = _make_model()
+        model.structured = {"type": "json_schema", "schema": CityInfo}
+        tools = [
+            Tool(
+                type="function",
+                function=ToolFunction(
+                    name="get_weather",
+                    description="Get weather",
+                    parameters={"type": "object", "properties": {}},
+                ),
+            )
+        ]
+        with pytest.raises(ValueError, match="combined with tools"):
+            await model.achat_complete(
+                [{"role": "user", "content": "Capital?"}], tools=tools
+            )

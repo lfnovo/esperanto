@@ -57,7 +57,7 @@ Whether you're building a quick prototype or a production application serving mi
 - **Text-to-Speech Support**: Generate speech using multiple providers
 - **Async Support**: Both synchronous and asynchronous API calls
 - **Streaming**: Support for streaming responses
-- **Structured Output**: JSON output formatting (where supported)
+- **Structured Output**: JSON mode + schema-driven outputs across all LLM providers (OpenAI, Azure, OpenAI-compatible, Google, Vertex, Anthropic, Groq, Mistral, Ollama, OpenRouter, Perplexity, xAI, Cohere)
 - **LangChain Integration**: Easy conversion to LangChain chat models
 
 ## 📚 Documentation
@@ -140,7 +140,7 @@ pip install "langchain_deepseek>=0.1.3"
 | Anthropic    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Groq         | ✅          | ❌               | ❌                | ✅             | ❌             | ✅        |
 | Google (GenAI) | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
-| Vertex AI    | ✅          | ✅               | ❌                | ❌             | ✅             | ❌        |
+| Vertex AI    | ✅          | ✅               | ❌                | ❌             | ✅             | ✅        |
 | Ollama       | ✅          | ✅               | ❌                | ❌             | ❌             | ❌        |
 | Perplexity   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Transformers | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
@@ -722,6 +722,41 @@ messages = [
 response = model.chat_complete(messages)
 # Response will be in JSON format
 ```
+
+Schema-driven structured output is also supported for OpenAI, Azure OpenAI, OpenAI-compatible, Google (Gemini), Vertex AI, Anthropic, OpenRouter (model-dependent), Groq, Mistral, xAI (model-dependent), Perplexity (model-dependent), Ollama, and Cohere providers:
+
+```python
+from pydantic import BaseModel
+
+class Capitals(BaseModel):
+    capitals: list[str]
+
+model = OpenAILanguageModel(
+    api_key="your-api-key",
+    structured={
+        "type": "json_schema",
+        "schema": Capitals,      # or a JSON Schema dict
+        "name": "capitals",      # optional, defaults to class name
+        "strict": True,          # optional, defaults to True
+    }
+)
+
+response = model.chat_complete(
+    [{"role": "user", "content": "List three European capitals"}]
+)
+
+print(response.content)      # Raw JSON string from model
+print(response.structured)   # Parsed/validated Capitals instance
+```
+
+Notes:
+- Schema mode is config-driven (`config["structured"]` or provider constructor `structured=...`).
+- Schema mode is currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`); this is a temporary Esperanto limitation.
+- OpenAI-compatible endpoints fail fast if `json_schema` response format is unsupported.
+- OpenRouter schema mode is pass-through and model/provider-dependent; unsupported schema requests are surfaced directly (no silent fallback).
+- xAI and Perplexity schema mode are pass-through and model/provider-dependent; unsupported schema requests are surfaced directly (no silent fallback).
+- Anthropic schema mode uses `output_config.format` under the hood and requires a recent model (Opus 4.5+, Sonnet 4.5+, or Haiku 4.5); strict tool-use schema enforcement is a separate feature and is not part of this v1 rollout.
+- Cohere schema mode uses the native Cohere v2 `response_format` (`{"type": "json_object", "schema": ...}`); `to_langchain()` does not carry schema mode — use `.with_structured_output()` on the returned LangChain model. Cohere does not allow structured output combined with `tools` or RAG `documents`/`connectors` — Esperanto raises a clear `ValueError` for those combinations.
 
 ## LangChain Integration 🔗
 

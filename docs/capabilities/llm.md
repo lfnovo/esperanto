@@ -88,7 +88,7 @@ async for chunk in model.achat_complete(messages, stream=True):
 | `max_tokens` | int | Model default | Maximum tokens in response |
 | `top_p` | float | 1.0 | Nucleus sampling threshold (alternative to temperature) |
 | `streaming` | bool | False | Enable token-by-token streaming |
-| `structured` | dict | None | Enable structured output (e.g., `{"type": "json"}`) |
+| `structured` | dict | None | Structured output config (JSON mode or schema mode) |
 | `timeout` | float | 60.0 | Request timeout in seconds |
 
 ### Message Format
@@ -155,7 +155,7 @@ Multiple `<think>` blocks are concatenated. If the response has no `<think>` tag
 
 ## Structured Output
 
-Request JSON-formatted responses (where supported):
+Request JSON-formatted responses:
 
 ```python
 model = AIFactory.create_language(
@@ -171,7 +171,46 @@ response = model.chat_complete(messages)
 # Response content will be valid JSON
 ```
 
-**Supported Providers**: OpenAI, Anthropic, Google, Groq, OpenAI-Compatible (varies), Mistral, DeepSeek, xAI, DashScope, MiniMax, OpenRouter, Azure, Perplexity
+Schema-driven structured outputs:
+
+```python
+from pydantic import BaseModel
+from esperanto.factory import AIFactory
+
+class CountryList(BaseModel):
+    countries: list[str]
+
+model = AIFactory.create_language(
+    "openai",
+    "gpt-4",
+    config={
+        "structured": {
+            "type": "json_schema",
+            "schema": CountryList,   # or JSON schema dict
+            "name": "country_list",  # optional
+            "strict": True           # optional, defaults to True
+        }
+    }
+)
+
+response = model.chat_complete(
+    [{"role": "user", "content": "List three countries"}]
+)
+
+print(response.content)      # raw JSON string
+print(response.structured)   # parsed/validated CountryList
+```
+
+Notes:
+- Schema mode is config-driven and currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
+- OpenAI-compatible endpoints fail fast when `json_schema` response format is unsupported.
+- OpenRouter schema mode is model/provider-dependent and fail-fast (unsupported schema requests are surfaced directly).
+- xAI and Perplexity schema mode are model/provider-dependent and fail-fast (unsupported schema requests are surfaced directly).
+- Anthropic schema mode uses native `output_config.format` and requires a recent model (Opus 4.5+, Sonnet 4.5+, or Haiku 4.5); Anthropic strict tool-use schema enforcement is separate and unchanged in v1.
+- Cohere schema mode uses native `response_format` (`{"type": "json_object", "schema": ...}`) via the Cohere v2 chat API. `response.structured` is populated on `chat_complete`; `to_langchain()` does not carry schema mode — call `.with_structured_output()` on the returned LangChain model instead. Cohere rejects structured output combined with `tools` or RAG `documents`/`connectors`; Esperanto raises a clear `ValueError` for those combinations rather than sending a request the API can't accept.
+
+**JSON Mode Supported Providers**: OpenAI, Anthropic, Google, Groq, OpenAI-Compatible (varies), Mistral, DeepSeek, xAI, DashScope, MiniMax, OpenRouter, Azure, Perplexity, Cohere  
+**Schema Mode Supported Providers (v1)**: OpenAI, Azure, OpenAI-Compatible, Google (Gemini), Vertex AI, Anthropic, OpenRouter (model-dependent), Groq, Mistral, Ollama, xAI (model-dependent), Perplexity (model-dependent), Cohere
 
 ## Provider Selection
 

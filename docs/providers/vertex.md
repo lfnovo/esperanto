@@ -174,6 +174,33 @@ response = model.chat_complete(messages)
 # Response will be valid JSON
 ```
 
+**Example - Schema Mode (`json_schema`):**
+
+```python
+from pydantic import BaseModel
+
+class ServiceInfo(BaseModel):
+    service: str
+    category: str
+
+model = AIFactory.create_language(
+    "vertex",
+    "gemini-2.0-flash",
+    config={
+        "structured": {
+            "type": "json_schema",
+            "schema": ServiceInfo,
+        }
+    }
+)
+
+response = model.chat_complete([{"role": "user", "content": "Return one cloud service"}])
+print(response.content)      # raw JSON string
+print(response.structured)   # validated ServiceInfo
+```
+
+**Schema mode note:** In Esperanto v1, `json_schema` mode is currently non-streaming (`stream=True` raises `ValueError`).
+
 ### Embeddings
 
 **Available Models:**
@@ -451,6 +478,8 @@ langchain_model = model.to_langchain()
 from langchain.chains import ConversationChain
 chain = ConversationChain(llm=langchain_model)
 ```
+
+When `structured` is set, `to_langchain()` forwards Gemini-native structured params (`response_mime_type`, and `response_schema` for `json_schema` mode).
 
 ## Region Availability
 

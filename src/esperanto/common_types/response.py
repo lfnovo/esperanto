@@ -106,6 +106,10 @@ class Message(BaseModel):
     tool_calls: Optional[List[ToolCall]] = Field(
         default=None, description="Tool calls if the message contains tool invocations"
     )
+    structured: Optional[Any] = Field(
+        default=None,
+        description="Parsed structured output when schema-driven mode is enabled.",
+    )
 
     def __getitem__(self, key: str) -> Any:
         """Enable dict-like access for backward compatibility."""
@@ -305,6 +309,19 @@ class ChatCompletion(BaseModel):
         if not self.choices or not self.choices[0].message:
             return ""
         return self.choices[0].message.content or ""
+
+    @property
+    def structured(self) -> Optional[Any]:
+        """Get the parsed structured output of the first choice's message.
+
+        Mirrors ``content``: the parsed object lives on each choice's message
+        (populated in schema-driven mode), and this surfaces the first choice's
+        value for ergonomic access. Returns ``None`` when there are no choices
+        or the message has no structured output.
+        """
+        if not self.choices or not self.choices[0].message:
+            return None
+        return self.choices[0].message.structured
 
     @model_validator(mode="before")
     @classmethod

@@ -36,6 +36,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    apply_structured_output,
+    resolve_structured_output,
+)
 
 MISTRAL_DEFAULT_MODEL_NAME = "mistral-large-latest"
 
@@ -246,6 +251,7 @@ class MistralLanguageModel(LanguageModel):
     def _get_api_kwargs(
         self,
         exclude_stream: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -273,9 +279,13 @@ class MistralLanguageModel(LanguageModel):
         elif "streaming" in config:
             kwargs["stream"] = config["streaming"]
 
-        if self.structured and isinstance(self.structured, dict):
-            if self.structured.get("type") == "json_object" or self.structured.get("type") == "json":
-                kwargs["response_format"] = {"type": "json_object"}
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
+        if resolved_structured:
+            kwargs["response_format"] = resolved_structured.response_format
 
         return kwargs
 
@@ -325,6 +335,16 @@ class MistralLanguageModel(LanguageModel):
         effective_top_p = self._resolve_top_p(top_p)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -338,6 +358,7 @@ class MistralLanguageModel(LanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
+                resolved_structured=resolved_structured,
                 max_tokens=effective_max_tokens,
                 temperature=effective_temperature,
                 top_p=effective_top_p,
@@ -371,6 +392,8 @@ class MistralLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
@@ -419,6 +442,16 @@ class MistralLanguageModel(LanguageModel):
         effective_top_p = self._resolve_top_p(top_p)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve tool configuration
         resolved_tools = self._resolve_tools(tools)
@@ -432,6 +465,7 @@ class MistralLanguageModel(LanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
+                resolved_structured=resolved_structured,
                 max_tokens=effective_max_tokens,
                 temperature=effective_temperature,
                 top_p=effective_top_p,
@@ -470,6 +504,8 @@ class MistralLanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
+        result = apply_structured_output(result, resolved_structured)
+
         return result
 
     @property
@@ -487,13 +523,21 @@ class MistralLanguageModel(LanguageModel):
                 "Install with: uv add langchain_mistralai or pip install langchain_mistralai"
             )
 
-        lc_kwargs = {
+        lc_kwargs: Dict[str, Any] = {
             "mistral_api_key": self.api_key,
-            "model": self.get_model_name(), 
+            "model": self.get_model_name(),
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
+            "model_kwargs": {},
         }
+
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            lc_kwargs["model_kwargs"]["response_format"] = resolved_structured.response_format
         if self.base_url: 
             lc_kwargs["endpoint"] = self.base_url
 

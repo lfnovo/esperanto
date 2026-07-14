@@ -36,6 +36,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    apply_structured_output,
+    resolve_structured_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +194,35 @@ class CohereLanguageModel(LanguageModel):
 
         return formatted
 
+    def _reject_incompatible_structured(
+        self,
+        resolved_structured: Optional[ResolvedStructuredOutput],
+        tools: Optional[List[Tool]],
+    ) -> None:
+        """Reject structured output combined with tools or RAG documents.
+
+        Cohere's v2 chat API does not support ``response_format`` together with
+        the ``tools`` or ``documents``/``connectors`` parameters — such a request
+        fails upstream. We surface a clear error client-side instead.
+        """
+        if not resolved_structured:
+            return
+        rag_fields = [
+            field
+            for field in ("documents", "connectors")
+            if self._config.get(field) is not None
+        ]
+        if tools:
+            raise ValueError(
+                "Cohere does not support structured output (response_format) "
+                "combined with tools. Use one or the other."
+            )
+        if rag_fields:
+            raise ValueError(
+                "Cohere does not support structured output (response_format) "
+                f"combined with {'/'.join(rag_fields)}. Use one or the other."
+            )
+
     def _create_request_payload(
         self,
         messages: List[Dict[str, Any]],
@@ -198,6 +232,7 @@ class CohereLanguageModel(LanguageModel):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
     ) -> Dict[str, Any]:
         """Create request payload for the Cohere v2 chat API."""
         effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
@@ -228,9 +263,19 @@ class CohereLanguageModel(LanguageModel):
             if cohere_tool_choice:
                 payload["tool_choice"] = cohere_tool_choice
 
-        # JSON mode via structured output config.
-        if self.structured and self.structured.get("type") in ("json", "json_object"):
-            payload["response_format"] = {"type": "json_object"}
+        # Structured output. Cohere v2 always uses response_format type
+        # "json_object"; schema mode adds a "schema" key with the JSON Schema.
+        if resolved_structured:
+            if resolved_structured.is_schema_mode:
+                schema = resolved_structured.response_format.get(
+                    "json_schema", {}
+                ).get("schema")
+                payload["response_format"] = {
+                    "type": "json_object",
+                    "schema": schema,
+                }
+            else:
+                payload["response_format"] = {"type": "json_object"}
 
         # Pass through Cohere-specific fields (documents/citations/connectors) from
         # config without altering the universal chat_complete signature.
@@ -518,6 +563,16 @@ class CohereLanguageModel(LanguageModel):
 
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
+        self._reject_incompatible_structured(resolved_structured, resolved_tools)
 
         payload = self._create_request_payload(
             messages,
@@ -527,6 +582,7 @@ class CohereLanguageModel(LanguageModel):
             max_tokens=effective_max_tokens,
             temperature=effective_temperature,
             top_p=effective_top_p,
+            resolved_structured=resolved_structured,
         )
 
         response = self.client.post(
@@ -551,6 +607,8 @@ class CohereLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
@@ -577,6 +635,16 @@ class CohereLanguageModel(LanguageModel):
 
         resolved_tools = self._resolve_tools(tools)
         resolved_tool_choice = self._resolve_tool_choice(tool_choice)
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
+        self._reject_incompatible_structured(resolved_structured, resolved_tools)
 
         payload = self._create_request_payload(
             messages,
@@ -586,6 +654,7 @@ class CohereLanguageModel(LanguageModel):
             max_tokens=effective_max_tokens,
             temperature=effective_temperature,
             top_p=effective_top_p,
+            resolved_structured=resolved_structured,
         )
 
         response = await self.async_client.post(
@@ -610,6 +679,8 @@ class CohereLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 

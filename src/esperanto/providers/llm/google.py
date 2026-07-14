@@ -34,6 +34,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    apply_structured_output,
+    resolve_structured_output,
+)
 
 if TYPE_CHECKING:
     pass  # Removed unused import
@@ -145,13 +150,29 @@ class GoogleLanguageModel(LanguageModel):
             if not model_name:
                 raise ValueError("Model name must be set to use Langchain integration.")
 
-            self._langchain_model = ChatGoogleGenerativeAI(
-                model=model_name,
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-                top_p=self.top_p,
-                google_api_key=self.api_key,
+            kwargs: Dict[str, Any] = {
+                "model": model_name,
+                "temperature": self.temperature,
+                "max_tokens": self.max_tokens,
+                "top_p": self.top_p,
+                "google_api_key": self.api_key,
+            }
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
             )
+            if resolved_structured:
+                kwargs["response_mime_type"] = "application/json"
+                if resolved_structured.is_schema_mode:
+                    schema_payload = (
+                        resolved_structured.response_format
+                        .get("json_schema", {})
+                        .get("schema")
+                    )
+                    if isinstance(schema_payload, dict):
+                        kwargs["response_schema"] = schema_payload
+
+            self._langchain_model = ChatGoogleGenerativeAI(**kwargs)
         return self._langchain_model
 
     def _format_messages(self, messages: List[Dict[str, Any]]) -> tuple:
@@ -252,6 +273,7 @@ class GoogleLanguageModel(LanguageModel):
 
     def _create_generation_config(
         self,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -269,12 +291,16 @@ class GoogleLanguageModel(LanguageModel):
         if effective_max_tokens:
             config["maxOutputTokens"] = int(effective_max_tokens)
 
-        if self.structured:
-            if not isinstance(self.structured, dict):
-                raise TypeError("structured parameter must be a dictionary")
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
-                config["responseMimeType"] = "application/json"
+        if resolved_structured:
+            config["responseMimeType"] = "application/json"
+            if resolved_structured.is_schema_mode:
+                schema_payload = (
+                    resolved_structured.response_format
+                    .get("json_schema", {})
+                    .get("schema")
+                )
+                if isinstance(schema_payload, dict):
+                    config["responseJsonSchema"] = schema_payload
 
         return config
 
@@ -413,6 +439,15 @@ class GoogleLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve per-call overrides
         effective_max_tokens = self._resolve_max_tokens(max_tokens)
@@ -431,6 +466,7 @@ class GoogleLanguageModel(LanguageModel):
         payload: Dict[str, Any] = {
             "contents": formatted_messages,
             "generationConfig": self._create_generation_config(
+                resolved_structured=resolved_structured,
                 max_tokens=effective_max_tokens,
                 temperature=effective_temperature,
                 top_p=effective_top_p,
@@ -482,6 +518,8 @@ class GoogleLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
@@ -676,6 +714,15 @@ class GoogleLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve per-call overrides
         effective_max_tokens = self._resolve_max_tokens(max_tokens)
@@ -694,6 +741,7 @@ class GoogleLanguageModel(LanguageModel):
         payload: Dict[str, Any] = {
             "contents": formatted_messages,
             "generationConfig": self._create_generation_config(
+                resolved_structured=resolved_structured,
                 max_tokens=effective_max_tokens,
                 temperature=effective_temperature,
                 top_p=effective_top_p,
@@ -746,5 +794,7 @@ class GoogleLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        result = apply_structured_output(result, resolved_structured)
 
         return result

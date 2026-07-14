@@ -1,0 +1,285 @@
+"""Helpers for schema-driven structured outputs."""
+
+import json
+import re
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Type, Union, cast
+
+from pydantic import BaseModel, ValidationError
+
+from esperanto.common_types.exceptions import StructuredOutputValidationError
+from esperanto.common_types.response import ChatCompletion
+
+
+@dataclass(frozen=True)
+class ResolvedStructuredOutput:
+    """Normalized structured output configuration."""
+
+    mode: str
+    response_format: Dict[str, Any]
+    schema_source: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None
+    schema_name: Optional[str] = None
+
+    @property
+    def is_schema_mode(self) -> bool:
+        """Whether this config enforces a JSON schema."""
+        return self.mode == "json_schema"
+
+
+def _is_pydantic_model_class(value: Any) -> bool:
+    """Check whether a value is a Pydantic model class."""
+    return isinstance(value, type) and issubclass(value, BaseModel)
+
+
+def _validate_schema_name(name: Any) -> str:
+    """Validate schema name and return normalized value."""
+    if not isinstance(name, str):
+        raise ValueError("structured['name'] must be a non-empty string")
+    normalized = name.strip()
+    if not normalized:
+        raise ValueError("structured['name'] must be a non-empty string")
+
+    # OpenAI-compatible schema name constraints.
+    if len(normalized) > 64:
+        raise ValueError("structured['name'] must be at most 64 characters")
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", normalized):
+        raise ValueError(
+            "structured['name'] may only contain letters, digits, underscores, and dashes"
+        )
+    return normalized
+
+
+def _validate_strict(strict: Any) -> bool:
+    """Validate strict flag for schema mode."""
+    if not isinstance(strict, bool):
+        raise TypeError("structured['strict'] must be a boolean")
+    return strict
+
+
+def resolve_structured_output(
+    structured: Any,
+    *,
+    allow_string_json_alias: bool = False,
+) -> Optional[ResolvedStructuredOutput]:
+    """Normalize structured output configuration.
+
+    Supports:
+      - {"type": "json"} / {"type": "json_object"}
+      - {"type": "json_schema", "schema": <Pydantic model class | JSON schema dict>}
+      - "json" (optional alias, when allow_string_json_alias=True)
+    """
+    if structured is None:
+        return None
+
+    if isinstance(structured, str):
+        if allow_string_json_alias and structured == "json":
+            return ResolvedStructuredOutput(
+                mode="json_object",
+                response_format={"type": "json_object"},
+            )
+        raise TypeError("structured parameter must be a dictionary")
+
+    if not isinstance(structured, dict):
+        raise TypeError("structured parameter must be a dictionary")
+
+    structured_type = structured.get("type")
+    if structured_type in ("json", "json_object"):
+        return ResolvedStructuredOutput(
+            mode="json_object",
+            response_format={"type": "json_object"},
+        )
+
+    if structured_type != "json_schema":
+        raise TypeError(
+            "Invalid 'type' in structured dictionary. "
+            "Expected 'json', 'json_object', or 'json_schema'."
+        )
+
+    if "schema" not in structured:
+        raise ValueError("structured['schema'] is required when type='json_schema'")
+
+    schema = structured["schema"]
+    strict = _validate_strict(structured.get("strict", True))
+
+    if _is_pydantic_model_class(schema):
+        schema_name = structured.get("name", schema.__name__)
+        schema_name = _validate_schema_name(schema_name)
+        schema_dict = schema.model_json_schema()
+        return ResolvedStructuredOutput(
+            mode="json_schema",
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_name,
+                    "schema": schema_dict,
+                    "strict": strict,
+                },
+            },
+            schema_source=schema,
+            schema_name=schema_name,
+        )
+
+    if isinstance(schema, dict):
+        schema_name = structured.get("name", "structured_output")
+        schema_name = _validate_schema_name(schema_name)
+        return ResolvedStructuredOutput(
+            mode="json_schema",
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_name,
+                    "schema": schema,
+                    "strict": strict,
+                },
+            },
+            schema_source=schema,
+            schema_name=schema_name,
+        )
+
+    raise TypeError(
+        "structured['schema'] must be a Pydantic model class or JSON schema dictionary"
+    )
+
+
+def _format_jsonschema_path(path: Any) -> str:
+    """Format a jsonschema error path into a readable JSON path."""
+    if not path:
+        return "$"
+    parts = ["$"]
+    for segment in path:
+        if isinstance(segment, int):
+            parts.append(f"[{segment}]")
+        else:
+            parts.append(f".{segment}")
+    return "".join(parts)
+
+
+def parse_structured_output_content(
+    content: Optional[str],
+    resolved: ResolvedStructuredOutput,
+) -> Any:
+    """Parse and validate model output content for schema mode."""
+    if not resolved.is_schema_mode:
+        return None
+
+    schema_name = resolved.schema_name or "structured_output"
+    raw_content = content or ""
+
+    try:
+        parsed = json.loads(raw_content)
+    except json.JSONDecodeError as exc:
+        raise StructuredOutputValidationError(
+            schema_name=schema_name,
+            errors=[f"Response content is not valid JSON: {exc.msg}"],
+        ) from exc
+
+    schema_source = resolved.schema_source
+    if _is_pydantic_model_class(schema_source):
+        model_cls = cast(Type[BaseModel], schema_source)
+        try:
+            return model_cls.model_validate(parsed)
+        except ValidationError as exc:
+            errors = [str(err) for err in exc.errors()]
+            raise StructuredOutputValidationError(
+                schema_name=schema_name,
+                errors=errors or ["Pydantic validation failed"],
+            ) from exc
+
+    if isinstance(schema_source, dict):
+        try:
+            import jsonschema
+        except ImportError:
+            raise StructuredOutputValidationError(
+                schema_name=schema_name,
+                errors=[
+                    "jsonschema is required to validate dict-based structured output schemas. "
+                    "Install it with: pip install esperanto[validation]"
+                ],
+            )
+
+        try:
+            validator_cls = jsonschema.validators.validator_for(schema_source)
+            validator_cls.check_schema(schema_source)
+            validator = validator_cls(schema_source)
+            validation_errors = sorted(
+                validator.iter_errors(parsed),
+                key=lambda err: list(err.absolute_path),
+            )
+        except jsonschema.exceptions.SchemaError as exc:
+            raise StructuredOutputValidationError(
+                schema_name=schema_name,
+                errors=[f"Invalid JSON schema configuration: {exc.message}"],
+            ) from exc
+
+        if validation_errors:
+            errors = [
+                f"{_format_jsonschema_path(err.absolute_path)}: {err.message}"
+                for err in validation_errors
+            ]
+            raise StructuredOutputValidationError(schema_name=schema_name, errors=errors)
+
+        return parsed
+
+    raise StructuredOutputValidationError(
+        schema_name=schema_name,
+        errors=["Unsupported schema configuration for parsing"],
+    )
+
+
+_SCHEMA_UNSUPPORTED_PATTERNS = (
+    "not support",
+    "unsupported",
+    "must be 'text'",
+    'must be "text"',
+    "not implemented",
+)
+
+
+def is_json_schema_unsupported_error(error: Exception) -> bool:
+    """Whether an error clearly indicates the endpoint can't do ``json_schema``.
+
+    Shared across OpenAI-compatible providers (and OpenRouter) so the
+    "schema mode not supported" signal is detected identically everywhere,
+    letting providers raise one clear message instead of leaking the raw
+    upstream error.
+    """
+    error_str = str(error).lower()
+    if "json_schema" not in error_str:
+        return False
+    return any(pattern in error_str for pattern in _SCHEMA_UNSUPPORTED_PATTERNS)
+
+
+def apply_structured_output(
+    result: ChatCompletion,
+    resolved: Optional[ResolvedStructuredOutput],
+) -> ChatCompletion:
+    """Populate ``message.structured`` on each choice for schema mode.
+
+    Centralizes the schema-mode gate and the tool-calls guard so every provider
+    behaves identically: when the model returns tool calls instead of JSON
+    content, parsing is skipped and ``structured`` is left as ``None`` (rather
+    than crashing on empty content). Parsing runs per-choice, so multi-choice
+    (``n>1``) responses each carry their own parsed object, surfaced at the top
+    level via ``ChatCompletion.structured`` (first choice). No-op when not in
+    schema mode or there are no choices.
+    """
+    if not (resolved and resolved.is_schema_mode) or not result.choices:
+        return result
+
+    new_choices = []
+    changed = False
+    for choice in result.choices:
+        message = choice.message
+        # Tool-calls guard: a schema-mode response that returns tool calls has
+        # no JSON content to parse — leave structured as None instead of raising.
+        if message.tool_calls:
+            new_choices.append(choice)
+            continue
+        parsed = parse_structured_output_content(message.content, resolved)
+        new_message = message.model_copy(update={"structured": parsed})
+        new_choices.append(choice.model_copy(update={"message": new_message}))
+        changed = True
+
+    if not changed:
+        return result
+    return result.model_copy(update={"choices": new_choices})

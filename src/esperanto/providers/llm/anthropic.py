@@ -36,6 +36,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    apply_structured_output,
+    resolve_structured_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -560,6 +565,7 @@ class AnthropicLanguageModel(LanguageModel):
         tools: Optional[List[Tool]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         parallel_tool_calls: Optional[bool] = None,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -572,6 +578,7 @@ class AnthropicLanguageModel(LanguageModel):
             tools: List of tools the model can call.
             tool_choice: Controls tool usage.
             parallel_tool_calls: Whether to allow parallel tool calls.
+            resolved_structured: Pre-resolved structured output configuration.
             max_tokens: Per-call override for max_tokens.
             temperature: Per-call override for temperature.
             top_p: Per-call override for top_p.
@@ -618,6 +625,20 @@ class AnthropicLanguageModel(LanguageModel):
         )
         if anthropic_tool_choice:
             payload["tool_choice"] = anthropic_tool_choice
+
+        if resolved_structured and resolved_structured.is_schema_mode:
+            schema_payload = (
+                resolved_structured.response_format
+                .get("json_schema", {})
+                .get("schema")
+            )
+            if isinstance(schema_payload, dict):
+                payload["output_config"] = {
+                    "format": {
+                        "type": "json_schema",
+                        "schema": schema_payload,
+                    }
+                }
 
         return payload
 
@@ -675,6 +696,16 @@ class AnthropicLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve per-call overrides
         effective_max_tokens = self._resolve_max_tokens(max_tokens)
@@ -692,6 +723,7 @@ class AnthropicLanguageModel(LanguageModel):
             tools=resolved_tools,
             tool_choice=resolved_tool_choice,
             parallel_tool_calls=resolved_parallel,
+            resolved_structured=resolved_structured,
             max_tokens=effective_max_tokens,
             temperature=effective_temperature,
             top_p=effective_top_p,
@@ -721,6 +753,8 @@ class AnthropicLanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
@@ -778,6 +812,16 @@ class AnthropicLanguageModel(LanguageModel):
         self._warn_if_validate_with_streaming(validate_tool_calls, stream)
 
         should_stream = stream if stream is not None else self.streaming
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve per-call overrides
         effective_max_tokens = self._resolve_max_tokens(max_tokens)
@@ -795,6 +839,7 @@ class AnthropicLanguageModel(LanguageModel):
             tools=resolved_tools,
             tool_choice=resolved_tool_choice,
             parallel_tool_calls=resolved_parallel,
+            resolved_structured=resolved_structured,
             max_tokens=effective_max_tokens,
             temperature=effective_temperature,
             top_p=effective_top_p,
@@ -825,6 +870,8 @@ class AnthropicLanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
+        result = apply_structured_output(result, resolved_structured)
+
         return result
 
     def to_langchain(self) -> "ChatAnthropic":
@@ -854,6 +901,27 @@ class AnthropicLanguageModel(LanguageModel):
             "max_tokens": self.max_tokens,
             "api_key": self.api_key,
         }
+
+        model_kwargs: Dict[str, Any] = {}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured and resolved_structured.is_schema_mode:
+            schema_payload = (
+                resolved_structured.response_format
+                .get("json_schema", {})
+                .get("schema")
+            )
+            if isinstance(schema_payload, dict):
+                model_kwargs["output_config"] = {
+                    "format": {
+                        "type": "json_schema",
+                        "schema": schema_payload,
+                    }
+                }
+        if model_kwargs:
+            kwargs["model_kwargs"] = model_kwargs
 
         if self.temperature is not None:
             kwargs["temperature"] = self.temperature

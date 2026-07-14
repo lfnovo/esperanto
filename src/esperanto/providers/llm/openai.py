@@ -32,6 +32,11 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.base import LanguageModel
+from esperanto.providers.llm.structured_output import (
+    ResolvedStructuredOutput,
+    apply_structured_output,
+    resolve_structured_output,
+)
 
 if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
@@ -237,6 +242,7 @@ class OpenAILanguageModel(LanguageModel):
     def _get_api_kwargs(
         self,
         exclude_stream: bool = False,
+        resolved_structured: Optional[ResolvedStructuredOutput] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -245,6 +251,7 @@ class OpenAILanguageModel(LanguageModel):
 
         Args:
             exclude_stream: If True, excludes streaming-related parameters.
+            resolved_structured: Pre-resolved structured output configuration.
             max_tokens: Per-call override for max_tokens.
             temperature: Per-call override for temperature.
             top_p: Per-call override for top_p.
@@ -296,12 +303,13 @@ class OpenAILanguageModel(LanguageModel):
             kwargs["stream"] = kwargs.pop("streaming")
 
         # Handle structured output
-        if self.structured:
-            if not isinstance(self.structured, dict):
-                raise TypeError("structured parameter must be a dictionary")
-            structured_type = self.structured.get("type")
-            if structured_type in ["json", "json_object"]:
-                kwargs["response_format"] = {"type": "json_object"}
+        if resolved_structured is None:
+            resolved_structured = resolve_structured_output(
+                self.structured,
+                allow_string_json_alias=True,
+            )
+        if resolved_structured:
+            kwargs["response_format"] = resolved_structured.response_format
 
         return kwargs
 
@@ -354,6 +362,16 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve per-call overrides
         # Per-call values flow raw into _get_api_kwargs which tracks
@@ -377,6 +395,7 @@ class OpenAILanguageModel(LanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
+                resolved_structured=resolved_structured,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_p=top_p,
@@ -413,6 +432,8 @@ class OpenAILanguageModel(LanguageModel):
             for choice in result.choices:
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
+
+        result = apply_structured_output(result, resolved_structured)
 
         return result
 
@@ -462,6 +483,16 @@ class OpenAILanguageModel(LanguageModel):
         should_stream = stream if stream is not None else self.streaming
         model_name = self.get_model_name()
         is_reasoning_model = self._is_reasoning_model()
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+
+        if resolved_structured and resolved_structured.is_schema_mode and should_stream:
+            raise ValueError(
+                "structured type 'json_schema' is not supported with streaming. "
+                "Set stream=False."
+            )
 
         # Resolve per-call overrides
         # Per-call values flow raw into _get_api_kwargs which tracks
@@ -485,6 +516,7 @@ class OpenAILanguageModel(LanguageModel):
             "stream": should_stream,
             **self._get_api_kwargs(
                 exclude_stream=True,
+                resolved_structured=resolved_structured,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_p=top_p,
@@ -523,6 +555,8 @@ class OpenAILanguageModel(LanguageModel):
                 if choice.message.tool_calls:
                     _validate_tool_calls(choice.message.tool_calls, resolved_tools)
 
+        result = apply_structured_output(result, resolved_structured)
+
         return result
 
     def _get_default_model(self) -> str:
@@ -549,8 +583,12 @@ class OpenAILanguageModel(LanguageModel):
             ) from e
 
         model_kwargs: Dict[str, Any] = {}
-        if self.structured == "json":
-            model_kwargs["response_format"] = {"type": "json_object"}
+        resolved_structured = resolve_structured_output(
+            self.structured,
+            allow_string_json_alias=True,
+        )
+        if resolved_structured:
+            model_kwargs["response_format"] = resolved_structured.response_format
 
         langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
