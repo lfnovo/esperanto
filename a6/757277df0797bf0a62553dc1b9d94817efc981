@@ -1,0 +1,30 @@
+src/esperanto/providers/llm/cohere.py
+  s_ba01133bce787c::t_560b5736167cc8 575,647
+  s_ba01133bce787c::t_9977387711c4cc 197-225
+tests/providers/llm/test_structured_output_parity.py
+  s_ba01133bce787c::t_db27bdc2d9fba5 214-218,224-225
+  s_ba01133bce787c::t_d2b4d24ef9b336 202-213,219-223,226-230,239,242
+  s_ba01133bce787c::t_f05b77596300c7 23,26
+README.md
+  s_ba01133bce787c::t_7a9e594accfec4 60
+tests/providers/llm/test_cohere.py
+  s_ba01133bce787c::t_c16f4b4039c346 350-394
+src/esperanto/providers/llm/openrouter.py
+  s_ba01133bce787c::t_e6de7d3065b4e3 127-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a6757277df0797bf0a62553dc1b9d94817efc981",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
