@@ -307,3 +307,15 @@ class TestCreateSpeechToText:
             model_name="whisper-1",
             api_key="sk-test",
         )
+
+
+class TestOpenRouterAudioRegistration:
+    """Verify OpenRouter is registered for the audio modalities (issue #223)."""
+
+    def test_tts_registered(self):
+        cls = AIFactory._import_provider_class("text_to_speech", "openrouter")
+        assert cls.__name__ == "OpenRouterTextToSpeechModel"
+
+    def test_stt_registered(self):
+        cls = AIFactory._import_provider_class("speech_to_text", "openrouter")
+        assert cls.__name__ == "OpenRouterSpeechToTextModel"

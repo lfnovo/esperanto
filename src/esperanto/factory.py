@@ -56,6 +56,7 @@ class AIFactory:
             "google": "esperanto.providers.stt.google:GoogleSpeechToTextModel",
             "mistral": "esperanto.providers.stt.mistral:MistralSpeechToTextModel",
             "deepgram": "esperanto.providers.stt.deepgram:DeepgramSpeechToTextModel",
+            "openrouter": "esperanto.providers.stt.openrouter:OpenRouterSpeechToTextModel",
         },
         "text_to_speech": {
             "openai": "esperanto.providers.tts.openai:OpenAITextToSpeechModel",
@@ -67,6 +68,7 @@ class AIFactory:
             "xai": "esperanto.providers.tts.xai:XAITextToSpeechModel",
             "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
             "deepgram": "esperanto.providers.tts.deepgram:DeepgramTextToSpeechModel",
+            "openrouter": "esperanto.providers.tts.openrouter:OpenRouterTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",

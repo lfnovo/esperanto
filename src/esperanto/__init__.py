@@ -132,6 +132,16 @@ except ImportError:
     DeepgramSpeechToTextModel = None  # type: ignore[assignment,misc]
 
 try:
+    from esperanto.providers.tts.openrouter import OpenRouterTextToSpeechModel
+except ImportError:
+    OpenRouterTextToSpeechModel = None  # type: ignore[assignment,misc]
+
+try:
+    from esperanto.providers.stt.openrouter import OpenRouterSpeechToTextModel
+except ImportError:
+    OpenRouterSpeechToTextModel = None  # type: ignore[assignment,misc]
+
+try:
     from esperanto.providers.llm.cohere import CohereLanguageModel
 except ImportError:
     CohereLanguageModel = None  # type: ignore[assignment,misc]
@@ -191,6 +201,8 @@ __all__ = [
     "MistralSpeechToTextModel",
     "DeepgramTextToSpeechModel",
     "DeepgramSpeechToTextModel",
+    "OpenRouterTextToSpeechModel",
+    "OpenRouterSpeechToTextModel",
     "CohereLanguageModel",
     "CohereEmbeddingModel",
     "CohereRerankerModel",

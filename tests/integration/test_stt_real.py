@@ -283,3 +283,43 @@ class TestOpenAICompatibleSTT:
 
         result = asyncio.run(_run())
         assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+
+
+# =============================================================================
+# OpenRouter Tests
+# =============================================================================
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("OPENROUTER_API_KEY"),
+    reason="OPENROUTER_API_KEY not configured",
+)
+class TestOpenRouterSTT:
+    """Real integration tests for OpenRouter speech-to-text."""
+
+    MODEL = "openai/whisper-1"
+
+    def test_sync_transcribe(self):
+        """Test sync transcription with file-path input."""
+        model = AIFactory.create_speech_to_text("openrouter", self.MODEL)
+        result = model.transcribe(str(SAMPLE_AUDIO))
+        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        assert result.provider == "openrouter"
+
+    def test_sync_transcribe_binary_io(self):
+        """Test sync transcription with BinaryIO input."""
+        model = AIFactory.create_speech_to_text("openrouter", self.MODEL)
+        with open(SAMPLE_AUDIO, "rb") as f:
+            result = model.transcribe(f)
+        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+
+    def test_async_atranscribe(self):
+        """Test async transcription with file-path input."""
+        model = AIFactory.create_speech_to_text("openrouter", self.MODEL)
+
+        async def _run() -> object:
+            return await model.atranscribe(str(SAMPLE_AUDIO))
+
+        result = asyncio.run(_run())
+        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()

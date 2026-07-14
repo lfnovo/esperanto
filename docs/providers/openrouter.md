@@ -11,8 +11,8 @@ OpenRouter provides unified access to multiple AI models from different provider
 | Language Models (LLM) | ✅ | Access to 100+ models from multiple providers |
 | Embeddings | ❌ | Not available |
 | Reranking | ❌ | Not available |
-| Speech-to-Text | ❌ | Not available |
-| Text-to-Speech | ❌ | Not available |
+| Speech-to-Text | ✅ | OpenAI-compatible transcription (`/audio/transcriptions`) |
+| Text-to-Speech | ✅ | OpenAI-compatible speech (`/audio/speech`) |
 
 **Official Documentation:** https://openrouter.ai/docs
 
@@ -312,6 +312,80 @@ focused_model = AIFactory.create_language(
     config={"temperature": 0.3, "max_tokens": 1024}
 )
 ```
+
+### Text-to-Speech (TTS)
+
+OpenRouter exposes an OpenAI-compatible speech endpoint (`POST /api/v1/audio/speech`)
+that accepts `model`, `input`, `voice`, and `response_format`. Model names follow
+OpenRouter's `vendor/model` convention.
+
+**Available models** — OpenRouter lists dedicated speech models under its
+`?output_modalities=speech` filter (they do **not** appear in the unfiltered
+`/models` list that `AIFactory.get_provider_models("openrouter")` returns):
+- `microsoft/mai-voice-2` (default)
+- `x-ai/grok-voice-tts-1.0`
+- `google/gemini-3.1-flash-tts-preview`
+- `mistralai/voxtral-mini-tts-2603`
+- `hexgrad/kokoro-82m`, `sesame/csm-1b`, `canopylabs/orpheus-3b-0.1-ft`,
+  `zyphra/zonos-v0.1-transformer`, `zyphra/zonos-v0.1-hybrid`
+
+> **Voices are model-specific.** There is currently no OpenAI TTS model on
+> OpenRouter, so OpenAI's `alloy`/`nova` voice names do **not** apply. The default
+> `microsoft/mai-voice-2` uses Microsoft neural voice names (e.g.
+> `en-US-AvaNeural`, `en-US-AndrewNeural`). When picking a different model, pass a
+> voice listed on that model's page. `response_format` supports `mp3` (default)
+> and `pcm` only.
+
+```python
+from esperanto.factory import AIFactory
+
+# Zero-config: default model (microsoft/mai-voice-2) + default voice (en-US-AvaNeural)
+tts = AIFactory.create_text_to_speech("openrouter")
+response = tts.generate_speech("Hello from OpenRouter")
+with open("speech.mp3", "wb") as f:
+    f.write(response.audio_data)
+
+# Explicit model + a voice that model supports
+tts = AIFactory.create_text_to_speech("openrouter", "microsoft/mai-voice-2")
+response = tts.generate_speech("Hello", voice="en-US-AndrewNeural")
+
+# Async
+async def synth():
+    return (await tts.agenerate_speech("Hello", voice="en-US-EmmaNeural")).audio_data
+```
+
+### Speech-to-Text (STT)
+
+OpenRouter's transcription endpoint (`POST /api/v1/audio/transcriptions`) accepts a
+JSON body with base64-encoded audio (not OpenAI's multipart upload). Esperanto handles
+this encoding for you — pass a file path or a binary stream exactly like other providers.
+
+**Popular models:**
+- `openai/whisper-1` (default)
+- `openai/whisper-large-v3`
+
+```python
+from esperanto.factory import AIFactory
+
+stt = AIFactory.create_speech_to_text("openrouter", "openai/whisper-1")
+
+# From a file path
+result = stt.transcribe("audio.mp3", language="en")
+print(result.text)
+
+# From a binary stream
+with open("audio.mp3", "rb") as f:
+    result = stt.transcribe(f)
+
+# Usage stats (when reported by OpenRouter)
+if result.usage:
+    print(result.usage.input_seconds, result.usage.total_tokens)
+```
+
+The audio codec is inferred from the file extension (wav, mp3, flac, m4a, ogg, webm, aac).
+OpenRouter's transcription endpoint does not document a `prompt` parameter, so `prompt`
+is accepted for interface parity but not sent, and segment-level timestamps are not
+returned (`segments` stays `None`).
 
 ## Advanced Features
 
