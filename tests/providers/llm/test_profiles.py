@@ -58,6 +58,7 @@ class TestProfileRegistry:
     def test_builtin_profiles_exist(self):
         assert "deepseek" in BUILTIN_PROFILES
         assert "xai" in BUILTIN_PROFILES
+        assert "novita" in BUILTIN_PROFILES
 
     def test_get_builtin_profile(self):
         profile = get_profile("deepseek")
@@ -80,6 +81,14 @@ class TestProfileRegistry:
         assert profile.base_url == "https://dashscope.aliyuncs.com/compatible-mode/v1"
         assert profile.api_key_env == "DASHSCOPE_API_KEY"
         assert profile.default_model == "qwen-plus"
+
+    def test_get_novita_profile(self):
+        profile = get_profile("novita")
+        assert profile is not None
+        assert profile.name == "novita"
+        assert profile.base_url == "https://api.novita.ai/openai"
+        assert profile.api_key_env == "NOVITA_API_KEY"
+        assert profile.default_model == "moonshotai/kimi-k2.5"
 
     def test_get_unknown_profile_returns_none(self):
         assert get_profile("unknown-provider") is None
@@ -121,6 +130,7 @@ class TestProfileRegistry:
         names = get_all_profile_names()
         assert "deepseek" in names
         assert "xai" in names
+        assert "novita" in names
 
     def test_get_all_profile_names_includes_user(self):
         register_profile(
@@ -183,6 +193,7 @@ class TestFactoryIntegration:
         providers = AIFactory.get_available_providers()
         assert "deepseek" in providers["language"]
         assert "xai" in providers["language"]
+        assert "novita" in providers["language"]
         # Class-based providers also present
         assert "openai" in providers["language"]
 
@@ -274,6 +285,24 @@ class TestProfileBehavior:
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="DashScope API key not found"):
                 AIFactory.create_language("dashscope", "qwen-plus")
+
+    def test_novita_creation(self):
+        model = AIFactory.create_language(
+            "novita", "moonshotai/kimi-k2.5", config={"api_key": "test-key"}
+        )
+        assert model.provider == "novita"
+        assert model.base_url == "https://api.novita.ai/openai"
+        assert model._get_default_model() == "moonshotai/kimi-k2.5"
+
+    def test_novita_env_var(self):
+        with patch.dict(os.environ, {"NOVITA_API_KEY": "env-key"}, clear=False):
+            model = AIFactory.create_language("novita", "moonshotai/kimi-k2.5")
+            assert model.api_key == "env-key"
+
+    def test_novita_missing_api_key_raises(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="Novita API key not found"):
+                AIFactory.create_language("novita", "moonshotai/kimi-k2.5")
 
     def test_minimax_creation(self):
         model = AIFactory.create_language(
