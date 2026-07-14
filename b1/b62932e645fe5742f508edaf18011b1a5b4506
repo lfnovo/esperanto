@@ -1,0 +1,401 @@
+tests/unit/test_mypy_reexport.py
+  s_ba01133bce787c::t_f39ad95f741736 1-31
+CONTRIBUTING.md
+  s_ba01133bce787c::t_f39ad95f741736 3,9,11-17,19,21,23-25,27,30-41,46,48-51,53,55-58,60,64,77,84,89-94,97-104,106,109,112-152,154-162,165-291,293,295,297,299-301
+tests/unit/test_tool_calling.py
+  s_ba01133bce787c::t_f39ad95f741736 9,14-15,19,24
+tests/providers/llm/test_azure_reasoning_models.py
+  s_ba01133bce787c::t_f39ad95f741736 3,192-224
+src/esperanto/providers/llm/anthropic.py
+  s_ba01133bce787c::t_f39ad95f741736 4,44-45,66,74,410-418,468-476,569-571,582-584,591-594,598,606-613,653-655,676-688,710-714,727-729,771-773,794-806,828-832,845-847,935
+src/esperanto/common_types/reranker.py
+  s_ba01133bce787c::t_f39ad95f741736 44
+src/esperanto/common_types/response.py
+  s_ba01133bce787c::t_f39ad95f741736 4,161-163,171-180
+  s_ba01133bce787c::t_f16446a0abc509 181
+pyproject.toml
+  s_ba01133bce787c::t_f39ad95f741736 3,51-54,58-62,85,97
+src/esperanto/providers/llm/groq.py
+  s_ba01133bce787c::t_345d0024a7b534 538
+  s_ba01133bce787c::t_f39ad95f741736 59,231-233,239-249,263-265,294-296,326-328,354-356,403-405,435-437,463-465
+src/esperanto/providers/stt/CLAUDE.md
+  s_ba01133bce787c::t_f39ad95f741736 57,60-61,63,108-140,145-149,153-165,208-209,225-249,267,305
+src/esperanto/providers/embedding/openrouter.py
+  s_ba01133bce787c::t_f39ad95f741736 5,29,31,85,116
+CLAUDE.md
+  s_ba01133bce787c::t_f39ad95f741736 248-289,292-299
+src/esperanto/providers/llm/xai.py
+  s_ba01133bce787c::t_f39ad95f741736 1,3-5,7-8,10,14-15,17-20,23-27,29-31
+tests/providers/embedding/test_voyage_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 172,177-228
+tests/providers/test_config_dict_propagation.py
+  s_ba01133bce787c::t_f39ad95f741736 1-807
+docs/providers/mistral_stt.md
+  s_ba01133bce787c::t_f39ad95f741736 1-151
+tests/providers/llm/test_openai_compatible_provider.py
+  s_ba01133bce787c::t_15a54ab493f717 595
+  s_ba01133bce787c::t_f39ad95f741736 4,596-931
+  s_ba01133bce787c::t_2ebf21cd0a1cad 530-531
+  s_ba01133bce787c::t_e4e7da4a8aa37d 559-560
+  s_ba01133bce787c::t_90e802a3ea1bd2 586-587
+tests/integration/test_stt_real.py
+  s_ba01133bce787c::t_f39ad95f741736 1-285
+docs/providers/openai.md
+  s_ba01133bce787c::t_f39ad95f741736 319-341
+docs/README.md
+  s_ba01133bce787c::t_f39ad95f741736 41
+src/esperanto/providers/embedding/ollama.py
+  s_ba01133bce787c::t_f39ad95f741736 9,23,94-96,146-148
+src/esperanto/providers/embedding/openai_compatible.py
+  s_ba01133bce787c::t_f39ad95f741736 9,218-222,260-264
+src/esperanto/providers/reranker/__init__.py
+  s_ba01133bce787c::t_f39ad95f741736 6
+src/esperanto/providers/embedding/CLAUDE.md
+  s_ba01133bce787c::t_f39ad95f741736 15
+src/esperanto/factory.py
+  s_ba01133bce787c::t_f39ad95f741736 28,32,34,48,57-58,67-69,75,99-104,107,137-139,143-173,227-233,286-287,294-308
+tests/providers/tts/test_google.py
+  s_ba01133bce787c::t_f39ad95f741736 16-20,35-48,50,53,55-56,58-59,62-70,72-76,78-83,85,88-100,102-104,106-154
+tests/test_timeout_integration.py
+  s_ba01133bce787c::t_f39ad95f741736 6,11,22,31,45,52,65,72,85,93,111,119,408,428,447
+src/esperanto/providers/embedding/mistral.py
+  s_ba01133bce787c::t_f39ad95f741736 3,8,23,70-74,98-102
+src/esperanto/common_types/__init__.py
+  s_ba01133bce787c::t_f39ad95f741736 19,46-47
+src/esperanto/providers/tts/vertex.py
+  s_ba01133bce787c::t_f39ad95f741736 7,50
+src/esperanto/providers/llm/mistral.py
+  s_ba01133bce787c::t_443e20bbc76e0a 532,534
+  s_ba01133bce787c::t_f39ad95f741736 14,61,118-122,255-257,263-269,301-303,333-336,362-364,411-413,443-446,472-474,552
+tests/providers/embedding/test_cohere.py
+  s_ba01133bce787c::t_f39ad95f741736 1-126
+tests/providers/reranker/test_voyage.py
+  s_ba01133bce787c::t_f39ad95f741736 3-4,7
+src/esperanto/providers/tts/google.py
+  s_ba01133bce787c::t_f39ad95f741736 7,13-25,29,33,36,63,87,307,313-317,347,361-365,425,439-443,521,533-537,609,621-624
+  s_ba01133bce787c::t_d6505f274020c5 625
+src/esperanto/providers/stt/google.py
+  s_ba01133bce787c::t_f39ad95f741736 38
+src/esperanto/utils/embedding.py
+  s_ba01133bce787c::t_f39ad95f741736 1-17
+src/esperanto/providers/llm/base.py
+  s_ba01133bce787c::t_f39ad95f741736 145-189,224-226,247-249,267-269,290-292
+tests/providers/embedding/test_transformers_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 3-6,110-165
+src/esperanto/providers/llm/profiles.py
+  s_ba01133bce787c::t_f39ad95f741736 1-119
+src/esperanto/providers/reranker/transformers.py
+  s_ba01133bce787c::t_f39ad95f741736 12,30-34,41,46,49,511
+src/esperanto/providers/stt/deepgram.py
+  s_ba01133bce787c::t_f39ad95f741736 1-176
+tests/providers/llm/test_openrouter_provider.py
+  s_ba01133bce787c::t_d26f371e5cf987 362
+  s_ba01133bce787c::t_f39ad95f741736 262,264,288,300,302,461-525
+  s_ba01133bce787c::t_88c3641e6b62bc 459-460
+  s_ba01133bce787c::t_06e7e8b4838bcc 394
+src/esperanto/providers/stt/groq.py
+  s_ba01133bce787c::t_f39ad95f741736 30
+src/esperanto/providers/llm/deepseek.py
+  s_ba01133bce787c::t_f39ad95f741736 1,3-5,7-8,10,14-15,17-20,22,25-29,31-33
+tests/providers/tts/test_mistral.py
+  s_ba01133bce787c::t_f39ad95f741736 1-281
+src/esperanto/common_types/stt.py
+  s_ba01133bce787c::t_f39ad95f741736 3,7-42,55,61-63,67-73
+tests/providers/llm/test_gemini_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 38,91-92,145,186,200-201,242,256
+.github/workflows/test.yml
+  s_ba01133bce787c::t_f39ad95f741736 5,17-19,22,34,36
+src/esperanto/utils/__init__.py
+  s_ba01133bce787c::t_f39ad95f741736 3,6
+ARCHITECTURE.md
+  s_ba01133bce787c::t_f39ad95f741736 1-249
+tests/providers/embedding/test_openai_compatible.py
+  s_ba01133bce787c::t_f39ad95f741736 2-3,6-8,299,411-568
+src/esperanto/providers/stt/mistral.py
+  s_ba01133bce787c::t_f39ad95f741736 1-174
+docs/providers/dashscope.md
+  s_ba01133bce787c::t_f39ad95f741736 1-127
+tests/providers/stt/test_google.py
+  s_ba01133bce787c::t_f39ad95f741736 271
+src/esperanto/providers/tts/mistral.py
+  s_ba01133bce787c::t_f39ad95f741736 1-198
+src/esperanto/providers/stt/elevenlabs.py
+  s_ba01133bce787c::t_f39ad95f741736 10-14,32,40,103,113,144,154
+tests/providers/llm/test_ollama_provider.py
+  s_ba01133bce787c::t_0f432ec30c0935 10-14
+  s_ba01133bce787c::t_f39ad95f741736 97,142,177-178,217-218,370,617-720,741-960,962,967,980,984
+tests/providers/stt/test_openai.py
+  s_ba01133bce787c::t_f39ad95f741736 4,10,22-49,81,167-169,200-201,281-608
+docs/providers/openai-compatible.md
+  s_ba01133bce787c::t_f39ad95f741736 76-99,524-579
+  s_ba01133bce787c::t_6d710a90785118 580
+src/esperanto/providers/tts/elevenlabs.py
+  s_ba01133bce787c::t_f39ad95f741736 4,57-59,75,89,123
+src/esperanto/providers/embedding/azure.py
+  s_ba01133bce787c::t_f39ad95f741736 4,9,42-43,79,135-139,176-180
+src/esperanto/providers/embedding/openai.py
+  s_ba01133bce787c::t_f39ad95f741736 3,8,26,88-92,124-128
+src/esperanto/providers/reranker/jina.py
+  s_ba01133bce787c::t_f39ad95f741736 32,244
+tests/providers/stt/test_groq.py
+  s_ba01133bce787c::t_f39ad95f741736 97,179-257
+tests/test_ssl_configuration.py
+  s_ba01133bce787c::t_f39ad95f741736 6,10,99,109,386,432,480
+tests/providers/llm/test_base_model.py
+  s_ba01133bce787c::t_f39ad95f741736 91-93,95-100
+src/esperanto/providers/stt/openai.py
+  s_ba01133bce787c::t_f39ad95f741736 10-16,34,94-106,116-129,143,153,164,179,189,200
+tests/providers/tts/test_elevenlabs.py
+  s_ba01133bce787c::t_f39ad95f741736 3-5
+tests/providers/llm/test_mistral_provider.py
+  s_ba01133bce787c::t_e718469d8e3695 5
+  s_ba01133bce787c::t_0f432ec30c0935 7-11
+  s_ba01133bce787c::t_f39ad95f741736 1-2,13-14
+tests/providers/tts/test_openai_compatible.py
+  s_ba01133bce787c::t_f39ad95f741736 2-3,405,415
+tests/providers/embedding/test_jina.py
+  s_ba01133bce787c::t_f39ad95f741736 239,244-279
+src/esperanto/providers/embedding/transformers.py
+  s_ba01133bce787c::t_f39ad95f741736 9,21,24-25,117,123-128,132,263,265,268,271-272,337-339,341,378,432,435,467,532-533,535-536,538,595
+tests/providers/stt/test_elevenlabs.py
+  s_ba01133bce787c::t_f39ad95f741736 1-223
+src/esperanto/providers/tts/deepgram.py
+  s_ba01133bce787c::t_f39ad95f741736 1-305
+tests/integration/test_embedding_real.py
+  s_ba01133bce787c::t_f39ad95f741736 1-464
+src/esperanto/providers/llm/openrouter.py
+  s_ba01133bce787c::t_f39ad95f741736 52,54,81,88,92,102,111-113,122-124,153-155,186-188,222-224,265-267,298-300,334-336
+docs/capabilities/llm.md
+  s_ba01133bce787c::t_3b86bbbfb092a1 211
+src/esperanto/providers/embedding/voyage.py
+  s_ba01133bce787c::t_f39ad95f741736 4,9,32,87-91,123-127
+tests/providers/embedding/test_google_task_translation.py
+  s_ba01133bce787c::t_f39ad95f741736 5-6,77
+tests/test_deprecation_warnings.py
+  s_ba01133bce787c::t_f39ad95f741736 5,10,48,121,158,192,230,267,300,381
+tests/common_types/test_stt.py
+  s_ba01133bce787c::t_f39ad95f741736 1-97
+tests/providers/llm/test_google_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 165,179,811,852-875
+tests/providers/llm/test_profiles.py
+  s_ba01133bce787c::t_f39ad95f741736 1-371
+tests/providers/stt/test_azure.py
+  s_ba01133bce787c::t_f39ad95f741736 1-397
+tests/providers/reranker/test_transformers.py
+  s_ba01133bce787c::t_f39ad95f741736 3-4,8,561,565,577
+src/esperanto/providers/embedding/jina.py
+  s_ba01133bce787c::t_f39ad95f741736 4,10,55,65,77,111,114,117,155,167,169,197,209,211
+src/esperanto/providers/llm/azure.py
+  s_ba01133bce787c::t_d0aabcfbf056de 599
+  s_ba01133bce787c::t_f39ad95f741736 68-69,106,275-277,282-289,296-299,301,305-306,336-343,354-356,377-379,403-406,415-417,468-471,482-484,505-507,531-534,543-545
+tests/providers/reranker/test_jina.py
+  s_ba01133bce787c::t_f39ad95f741736 3,7
+tests/providers/stt/test_base.py
+  s_ba01133bce787c::t_f39ad95f741736 9-55
+src/esperanto/common_types/CLAUDE.md
+  s_ba01133bce787c::t_f39ad95f741736 10,145-169
+docs/providers/cohere.md
+  s_ba01133bce787c::t_f39ad95f741736 1-162
+src/esperanto/providers/llm/google.py
+  s_ba01133bce787c::t_e8dfb3f2aece88 469,746
+  s_ba01133bce787c::t_f39ad95f741736 64,137-139,277-279,282-288,291-292,406-408,429-431,452-456,468,470-473,621,631-639,683-685,706-708,729-733,745,747-750
+src/esperanto/providers/llm/ollama.py
+  s_ba01133bce787c::t_d0184b7e937995 349,468
+  s_ba01133bce787c::t_f39ad95f741736 57-58,82-84,89-94,117-118,249,266-268,292-294,329-333,336,348,350-353,395-397,421-423,448-452,455,467,469-472,550,553,585-593,605,608,669
+src/esperanto/providers/llm/openai.py
+  s_ba01133bce787c::t_f39ad95f741736 59,246-248,255-257,261-266,268-270,285-287,327-329,350-352,376-379,399-401,450-452,473-475,499-502,522-524,597
+  s_ba01133bce787c::t_5138e9980a80a5 589
+src/esperanto/providers/tts/openai.py
+  s_ba01133bce787c::t_f39ad95f741736 4,8,55
+docs/providers/mistral_tts.md
+  s_ba01133bce787c::t_f39ad95f741736 1-179
+tests/providers/llm/test_xai_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 15-19,404-430
+tests/providers/tts/test_openai.py
+  s_ba01133bce787c::t_f39ad95f741736 2-3
+tests/test_factory.py
+  s_ba01133bce787c::t_f39ad95f741736 4,130-308
+tests/test_http_connection.py
+  s_ba01133bce787c::t_f39ad95f741736 4
+src/esperanto/providers/llm/structured_output.py
+  s_ba01133bce787c::t_0f432ec30c0935 6
+tests/test_message_thinking.py
+  s_ba01133bce787c::t_f39ad95f741736 119-197
+  s_ba01133bce787c::t_06b37f149a2ac0 198-199
+src/esperanto/providers/reranker/cohere.py
+  s_ba01133bce787c::t_f39ad95f741736 1-257
+tests/providers/embedding/test_azure_embedding_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 189-240
+tests/providers/llm/test_groq_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 128,553-578
+tests/providers/test_base_url_normalization.py
+  s_ba01133bce787c::t_f39ad95f741736 1-400
+README.md
+  s_ba01133bce787c::t_f39ad95f741736 49-50,53,148,154-157,178-179,181-182,264
+src/esperanto/providers/llm/CLAUDE.md
+  s_ba01133bce787c::t_f39ad95f741736 20
+src/esperanto/providers/stt/openai_compatible.py
+  s_ba01133bce787c::t_f39ad95f741736 4,253,311
+src/esperanto/providers/embedding/cohere.py
+  s_ba01133bce787c::t_f39ad95f741736 1-190
+tests/integration/test_tts_real.py
+  s_ba01133bce787c::t_f39ad95f741736 1-356
+tests/providers/embedding/test_openrouter_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 136-138,165-167,226,228
+tests/providers/stt/test_openai_compatible.py
+  s_ba01133bce787c::t_f39ad95f741736 3-5,257
+tests/test_timeout_configuration.py
+  s_ba01133bce787c::t_f39ad95f741736 6-8
+docs/providers/deepseek.md
+  s_ba01133bce787c::t_f39ad95f741736 57-59,62,64
+src/esperanto/providers/tts/base.py
+  s_ba01133bce787c::t_f39ad95f741736 126,129
+tests/unit/probe_reexport.py
+  s_ba01133bce787c::t_f39ad95f741736 1-19
+docs/configuration.md
+  s_ba01133bce787c::t_f39ad95f741736 134-147
+docs/providers/deepgram.md
+  s_ba01133bce787c::t_f39ad95f741736 1-177
+tests/integration/test_reranker_real.py
+  s_ba01133bce787c::t_f39ad95f741736 1-135
+src/esperanto/providers/embedding/google.py
+  s_ba01133bce787c::t_f39ad95f741736 44,208,236-237
+.gitignore
+  s_ba01133bce787c::t_f39ad95f741736 3-4,119-130
+tests/providers/llm/test_cohere.py
+  s_ba01133bce787c::t_f39ad95f741736 1-233
+src/esperanto/providers/llm/perplexity.py
+  s_ba01133bce787c::t_f39ad95f741736 64,66,134-136,142-152,166-168,311-313,346-348,364-366,427-429,462-464,480-482,609
+src/esperanto/utils/connect.py
+  s_ba01133bce787c::t_f39ad95f741736 8,26-30,40-44
+tests/integration/test_tool_calling_real.py
+  s_ba01133bce787c::t_f39ad95f741736 15,77-109,204,296,388,480,567,654,742,829,932,934-935,1028
+tests/providers/tts/test_deepgram.py
+  s_ba01133bce787c::t_f39ad95f741736 1-280
+src/esperanto/providers/stt/azure.py
+  s_ba01133bce787c::t_f39ad95f741736 9-18,42-43,77,118-150,160-161,167,177,188,199-200,206,216,227
+tests/providers/llm/test_azure_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 5,16,81,98,148,171,352,359,368
+docs/providers/google.md
+  s_ba01133bce787c::t_f39ad95f741736 67,92,440,453,516
+src/esperanto/providers/embedding/vertex.py
+  s_ba01133bce787c::t_f39ad95f741736 28,34-35
+src/esperanto/providers/llm/openai_compatible.py
+  s_ba01133bce787c::t_05639bdc94d823 772-778,780-781,783-784
+  s_ba01133bce787c::t_1c01a5c631bdcf 507,668
+  s_ba01133bce787c::t_f39ad95f741736 17-19,48,53-99,101-111,114,122-125,160-168,173,177,180-195,199,201,234-238,282-284,292-294,303-305,353-433,441-442,451-455,477-482,489-501,515-517,534-536,540-594,602-603,612-616,638-643,650-662,676-678,695-697,703,706-707,715,717-720,723,728-734,742-744,746-747,753-754,771,786
+  s_ba01133bce787c::t_efe229e1bbd4f3 434-440,595-601
+  s_ba01133bce787c::t_1b6774125387d4 21
+  s_ba01133bce787c::t_cd135c6ecf9642 24
+  s_ba01133bce787c::t_8a2b155122dad4 669-674
+  s_ba01133bce787c::t_bffd130a73e7db 508-513
+  s_ba01133bce787c::t_14691225cc279b 285
+  s_ba01133bce787c::t_6d2d5d0402cf6d 785
+docs/capabilities/speech-to-text.md
+  s_ba01133bce787c::t_f39ad95f741736 122-124,127-139,142-145
+  s_ba01133bce787c::t_705161e052ab15 146
+src/esperanto/providers/reranker/CLAUDE.md
+  s_ba01133bce787c::t_f39ad95f741736 10
+src/esperanto/providers/tts/__init__.py
+  s_ba01133bce787c::t_f39ad95f741736 14-15
+src/esperanto/providers/tts/azure.py
+  s_ba01133bce787c::t_f39ad95f741736 5,61-62,96,103
+docs/providers/minimax.md
+  s_ba01133bce787c::t_f39ad95f741736 1-94
+src/esperanto/providers/tts/openai_compatible.py
+  s_ba01133bce787c::t_f39ad95f741736 11
+tests/providers/embedding/test_embedding_providers.py
+  s_ba01133bce787c::t_f39ad95f741736 5,741-825
+tests/providers/tts/test_xai.py
+  s_ba01133bce787c::t_f39ad95f741736 1-470
+tests/integration/test_chat_completion_real.py
+  s_ba01133bce787c::t_f39ad95f741736 1-799
+src/esperanto/providers/llm/vertex.py
+  s_ba01133bce787c::t_f39ad95f741736 67,101-102,317-319,324-326,328-329,331-335,457,467-475,519-521,551-554,580,582-585,734-736,766-769,795,797-800
+  s_ba01133bce787c::t_4ccba380fa2f0a 322
+  s_ba01133bce787c::t_4fad04f8637b31 581,796
+tests/test_model_discovery.py
+  s_ba01133bce787c::t_f39ad95f741736 6-7,9,11,14,16,18,20-21,158-201,260-332,498-557
+  s_ba01133bce787c::t_74b77374251935 558
+.github/workflows/lint.yml
+  s_ba01133bce787c::t_f39ad95f741736 1-25
+src/esperanto/providers/llm/cohere.py
+  s_ba01133bce787c::t_f39ad95f741736 1-643
+tests/providers/embedding/test_mistral_embedding_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 1-2,4,7,101-153
+CHANGELOG.md
+  s_ba01133bce787c::t_f39ad95f741736 10-172
+docs/providers/ollama.md
+  s_ba01133bce787c::t_f39ad95f741736 122,124,127-130,134,137,141,495
+src/esperanto/providers/reranker/voyage.py
+  s_ba01133bce787c::t_f39ad95f741736 12,32,226
+src/esperanto/__init__.py
+  s_ba01133bce787c::t_f39ad95f741736 18,26,31,36,42,47,52,57,62,67,72,77,82,87,92,97,102,107,112-147,150,169-197
+tests/providers/reranker/test_cohere.py
+  s_ba01133bce787c::t_f39ad95f741736 1-129
+tests/providers/stt/test_mistral.py
+  s_ba01133bce787c::t_f39ad95f741736 1-470
+docs/providers/groq.md
+  s_ba01133bce787c::t_f39ad95f741736 272-288
+docs/providers/vllm.md
+  s_ba01133bce787c::t_f39ad95f741736 1-136
+tests/providers/embedding/test_advanced_features.py
+  s_ba01133bce787c::t_f39ad95f741736 3-4,6,9,11,181
+tests/providers/llm/test_perplexity_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 4,16,295,382,441,445,450,466,470,474,479,483,488,502,510,515-553
+  s_ba01133bce787c::t_0f432ec30c0935 11-14
+docs/providers/azure.md
+  s_ba01133bce787c::t_f39ad95f741736 344-362
+tests/providers/llm/test_vertex_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 4,822,929,1077
+tests/providers/llm/test_deepseek_provider.py
+  s_ba01133bce787c::t_f39ad95f741736 6,9-12
+  s_ba01133bce787c::t_e242852cec2a9f 13
+src/esperanto/utils/model_cache.py
+  s_ba01133bce787c::t_f39ad95f741736 5
+src/esperanto/providers/stt/base.py
+  s_ba01133bce787c::t_f39ad95f741736 3-4,8,10-15,18-111
+  s_ba01133bce787c::t_be7558053f8711 112
+tests/providers/llm/test_openai_provider.py
+  s_ba01133bce787c::t_0b1ca5bf302327 10
+  s_ba01133bce787c::t_f0378df1f9bb25 1375
+  s_ba01133bce787c::t_f39ad95f741736 8-9,11-15,187,196,206-229,253,300,333,360,378,654,680,1230-1268,1376-1406
+  s_ba01133bce787c::t_1e74a0635cf37e 1269-1270
+docs/providers/README.md
+  s_ba01133bce787c::t_f39ad95f741736 20-22,27,139,146,205-207,314-315,321
+tests/providers/stt/test_deepgram.py
+  s_ba01133bce787c::t_f39ad95f741736 1-494
+.gitattributes
+  s_ba01133bce787c::t_f39ad95f741736 1-11
+src/esperanto/model_discovery.py
+  s_ba01133bce787c::t_f39ad95f741736 9,69,964-1101,1120-1121
+docs/providers/xai.md
+  s_ba01133bce787c::t_f39ad95f741736 15,58-60,63,65,246-322,446,571
+tests/providers/embedding/test_transformers_advanced.py
+  s_ba01133bce787c::t_f39ad95f741736 3-4,6,9
+tests/conftest.py
+  s_ba01133bce787c::t_f39ad95f741736 248-313
+src/esperanto/providers/tts/xai.py
+  s_ba01133bce787c::t_f39ad95f741736 1-328
+tests/providers/llm/test_anthropic_provider.py
+  s_ba01133bce787c::t_76ef7e7bffd8eb 9
+  s_ba01133bce787c::t_f39ad95f741736 7-8,10-14,144,345,385,586-608,1120-1171,1194,1214
+uv.lock
+  s_ba01133bce787c::t_4f19bd6aab9b14 275-293,519,550,567,594,611,636-675,1276-1290,1293,1297,1306,1308,1395-1406,3406-3410,3527-3547
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "b1b62932e645fe5742f508edaf18011b1a5b4506",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
