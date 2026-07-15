@@ -478,6 +478,37 @@ class TestSiliconFlowDiscovery:
         assert mock_get.call_args.args[0] == "https://api.siliconflow.com/v1/models"
 
     @patch("esperanto.model_discovery.httpx.get")
+    def test_get_siliconflow_models_strips_trailing_slash(self, mock_get):
+        """Test that trailing slash is stripped from base_url."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_siliconflow_models(
+            api_key="test-key",
+            base_url="https://api.siliconflow.com/v1/",
+        )
+
+        assert mock_get.call_args.args[0] == "https://api.siliconflow.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_siliconflow_models_empty_owned_by_falls_back(self, mock_get):
+        """Test empty owned_by values fall back to the provider owner."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [{"id": "Qwen/Qwen3-235B-A22B", "owned_by": ""}]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_siliconflow_models(api_key="test-key")
+
+        assert models[0].owned_by == "siliconflow"
+
+    @patch("esperanto.model_discovery.httpx.get")
     def test_get_siliconflow_models_base_url_from_env(self, mock_get):
         """Test that SILICONFLOW_BASE_URL is used when no explicit base_url is given."""
         _model_cache.clear()

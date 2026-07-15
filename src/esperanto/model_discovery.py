@@ -661,7 +661,9 @@ def get_siliconflow_models(
     if not api_key:
         raise ValueError("SiliconFlow API key not found. Provide api_key or set SILICONFLOW_API_KEY environment variable.")
 
-    base_url = base_url or os.getenv("SILICONFLOW_BASE_URL") or "https://api.siliconflow.cn/v1"
+    base_url = (
+        base_url or os.getenv("SILICONFLOW_BASE_URL") or "https://api.siliconflow.cn/v1"
+    ).rstrip("/")
 
     cache_key = _create_cache_key("siliconflow", api_key=api_key, base_url=base_url)
     cached_models = _model_cache.get(cache_key)
@@ -694,7 +696,7 @@ def get_siliconflow_models(
         for model in models_data.get("data", []):
             all_models.append(Model(
                 id=model["id"],
-                owned_by=model.get("owned_by", "siliconflow"),
+                owned_by=model.get("owned_by") or "siliconflow",
                 context_window=model.get("context_window", None),
             ))
 
