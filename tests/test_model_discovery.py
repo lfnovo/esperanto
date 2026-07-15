@@ -19,6 +19,7 @@ from esperanto.model_discovery import (
     get_google_models,
     get_openai_compatible_models,
     get_openai_models,
+    get_siliconflow_models,
 )
 
 
@@ -430,6 +431,73 @@ class TestOpenAICompatibleDiscovery:
         assert call_args.args[0] == "http://localhost:1234/v1/models"
 
 
+class TestSiliconFlowDiscovery:
+    """Test SiliconFlow model discovery."""
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_siliconflow_models_success(self, mock_get):
+        """Test successful SiliconFlow model discovery."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"id": "deepseek-ai/DeepSeek-V3.1", "owned_by": "siliconflow"},
+                {"id": "Qwen/Qwen3-235B-A22B", "owned_by": "siliconflow"},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_siliconflow_models(api_key="test-key")
+
+        assert len(models) == 2
+        assert all(isinstance(m, Model) for m in models)
+        assert models[0].id == "deepseek-ai/DeepSeek-V3.1"
+        assert mock_get.call_args.args[0] == "https://api.siliconflow.cn/v1/models"
+
+    def test_get_siliconflow_models_no_api_key(self):
+        """Test that ValueError is raised when API key is missing."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="SiliconFlow API key not found"):
+                get_siliconflow_models()
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_siliconflow_models_global_base_url_param(self, mock_get):
+        """Test that explicit base_url can target the Global endpoint."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_siliconflow_models(
+            api_key="test-key",
+            base_url="https://api.siliconflow.com/v1",
+        )
+
+        assert mock_get.call_args.args[0] == "https://api.siliconflow.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_siliconflow_models_base_url_from_env(self, mock_get):
+        """Test that SILICONFLOW_BASE_URL is used when no explicit base_url is given."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        with patch.dict(
+            os.environ,
+            {
+                "SILICONFLOW_API_KEY": "env-key",
+                "SILICONFLOW_BASE_URL": "https://api.siliconflow.com/v1",
+            },
+        ):
+            get_siliconflow_models()
+
+        assert mock_get.call_args.args[0] == "https://api.siliconflow.com/v1/models"
+
+
 class TestProviderRegistry:
     """Test the provider registry."""
 
@@ -437,7 +505,7 @@ class TestProviderRegistry:
         """Test that registry has entries for all supported providers."""
         expected_providers = [
             "openai", "openai-compatible", "anthropic", "google", "vertex", "mistral",
-            "groq", "deepseek", "ollama", "openrouter", "xai",
+            "groq", "deepseek", "siliconflow", "ollama", "openrouter", "xai",
             "perplexity", "jina", "voyage", "azure", "transformers"
         ]
 
