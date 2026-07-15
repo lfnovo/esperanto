@@ -76,7 +76,7 @@ class TestProfileRegistry:
         assert profile.base_url == "https://api.siliconflow.cn/v1"
         assert profile.api_key_env == "SILICONFLOW_API_KEY"
         assert profile.base_url_env == "SILICONFLOW_BASE_URL"
-        assert profile.default_model == "deepseek-ai/DeepSeek-V3.1"
+        assert profile.default_model == "deepseek-ai/DeepSeek-V3.1-Terminus"
         assert profile.display_name == "SiliconFlow"
 
     def test_get_xai_profile(self):
@@ -169,7 +169,7 @@ class TestFactoryIntegration:
 
     def test_create_language_with_siliconflow_profile(self):
         model = AIFactory.create_language(
-            "siliconflow", "deepseek-ai/DeepSeek-V3.1", config={"api_key": "test-key"}
+            "siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus", config={"api_key": "test-key"}
         )
         assert model.provider == "siliconflow"
         assert model.base_url == "https://api.siliconflow.cn/v1"
@@ -245,9 +245,9 @@ class TestProfileBehavior:
 
     def test_siliconflow_default_model(self):
         model = AIFactory.create_language(
-            "siliconflow", "deepseek-ai/DeepSeek-V3.1", config={"api_key": "test-key"}
+            "siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus", config={"api_key": "test-key"}
         )
-        assert model._get_default_model() == "deepseek-ai/DeepSeek-V3.1"
+        assert model._get_default_model() == "deepseek-ai/DeepSeek-V3.1-Terminus"
 
     def test_xai_default_model(self):
         model = AIFactory.create_language(
@@ -262,7 +262,7 @@ class TestProfileBehavior:
 
     def test_siliconflow_env_var_api_key(self):
         with patch.dict(os.environ, {"SILICONFLOW_API_KEY": "env-key"}, clear=False):
-            model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1")
+            model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
             assert model.api_key == "env-key"
 
     def test_xai_env_var_api_key(self):
@@ -288,7 +288,7 @@ class TestProfileBehavior:
             },
             clear=False,
         ):
-            model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1")
+            model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
             assert model.base_url == "https://api.siliconflow.com/v1"
 
     def test_config_overrides_profile_defaults(self):
@@ -305,7 +305,7 @@ class TestProfileBehavior:
     def test_siliconflow_config_base_url_uses_global_endpoint(self):
         model = AIFactory.create_language(
             "siliconflow",
-            "deepseek-ai/DeepSeek-V3.1",
+            "deepseek-ai/DeepSeek-V3.1-Terminus",
             config={
                 "api_key": "test-key",
                 "base_url": "https://api.siliconflow.com/v1",
@@ -321,7 +321,7 @@ class TestProfileBehavior:
     def test_missing_siliconflow_api_key_raises_with_provider_name(self):
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="SiliconFlow API key not found"):
-                AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1")
+                AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
 
     def test_missing_xai_api_key_raises_with_provider_name(self):
         with patch.dict(os.environ, {}, clear=True):

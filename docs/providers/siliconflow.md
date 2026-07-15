@@ -45,7 +45,7 @@ SILICONFLOW_BASE_URL="https://api.siliconflow.com/v1"
 from esperanto.factory import AIFactory
 
 # Uses the default CN endpoint
-model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1")
+model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
 
 messages = [{"role": "user", "content": "Explain retrieval augmented generation"}]
 response = model.chat_complete(messages)
@@ -61,7 +61,7 @@ from esperanto.factory import AIFactory
 
 model = AIFactory.create_language(
     "siliconflow",
-    "deepseek-ai/DeepSeek-V3.1",
+    "deepseek-ai/DeepSeek-V3.1-Terminus",
     config={"base_url": "https://api.siliconflow.com/v1"},
 )
 ```
@@ -83,7 +83,7 @@ for model in models:
 ### Streaming
 
 ```python
-model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1")
+model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
 
 for chunk in model.chat_complete(messages, stream=True):
     print(chunk.choices[0].delta.content, end="")
@@ -94,7 +94,7 @@ for chunk in model.chat_complete(messages, stream=True):
 ```python
 model = AIFactory.create_language(
     "siliconflow",
-    "deepseek-ai/DeepSeek-V3.1",
+    "deepseek-ai/DeepSeek-V3.1-Terminus",
     config={"structured": {"type": "json_object"}},
 )
 ```
@@ -111,14 +111,14 @@ response = await model.achat_complete(messages)
 # With explicit API key
 model = AIFactory.create_language(
     "siliconflow",
-    "deepseek-ai/DeepSeek-V3.1",
+    "deepseek-ai/DeepSeek-V3.1-Terminus",
     config={"api_key": "your-key"},
 )
 
 # With explicit API key and Global endpoint
 model = AIFactory.create_language(
     "siliconflow",
-    "deepseek-ai/DeepSeek-V3.1",
+    "deepseek-ai/DeepSeek-V3.1-Terminus",
     config={
         "api_key": "your-key",
         "base_url": "https://api.siliconflow.com/v1",

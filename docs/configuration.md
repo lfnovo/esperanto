@@ -128,12 +128,12 @@ SILICONFLOW_BASE_URL=https://api.siliconflow.com/v1
 from esperanto.factory import AIFactory
 
 # Default CN endpoint: https://api.siliconflow.cn/v1
-model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1")
+model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
 
 # Global endpoint override
 model = AIFactory.create_language(
     "siliconflow",
-    "deepseek-ai/DeepSeek-V3.1",
+    "deepseek-ai/DeepSeek-V3.1-Terminus",
     config={"base_url": "https://api.siliconflow.com/v1"},
 )
 ```

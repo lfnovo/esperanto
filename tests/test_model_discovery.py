@@ -442,7 +442,7 @@ class TestSiliconFlowDiscovery:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "data": [
-                {"id": "deepseek-ai/DeepSeek-V3.1", "owned_by": "siliconflow"},
+                {"id": "deepseek-ai/DeepSeek-V3.1-Terminus", "owned_by": "siliconflow"},
                 {"id": "Qwen/Qwen3-235B-A22B", "owned_by": "siliconflow"},
             ]
         }
@@ -452,7 +452,7 @@ class TestSiliconFlowDiscovery:
 
         assert len(models) == 2
         assert all(isinstance(m, Model) for m in models)
-        assert models[0].id == "deepseek-ai/DeepSeek-V3.1"
+        assert models[0].id == "deepseek-ai/DeepSeek-V3.1-Terminus"
         assert mock_get.call_args.args[0] == "https://api.siliconflow.cn/v1/models"
 
     def test_get_siliconflow_models_no_api_key(self):
