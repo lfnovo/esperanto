@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`stream=True` raises `ValueError`); providers/models that can't honor a
   `json_schema` request fail fast with a clear error rather than silently degrading.
   (#95)
+- **PayPerQ (PPQ) language provider** — PayPerQ is now selectable via
+  `AIFactory.create_language("ppq", "claude-sonnet-5")`. PPQ is a
+  pay-as-you-go gateway exposing hundreds of models from many labs through a
+  single OpenAI-compatible endpoint. Added as a built-in
+  `OpenAICompatibleProfile` (base URL `https://api.ppq.ai/v1`, `PPQ_API_KEY`,
+  optional `PPQ_BASE_URL`, default model `auto`), so it inherits streaming,
+  tool calling, and JSON mode from the OpenAI-compatible implementation. Ships
+  with profile unit tests and provider docs.
 
 ## [2.24.0] - 2026-06-23
 

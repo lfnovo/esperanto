@@ -103,6 +103,15 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         owned_by="Novita",
         display_name="Novita",
     ),
+    "ppq": OpenAICompatibleProfile(
+        name="ppq",
+        base_url="https://api.ppq.ai/v1",
+        api_key_env="PPQ_API_KEY",
+        base_url_env="PPQ_BASE_URL",
+        default_model="auto",
+        owned_by="PayPerQ",
+        display_name="PayPerQ",
+    ),
 }
 
 _USER_PROFILES: Dict[str, OpenAICompatibleProfile] = {}
