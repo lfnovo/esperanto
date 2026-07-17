@@ -1,0 +1,52 @@
+src/esperanto/providers/embedding/openai_compatible.py
+  s_ba01133bce787c::t_3b0cb2dac70df9 196
+  s_ba01133bce787c::t_5dc49d374c45f5 195,197
+  s_ba01133bce787c::t_4b90c2a9815202 60-62
+tests/providers/test_profile_multimodality.py
+  s_ba01133bce787c::t_06552e4ae512f0 260-292
+  s_ba01133bce787c::t_73708b6d53aec9 95-124
+src/esperanto/providers/tts/openai_compatible.py
+  s_ba01133bce787c::t_53beda28e5d110 59-61
+  s_ba01133bce787c::t_01b49f0974db22 220,222
+  s_ba01133bce787c::t_8667e8d2ab9a2e 221
+src/esperanto/providers/profile_mixin.py
+  s_ba01133bce787c::t_cb09b3cd2998eb 38,40-46,53-60
+src/esperanto/providers/llm/profiles.py
+  s_ba01133bce787c::t_eda13223a3db37 80-81,83-84,86-88,90,98-105
+  s_ba01133bce787c::t_1a2e5fd785061b 51-55
+  s_ba01133bce787c::t_fcec3d1e714efc 5-6,11
+  s_ba01133bce787c::t_3102b3814b0dce 82,85
+  s_deea26d3646cda::t_71aa4ec7f093d4 12
+src/esperanto/providers/stt/openai_compatible.py
+  s_ba01133bce787c::t_865493f137f93c 65-67
+  s_ba01133bce787c::t_15437c1f75cce2 192,194
+  s_ba01133bce787c::t_7c757fc4bf3c6f 193
+src/esperanto/factory.py
+  s_ba01133bce787c::t_d5e3be550ef74a 168
+src/esperanto/providers/llm/openai_compatible.py
+  s_ba01133bce787c::t_3e0f0aac047871 57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "52a873709a1ce429b44e9a87c379b1f7eace4326",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    },
+    "s_deea26d3646cda": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1ead5f7-ca81-42ba-ab96-868da743b3d6",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
