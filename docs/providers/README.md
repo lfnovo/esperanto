@@ -325,6 +325,7 @@ Require API keys, pay-per-use:
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
 - [Novita](./openai-compatible.md) (OpenAI-compatible profile)
+- [PayPerQ (PPQ)](./ppq.md) (OpenAI-compatible profile)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
 - [Cohere](./cohere.md)
