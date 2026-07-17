@@ -1,19 +1,20 @@
 """OpenAI-compatible Speech-to-Text provider implementation."""
 
 import mimetypes
-import os
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 import httpx
 
 from esperanto.common_types import Model, TranscriptionResponse
+from esperanto.providers.llm.profiles import OpenAICompatibleProfile
+from esperanto.providers.profile_mixin import ProfileAwareMixin
 from esperanto.utils.logging import logger
 
 from .base import SpeechToTextModel
 
 
-class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
+class OpenAICompatibleSpeechToTextModel(ProfileAwareMixin, SpeechToTextModel):
     """OpenAI-compatible Speech-to-Text provider implementation for custom endpoints.
 
     This provider extends OpenAI's STT implementation to work with any OpenAI-compatible
@@ -59,32 +60,42 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
         config = config or {}
         config.update(kwargs)
 
-        # Configuration precedence: Direct params > config > Environment variables
-        self.base_url = (
-            base_url or
-            config.get("base_url") or
-            os.getenv("OPENAI_COMPATIBLE_BASE_URL_STT") or
-            os.getenv("OPENAI_COMPATIBLE_BASE_URL")
+        # Resolve provider profile (None when not profile-driven) and configuration
+        # via the shared precedence chain (ProfileAwareMixin).
+        self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(
+            config, "speech_to_text"
+        )
+        self.base_url = self._resolve_base_url(
+            "speech_to_text", self._profile, base_url, config
+        )
+        self.api_key = self._resolve_api_key(
+            "speech_to_text", self._profile, api_key, config
         )
 
-        self.api_key = (
-            api_key or
-            config.get("api_key") or
-            os.getenv("OPENAI_COMPATIBLE_API_KEY_STT") or
-            os.getenv("OPENAI_COMPATIBLE_API_KEY")
-        )
-
-        # Validation
-        if not self.base_url:
-            raise ValueError(
-                "OpenAI-compatible base URL is required. "
-                "Set OPENAI_COMPATIBLE_BASE_URL_STT or OPENAI_COMPATIBLE_BASE_URL "
-                "environment variable or provide base_url in config."
-            )
-
-        # Use a default API key if none is provided (some endpoints don't require authentication)
-        if not self.api_key:
-            self.api_key = "not-required"
+        if self._profile:
+            display = self._profile.display_name or self._profile.name.title()
+            if not self.base_url:
+                raise ValueError(
+                    f"{display} base URL is not configured. "
+                    f"Provide base_url in config or check the profile configuration."
+                )
+            if not self.api_key:
+                raise ValueError(
+                    f"{display} API key not found. "
+                    f"Set {self._profile.api_key_env} environment variable "
+                    f"or provide api_key in config."
+                )
+        else:
+            # Validation
+            if not self.base_url:
+                raise ValueError(
+                    "OpenAI-compatible base URL is required. "
+                    "Set OPENAI_COMPATIBLE_BASE_URL_STT or OPENAI_COMPATIBLE_BASE_URL "
+                    "environment variable or provide base_url in config."
+                )
+            # Use a default API key if none is provided (some endpoints don't require authentication)
+            if not self.api_key:
+                self.api_key = "not-required"
 
         # Ensure base_url doesn't end with trailing slash for consistency
         if self.base_url.endswith("/"):
@@ -93,8 +104,8 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
         # Get timeout configuration (default to 300 seconds for STT operations)
         self.timeout = config.get("timeout", 300.0)
 
-        # Remove base_url, api_key, and timeout from config to avoid duplication
-        clean_config = {k: v for k, v in config.items() if k not in ['base_url', 'api_key', 'timeout']}
+        # Remove base_url, api_key, timeout, and profile marker from config to avoid duplication
+        clean_config = {k: v for k, v in config.items() if k not in ['base_url', 'api_key', 'timeout', '_profile_name']}
 
         # Initialize attributes for dataclass
         self.model_name = model_name or self._get_default_model()
@@ -169,14 +180,18 @@ class OpenAICompatibleSpeechToTextModel(SpeechToTextModel):
     def _get_default_model(self) -> str:
         """Get the default model name.
 
-        For OpenAI-compatible endpoints, we use a generic default
-        that users should override with their specific model.
+        Returns the profile's STT default if a profile is active,
+        otherwise a generic default users should override.
         """
-        return "whisper-1"
+        return self._resolve_default_model(
+            "speech_to_text", getattr(self, "_profile", None), "whisper-1"
+        )
 
     @property
     def provider(self) -> str:
-        """Get the provider name."""
+        """Get the provider name (the profile name when profile-driven)."""
+        if self._profile is not None:
+            return self._profile.name
         return "openai-compatible"
 
     def _get_api_kwargs(

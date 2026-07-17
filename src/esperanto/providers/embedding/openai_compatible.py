@@ -1,18 +1,19 @@
 """OpenAI-compatible Embedding provider implementation."""
 
-import os
 from typing import Any, Dict, List, Optional
 
 import httpx
 
 from esperanto.common_types import Model
+from esperanto.providers.llm.profiles import OpenAICompatibleProfile
+from esperanto.providers.profile_mixin import ProfileAwareMixin
 from esperanto.utils import validate_and_decode_embedding
 from esperanto.utils.logging import logger
 
 from .base import EmbeddingModel
 
 
-class OpenAICompatibleEmbeddingModel(EmbeddingModel):
+class OpenAICompatibleEmbeddingModel(ProfileAwareMixin, EmbeddingModel):
     """OpenAI-compatible Embedding provider implementation for custom endpoints.
 
     This provider extends OpenAI's embedding implementation to work with any OpenAI-compatible
@@ -54,32 +55,42 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
         config = config or {}
         config.update(kwargs)
 
-        # Configuration precedence: Direct params > config > Environment variables
-        self.base_url = (
-            base_url
-            or config.get("base_url")
-            or os.getenv("OPENAI_COMPATIBLE_BASE_URL_EMBEDDING")
-            or os.getenv("OPENAI_COMPATIBLE_BASE_URL")
+        # Resolve provider profile (None when not profile-driven) and configuration
+        # via the shared precedence chain (ProfileAwareMixin).
+        self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(
+            config, "embedding"
+        )
+        self.base_url = self._resolve_base_url(
+            "embedding", self._profile, base_url, config
+        )
+        self.api_key = self._resolve_api_key(
+            "embedding", self._profile, api_key, config
         )
 
-        self.api_key = (
-            api_key
-            or config.get("api_key")
-            or os.getenv("OPENAI_COMPATIBLE_API_KEY_EMBEDDING")
-            or os.getenv("OPENAI_COMPATIBLE_API_KEY")
-        )
-
-        # Validation
-        if not self.base_url:
-            raise ValueError(
-                "OpenAI-compatible base URL is required. "
-                "Set OPENAI_COMPATIBLE_BASE_URL_EMBEDDING or OPENAI_COMPATIBLE_BASE_URL "
-                "environment variable or provide base_url in config."
-            )
-
-        # Use a default API key if none is provided (some endpoints don't require authentication)
-        if not self.api_key:
-            self.api_key = "not-required"
+        if self._profile:
+            display = self._profile.display_name or self._profile.name.title()
+            if not self.base_url:
+                raise ValueError(
+                    f"{display} base URL is not configured. "
+                    f"Provide base_url in config or check the profile configuration."
+                )
+            if not self.api_key:
+                raise ValueError(
+                    f"{display} API key not found. "
+                    f"Set {self._profile.api_key_env} environment variable "
+                    f"or provide api_key in config."
+                )
+        else:
+            # Validation
+            if not self.base_url:
+                raise ValueError(
+                    "OpenAI-compatible base URL is required. "
+                    "Set OPENAI_COMPATIBLE_BASE_URL_EMBEDDING or OPENAI_COMPATIBLE_BASE_URL "
+                    "environment variable or provide base_url in config."
+                )
+            # Use a default API key if none is provided (some endpoints don't require authentication)
+            if not self.api_key:
+                self.api_key = "not-required"
 
         # Ensure base_url doesn't end with trailing slash for consistency
         if self.base_url.endswith("/"):
@@ -88,11 +99,11 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
         # Get timeout configuration (default to 120 seconds for embedding operations)
         self.timeout = config.get("timeout", 120.0)
 
-        # Remove base_url, api_key, and timeout from config to avoid duplication
+        # Remove base_url, api_key, timeout, and profile marker from config to avoid duplication
         clean_config = {
             k: v
             for k, v in config.items()
-            if k not in ["base_url", "api_key", "timeout"]
+            if k not in ["base_url", "api_key", "timeout", "_profile_name"]
         }
 
         # Initialize attributes for dataclass
@@ -172,14 +183,18 @@ class OpenAICompatibleEmbeddingModel(EmbeddingModel):
     def _get_default_model(self) -> str:
         """Get the default model name.
 
-        For OpenAI-compatible endpoints, we use a generic default
-        that users should override with their specific model.
+        Returns the profile's embedding default if a profile is active,
+        otherwise a generic default users should override.
         """
-        return "text-embedding-3-small"
+        return self._resolve_default_model(
+            "embedding", getattr(self, "_profile", None), "text-embedding-3-small"
+        )
 
     @property
     def provider(self) -> str:
-        """Get the provider name."""
+        """Get the provider name (the profile name when profile-driven)."""
+        if self._profile is not None:
+            return self._profile.name
         return "openai-compatible"
 
     def embed(self, texts: List[str], **kwargs) -> List[List[float]]:

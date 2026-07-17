@@ -1,6 +1,5 @@
 """OpenAI-compatible language model implementation."""
 
-import os
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -18,13 +17,14 @@ from esperanto.common_types.validation import (
     validate_tool_calls as _validate_tool_calls,
 )
 from esperanto.providers.llm.openai import OpenAILanguageModel
-from esperanto.providers.llm.profiles import OpenAICompatibleProfile, get_profile
+from esperanto.providers.llm.profiles import OpenAICompatibleProfile
 from esperanto.providers.llm.structured_output import (
     ResolvedStructuredOutput,
     apply_structured_output,
     is_json_schema_unsupported_error,
     resolve_structured_output,
 )
+from esperanto.providers.profile_mixin import ProfileAwareMixin
 from esperanto.utils.logging import logger
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ _JSON_OBJECT_RESPONSE_FORMAT_ERROR = "'response_format.type' must be 'json_schem
 
 
 @dataclass
-class OpenAICompatibleLanguageModel(OpenAILanguageModel):
+class OpenAICompatibleLanguageModel(ProfileAwareMixin, OpenAILanguageModel):
     """OpenAI-compatible language model implementation for custom endpoints."""
 
     base_url: Optional[str] = None
@@ -51,28 +51,19 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
         if hasattr(self, "config") and self.config:
             self._config.update(self.config)
 
-        # Resolve provider profile if configured
-        profile_name = self._config.get("_profile_name")
-        self._profile: Optional[OpenAICompatibleProfile] = None
-        if profile_name:
-            self._profile = get_profile(profile_name)
-            if not self._profile:
-                raise ValueError(f"Unknown provider profile: '{profile_name}'")
+        # Resolve provider profile (None when not profile-driven) and configuration
+        # via the shared precedence chain (ProfileAwareMixin).
+        self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(
+            self._config, "language"
+        )
+        self.base_url = self._resolve_base_url(
+            "language", self._profile, self.base_url, self._config
+        )
+        self.api_key = self._resolve_api_key(
+            "language", self._profile, self.api_key, self._config
+        )
 
         if self._profile:
-            # Profile-aware configuration precedence:
-            # explicit param > config dict > profile env var > profile default
-            self.base_url = (
-                self.base_url or
-                self._config.get("base_url") or
-                os.getenv(self._profile.base_url_env or "") or
-                self._profile.base_url
-            )
-            self.api_key = (
-                self.api_key or
-                self._config.get("api_key") or
-                os.getenv(self._profile.api_key_env)
-            )
             display = self._profile.display_name or self._profile.name.title()
             if not self.base_url:
                 raise ValueError(
@@ -86,20 +77,6 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
                     f"or provide api_key in config."
                 )
         else:
-            # Standard OpenAI-compatible configuration precedence
-            self.base_url = (
-                self.base_url or
-                self._config.get("base_url") or
-                os.getenv("OPENAI_COMPATIBLE_BASE_URL_LLM") or
-                os.getenv("OPENAI_COMPATIBLE_BASE_URL")
-            )
-            self.api_key = (
-                self.api_key or
-                self._config.get("api_key") or
-                os.getenv("OPENAI_COMPATIBLE_API_KEY_LLM") or
-                os.getenv("OPENAI_COMPATIBLE_API_KEY")
-            )
-
             # Validation
             if not self.base_url:
                 raise ValueError(
@@ -727,12 +704,10 @@ class OpenAICompatibleLanguageModel(OpenAILanguageModel):
     def _get_default_model(self) -> str:
         """Get the default model name.
 
-        Returns the profile's default_model if a profile is active,
+        Returns the profile's language default if a profile is active,
         otherwise a generic default.
         """
-        if self._profile:
-            return self._profile.default_model
-        return "gpt-3.5-turbo"
+        return self._resolve_default_model("language", self._profile, "gpt-3.5-turbo")
 
     @property
     def provider(self) -> str:
