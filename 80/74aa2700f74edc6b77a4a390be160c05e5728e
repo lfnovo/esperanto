@@ -1,0 +1,21 @@
+docs/providers/ppq.md
+  s_ba01133bce787c::t_554f24110bc9ea 143
+docs/providers/README.md
+  s_ba01133bce787c::t_9df6b33e9c6cb3 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8074aa2700f74edc6b77a4a390be160c05e5728e",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
