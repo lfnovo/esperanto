@@ -112,6 +112,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 **Multiple Models Access:**
 - **[OpenRouter](./openrouter.md)**: 100+ models from various providers
 - **[Novita](./openai-compatible.md)**: 200+ open-source models (OpenAI-compatible profile)
+- **[PayPerQ (PPQ)](./ppq.md)**: hundreds of models across LLM/embedding/STT/TTS, pay-as-you-go with one key
 
 **Local Deployment:**
 - **[Ollama](./ollama.md)**: Llama, Mistral, Qwen, etc.
