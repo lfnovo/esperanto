@@ -76,6 +76,12 @@ class OpenAICompatibleProfile:
     display_name: Optional[str] = None
     """Human-readable name for error messages (e.g., 'DeepSeek'). Defaults to name."""
 
+    requires_api_key: bool = True
+    """Whether the endpoint requires an API key. Set False for local/no-auth
+    endpoints (e.g. oMLX): a missing key then falls back to 'not-required'
+    instead of raising, mirroring the generic openai-compatible path.
+    (Kept last so new fields don't shift existing positional slots.)"""
+
     def __post_init__(self) -> None:
         # Validate declared capabilities against the known modalities, so a typo
         # can't leak an invalid category into get_available_providers().
@@ -171,6 +177,17 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         },
         owned_by="PayPerQ",
         display_name="PayPerQ",
+    ),
+    "omlx": OpenAICompatibleProfile(
+        name="omlx",
+        base_url="http://localhost:11435/v1",
+        api_key_env="OMLX_API_KEY",
+        base_url_env="OMLX_API_BASE",
+        capabilities={"language", "embedding"},
+        default_models={},  # bring-your-own-models: no fixed default
+        requires_api_key=False,
+        owned_by="oMLX",
+        display_name="oMLX",
     ),
 }
 

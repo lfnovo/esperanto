@@ -99,6 +99,35 @@ class ProfileAwareMixin:
             or os.getenv("OPENAI_COMPATIBLE_API_KEY")
         )
 
+    def _finalize_profile_credentials(
+        self,
+        profile: OpenAICompatibleProfile,
+        base_url: Optional[str],
+        api_key: Optional[str],
+    ) -> str:
+        """Validate a profile-active adapter's resolved base_url + api_key.
+
+        Raises on a missing base URL, and on a missing API key unless the profile
+        opts out via ``requires_api_key=False`` — in which case the key defaults
+        to ``"not-required"`` (local/no-auth endpoints), mirroring the generic
+        openai-compatible path. Returns the final API key to store.
+        """
+        display = profile.display_name or profile.name.title()
+        if not base_url:
+            raise ValueError(
+                f"{display} base URL is not configured. "
+                f"Provide base_url in config or check the profile configuration."
+            )
+        if not api_key:
+            if profile.requires_api_key:
+                raise ValueError(
+                    f"{display} API key not found. "
+                    f"Set {profile.api_key_env} environment variable "
+                    f"or provide api_key in config."
+                )
+            return "not-required"
+        return api_key
+
     def _resolve_default_model(
         self,
         modality: Modality,

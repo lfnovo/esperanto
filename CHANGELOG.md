@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **oMLX built-in profile + `requires_api_key` flag** — [oMLX](https://github.com/madroidmaq/omlx),
+  a local OpenAI-compatible MLX server for Apple Silicon, is now a built-in
+  profile (`omlx`, `capabilities={"language", "embedding"}`, base URL
+  `http://localhost:11435/v1`, override via `OMLX_API_BASE`). A new
+  `requires_api_key` flag on `OpenAICompatibleProfile` (default `True`) lets
+  local/no-auth endpoints tolerate a missing API key — it falls back to
+  `"not-required"` instead of raising. oMLX sets no default models (bring your
+  own), so pass a `model_name`. (#228)
+
 - **Multi-modality OpenAI-compatible profiles** — a registered
   `OpenAICompatibleProfile` can now serve `embedding`, `speech_to_text`, and
   `text_to_speech` in addition to `language`, via a new opt-in `capabilities`
