@@ -1,0 +1,41 @@
+src/esperanto/providers/profile_mixin.py
+  s_ba01133bce787c::t_0d1b4f7c610ac6 102,109,114-115,117-120,122-127,130
+  s_ba01133bce787c::t_f536b7d7ec9bc0 103-108,110-113,116,121,128-129
+tests/providers/test_profile_multimodality.py
+  s_ba01133bce787c::t_8cf692bd00dfd1 293-351
+src/esperanto/providers/stt/openai_compatible.py
+  s_ba01133bce787c::t_ce1823b0572e26 92
+  s_ba01133bce787c::t_821249d58c83f3 76-78
+src/esperanto/providers/embedding/openai_compatible.py
+  s_ba01133bce787c::t_8618e877a56b77 71-73
+  s_ba01133bce787c::t_5d265078967212 87
+docs/providers/openai-compatible.md
+  s_ba01133bce787c::t_7117d786c6554c 98
+  s_ba01133bce787c::t_2035aa2113e1d0 140-146
+src/esperanto/providers/llm/openai_compatible.py
+  s_ba01133bce787c::t_d874cc6616391c 67-69
+src/esperanto/providers/llm/profiles.py
+  s_ba01133bce787c::t_d40b5c7164712d 180-190
+  s_ba01133bce787c::t_d0ca75eadcf699 67-71
+CHANGELOG.md
+  s_ba01133bce787c::t_39143b02a4456a 12-20
+src/esperanto/providers/tts/openai_compatible.py
+  s_ba01133bce787c::t_883c6ab3b2f3e5 86
+  s_ba01133bce787c::t_0117d719ad90b8 70-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "00edc16b537c7bb98ccf4d4a28a0f2d74d95c8f8",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
