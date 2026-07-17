@@ -1,0 +1,31 @@
+CHANGELOG.md
+  s_ba01133bce787c::t_21db1d1535b7be 39-48
+docs/providers/ppq.md
+  s_ba01133bce787c::t_f8c191f3d6df1a 11-12,14-20
+src/esperanto/providers/llm/profiles.py
+  s_ba01133bce787c::t_8bbda581fbb9e7 165-171
+README.md
+  s_ba01133bce787c::t_b23e8b306feea5 160
+docs/providers/README.md
+  s_ba01133bce787c::t_8ce8368b03e8ce 25
+tests/providers/llm/test_profiles.py
+  s_ba01133bce787c::t_65ed634e7eb22e 99,102-112
+  s_ba01133bce787c::t_fe61d98a639114 373-393
+  s_ba01133bce787c::t_02e8936ff8b931 113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "c68f2f28d52d5eecc4e0b1eb6d4a492888bc6b4b",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
