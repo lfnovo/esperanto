@@ -3,6 +3,24 @@
 from typing import List
 
 
+class EsperantoError(Exception):
+    """Base class for all Esperanto-raised errors.
+
+    This is the root of Esperanto's normalized exception hierarchy. Catching
+    ``EsperantoError`` catches any error the library raises deliberately (as
+    opposed to a raw provider/SDK exception). More specific error types are
+    built on top of this root — see issue #227 for the full hierarchy.
+    """
+
+
+class ProviderCapabilityError(EsperantoError):
+    """Raised when a provider is asked for a modality it does not support.
+
+    For example, requesting an embedding model from an OpenAI-compatible profile
+    that only declares ``language`` support.
+    """
+
+
 class ToolCallValidationError(Exception):
     """Raised when tool call arguments fail JSON schema validation.
 

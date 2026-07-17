@@ -66,7 +66,7 @@ class TestProfileRegistry:
         assert profile.name == "deepseek"
         assert profile.base_url == "https://api.deepseek.com/v1"
         assert profile.api_key_env == "DEEPSEEK_API_KEY"
-        assert profile.default_model == "deepseek-chat"
+        assert profile.default_model_for("language") == "deepseek-chat"
 
     def test_get_xai_profile(self):
         profile = get_profile("xai")
@@ -80,7 +80,7 @@ class TestProfileRegistry:
         assert profile.name == "dashscope"
         assert profile.base_url == "https://dashscope.aliyuncs.com/compatible-mode/v1"
         assert profile.api_key_env == "DASHSCOPE_API_KEY"
-        assert profile.default_model == "qwen-plus"
+        assert profile.default_model_for("language") == "qwen-plus"
 
     def test_get_novita_profile(self):
         profile = get_profile("novita")
@@ -88,7 +88,7 @@ class TestProfileRegistry:
         assert profile.name == "novita"
         assert profile.base_url == "https://api.novita.ai/openai"
         assert profile.api_key_env == "NOVITA_API_KEY"
-        assert profile.default_model == "moonshotai/kimi-k2.5"
+        assert profile.default_model_for("language") == "moonshotai/kimi-k2.5"
 
     def test_get_unknown_profile_returns_none(self):
         assert get_profile("unknown-provider") is None
