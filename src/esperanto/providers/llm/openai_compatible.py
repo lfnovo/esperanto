@@ -54,7 +54,7 @@ class OpenAICompatibleLanguageModel(ProfileAwareMixin, OpenAILanguageModel):
         # Resolve provider profile (None when not profile-driven) and configuration
         # via the shared precedence chain (ProfileAwareMixin).
         self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(
-            self._config
+            self._config, "language"
         )
         self.base_url = self._resolve_base_url(
             "language", self._profile, self.base_url, self._config

@@ -62,7 +62,9 @@ class OpenAICompatibleSpeechToTextModel(ProfileAwareMixin, SpeechToTextModel):
 
         # Resolve provider profile (None when not profile-driven) and configuration
         # via the shared precedence chain (ProfileAwareMixin).
-        self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(config)
+        self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(
+            config, "speech_to_text"
+        )
         self.base_url = self._resolve_base_url(
             "speech_to_text", self._profile, base_url, config
         )
@@ -187,7 +189,9 @@ class OpenAICompatibleSpeechToTextModel(ProfileAwareMixin, SpeechToTextModel):
 
     @property
     def provider(self) -> str:
-        """Get the provider name."""
+        """Get the provider name (the profile name when profile-driven)."""
+        if self._profile is not None:
+            return self._profile.name
         return "openai-compatible"
 
     def _get_api_kwargs(

@@ -92,6 +92,36 @@ class TestProfileSchema:
             )
         assert p.default_model_for("language") == "explicit"
 
+    def test_positional_construction_binds_default_model(self):
+        # Back-compat: the 4th positional arg must still be default_model.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            p = OpenAICompatibleProfile("x", "http://x/v1", "X_KEY", "my-model")
+        assert p.default_model_for("language") == "my-model"
+
+    def test_invalid_capability_raises(self):
+        with pytest.raises(ValueError, match="Unknown profile capabilities"):
+            OpenAICompatibleProfile(
+                name="x",
+                base_url="http://x/v1",
+                api_key_env="X_KEY",
+                capabilities={"embeddng"},  # typo
+            )
+
+    def test_capabilities_and_default_models_are_immutable(self):
+        p = OpenAICompatibleProfile(
+            name="x",
+            base_url="http://x/v1",
+            api_key_env="X_KEY",
+            capabilities={"language", "embedding"},
+            default_models={"language": "a"},
+        )
+        assert isinstance(p.capabilities, frozenset)
+        with pytest.raises((AttributeError, TypeError)):
+            p.capabilities.add("speech_to_text")  # type: ignore[attr-defined]
+        with pytest.raises(TypeError):
+            p.default_models["language"] = "b"  # type: ignore[index]
+
     def test_builtins_do_not_warn_and_resolve_language_default(self, recwarn):
         # Re-importing built-ins must not emit deprecation noise; they use
         # default_models now, not default_model.
@@ -225,6 +255,39 @@ class TestFactoryResolution:
 # =============================================================================
 # Hybrid provider: xAI is a language profile AND a first-class TTS class
 # =============================================================================
+
+
+class TestDirectConstructionGate:
+    def test_direct_embedding_with_language_only_profile_raises(self, monkeypatch):
+        # Constructing the adapter directly (bypassing the factory) with a
+        # language-only profile must still be rejected at the boundary.
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "k")
+        from esperanto.providers.embedding.openai_compatible import (
+            OpenAICompatibleEmbeddingModel,
+        )
+
+        with pytest.raises(ProviderCapabilityError):
+            OpenAICompatibleEmbeddingModel(
+                model_name="m", config={"_profile_name": "deepseek"}
+            )
+
+
+class TestProviderIdentity:
+    def test_profile_backed_embedding_reports_profile_name(self, _env):
+        _register(
+            name="multi",
+            base_url="http://localhost:9/v1",
+            api_key_env="MULTI_KEY",
+            capabilities={"embedding"},
+            default_models={"embedding": "e"},
+        )
+        model = AIFactory.create_embedding("multi", None)
+        assert model.provider == "multi"
+
+    def test_plain_openai_compatible_embedding_reports_generic(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL", "http://localhost:9/v1")
+        model = AIFactory.create_embedding("openai-compatible", "m")
+        assert model.provider == "openai-compatible"
 
 
 class TestHybridProvider:

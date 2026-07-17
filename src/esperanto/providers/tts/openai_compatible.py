@@ -56,7 +56,9 @@ class OpenAICompatibleTextToSpeechModel(ProfileAwareMixin, OpenAITextToSpeechMod
 
         # Resolve provider profile (None when not profile-driven) and configuration
         # via the shared precedence chain (ProfileAwareMixin).
-        self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(config)
+        self._profile: Optional[OpenAICompatibleProfile] = self._resolve_profile(
+            config, "text_to_speech"
+        )
         self.base_url = self._resolve_base_url(
             "text_to_speech", self._profile, base_url, config
         )
@@ -215,7 +217,9 @@ class OpenAICompatibleTextToSpeechModel(ProfileAwareMixin, OpenAITextToSpeechMod
 
     @property
     def provider(self) -> str:
-        """Get the provider name."""
+        """Get the provider name (the profile name when profile-driven)."""
+        if self._profile is not None:
+            return self._profile.name
         return "openai-compatible"
 
     def generate_speech(

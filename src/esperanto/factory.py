@@ -165,7 +165,7 @@ class AIFactory:
             ...         name="together",
             ...         base_url="https://api.together.xyz/v1",
             ...         api_key_env="TOGETHER_API_KEY",
-            ...         default_model="meta-llama/Llama-3-70b-chat-hf",
+            ...         default_models={"language": "meta-llama/Llama-3-70b-chat-hf"},
             ...     )
             ... )
             >>> model = AIFactory.create_language("together", "meta-llama/Llama-3-70b-chat-hf")

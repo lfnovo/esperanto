@@ -35,15 +35,29 @@ class ProfileAwareMixin:
     """
 
     def _resolve_profile(
-        self, config: Dict[str, Any]
+        self, config: Dict[str, Any], modality: Modality
     ) -> Optional[OpenAICompatibleProfile]:
-        """Look up the active profile from config, or None if not profile-driven."""
+        """Look up the active profile from config, or None if not profile-driven.
+
+        Enforces the modality capability at the construction boundary too, not
+        just in the factory — so directly constructing a modality adapter with a
+        profile that doesn't declare that modality fails fast rather than reaching
+        the wrong endpoint.
+        """
         profile_name = config.get("_profile_name")
         if not profile_name:
             return None
         profile = get_profile(profile_name)
         if not profile:
             raise ValueError(f"Unknown provider profile: '{profile_name}'")
+        if modality not in profile.capabilities:
+            from esperanto.common_types import ProviderCapabilityError
+
+            display = profile.display_name or profile.name
+            raise ProviderCapabilityError(
+                f"Provider '{profile.name}' ({display}) does not support {modality}. "
+                f"Declared capabilities: {sorted(profile.capabilities)}."
+            )
         return profile
 
     def _resolve_base_url(

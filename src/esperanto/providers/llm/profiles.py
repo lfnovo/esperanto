@@ -2,10 +2,13 @@
 
 import warnings
 from dataclasses import dataclass, field
-from typing import Dict, Literal, Optional, Set
+from types import MappingProxyType
+from typing import Dict, Literal, Optional, Set, get_args
 
 Modality = Literal["language", "embedding", "speech_to_text", "text_to_speech"]
 """The modalities a profile can declare support for."""
+
+_VALID_MODALITIES: Set[str] = set(get_args(Modality))
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,11 @@ class OpenAICompatibleProfile:
     api_key_env: str
     """Environment variable name for the API key (e.g., 'DEEPSEEK_API_KEY')."""
 
+    default_model: Optional[str] = None
+    """Deprecated. Back-compat alias for ``default_models['language']``. Kept in
+    its original positional slot so existing positional construction still binds
+    here. Passing this emits a DeprecationWarning; use ``default_models`` instead."""
+
     capabilities: Set[Modality] = field(default_factory=lambda: {"language"})
     """Modalities this profile serves. Defaults to language-only."""
 
@@ -52,10 +60,6 @@ class OpenAICompatibleProfile:
     """Default model per modality when the caller passes none. A modality with
     no entry has no default — the caller must pass a model name or a clear error
     is raised (never a generic placeholder)."""
-
-    default_model: Optional[str] = None
-    """Deprecated. Back-compat alias for ``default_models['language']``. Passing
-    this emits a DeprecationWarning; use ``default_models`` instead."""
 
     base_url_env: Optional[str] = None
     """Optional environment variable for base URL override."""
@@ -73,8 +77,17 @@ class OpenAICompatibleProfile:
     """Human-readable name for error messages (e.g., 'DeepSeek'). Defaults to name."""
 
     def __post_init__(self) -> None:
+        # Validate declared capabilities against the known modalities, so a typo
+        # can't leak an invalid category into get_available_providers().
+        invalid = sorted(c for c in self.capabilities if c not in _VALID_MODALITIES)
+        if invalid:
+            raise ValueError(
+                f"Unknown profile capabilities {invalid}; "
+                f"valid modalities are {sorted(_VALID_MODALITIES)}."
+            )
+
         # Fold the deprecated ``default_model`` into ``default_models['language']``.
-        # Frozen dataclass → mutate via object.__setattr__.
+        models = dict(self.default_models)
         if self.default_model is not None:
             warnings.warn(
                 "OpenAICompatibleProfile(default_model=...) is deprecated; "
@@ -82,10 +95,14 @@ class OpenAICompatibleProfile:
                 DeprecationWarning,
                 stacklevel=3,
             )
-            if "language" not in self.default_models:
-                merged = dict(self.default_models)
-                merged["language"] = self.default_model
-                object.__setattr__(self, "default_models", merged)
+            models.setdefault("language", self.default_model)
+
+        # Freeze the mutable collections. The dataclass is frozen (no rebinding),
+        # but a Set/Dict field is still mutable in place — and built-in profiles
+        # are shared global state, so a stray .add()/[...]= could drift behavior
+        # for every caller. Store immutable copies instead.
+        object.__setattr__(self, "capabilities", frozenset(self.capabilities))
+        object.__setattr__(self, "default_models", MappingProxyType(models))
 
     def default_model_for(self, modality: Modality) -> Optional[str]:
         """Return the default model for a modality, or None if none is set."""
