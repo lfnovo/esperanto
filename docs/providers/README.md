@@ -22,6 +22,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [PayPerQ (PPQ)](./ppq.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Voyage](./voyage.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -42,6 +43,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[OpenAI](./openai.md)**: LLM + Embedding + STT + TTS (industry standard)
 - **[Azure OpenAI](./azure.md)**: Same as OpenAI + enterprise compliance
 - **[Google GenAI](./google.md)**: LLM + Embedding + TTS (competitive pricing)
+- **[PayPerQ (PPQ)](./ppq.md)**: LLM + Embedding + STT + TTS (pay-as-you-go gateway, single key)
 - **[OpenAI-Compatible](./openai-compatible.md)**: Use different endpoints for different capabilities
 
 **Partial Multi-Modal:**
@@ -110,6 +112,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 **Multiple Models Access:**
 - **[OpenRouter](./openrouter.md)**: 100+ models from various providers
 - **[Novita](./openai-compatible.md)**: 200+ open-source models (OpenAI-compatible profile)
+- **[PayPerQ (PPQ)](./ppq.md)**: hundreds of models across LLM/embedding/STT/TTS, pay-as-you-go with one key
 
 **Local Deployment:**
 - **[Ollama](./ollama.md)**: Llama, Mistral, Qwen, etc.
@@ -322,6 +325,7 @@ Require API keys, pay-per-use:
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
 - [Novita](./openai-compatible.md) (OpenAI-compatible profile)
+- [PayPerQ (PPQ)](./ppq.md) (OpenAI-compatible profile)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
 - [Cohere](./cohere.md)
