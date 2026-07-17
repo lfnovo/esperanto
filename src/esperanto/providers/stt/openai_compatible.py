@@ -73,18 +73,9 @@ class OpenAICompatibleSpeechToTextModel(ProfileAwareMixin, SpeechToTextModel):
         )
 
         if self._profile:
-            display = self._profile.display_name or self._profile.name.title()
-            if not self.base_url:
-                raise ValueError(
-                    f"{display} base URL is not configured. "
-                    f"Provide base_url in config or check the profile configuration."
-                )
-            if not self.api_key:
-                raise ValueError(
-                    f"{display} API key not found. "
-                    f"Set {self._profile.api_key_env} environment variable "
-                    f"or provide api_key in config."
-                )
+            self.api_key = self._finalize_profile_credentials(
+                self._profile, self.base_url, self.api_key
+            )
         else:
             # Validation
             if not self.base_url:
@@ -98,7 +89,7 @@ class OpenAICompatibleSpeechToTextModel(ProfileAwareMixin, SpeechToTextModel):
                 self.api_key = "not-required"
 
         # Ensure base_url doesn't end with trailing slash for consistency
-        if self.base_url.endswith("/"):
+        if self.base_url and self.base_url.endswith("/"):
             self.base_url = self.base_url.rstrip("/")
 
         # Get timeout configuration (default to 300 seconds for STT operations)

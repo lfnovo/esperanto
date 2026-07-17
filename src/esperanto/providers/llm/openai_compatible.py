@@ -64,18 +64,9 @@ class OpenAICompatibleLanguageModel(ProfileAwareMixin, OpenAILanguageModel):
         )
 
         if self._profile:
-            display = self._profile.display_name or self._profile.name.title()
-            if not self.base_url:
-                raise ValueError(
-                    f"{display} base URL is not configured. "
-                    f"Provide base_url in config or check the profile configuration."
-                )
-            if not self.api_key:
-                raise ValueError(
-                    f"{display} API key not found. "
-                    f"Set {self._profile.api_key_env} environment variable "
-                    f"or provide api_key in config."
-                )
+            self.api_key = self._finalize_profile_credentials(
+                self._profile, self.base_url, self.api_key
+            )
         else:
             # Validation
             if not self.base_url:

@@ -290,6 +290,65 @@ class TestProviderIdentity:
         assert model.provider == "openai-compatible"
 
 
+class TestRequiresApiKey:
+    def test_no_auth_profile_defaults_key(self, monkeypatch):
+        # A requires_api_key=False profile with no key set constructs fine.
+        monkeypatch.delenv("NOAUTH_KEY", raising=False)
+        _register(
+            name="noauth",
+            base_url="http://localhost:9/v1",
+            api_key_env="NOAUTH_KEY",
+            capabilities={"language"},
+            default_models={"language": "m"},
+            requires_api_key=False,
+        )
+        model = AIFactory.create_language("noauth", "m")
+        assert model.api_key == "not-required"
+
+    def test_requires_key_profile_still_raises(self, monkeypatch):
+        monkeypatch.delenv("NEEDKEY_KEY", raising=False)
+        _register(
+            name="needkey",
+            base_url="http://localhost:9/v1",
+            api_key_env="NEEDKEY_KEY",
+            capabilities={"language"},
+            default_models={"language": "m"},
+            # requires_api_key defaults True
+        )
+        with pytest.raises(ValueError, match="API key not found"):
+            AIFactory.create_language("needkey", "m")
+
+
+class TestOmlxProfile:
+    def test_omlx_no_auth_language_and_embedding(self, monkeypatch):
+        for var in ("OMLX_API_KEY", "OMLX_API_BASE"):
+            monkeypatch.delenv(var, raising=False)
+        llm = AIFactory.create_language("omlx", "some-model")
+        emb = AIFactory.create_embedding("omlx", "some-embed")
+        assert llm.api_key == "not-required"
+        assert emb.api_key == "not-required"
+        assert emb.base_url == "http://localhost:11435/v1"
+        assert emb.provider == "omlx"
+
+    def test_omlx_audio_modalities_unsupported(self, monkeypatch):
+        monkeypatch.delenv("OMLX_API_KEY", raising=False)
+        with pytest.raises(ProviderCapabilityError):
+            AIFactory.create_speech_to_text("omlx", "x")
+        with pytest.raises(ProviderCapabilityError):
+            AIFactory.create_text_to_speech("omlx", "x")
+
+    def test_omlx_no_default_requires_model(self, monkeypatch):
+        monkeypatch.delenv("OMLX_API_KEY", raising=False)
+        with pytest.raises(ValueError, match="no default model"):
+            AIFactory.create_embedding("omlx", None)
+
+    def test_omlx_base_url_override(self, monkeypatch):
+        monkeypatch.delenv("OMLX_API_KEY", raising=False)
+        monkeypatch.setenv("OMLX_API_BASE", "http://localhost:9999/v1")
+        model = AIFactory.create_language("omlx", "m")
+        assert model.base_url == "http://localhost:9999/v1"
+
+
 class TestHybridProvider:
     def test_xai_tts_falls_through_to_first_class(self, monkeypatch):
         monkeypatch.setenv("XAI_API_KEY", "test-key")

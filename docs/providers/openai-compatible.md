@@ -95,7 +95,7 @@ model = AIFactory.create_language("my-company", "llama-3-70b")
 response = model.chat_complete(messages)
 ```
 
-Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, and **Novita**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile.
+Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, **Novita**, **PayPerQ (PPQ)**, and **oMLX**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile.
 
 ### Multi-Modality Profiles
 
@@ -137,6 +137,13 @@ Notes:
 - **Deprecation.** `default_model="..."` is deprecated in favor of
   `default_models={"language": "..."}`; it still works as a language alias and
   emits a `DeprecationWarning`.
+- **No-auth / local endpoints.** For a local server that needs no API key (e.g.
+  [oMLX](https://github.com/madroidmaq/omlx)), set `requires_api_key=False`; a
+  missing key then falls back to `"not-required"` instead of raising. The
+  built-in **oMLX** profile (`omlx`, `capabilities={"language", "embedding"}`,
+  base URL `http://localhost:11435/v1`, override via `OMLX_API_BASE`) uses this.
+  It sets no default models, so pass a `model_name` for whatever MLX model you
+  have loaded.
 
 ## Quick Start
 

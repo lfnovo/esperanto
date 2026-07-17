@@ -64,6 +64,11 @@ class OpenAICompatibleProfile:
     base_url_env: Optional[str] = None
     """Optional environment variable for base URL override."""
 
+    requires_api_key: bool = True
+    """Whether the endpoint requires an API key. Set False for local/no-auth
+    endpoints (e.g. oMLX): a missing key then falls back to 'not-required'
+    instead of raising, mirroring the generic openai-compatible path."""
+
     supports_response_format: bool = True
     """Whether the endpoint supports the response_format parameter."""
 
@@ -171,6 +176,17 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         },
         owned_by="PayPerQ",
         display_name="PayPerQ",
+    ),
+    "omlx": OpenAICompatibleProfile(
+        name="omlx",
+        base_url="http://localhost:11435/v1",
+        api_key_env="OMLX_API_KEY",
+        base_url_env="OMLX_API_BASE",
+        capabilities={"language", "embedding"},
+        default_models={},  # bring-your-own-models: no fixed default
+        requires_api_key=False,
+        owned_by="oMLX",
+        display_name="oMLX",
     ),
 }
 
