@@ -64,11 +64,6 @@ class OpenAICompatibleProfile:
     base_url_env: Optional[str] = None
     """Optional environment variable for base URL override."""
 
-    requires_api_key: bool = True
-    """Whether the endpoint requires an API key. Set False for local/no-auth
-    endpoints (e.g. oMLX): a missing key then falls back to 'not-required'
-    instead of raising, mirroring the generic openai-compatible path."""
-
     supports_response_format: bool = True
     """Whether the endpoint supports the response_format parameter."""
 
@@ -80,6 +75,12 @@ class OpenAICompatibleProfile:
 
     display_name: Optional[str] = None
     """Human-readable name for error messages (e.g., 'DeepSeek'). Defaults to name."""
+
+    requires_api_key: bool = True
+    """Whether the endpoint requires an API key. Set False for local/no-auth
+    endpoints (e.g. oMLX): a missing key then falls back to 'not-required'
+    instead of raising, mirroring the generic openai-compatible path.
+    (Kept last so new fields don't shift existing positional slots.)"""
 
     def __post_init__(self) -> None:
         # Validate declared capabilities against the known modalities, so a typo
