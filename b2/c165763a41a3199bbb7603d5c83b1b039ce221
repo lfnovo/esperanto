@@ -1,0 +1,75 @@
+src/esperanto/providers/tts/openai_compatible.py
+  s_ba01133bce787c::t_94a2265ff845be 7-8,15
+  s_ba01133bce787c::t_91912f31d0916b 57-61,63-64,67-90,96-101
+  s_ba01133bce787c::t_27337e1b9a1afa 209-210,212-214
+tests/providers/test_profile_multimodality.py
+  s_ba01133bce787c::t_a350b9bd378d4b 222
+  s_ba01133bce787c::t_540f5217b0aa45 185
+  s_ba01133bce787c::t_8664851c19e09f 1-184,186-221,223-275
+src/esperanto/providers/llm/openai_compatible.py
+  s_ba01133bce787c::t_f6c201366053aa 20
+  s_ba01133bce787c::t_d790f2d52e0f57 707,710
+  s_ba01133bce787c::t_52521c3006e7f7 38,54-64
+  s_ba01133bce787c::t_6392a0e6275ad9 27
+src/esperanto/__init__.py
+  s_ba01133bce787c::t_e3b04a81707349 181-183
+  s_ba01133bce787c::t_496dddbecf91ea 7,9
+tests/providers/llm/test_profiles.py
+  s_ba01133bce787c::t_291ac2f1f94d9c 83
+  s_ba01133bce787c::t_754bff73c2259b 91
+  s_ba01133bce787c::t_9a7be4e53adaed 69
+src/esperanto/factory.py
+  s_ba01133bce787c::t_4ebba75f94b4f9 479-489
+  s_ba01133bce787c::t_f16aab0c1bd1cd 139,145-148
+  s_ba01133bce787c::t_4e53cfbe9e40a2 175-187
+  s_ba01133bce787c::t_a4bc0a38808561 284-310
+  s_ba01133bce787c::t_4b618adc5df62b 338
+  s_ba01133bce787c::t_ed54f69e5febb8 416-427
+  s_ba01133bce787c::t_cb099129b6bfd3 366-377
+  s_ba01133bce787c::t_90a42112f35aae 283
+src/esperanto/providers/stt/openai_compatible.py
+  s_ba01133bce787c::t_3584afbfe46591 181-182,184-186
+  s_ba01133bce787c::t_67cf1267433cf0 63-67,69-70,73-96
+  s_ba01133bce787c::t_6a58445194644a 105-106
+  s_ba01133bce787c::t_82d4eee222a2a4 10-11,17
+src/esperanto/providers/embedding/openai_compatible.py
+  s_ba01133bce787c::t_ae4a67a5db0493 8-9,16
+  s_ba01133bce787c::t_47ab972fc887c2 58-62,64-65,68-91
+  s_ba01133bce787c::t_a35434071fab1e 100,104
+  s_ba01133bce787c::t_ba1179795c2d1c 184-185,187-189
+src/esperanto/common_types/exceptions.py
+  s_ba01133bce787c::t_96251ff8560157 6-23
+CHANGELOG.md
+  s_ba01133bce787c::t_f36b8c6ddb7634 40-46
+  s_ba01133bce787c::t_b53fdffc764cd0 12,14-25
+  s_ba01133bce787c::t_77c06d28ef1059 13
+docs/providers/openai-compatible.md
+  s_ba01133bce787c::t_b749f4d739a8e7 89,100-139
+  s_ba01133bce787c::t_9bf429025307e7 140
+src/esperanto/common_types/__init__.py
+  s_ba01133bce787c::t_2b693954154768 3-8
+  s_ba01133bce787c::t_a213132ed4a5d0 43-45
+src/esperanto/providers/llm/profiles.py
+  s_ba01133bce787c::t_a02f24d52c0911 166-174
+  s_ba01133bce787c::t_3d7f2735e17c13 101,110,121,130,139
+  s_ba01133bce787c::t_73c729d8b5b25c 3-8,16-22,33,48-58,75-92
+  s_ba01133bce787c::t_753ca4e6c93521 93
+src/esperanto/providers/profile_mixin.py
+  s_ba01133bce787c::t_0d3b479486eb2b 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "b2c165763a41a3199bbb7603d5c83b1b039ce221",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
