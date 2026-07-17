@@ -140,4 +140,4 @@ model = AIFactory.create_language(
 
 - PayPerQ exposes an OpenAI-compatible endpoint (`/chat/completions`, `/models`) under `https://api.ppq.ai/v1`, so all standard Esperanto LLM features (streaming, tool calling, JSON mode) work with models that support them.
 - Because PayPerQ aggregates many providers, feature support (JSON mode, tool calling, reasoning) depends on the specific model you select, not on PayPerQ itself.
-- `AIFactory.get_provider_models("ppq")` returns the chat catalog, which currently includes non-language models (e.g. image/video). Filter by the model `id` you intend to use for text generation.
+- `AIFactory.get_provider_models("ppq", model_type="language")` returns just the language catalog; the unfiltered `AIFactory.get_provider_models("ppq")` may include non-language models (e.g. image/video), so prefer the `model_type` filter over post-filtering by `id`.

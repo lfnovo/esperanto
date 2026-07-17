@@ -43,6 +43,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[OpenAI](./openai.md)**: LLM + Embedding + STT + TTS (industry standard)
 - **[Azure OpenAI](./azure.md)**: Same as OpenAI + enterprise compliance
 - **[Google GenAI](./google.md)**: LLM + Embedding + TTS (competitive pricing)
+- **[PayPerQ (PPQ)](./ppq.md)**: LLM + Embedding + STT + TTS (pay-as-you-go gateway, single key)
 - **[OpenAI-Compatible](./openai-compatible.md)**: Use different endpoints for different capabilities
 
 **Partial Multi-Modal:**
