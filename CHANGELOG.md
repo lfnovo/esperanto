@@ -36,6 +36,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`stream=True` raises `ValueError`); providers/models that can't honor a
   `json_schema` request fail fast with a clear error rather than silently degrading.
   (#95)
+- **PayPerQ (PPQ) provider — LLM, embedding, STT, TTS** — PayPerQ is now
+  selectable across all four modalities via `AIFactory.create_language`,
+  `create_embedding`, `create_speech_to_text`, and `create_text_to_speech` with
+  provider `"ppq"`. PPQ is a pay-as-you-go gateway exposing hundreds of models
+  from many labs through a single OpenAI-compatible endpoint. Added as a built-in
+  multi-modality `OpenAICompatibleProfile` (base URL `https://api.ppq.ai/v1`,
+  `PPQ_API_KEY`, optional `PPQ_BASE_URL`) with per-modality defaults (`auto`,
+  `openai/text-embedding-3-small`, `nova-3`, `deepgram_aura_2`), so it inherits
+  streaming, tool calling, and JSON mode from the OpenAI-compatible
+  implementation. Ships with profile unit tests and provider docs.
 
 ### Deprecated
 
