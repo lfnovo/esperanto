@@ -1,0 +1,27 @@
+.github/workflows/test.yml
+  s_ba01133bce787c::t_7f65b2664c52b1 16,19,25
+.github/workflows/create-tag.yml
+  s_ba01133bce787c::t_7f65b2664c52b1 19
+.github/workflows/lint.yml
+  s_ba01133bce787c::t_7f65b2664c52b1 11,14
+.github/workflows/publish.yml
+  s_ba01133bce787c::t_7f65b2664c52b1 14,17
+.github/workflows/claude.yml
+  s_ba01133bce787c::t_7f65b2664c52b1 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "ff0cee6bd47679752e3dda04a17d94ba83147e0a",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
