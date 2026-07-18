@@ -54,7 +54,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PPQ_API_KEY`, optional `PPQ_BASE_URL`) with per-modality defaults (`auto`,
   `openai/text-embedding-3-small`, `nova-3`, `deepgram_aura_2`), so it inherits
   streaming, tool calling, and JSON mode from the OpenAI-compatible
-  implementation. Ships with profile unit tests and provider docs.
+  implementation. Ships with profile unit tests and provider docs. (#238)
+- **OpenRouter text-to-speech and speech-to-text** — OpenRouter is now
+  selectable for TTS via `AIFactory.create_text_to_speech("openrouter", ...)`
+  and for STT via `AIFactory.create_speech_to_text("openrouter", ...)`, using
+  `OPENROUTER_API_KEY`. Rounds out OpenRouter to LLM + TTS + STT. (#224)
+- **Novita AI language provider** — Novita is now selectable via
+  `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with
+  `NOVITA_API_KEY`. Novita is a pay-as-you-go gateway to many open-source models
+  through a single OpenAI-compatible endpoint, added as a built-in
+  `OpenAICompatibleProfile` (base URL `https://api.novita.ai/openai`, optional
+  `NOVITA_BASE_URL`). (#120)
 
 ### Deprecated
 
