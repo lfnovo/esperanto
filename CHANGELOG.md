@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.25.0] - 2026-07-18
+
 ### Added
 
 - **oMLX built-in profile + `requires_api_key` flag** — [oMLX](https://github.com/madroidmaq/omlx),
