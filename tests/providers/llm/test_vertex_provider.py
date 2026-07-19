@@ -903,9 +903,9 @@ class TestCredentials:
                 "google.oauth2.service_account.Credentials.from_service_account_file",
             ) as mock_from_file:
                 model = VertexLanguageModel(model_name="gemini-2.0-flash")
-        mock_from_file.assert_not_called()
-        mock_default.assert_called_once()
-        assert model._credentials is mock_creds
+                mock_from_file.assert_not_called()
+                mock_default.assert_called_once()
+                assert model._credentials is mock_creds
 
     def test_credentials_file_takes_priority_over_env_var(self):
         """Test that explicit credentials_file takes priority over env var."""
