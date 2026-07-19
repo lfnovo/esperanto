@@ -1,0 +1,30 @@
+src/esperanto/providers/stt/elevenlabs.py
+  s_ba01133bce787c::t_793603b2149216 55
+  s_ba01133bce787c::t_c47afe91a3203a 66-69
+  s_ba01133bce787c::t_1fbd4f20c850e8 65
+src/esperanto/providers/tts/elevenlabs.py
+  s_ba01133bce787c::t_7566080a588e1f 15,17,20-21
+tests/integration/test_stt_real.py
+  s_ba01133bce787c::t_7fb7c172542aa7 230-235,238,243-248,250
+tests/providers/stt/test_elevenlabs.py
+  s_ba01133bce787c::t_9f4e8590b7db16 110
+  s_ba01133bce787c::t_62617f26998ba1 217
+CHANGELOG.md
+  s_ba01133bce787c::t_158ce999ba6f6b 10-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "c3558333b258c8a7691b11a6ad04ca14ae7c94d6",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
