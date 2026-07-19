@@ -21,14 +21,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Load cached venv
-      id: cached-dependencies
       uses: actions/cache@v4
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
 
+    # Always run the sync — a cache hit only warms .venv; skipping the install on
+    # a hit lets a partial/poisoned cache (e.g. missing numpy/torch) persist
+    # forever. `uv sync` is fast and idempotent against a warm cache.
     - name: Create venv and install dependencies
-      if: steps.cached-dependencies.outputs.cache-hit != 'true'
       run: |
         uv sync --all-extras && uv pip install mxbai-rerank
 
