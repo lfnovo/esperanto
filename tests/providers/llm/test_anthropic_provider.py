@@ -1231,3 +1231,25 @@ class TestStreamingToolCalls:
 
         assert chunk is not None
         assert chunk.choices[0].finish_reason == "tool_calls"
+
+
+def test_anthropic_to_langchain_forwards_custom_base_url():
+    """A custom Anthropic-compatible endpoint is forwarded (with /v1 stripped)."""
+    model = AnthropicLanguageModel(
+        api_key="test-key",
+        model_name="claude-3-opus-20240229",
+        base_url="https://api.moonshot.ai/anthropic/v1",
+    )
+    with patch("langchain_anthropic.ChatAnthropic") as MockChat:
+        model.to_langchain()
+    assert MockChat.call_args.kwargs["base_url"] == "https://api.moonshot.ai/anthropic"
+
+
+def test_anthropic_to_langchain_omits_default_base_url():
+    """The default endpoint is not forwarded (ChatAnthropic uses its own default)."""
+    model = AnthropicLanguageModel(
+        api_key="test-key", model_name="claude-3-opus-20240229"
+    )
+    with patch("langchain_anthropic.ChatAnthropic") as MockChat:
+        model.to_langchain()
+    assert "base_url" not in MockChat.call_args.kwargs

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`to_langchain()` now forwards a custom base URL for Anthropic and Cohere.**
+  Previously, converting an Anthropic- or Cohere-compatible model (configured with
+  a custom `base_url`) to LangChain silently reconnected to the official API.
+  Anthropic strips the `/v1` suffix that `ChatAnthropic` doesn't expect. The
+  default endpoint is still omitted so LangChain uses its own default. (#229)
+
 ### Changed
 
 - **ElevenLabs default models bumped to the latest.** Speech-to-text now defaults
