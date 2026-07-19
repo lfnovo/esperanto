@@ -52,15 +52,21 @@ def test_service_account_file_is_used(kwargs, fake_creds):
     assert d._credentials is fake_creds
 
 
-def test_env_var_credentials(monkeypatch, fake_creds):
-    monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/env/key.json")
+def test_env_var_routes_through_adc_not_service_account(monkeypatch, fake_creds):
+    """GOOGLE_APPLICATION_CREDENTIALS is left for ADC (google.auth.default) to
+    interpret — never forced through from_service_account_file, which would break
+    workload/workforce identity federation configs."""
+    monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/env/federated.json")
     with patch(
-        "google.oauth2.service_account.Credentials.from_service_account_file",
-        return_value=fake_creds,
-    ) as mock_load:
+        "google.oauth2.service_account.Credentials.from_service_account_file"
+    ) as mock_sa, patch(
+        "google.auth.default", return_value=(fake_creds, "proj")
+    ) as mock_adc:
         d = _Dummy()
         d._load_credentials()
-    assert mock_load.call_args[0][0] == "/env/key.json"
+    mock_sa.assert_not_called()
+    mock_adc.assert_called_once()
+    assert d._credentials is fake_creds
 
 
 # --- token acquisition ----------------------------------------------------- #

@@ -7,13 +7,15 @@ request (`_get_access_token`).
 
 Credential resolution priority:
 1. An explicit service-account key file — from a ``credentials_file`` attribute,
-   or a ``credentials_file`` / ``credentials_path`` config entry.
-2. ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable.
-3. Application Default Credentials (``google.auth.default``).
-4. The ``gcloud`` CLI (last-resort fallback in ``_get_access_token``).
+   or a ``credentials_file`` / ``credentials_path`` config entry (loaded as a
+   service-account key).
+2. Application Default Credentials (``google.auth.default``), which itself reads
+   ``GOOGLE_APPLICATION_CREDENTIALS`` and supports every credential type
+   (service-account keys, workload/workforce identity federation, the metadata
+   server, ...).
+3. The ``gcloud`` CLI (last-resort fallback in ``_get_access_token``).
 """
 
-import os
 import subprocess
 import time
 from typing import Any, Optional
@@ -37,14 +39,17 @@ class VertexAuthMixin:
         """
         self._credentials = None
         config = getattr(self, "_config", None) or {}
-        creds_path = (
+        # A key file the caller explicitly declared — treat it as a
+        # service-account key. GOOGLE_APPLICATION_CREDENTIALS is deliberately NOT
+        # read here: it can point at a federated/external-account config that is
+        # not a service-account key, so it's left for ADC below to interpret.
+        explicit_key = (
             getattr(self, "credentials_file", None)
             or config.get("credentials_file")
             or config.get("credentials_path")
-            or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
         )
 
-        if creds_path:
+        if explicit_key:
             # Explicit credentials file — errors must propagate so the user
             # doesn't silently fall back to a different identity.
             try:
@@ -55,10 +60,13 @@ class VertexAuthMixin:
                     "Install with: uv add google-auth or pip install google-auth"
                 )
             self._credentials = service_account.Credentials.from_service_account_file(
-                creds_path, scopes=_SCOPES
+                explicit_key, scopes=_SCOPES
             )
         else:
-            # ADC — best-effort; fall back to the gcloud CLI if unavailable.
+            # Application Default Credentials — reads GOOGLE_APPLICATION_CREDENTIALS
+            # itself and handles every credential type (service-account keys,
+            # workload/workforce identity federation, metadata server, ...).
+            # Best-effort; fall back to the gcloud CLI if unavailable.
             try:
                 import google.auth
 
