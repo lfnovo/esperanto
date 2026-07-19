@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Vertex AI now authenticates from a service-account key file across all
+  modalities.** `VertexTextToSpeechModel` and `VertexEmbeddingModel` previously
+  ignored a configured key and shelled out to the `gcloud` CLI (unusable in
+  containers where `gcloud` isn't installed). All three Vertex providers now
+  share one auth path (`VertexAuthMixin`): explicit key file (`credentials_file`
+  or `credentials_path` config, or `GOOGLE_APPLICATION_CREDENTIALS`) →
+  Application Default Credentials → `gcloud` CLI as a last resort. A missing
+  `gcloud` binary now raises a clear error instead of an opaque crash. (#249)
 - **`to_langchain()` now forwards a custom base URL for Anthropic and Cohere.**
   Previously, converting an Anthropic- or Cohere-compatible model (configured with
   a custom `base_url`) to LangChain silently reconnected to the official API.

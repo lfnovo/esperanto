@@ -889,26 +889,22 @@ class TestCredentials:
                 )
                 assert model._credentials is mock_creds
 
-    def test_google_application_credentials_env_var(self):
-        """Test loading credentials from GOOGLE_APPLICATION_CREDENTIALS env var."""
-        mock_creds = MagicMock()
-        mock_creds.valid = True
-        mock_creds.token = "env-sa-token"
-
+    def test_google_application_credentials_routes_through_adc(self, mock_google_auth):
+        """GOOGLE_APPLICATION_CREDENTIALS is interpreted by ADC
+        (google.auth.default), not forced through from_service_account_file — so
+        workload/workforce identity federation configs authenticate correctly."""
+        mock_default, mock_creds = mock_google_auth
         env = {
             "VERTEX_PROJECT": "test-project",
-            "GOOGLE_APPLICATION_CREDENTIALS": "/env/path/sa.json",
+            "GOOGLE_APPLICATION_CREDENTIALS": "/env/path/config.json",
         }
         with patch.dict(os.environ, env, clear=False):
             with patch(
                 "google.oauth2.service_account.Credentials.from_service_account_file",
-                return_value=mock_creds,
             ) as mock_from_file:
                 model = VertexLanguageModel(model_name="gemini-2.0-flash")
-                mock_from_file.assert_called_once_with(
-                    "/env/path/sa.json",
-                    scopes=["https://www.googleapis.com/auth/cloud-platform"],
-                )
+                mock_from_file.assert_not_called()
+                mock_default.assert_called_once()
                 assert model._credentials is mock_creds
 
     def test_credentials_file_takes_priority_over_env_var(self):
@@ -1034,21 +1030,6 @@ class TestCredentials:
                         model_name="gemini-2.0-flash",
                         credentials_file="/path/sa.json",
                     )
-
-    def test_env_var_credentials_raises_on_invalid_file(self):
-        """Test that GOOGLE_APPLICATION_CREDENTIALS raises on invalid file instead of falling back."""
-        env = {
-            "VERTEX_PROJECT": "test-project",
-            "GOOGLE_APPLICATION_CREDENTIALS": "/bad/path/sa.json",
-        }
-        with patch.dict(os.environ, env, clear=False):
-            with patch(
-                "google.oauth2.service_account.Credentials.from_service_account_file",
-                side_effect=ValueError("Invalid service account info"),
-            ):
-                with pytest.raises(ValueError, match="Invalid service account"):
-                    VertexLanguageModel(model_name="gemini-2.0-flash")
-
 
 class TestLangChainIntegration:
     """Tests for LangChain integration using ChatGoogleGenerativeAI."""
