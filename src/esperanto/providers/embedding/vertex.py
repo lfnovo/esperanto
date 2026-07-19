@@ -1,15 +1,14 @@
 """Google Vertex AI embedding model provider."""
 import os
-import subprocess
-import time
 from typing import Any, Dict, List, Optional
 
 import httpx
 
 from esperanto.providers.embedding.base import EmbeddingModel, Model
+from esperanto.providers.vertex_auth import VertexAuthMixin
 
 
-class VertexEmbeddingModel(EmbeddingModel):
+class VertexEmbeddingModel(VertexAuthMixin, EmbeddingModel):
     """Google Vertex AI embedding model implementation."""
 
     def __init__(self, vertex_project: Optional[str] = None, vertex_location: Optional[str] = None, **kwargs):
@@ -30,38 +29,16 @@ class VertexEmbeddingModel(EmbeddingModel):
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
         
-        # Cache for access token
+        # Cache for access token (gcloud fallback)
         self._access_token: Optional[str] = None
         self._token_expiry: float = 0
-        
+
         # Update config with model_name if provided
         if "model_name" in kwargs:
             self._config["model_name"] = kwargs["model_name"]
 
-    def _get_access_token(self) -> str:
-        """Get OAuth 2.0 access token for Google Cloud APIs."""
-        current_time = time.time()
-        
-        # Check if token is still valid (with 5-minute buffer)
-        if self._access_token and current_time < (self._token_expiry - 300):
-            return self._access_token
-            
-        try:
-            # Use gcloud to get access token
-            result = subprocess.run(
-                ["gcloud", "auth", "application-default", "print-access-token"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            self._access_token = result.stdout.strip()
-            # Tokens typically expire in 1 hour
-            self._token_expiry = current_time + 3600
-            return self._access_token
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"Failed to get access token. Make sure you're authenticated with 'gcloud auth application-default login': {e}"
-            )
+        # Resolve service-account / ADC credentials (VertexAuthMixin)
+        self._load_credentials()
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Vertex AI API requests."""
