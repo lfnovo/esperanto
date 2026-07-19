@@ -711,4 +711,11 @@ class CohereLanguageModel(LanguageModel):
         if self.temperature is not None:
             kwargs["temperature"] = self.temperature
 
+        # Forward a custom base URL so the LangChain model doesn't silently
+        # reconnect to the official API. Only pass when it differs from the default.
+        if self.base_url:
+            base_url = self.base_url.rstrip("/")
+            if base_url and base_url != "https://api.cohere.com":
+                kwargs["base_url"] = base_url
+
         return ChatCohere(**kwargs)  # type: ignore[arg-type]
