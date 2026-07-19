@@ -1,0 +1,23 @@
+pyproject.toml
+  s_ba01133bce787c::t_bac27b587cb175 3
+CHANGELOG.md
+  s_ba01133bce787c::t_deefece3daab3e 10-11
+uv.lock
+  s_ba01133bce787c::t_0adde0e8c5de56 537
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "f77ba910c1f2c2a8c9c6e88f91926de96343b354",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
