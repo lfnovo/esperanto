@@ -107,7 +107,7 @@ def test_elevenlabs_transcribe(audio_file, mock_httpx_clients):
     assert call_args[0][0] == "https://api.elevenlabs.io/v1/speech-to-text"
     assert "files" in call_args[1]
     assert "data" in call_args[1]
-    assert call_args[1]["data"]["model_id"] == "scribe_v1"
+    assert call_args[1]["data"]["model_id"] == "scribe_v2"
 
     assert isinstance(response, TranscriptionResponse)
     assert response.text == "This is a test transcription"
@@ -214,7 +214,7 @@ def test_elevenlabs_provider_name():
 
 def test_elevenlabs_default_model():
     model = ElevenLabsSpeechToTextModel(api_key="test-key")
-    assert model._get_default_model() == "scribe_v1"
+    assert model._get_default_model() == "scribe_v2"
 
 
 def test_elevenlabs_missing_api_key():

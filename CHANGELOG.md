@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **ElevenLabs default models bumped to the latest.** Speech-to-text now defaults
+  to `scribe_v2` (was `scribe_v1`) and lists it in model discovery; text-to-speech
+  now defaults to `eleven_v3` (was `eleven_multilingual_v2`). Both older models
+  remain usable by passing an explicit `model_name`. Verified against the live
+  ElevenLabs API. (#245)
+
 ## [2.25.0] - 2026-07-18
 
 ### Added
