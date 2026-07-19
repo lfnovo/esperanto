@@ -12,12 +12,13 @@ class ElevenLabsTextToSpeechModel(TextToSpeechModel):
     """ElevenLabs Text-to-Speech provider implementation.
     
     Supports multiple models including:
+    - eleven_v3: Latest, most expressive model (default)
     - eleven_multilingual_v2: Multilingual model
+    - eleven_flash_v2_5 / eleven_turbo_v2_5: Faster, low-latency models
     - eleven_monolingual_v1: English-only model
-    - eleven_turbo_v2: Faster, lower-quality model
     """
-    
-    DEFAULT_MODEL = "eleven_multilingual_v2"
+
+    DEFAULT_MODEL = "eleven_v3"
     DEFAULT_VOICE = "Aria"  # One of their default voices
     PROVIDER = "elevenlabs"
     

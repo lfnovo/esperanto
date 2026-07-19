@@ -52,7 +52,7 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "scribe_v1"
+        return "scribe_v2"
 
     @property
     def provider(self) -> str:
@@ -62,6 +62,11 @@ class ElevenLabsSpeechToTextModel(SpeechToTextModel):
     def _get_models(self) -> List[Model]:
         """List all available models for this provider."""
         return [
+            Model(
+                id="scribe_v2",
+                owned_by="ElevenLabs",
+                context_window=None,  # Audio models don't have context windows
+            ),
             Model(
                 id="scribe_v1",
                 owned_by="ElevenLabs",
