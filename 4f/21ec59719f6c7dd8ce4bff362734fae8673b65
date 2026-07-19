@@ -1,0 +1,27 @@
+src/esperanto/providers/llm/cohere.py
+  s_ba01133bce787c::t_c1e2693b8352b2 714-720
+src/esperanto/providers/llm/anthropic.py
+  s_ba01133bce787c::t_de95886db2c592 931-939
+tests/providers/llm/test_anthropic_provider.py
+  s_ba01133bce787c::t_b51f6aa1ab8857 1234-1255
+tests/providers/llm/test_cohere.py
+  s_ba01133bce787c::t_8711cd34adb37a 395-416
+CHANGELOG.md
+  s_ba01133bce787c::t_b391bb452c7487 10-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4f21ec59719f6c7dd8ce4bff362734fae8673b65",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
