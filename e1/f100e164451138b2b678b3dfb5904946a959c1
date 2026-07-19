@@ -1,0 +1,35 @@
+src/esperanto/providers/tts/vertex.py
+  s_ba01133bce787c::t_22584834c94158 9-10,14
+  s_ba01133bce787c::t_a71f10c6efcf76 55,59-60
+CHANGELOG.md
+  s_ba01133bce787c::t_ad9f6c3569f770 12-19
+src/esperanto/providers/vertex_auth.py
+  s_ba01133bce787c::t_de76397799622d 74-75,79-81
+  s_ba01133bce787c::t_6a476cee6e6f0d 1-18,20-25,31-73,76-78,82-87,91-109
+  s_ba01133bce787c::t_c2e22fc2b7db17 88-90
+  s_ba01133bce787c::t_accbd9e33de308 19,26-30
+src/esperanto/providers/embedding/vertex.py
+  s_ba01133bce787c::t_6a5453a420813c 8,11
+  s_ba01133bce787c::t_7e082d4a56f849 32,35,40-41
+tests/providers/test_vertex_auth.py
+  s_ba01133bce787c::t_6dbc8533983008 1-135
+src/esperanto/providers/llm/vertex.py
+  s_ba01133bce787c::t_ad89da19542c71 46
+  s_ba01133bce787c::t_2799398e5a98ca 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "e1f100e164451138b2b678b3dfb5904946a959c1",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
