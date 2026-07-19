@@ -1,0 +1,19 @@
+tests/providers/llm/test_vertex_provider.py
+  s_ba01133bce787c::t_12d76497d77462 892-896,899,906-908
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4333dbaa6fe0176c0807d6fefe970a25f63a5cf4",
+  "prompts": {},
+  "sessions": {
+    "s_ba01133bce787c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8e90f87-45df-4756-8bcf-b0319e4f61b3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
