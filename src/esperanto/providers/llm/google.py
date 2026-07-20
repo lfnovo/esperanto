@@ -172,6 +172,11 @@ class GoogleLanguageModel(LanguageModel):
                     if isinstance(schema_payload, dict):
                         kwargs["response_schema"] = schema_payload
 
+            _DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+            if self.base_url != _DEFAULT_BASE_URL:
+                custom_host = self.base_url[:-len("/v1beta")] if self.base_url.endswith("/v1beta") else self.base_url
+                kwargs["base_url"] = custom_host
+
             self._langchain_model = ChatGoogleGenerativeAI(**kwargs)
         return self._langchain_model
 
