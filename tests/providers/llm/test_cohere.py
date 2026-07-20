@@ -392,3 +392,25 @@ class TestCohereStructuredOutput:
             await model.achat_complete(
                 [{"role": "user", "content": "Capital?"}], tools=tools
             )
+
+
+def test_cohere_to_langchain_forwards_custom_base_url():
+    """A custom base URL is forwarded to ChatCohere."""
+    with patch.object(CohereLanguageModel, "_create_http_clients", lambda self: None):
+        model = CohereLanguageModel(
+            model_name="command-a-03-2025",
+            api_key="test-key",
+            base_url="https://gateway.internal/cohere",
+        )
+    with patch("langchain_cohere.ChatCohere") as MockChat:
+        model.to_langchain()
+    assert MockChat.call_args.kwargs["base_url"] == "https://gateway.internal/cohere"
+
+
+def test_cohere_to_langchain_omits_default_base_url():
+    """The default endpoint is not forwarded (ChatCohere uses its own default)."""
+    with patch.object(CohereLanguageModel, "_create_http_clients", lambda self: None):
+        model = CohereLanguageModel(model_name="command-a-03-2025", api_key="test-key")
+    with patch("langchain_cohere.ChatCohere") as MockChat:
+        model.to_langchain()
+    assert "base_url" not in MockChat.call_args.kwargs

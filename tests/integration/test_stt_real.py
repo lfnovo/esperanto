@@ -227,16 +227,27 @@ class TestMistralSTT:
     reason="ELEVENLABS_API_KEY not configured",
 )
 class TestElevenLabsSTT:
-    """Real integration tests for ElevenLabs speech-to-text."""
+    """Real integration tests for ElevenLabs speech-to-text (Scribe)."""
+
+    def test_default_model_is_scribe_v2(self):
+        """The default model resolves to the latest Scribe (scribe_v2)."""
+        model = AIFactory.create_speech_to_text("elevenlabs")
+        assert model.get_model_name() == "scribe_v2"
 
     def test_sync_transcribe(self):
-        """Test sync transcription."""
+        """Test sync transcription (default model = scribe_v2)."""
         model = AIFactory.create_speech_to_text("elevenlabs")
         result = model.transcribe(str(SAMPLE_AUDIO))
         assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
 
+    def test_sync_transcribe_scribe_v2_explicit(self):
+        """Explicit scribe_v2 model_id transcribes the sample."""
+        model = AIFactory.create_speech_to_text("elevenlabs", "scribe_v2")
+        result = model.transcribe(str(SAMPLE_AUDIO))
+        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+
     def test_async_atranscribe(self):
-        """Test async transcription."""
+        """Test async transcription (default model = scribe_v2)."""
         model = AIFactory.create_speech_to_text("elevenlabs")
 
         async def _run() -> object:

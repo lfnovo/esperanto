@@ -22,7 +22,9 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [oMLX](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [PayPerQ (PPQ)](./ppq.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Voyage](./voyage.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -32,6 +34,8 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
 
 *Novita is available as a built-in OpenAI-compatible LLM profile. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY`. See [OpenAI-Compatible](./openai-compatible.md) for the shared setup path.
+
+*oMLX is a built-in OpenAI-compatible profile for the local [oMLX](https://github.com/madroidmaq/omlx) MLX server (language + embedding, no API key). Use `AIFactory.create_language("omlx", "<your-model>")`; base URL defaults to `http://localhost:11435/v1` (override via `OMLX_API_BASE`). See [OpenAI-Compatible](./openai-compatible.md).
 
 ## Quick Selection Guide
 
@@ -43,6 +47,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[OpenAI](./openai.md)**: LLM + Embedding + STT + TTS (industry standard)
 - **[Azure OpenAI](./azure.md)**: Same as OpenAI + enterprise compliance
 - **[Google GenAI](./google.md)**: LLM + Embedding + TTS (competitive pricing)
+- **[PayPerQ (PPQ)](./ppq.md)**: LLM + Embedding + STT + TTS (pay-as-you-go gateway, single key)
 - **[OpenAI-Compatible](./openai-compatible.md)**: Use different endpoints for different capabilities
 
 **Partial Multi-Modal:**
@@ -55,6 +60,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 **Fully Local:**
 - **[Ollama](./ollama.md)**: LLM + Embedding (simple setup, no API costs)
 - **[Transformers](./transformers.md)**: Embedding + Reranking (100+ models, offline)
+- **[oMLX](./openai-compatible.md)**: LLM + Embedding on Apple Silicon (MLX, no API key)
 - **[OpenAI-Compatible](./openai-compatible.md)**: Connect to local LM Studio, vLLM, or Ollama
 
 **Self-Hosted Options:**
@@ -114,6 +120,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 **Multiple Models Access:**
 - **[OpenRouter](./openrouter.md)**: 100+ models from various providers
 - **[Novita](./openai-compatible.md)**: 200+ open-source models (OpenAI-compatible profile)
+- **[PayPerQ (PPQ)](./ppq.md)**: hundreds of models across LLM/embedding/STT/TTS, pay-as-you-go with one key
 
 **Local Deployment:**
 - **[Ollama](./ollama.md)**: Llama, Mistral, Qwen, etc.
@@ -328,6 +335,7 @@ Require API keys, pay-per-use:
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
 - [Novita](./openai-compatible.md) (OpenAI-compatible profile)
+- [PayPerQ (PPQ)](./ppq.md) (OpenAI-compatible profile)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
 - [Cohere](./cohere.md)
@@ -344,6 +352,7 @@ Enterprise features, private deployment:
 No API costs, privacy-focused:
 - [Ollama](./ollama.md)
 - [Transformers](./transformers.md)
+- [oMLX](./openai-compatible.md) (Apple Silicon MLX, OpenAI-compatible profile)
 - [OpenAI-Compatible](./openai-compatible.md)
 
 ## Next Steps

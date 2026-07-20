@@ -1,17 +1,17 @@
 """Google Vertex AI Text-to-Speech provider implementation."""
 import base64
 import os
-import subprocess
-import time
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import httpx
 
+from esperanto.providers.vertex_auth import VertexAuthMixin
+
 from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
 
-class VertexTextToSpeechModel(TextToSpeechModel):
+class VertexTextToSpeechModel(VertexAuthMixin, TextToSpeechModel):
     """Google Cloud Text-to-Speech provider implementation via Vertex AI.
     
     Uses the Cloud Text-to-Speech API for text-to-speech generation.
@@ -52,34 +52,12 @@ class VertexTextToSpeechModel(TextToSpeechModel):
         # Initialize HTTP clients with configurable timeout
         self._create_http_clients()
 
-        # Cache for access token
+        # Cache for access token (gcloud fallback)
         self._access_token = None
         self._token_expiry = 0
 
-    def _get_access_token(self) -> str:
-        """Get OAuth 2.0 access token for Google Cloud APIs."""
-        current_time = time.time()
-        
-        # Check if token is still valid (with 5-minute buffer)
-        if self._access_token and current_time < (self._token_expiry - 300):
-            return self._access_token
-            
-        try:
-            # Use gcloud to get access token
-            result = subprocess.run(
-                ["gcloud", "auth", "application-default", "print-access-token"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            self._access_token = result.stdout.strip()
-            # Tokens typically expire in 1 hour
-            self._token_expiry = current_time + 3600
-            return self._access_token
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"Failed to get access token. Make sure you're authenticated with 'gcloud auth application-default login': {e}"
-            )
+        # Resolve service-account / ADC credentials (VertexAuthMixin)
+        self._load_credentials()
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Cloud Text-to-Speech API requests."""
