@@ -7,8 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.25.1] - 2026-07-19
+
+### Fixed
+
+- **Vertex AI now authenticates from a service-account key file across all
+  modalities.** `VertexTextToSpeechModel` and `VertexEmbeddingModel` previously
+  ignored a configured key and shelled out to the `gcloud` CLI (unusable in
+  containers where `gcloud` isn't installed). All three Vertex providers now
+  share one auth path (`VertexAuthMixin`): explicit key file (`credentials_file`
+  or `credentials_path` config, or `GOOGLE_APPLICATION_CREDENTIALS`) →
+  Application Default Credentials → `gcloud` CLI as a last resort. A missing
+  `gcloud` binary now raises a clear error instead of an opaque crash. (#249)
+- **`to_langchain()` now forwards a custom base URL for Anthropic and Cohere.**
+  Previously, converting an Anthropic- or Cohere-compatible model (configured with
+  a custom `base_url`) to LangChain silently reconnected to the official API.
+  Anthropic strips the `/v1` suffix that `ChatAnthropic` doesn't expect. The
+  default endpoint is still omitted so LangChain uses its own default. (#229)
+
+### Changed
+
+- **ElevenLabs default models bumped to the latest.** Speech-to-text now defaults
+  to `scribe_v2` (was `scribe_v1`) and lists it in model discovery; text-to-speech
+  now defaults to `eleven_v3` (was `eleven_multilingual_v2`). Both older models
+  remain usable by passing an explicit `model_name`. Verified against the live
+  ElevenLabs API. (#245)
+
+## [2.25.0] - 2026-07-18
+
 ### Added
 
+- **oMLX built-in profile + `requires_api_key` flag** — [oMLX](https://github.com/madroidmaq/omlx),
+  a local OpenAI-compatible MLX server for Apple Silicon, is now a built-in
+  profile (`omlx`, `capabilities={"language", "embedding"}`, base URL
+  `http://localhost:11435/v1`, override via `OMLX_API_BASE`). A new
+  `requires_api_key` flag on `OpenAICompatibleProfile` (default `True`) lets
+  local/no-auth endpoints tolerate a missing API key — it falls back to
+  `"not-required"` instead of raising. oMLX sets no default models (bring your
+  own), so pass a `model_name`. (#228)
+
+- **Multi-modality OpenAI-compatible profiles** — a registered
+  `OpenAICompatibleProfile` can now serve `embedding`, `speech_to_text`, and
+  `text_to_speech` in addition to `language`, via a new opt-in `capabilities`
+  field (default: `{"language"}`) and per-modality `default_models`. The four
+  factories (`create_language`/`create_embedding`/`create_speech_to_text`/
+  `create_text_to_speech`) resolve profiles through one shared precedence chain
+  (`ProfileAwareMixin`). Requesting a modality a profile doesn't declare raises
+  the new typed `ProviderCapabilityError` (unless a first-class class of the same
+  name covers it — e.g. xAI is a `language` profile and a first-class TTS class,
+  which keeps working). A profile that declares a modality but sets no default
+  model raises a clear error rather than falling back to a placeholder the
+  endpoint has never heard of. New base exception `EsperantoError`
+  (`ProviderCapabilityError` extends it), seeding the normalized exception
+  hierarchy. (#230)
 - **Schema-driven structured outputs across all LLM providers** — set
   `config={"structured": {"type": "json_schema", "schema": MyPydanticModel}}`
   (or a JSON Schema dict) and read the parsed, validated result from
@@ -22,6 +73,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`stream=True` raises `ValueError`); providers/models that can't honor a
   `json_schema` request fail fast with a clear error rather than silently degrading.
   (#95)
+- **PayPerQ (PPQ) provider — LLM, embedding, STT, TTS** — PayPerQ is now
+  selectable across all four modalities via `AIFactory.create_language`,
+  `create_embedding`, `create_speech_to_text`, and `create_text_to_speech` with
+  provider `"ppq"`. PPQ is a pay-as-you-go gateway exposing hundreds of models
+  from many labs through a single OpenAI-compatible endpoint. Added as a built-in
+  multi-modality `OpenAICompatibleProfile` (base URL `https://api.ppq.ai/v1`,
+  `PPQ_API_KEY`, optional `PPQ_BASE_URL`) with per-modality defaults (`auto`,
+  `openai/text-embedding-3-small`, `nova-3`, `deepgram_aura_2`), so it inherits
+  streaming, tool calling, and JSON mode from the OpenAI-compatible
+  implementation. Ships with profile unit tests and provider docs. (#238)
+- **OpenRouter text-to-speech and speech-to-text** — OpenRouter is now
+  selectable for TTS via `AIFactory.create_text_to_speech("openrouter", ...)`
+  and for STT via `AIFactory.create_speech_to_text("openrouter", ...)`, using
+  `OPENROUTER_API_KEY`. Rounds out OpenRouter to LLM + TTS + STT. (#224)
+- **Novita AI language provider** — Novita is now selectable via
+  `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with
+  `NOVITA_API_KEY`. Novita is a pay-as-you-go gateway to many open-source models
+  through a single OpenAI-compatible endpoint, added as a built-in
+  `OpenAICompatibleProfile` (base URL `https://api.novita.ai/openai`, optional
+  `NOVITA_BASE_URL`). (#120)
+
+### Deprecated
+
+- **`OpenAICompatibleProfile(default_model=...)`** — use
+  `default_models={"language": ...}` instead. The old field still works as a
+  back-compat alias for the language default and now emits a `DeprecationWarning`.
+  (#230)
 
 ## [2.24.0] - 2026-06-23
 

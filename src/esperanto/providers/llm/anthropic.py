@@ -928,4 +928,13 @@ class AnthropicLanguageModel(LanguageModel):
         elif self.top_p is not None:
             kwargs["top_p"] = self.top_p
 
+        # Forward a custom (Anthropic-compatible) endpoint so the LangChain model
+        # doesn't silently reconnect to the official API. esperanto's base_url
+        # carries the /v1 suffix (it appends /messages); ChatAnthropic wants the
+        # API root, so strip it. Only pass when it differs from the default.
+        if self.base_url:
+            base_url = self.base_url.rstrip("/").removesuffix("/v1")
+            if base_url and base_url != "https://api.anthropic.com":
+                kwargs["base_url"] = base_url
+
         return ChatAnthropic(**kwargs)  # type: ignore[arg-type]

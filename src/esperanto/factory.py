@@ -136,16 +136,16 @@ class AIFactory:
             Dict[str, List[str]]: A dictionary where keys are model types (language, embedding, speech_to_text, text_to_speech)
                 and values are lists of available provider names.
         """
-        from esperanto.providers.llm.profiles import get_all_profile_names
+        from esperanto.providers.llm.profiles import get_profile_capabilities
 
         result = {
             model_type: list(providers.keys())
             for model_type, providers in cls._provider_modules.items()
         }
-        # Merge OpenAI-compatible profile names into language providers
-        result["language"] = sorted(
-            set(result.get("language", [])) | get_all_profile_names()
-        )
+        # Merge each profile into every modality it declares (language-only by default)
+        for name, modalities in get_profile_capabilities().items():
+            for modality in modalities:
+                result[modality] = sorted(set(result.get(modality, [])) | {name})
         return result
 
     @classmethod
@@ -165,12 +165,25 @@ class AIFactory:
             ...         name="together",
             ...         base_url="https://api.together.xyz/v1",
             ...         api_key_env="TOGETHER_API_KEY",
-            ...         default_model="meta-llama/Llama-3-70b-chat-hf",
+            ...         default_models={"language": "meta-llama/Llama-3-70b-chat-hf"},
             ...     )
             ... )
             >>> model = AIFactory.create_language("together", "meta-llama/Llama-3-70b-chat-hf")
         """
         from esperanto.providers.llm.profiles import register_profile
+
+        # Warn when a declared capability shadows an existing first-class provider
+        # of the same name+modality. The profile wins (create_* checks profiles
+        # first), so surface the shadowing rather than let it happen silently.
+        normalized = profile.name.lower().replace("_", "-")
+        for modality in profile.capabilities:
+            if normalized in cls._provider_modules.get(modality, {}):
+                warnings.warn(
+                    f"Profile '{normalized}' declares capability '{modality}', "
+                    f"which shadows the existing first-class {modality} provider "
+                    f"of the same name. The profile will take precedence.",
+                    stacklevel=2,
+                )
 
         register_profile(profile)
 
@@ -268,6 +281,34 @@ class AIFactory:
         return models
 
     @classmethod
+    def _profile_for_modality(cls, normalized: str, modality: str):
+        """Resolve the profile to use for (provider, modality), or None.
+
+        Returns the profile when it declares ``modality`` (profile wins). Returns
+        None to fall through to the first-class class registry — either because no
+        profile exists, or because a profile exists for a different modality but a
+        first-class class covers this one (hybrid providers, e.g. xAI is a
+        language profile and a first-class TTS class). Raises
+        ``ProviderCapabilityError`` when a profile exists, does not declare this
+        modality, and no first-class class can serve it either.
+        """
+        from esperanto.common_types import ProviderCapabilityError
+        from esperanto.providers.llm.profiles import get_profile
+
+        profile = get_profile(normalized)
+        if profile is None:
+            return None
+        if modality in profile.capabilities:
+            return profile
+        if normalized in cls._provider_modules.get(modality, {}):
+            return None  # hybrid provider: fall through to the first-class class
+        display = profile.display_name or profile.name
+        raise ProviderCapabilityError(
+            f"Provider '{normalized}' ({display}) does not support {modality}. "
+            f"Declared capabilities: {sorted(profile.capabilities)}."
+        )
+
+    @classmethod
     def _create_instance(
         cls,
         service_type: str,
@@ -293,11 +334,8 @@ class AIFactory:
         Returns:
             Language model instance
         """
-        from esperanto.providers.llm.profiles import get_profile
-
         normalized = provider.lower().replace("_", "-")
-        profile = get_profile(normalized)
-        if profile:
+        if cls._profile_for_modality(normalized, "language"):
             from esperanto.providers.llm.openai_compatible import (
                 OpenAICompatibleLanguageModel,
             )
@@ -325,6 +363,18 @@ class AIFactory:
         Returns:
             Embedding model instance
         """
+        normalized = provider.lower().replace("_", "-")
+        if cls._profile_for_modality(normalized, "embedding"):
+            from esperanto.providers.embedding.openai_compatible import (
+                OpenAICompatibleEmbeddingModel,
+            )
+
+            merged_config = dict(config or {})
+            merged_config["_profile_name"] = normalized
+            return OpenAICompatibleEmbeddingModel(
+                model_name=model_name, config=merged_config
+            )
+
         provider_class = cls._import_provider_class("embedding", provider)
         return provider_class(model_name=model_name, config=config or {})
 
@@ -363,6 +413,18 @@ class AIFactory:
             Speech-to-text model instance
         """
         config = config or {}
+        normalized = provider.lower().replace("_", "-")
+        if cls._profile_for_modality(normalized, "speech_to_text"):
+            from esperanto.providers.stt.openai_compatible import (
+                OpenAICompatibleSpeechToTextModel,
+            )
+
+            merged_config = dict(config)
+            merged_config["_profile_name"] = normalized
+            return OpenAICompatibleSpeechToTextModel(
+                model_name=model_name, config=merged_config
+            )
+
         return cls._create_instance(
             "speech_to_text", provider, model_name=model_name, **config
         )
@@ -413,6 +475,17 @@ class AIFactory:
                 stacklevel=2,
             )
             config["base_url"] = base_url
+
+        normalized = provider.lower().replace("_", "-")
+        if cls._profile_for_modality(normalized, "text_to_speech"):
+            from esperanto.providers.tts.openai_compatible import (
+                OpenAICompatibleTextToSpeechModel,
+            )
+
+            merged_config = {**config, **kwargs, "_profile_name": normalized}
+            return OpenAICompatibleTextToSpeechModel(
+                model_name=model_name, config=merged_config
+            )
 
         return cls._create_instance(
             "text_to_speech", provider, model_name=model_name, **config, **kwargs

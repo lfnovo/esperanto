@@ -297,6 +297,8 @@ _PROVIDER_ENV_VARS = [
     "MINIMAX_API_KEY",
     "ZAI_API_KEY",
     "ZAI_BASE_URL",
+    "PPQ_API_KEY",
+    "PPQ_BASE_URL",
 ]
 
 

@@ -86,7 +86,7 @@ AIFactory.register_openai_compatible_profile(
         name="my-company",
         base_url="https://llm.internal.company.com/v1",
         api_key_env="MY_COMPANY_LLM_KEY",
-        default_model="llama-3-70b",
+        default_models={"language": "llama-3-70b"},
     )
 )
 
@@ -96,6 +96,55 @@ response = model.chat_complete(messages)
 ```
 
 Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, **Novita**, and **Z.ai**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile, or `AIFactory.create_language("zai", "glm-5.2")` with `ZAI_API_KEY` for the built-in Z.ai profile.
+Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, **Novita**, **PayPerQ (PPQ)**, and **oMLX**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile.
+
+### Multi-Modality Profiles
+
+A profile serves **language only** by default. If your endpoint also exposes
+OpenAI-compatible embedding, speech-to-text, or text-to-speech, declare those
+modalities via `capabilities` and give each a default model in `default_models`:
+
+```python
+AIFactory.register_openai_compatible_profile(
+    OpenAICompatibleProfile(
+        name="my-gateway",
+        base_url="https://gateway.internal.company.com/v1",
+        api_key_env="MY_GATEWAY_KEY",
+        capabilities={"language", "embedding"},
+        default_models={
+            "language": "llama-3-70b",
+            "embedding": "bge-large-en",
+        },
+    )
+)
+
+llm = AIFactory.create_language("my-gateway", "llama-3-70b")
+emb = AIFactory.create_embedding("my-gateway")   # uses the embedding default
+```
+
+Notes:
+
+- **Opt-in.** Requesting a modality a profile doesn't declare raises
+  `ProviderCapabilityError` (e.g. `create_embedding("deepseek", ...)` — DeepSeek
+  is language-only). This keeps the provider matrix honest.
+- **Hybrid providers.** If a first-class class already exists for a name+modality
+  (e.g. xAI has a first-class TTS class), a language-only profile of the same
+  name leaves that class untouched — `create_text_to_speech("xai", ...)` still
+  uses the first-class implementation.
+- **No default → error, not a placeholder.** A profile that declares a modality
+  but sets no default in `default_models` requires the caller to pass a
+  `model_name`; otherwise a clear error is raised rather than a generic
+  placeholder the endpoint may not serve.
+- **Deprecation.** `default_model="..."` is deprecated in favor of
+  `default_models={"language": "..."}`; it still works as a language alias and
+  emits a `DeprecationWarning`.
+- **No-auth / local endpoints.** For a local server that needs no API key (e.g.
+  [oMLX](https://github.com/madroidmaq/omlx)), set `requires_api_key=False`; a
+  missing key then falls back to `"not-required"` instead of raising. The
+  built-in **oMLX** profile (`omlx`, `capabilities={"language", "embedding"}`,
+  base URL `http://localhost:11435/v1`, override via `OMLX_API_BASE`) uses this.
+  It sets no default models, so pass a `model_name` for whatever MLX model you
+  have loaded.
 
 ## Quick Start
 
