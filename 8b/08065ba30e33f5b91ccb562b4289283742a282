@@ -1,0 +1,21 @@
+tests/providers/llm/test_google_provider.py
+  s_d616f3fd2e56c1::t_465d92b1820019 876-892
+src/esperanto/providers/llm/google.py
+  s_d616f3fd2e56c1::t_614abba9d77c2c 175-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8b08065ba30e33f5b91ccb562b4289283742a282",
+  "prompts": {},
+  "sessions": {
+    "s_d616f3fd2e56c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c6c78af9-fa11-4dea-a36b-df10c53ed6b6",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": null
+    }
+  }
+}
