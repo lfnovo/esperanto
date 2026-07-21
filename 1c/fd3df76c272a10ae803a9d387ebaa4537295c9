@@ -1,0 +1,37 @@
+src/esperanto/providers/embedding/base.py
+  s_f4d8690bbc9227::t_b5f80fc2d5d9cd 286-288
+src/esperanto/providers/embedding/openai.py
+  s_f4d8690bbc9227::t_e0676b842a70b8 93,130
+src/esperanto/providers/embedding/azure.py
+  s_f4d8690bbc9227::t_92879db1bcba50 140,182
+tests/providers/embedding/test_embed_batching.py
+  s_f4d8690bbc9227::t_36f74d24ed8581 49,53,57-58,60-61,63
+  s_f4d8690bbc9227::t_db9bd689ad3a1a 15,19
+  s_f4d8690bbc9227::t_e1664a0c6055b8 277-375
+  s_f4d8690bbc9227::t_7a688578789eda 21
+src/esperanto/providers/embedding/jina.py
+  s_f4d8690bbc9227::t_e40e923fdc4346 171,214
+src/esperanto/providers/embedding/ollama.py
+  s_f4d8690bbc9227::t_812dca942174ee 100,153
+  s_f4d8690bbc9227::t_fbb2a574509987 68,121
+src/esperanto/providers/embedding/voyage.py
+  s_f4d8690bbc9227::t_8180dba76dac49 92,129
+src/esperanto/providers/embedding/mistral.py
+  s_f4d8690bbc9227::t_df576f15f297b1 75,104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1cfd3df76c272a10ae803a9d387ebaa4537295c9",
+  "prompts": {},
+  "sessions": {
+    "s_f4d8690bbc9227": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cda25992-92c0-47af-952a-101092b4a1ab",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
