@@ -1,0 +1,23 @@
+SECURITY.md
+  s_f4d8690bbc9227::t_ce179d57cfa827 1-58
+README.md
+  s_f4d8690bbc9227::t_037f78e12a4dde 791-794
+CONTRIBUTING.md
+  s_f4d8690bbc9227::t_db5a81b1fb649c 25-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "e1cca663b879af387e53f1e0fa8a1c8849614f7e",
+  "prompts": {},
+  "sessions": {
+    "s_f4d8690bbc9227": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cda25992-92c0-47af-952a-101092b4a1ab",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
