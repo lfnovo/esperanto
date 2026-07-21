@@ -1,0 +1,61 @@
+src/esperanto/providers/embedding/azure.py
+  s_f4d8690bbc9227::t_2177cf003e270a 116-136,138-142
+  s_f4d8690bbc9227::t_e8023124ee11b5 4
+  s_f4d8690bbc9227::t_fbed776a855213 15-17
+  s_f4d8690bbc9227::t_8c522e55472263 158-178,180-184
+src/esperanto/providers/embedding/jina.py
+  s_f4d8690bbc9227::t_333c06fd02106a 154-156,158-163,165-166,168,170-173,175-180,182
+  s_f4d8690bbc9227::t_cf0c7da99a6922 4
+  s_f4d8690bbc9227::t_f7ebebfa3c788a 18-20
+  s_f4d8690bbc9227::t_b6e20aacbea503 197-199,201-206,208-209,211,213-216,218-221,223
+tests/providers/embedding/test_embed_batching.py
+  s_f4d8690bbc9227::t_efb046b21eb276 1-269
+src/esperanto/providers/embedding/openrouter.py
+  s_f4d8690bbc9227::t_84bb36c13b6173 78-92,94-100
+  s_f4d8690bbc9227::t_ee876e196864f1 5
+  s_f4d8690bbc9227::t_7ca1e83ea90c32 115-137
+  s_f4d8690bbc9227::t_37545d48153ab3 15-17
+src/esperanto/providers/embedding/openai.py
+  s_f4d8690bbc9227::t_0ca8962342d630 3,14-15
+  s_f4d8690bbc9227::t_53845fc9336b29 111-132
+  s_f4d8690bbc9227::t_dc94428f50e3b3 74-95
+  s_f4d8690bbc9227::t_affb5eefb72288 16
+src/esperanto/providers/embedding/cohere.py
+  s_f4d8690bbc9227::t_d6d6772c330c38 112
+  s_f4d8690bbc9227::t_b6bdac528705f1 94
+src/esperanto/providers/embedding/base.py
+  s_f4d8690bbc9227::t_d0e267927249be 19-25
+  s_f4d8690bbc9227::t_2c67e317d1c4ba 3,8
+  s_f4d8690bbc9227::t_4b6eb28ef9a268 295-341
+src/esperanto/providers/embedding/ollama.py
+  s_f4d8690bbc9227::t_0232f5f0b0929c 133-141,143-157
+  s_f4d8690bbc9227::t_356a83ddf928cb 80-88,90-97,99-104
+  s_f4d8690bbc9227::t_613415cdd5568c 4
+  s_f4d8690bbc9227::t_2f44af1b58f5eb 15-18
+src/esperanto/providers/embedding/voyage.py
+  s_f4d8690bbc9227::t_6ce87a4986c1e1 4
+  s_f4d8690bbc9227::t_5725e623cfd376 15-17
+  s_f4d8690bbc9227::t_5f34c108009e04 73-94
+  s_f4d8690bbc9227::t_1bbd4a407314e8 110-131
+src/esperanto/providers/embedding/mistral.py
+  s_f4d8690bbc9227::t_bb60cf2056697a 3
+  s_f4d8690bbc9227::t_c26a1fb4985f5b 56-77
+  s_f4d8690bbc9227::t_aca489fa33ed39 14-16
+  s_f4d8690bbc9227::t_739df4929f714d 85-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0706a2b01f2b8167b7bc2a252910380a22e5cc5c",
+  "prompts": {},
+  "sessions": {
+    "s_f4d8690bbc9227": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cda25992-92c0-47af-952a-101092b4a1ab",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
