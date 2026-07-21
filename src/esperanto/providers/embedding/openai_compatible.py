@@ -1,6 +1,6 @@
 """OpenAI-compatible Embedding provider implementation."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 import httpx
 
@@ -32,6 +32,10 @@ class OpenAICompatibleEmbeddingModel(ProfileAwareMixin, EmbeddingModel):
         ... )
         >>> embeddings = embedder.embed(["Hello world", "How are you?"])
     """
+
+    # Mirror OpenAI's per-request ceiling; a profile may lower it if its backend
+    # needs a smaller batch, and users can override via config="embed_batch_size".
+    MAX_BATCH_SIZE: ClassVar[int] = 2048
 
     def __init__(
         self,
@@ -205,26 +209,27 @@ class OpenAICompatibleEmbeddingModel(ProfileAwareMixin, EmbeddingModel):
             # Clean texts using enhanced text cleaning
             texts = [self._clean_text(text) for text in texts]
 
-            # Prepare request payload using OpenAI standard format
-            payload = {
-                "input": texts,
-                "model": self.get_model_name(),
-                "encoding_format": "float",
-                **{**self._get_api_kwargs(), **kwargs},
-            }
+            results: List[List[float]] = []
+            for batch in self._iter_embed_batches(texts):
+                # Prepare request payload using OpenAI standard format
+                payload = {
+                    "input": batch,
+                    "model": self.get_model_name(),
+                    "encoding_format": "float",
+                    **{**self._get_api_kwargs(), **kwargs},
+                }
 
-            # Generate embeddings
-            response = self.client.post(
-                f"{self.base_url}/embeddings", headers=self._get_headers(), json=payload
-            )
-            self._handle_error(response)
+                # Generate embeddings
+                response = self.client.post(
+                    f"{self.base_url}/embeddings", headers=self._get_headers(), json=payload
+                )
+                self._handle_error(response)
 
-            # Parse response
-            response_data = response.json()
-            results = []
-            for idx, data in enumerate(response_data["data"]):
-                raw = data.get("embedding")
-                results.append(validate_and_decode_embedding(idx, raw))
+                # Parse response
+                response_data = response.json()
+                for idx, data in enumerate(response_data["data"], start=len(results)):
+                    raw = data.get("embedding")
+                    results.append(validate_and_decode_embedding(idx, raw))
             return results
 
         except Exception as e:
@@ -247,26 +252,27 @@ class OpenAICompatibleEmbeddingModel(ProfileAwareMixin, EmbeddingModel):
             # Clean texts using enhanced text cleaning
             texts = [self._clean_text(text) for text in texts]
 
-            # Prepare request payload using OpenAI standard format
-            payload = {
-                "input": texts,
-                "model": self.get_model_name(),
-                "encoding_format": "float",
-                **{**self._get_api_kwargs(), **kwargs},
-            }
+            results: List[List[float]] = []
+            for batch in self._iter_embed_batches(texts):
+                # Prepare request payload using OpenAI standard format
+                payload = {
+                    "input": batch,
+                    "model": self.get_model_name(),
+                    "encoding_format": "float",
+                    **{**self._get_api_kwargs(), **kwargs},
+                }
 
-            # Generate embeddings
-            response = await self.async_client.post(
-                f"{self.base_url}/embeddings", headers=self._get_headers(), json=payload
-            )
-            self._handle_error(response)
+                # Generate embeddings
+                response = await self.async_client.post(
+                    f"{self.base_url}/embeddings", headers=self._get_headers(), json=payload
+                )
+                self._handle_error(response)
 
-            # Parse response
-            response_data = response.json()
-            results = []
-            for idx, data in enumerate(response_data["data"]):
-                raw = data.get("embedding")
-                results.append(validate_and_decode_embedding(idx, raw))
+                # Parse response
+                response_data = response.json()
+                for idx, data in enumerate(response_data["data"], start=len(results)):
+                    raw = data.get("embedding")
+                    results.append(validate_and_decode_embedding(idx, raw))
             return results
 
         except Exception as e:

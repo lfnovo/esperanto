@@ -10,11 +10,11 @@ from esperanto.providers.embedding.google import GoogleEmbeddingModel
 
 @pytest.fixture
 def mock_google_embedding_response():
-    """Mock Google API embedding response."""
+    """Mock Google :batchEmbedContents response (single embedding)."""
     return {
-        "embedding": {
-            "values": [0.1, 0.2, 0.3, 0.4, 0.5]
-        }
+        "embeddings": [
+            {"values": [0.1, 0.2, 0.3, 0.4, 0.5]}
+        ]
     }
 
 
@@ -97,8 +97,8 @@ class TestNativeTaskOptimization:
         # Verify API call includes task_type parameter
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert "task_type" in payload
-        assert payload["task_type"] == "RETRIEVAL_QUERY"
+        assert "task_type" in payload["requests"][0]
+        assert payload["requests"][0]["task_type"] == "RETRIEVAL_QUERY"
 
     @patch('httpx.AsyncClient.post')
     async def test_async_native_task_type_in_payload(self, mock_post, google_model, mock_google_embedding_response):
@@ -117,8 +117,8 @@ class TestNativeTaskOptimization:
         # Verify async API call includes task_type parameter
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert "task_type" in payload
-        assert payload["task_type"] == "CLASSIFICATION"
+        assert "task_type" in payload["requests"][0]
+        assert payload["requests"][0]["task_type"] == "CLASSIFICATION"
 
     @patch('httpx.Client.post')
     def test_no_task_type_when_default(self, mock_post, google_model, mock_google_embedding_response):
@@ -135,7 +135,7 @@ class TestNativeTaskOptimization:
         # Verify API call doesn't include task_type parameter
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert "task_type" not in payload
+        assert "task_type" not in payload["requests"][0]
 
     @patch('httpx.Client.post')
     def test_no_task_type_when_none(self, mock_post, google_model, mock_google_embedding_response):
@@ -152,7 +152,7 @@ class TestNativeTaskOptimization:
         # Verify API call doesn't include task_type parameter
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert "task_type" not in payload
+        assert "task_type" not in payload["requests"][0]
 
 
 class TestGeminiTaskTypeIntegration:
@@ -211,7 +211,7 @@ class TestGeminiTaskTypeIntegration:
             # Verify correct Gemini task type was sent
             call_args = mock_post.call_args
             payload = call_args[1]["json"]
-            assert payload["task_type"] == expected_gemini_value
+            assert payload["requests"][0]["task_type"] == expected_gemini_value
 
 
 class TestBackwardsCompatibility:
@@ -234,7 +234,7 @@ class TestBackwardsCompatibility:
         # Verify no task_type parameter was sent
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert "task_type" not in payload
+        assert "task_type" not in payload["requests"][0]
 
     @patch('httpx.AsyncClient.post')
     async def test_async_no_config_still_works(self, mock_post, mock_google_embedding_response):
@@ -255,7 +255,7 @@ class TestBackwardsCompatibility:
         # Verify no task_type parameter was sent
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert "task_type" not in payload
+        assert "task_type" not in payload["requests"][0]
 
 
 class TestErrorCases:
@@ -275,26 +275,30 @@ class TestErrorCases:
         assert model._get_task_type_param() is None
 
     @patch('httpx.Client.post')
-    def test_multiple_texts_with_task_types(self, mock_post, mock_google_embedding_response):
+    def test_multiple_texts_with_task_types(self, mock_post):
         """Test multiple texts with task type optimization."""
         mock_post.return_value.status_code = 200
-        mock_post.return_value.json.return_value = mock_google_embedding_response
-        
+        # :batchEmbedContents returns one embedding per request, in order.
+        mock_post.return_value.json.return_value = {
+            "embeddings": [{"values": [0.1, 0.2, 0.3]} for _ in range(3)]
+        }
+
         model = GoogleEmbeddingModel(
             api_key="test-key",
             model_name="text-embedding-004",
             config={"task_type": EmbeddingTaskType.SIMILARITY}
         )
-        
+
         # Test multiple texts
         texts = ["text one", "text two", "text three"]
         result = model.embed(texts)
-        
-        # Should make 3 API calls (one per text)
-        assert mock_post.call_count == 3
+
+        # A single batched call carries all three texts.
+        assert mock_post.call_count == 1
         assert len(result) == 3
-        
-        # Each call should include the task_type
-        for call in mock_post.call_args_list:
-            payload = call[1]["json"]
-            assert payload["task_type"] == "SEMANTIC_SIMILARITY"
+
+        # Every request in the batch should include the task_type.
+        payload = mock_post.call_args[1]["json"]
+        assert len(payload["requests"]) == 3
+        for request in payload["requests"]:
+            assert request["task_type"] == "SEMANTIC_SIMILARITY"

@@ -575,11 +575,11 @@ def google_embedding_model():
         mock_response = Mock()
         mock_response.status_code = 200
         
-        if "embedContent" in url:
+        if "batchEmbedContents" in url:
             mock_response.json.return_value = {
-                "embedding": {
-                    "values": [0.1, 0.2, 0.3]
-                }
+                "embeddings": [
+                    {"values": [0.1, 0.2, 0.3]}
+                ]
             }
         elif "models" in url:
             mock_response.json.return_value = {
@@ -599,11 +599,11 @@ def google_embedding_model():
         mock_response = AsyncMock()
         mock_response.status_code = 200
         
-        if "embedContent" in url:
+        if "batchEmbedContents" in url:
             mock_response.json = Mock(return_value={
-                "embedding": {
-                    "values": [0.1, 0.2, 0.3]
-                }
+                "embeddings": [
+                    {"values": [0.1, 0.2, 0.3]}
+                ]
             })
         elif "models" in url:
             mock_response.json = Mock(return_value={
@@ -662,21 +662,21 @@ def test_google_embed_with_task_type():
     
     with patch('httpx.Client.post') as mock_post:
         mock_post.return_value.status_code = 200
-        mock_post.return_value.json.return_value = {"embedding": {"values": [0.1, 0.2, 0.3]}}
-        
+        mock_post.return_value.json.return_value = {"embeddings": [{"values": [0.1, 0.2, 0.3]}]}
+
         model = GoogleEmbeddingModel(
             api_key="test-key",
             model_name="text-embedding-004",
             config={"task_type": EmbeddingTaskType.RETRIEVAL_QUERY}
         )
-        
+
         embeddings = model.embed(["Hello, world!"])
         assert embeddings == [[0.1, 0.2, 0.3]]
-        
+
         # Verify task_type was included in API call
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert payload["task_type"] == "RETRIEVAL_QUERY"
+        assert payload["requests"][0]["task_type"] == "RETRIEVAL_QUERY"
 
 
 @pytest.mark.asyncio
@@ -687,22 +687,22 @@ async def test_google_aembed_with_task_type():
     with patch('httpx.AsyncClient.post') as mock_post:
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"embedding": {"values": [0.1, 0.2, 0.3]}}
+        mock_response.json.return_value = {"embeddings": [{"values": [0.1, 0.2, 0.3]}]}
         mock_post.return_value = mock_response
-        
+
         model = GoogleEmbeddingModel(
-            api_key="test-key", 
+            api_key="test-key",
             model_name="text-embedding-004",
             config={"task_type": EmbeddingTaskType.CLASSIFICATION}
         )
-        
+
         embeddings = await model.aembed(["Hello, world!"])
         assert embeddings == [[0.1, 0.2, 0.3]]
-        
+
         # Verify task_type was included in async API call
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
-        assert payload["task_type"] == "CLASSIFICATION"
+        assert payload["requests"][0]["task_type"] == "CLASSIFICATION"
 
 
 # Tests for Vertex Embedding Provider

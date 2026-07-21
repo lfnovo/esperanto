@@ -547,7 +547,7 @@ embedder = AIFactory.create_embedding(
     config={
         # Performance
         "timeout": 60.0,
-        "batch_size": 32,       # Texts per request
+        "embed_batch_size": 32, # Texts per request (clamped to the provider max)
 
         # Advanced (provider-specific)
         "task_type": EmbeddingTaskType.RETRIEVAL_QUERY,  # Jina, Google
