@@ -800,11 +800,15 @@ git clone https://github.com/lfnovo/esperanto.git
 cd esperanto
 ```
 
-2. Install dependencies:
+2. Bootstrap the environment (creates a venv and installs all dependencies):
 ```bash
-pip install -r requirements.txt
+make setup
+source .venv/bin/activate
 ```
 
 3. Run tests:
 ```bash
-pytest
+make test
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
