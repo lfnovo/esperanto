@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`to_langchain()` now forwards a custom base URL for Google.** Converting a
+  Google (Gemini) model configured with a custom endpoint (`GEMINI_API_BASE_URL`)
+  to LangChain previously reconnected to the official
+  `generativelanguage.googleapis.com`. `ChatGoogleGenerativeAI` accepts a plain
+  `base_url`, so the custom host is now forwarded (with the `/v1beta` suffix
+  stripped). The default endpoint is still omitted so LangChain uses its own
+  default. Completes the `to_langchain()` base URL audit started in #229. (#248)
+
 ## [2.25.1] - 2026-07-19
 
 ### Fixed
