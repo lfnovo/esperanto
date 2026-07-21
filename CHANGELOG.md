@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Automatic embedding batching across all providers.** `embed()` / `aembed()`
+  now transparently split large inputs into requests that respect each provider's
+  per-request limit and concatenate the results in input order, so a list that
+  worked on one provider no longer breaks after a provider swap (applies the
+  Hot-Swap-First Defaults principle to embeddings). Ceilings: OpenAI / Azure /
+  OpenAI-compatible / Jina 2048, Voyage 1000, Cohere / OpenRouter 96, Mistral 64,
+  Google / Vertex 250, Ollama unbatched; `transformers` keeps its own internal
+  batching. Lower it per model with `config={"embed_batch_size": N}` (clamped to
+  the provider maximum; `N <= 0` raises `ValueError`); `embed([])` makes zero API
+  calls. Google and Vertex now use the native `:batchEmbedContents` /
+  multi-instance `:predict` endpoints instead of one HTTP call per text — a large
+  speedup for big inputs. (#108, #203)
+
 ### Fixed
 
 - **`to_langchain()` now forwards a custom base URL for Google.** Converting a

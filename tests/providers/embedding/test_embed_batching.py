@@ -15,10 +15,12 @@ import pytest
 from esperanto.providers.embedding.azure import AzureEmbeddingModel
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.embedding.cohere import CohereEmbeddingModel
+from esperanto.providers.embedding.google import GoogleEmbeddingModel
 from esperanto.providers.embedding.mistral import MistralEmbeddingModel
 from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
 from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
 from esperanto.providers.embedding.openrouter import OpenRouterEmbeddingModel
+from esperanto.providers.embedding.vertex import VertexEmbeddingModel
 from esperanto.providers.embedding.voyage import VoyageEmbeddingModel
 
 # --- response builders -------------------------------------------------------
@@ -373,3 +375,119 @@ async def test_ollama_empty_input_returns_empty_async():
     model = _make_ollama()
     assert await model.aembed([]) == []
     assert model.async_client.post.await_count == 0
+
+
+# --- Google: native :batchEmbedContents (issue #203) -------------------------
+
+
+def _make_google(config=None):
+    with patch.object(GoogleEmbeddingModel, "_create_http_clients", lambda self: None):
+        model = GoogleEmbeddingModel(
+            model_name="text-embedding-004", api_key="test-key", config=config or {}
+        )
+
+    def _texts_of(kwargs):
+        return [r["content"]["parts"][0]["text"] for r in kwargs["json"]["requests"]]
+
+    def post(url, **kwargs):
+        assert "batchEmbedContents" in url
+        resp = Mock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "embeddings": [{"values": [_text_value(t)]} for t in _texts_of(kwargs)]
+        }
+        return resp
+
+    async def apost(url, **kwargs):
+        return post(url, **kwargs)
+
+    model.client = Mock()
+    model.async_client = AsyncMock()
+    model.client.post.side_effect = post
+    model.async_client.post.side_effect = apost
+    return model
+
+
+def test_google_multi_batch_uses_batch_endpoint():
+    model = _make_google(config={"embed_batch_size": 2})
+    result = model.embed([f"t{i}" for i in range(5)])
+
+    # 5 texts, batch 2 -> 3 batchEmbedContents calls.
+    assert model.client.post.call_count == 3
+    # Each request bundles its slice under "requests".
+    sizes = [len(c.kwargs["json"]["requests"]) for c in model.client.post.call_args_list]
+    assert sizes == [2, 2, 1]
+    assert result == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+
+
+@pytest.mark.asyncio
+async def test_google_multi_batch_async():
+    model = _make_google(config={"embed_batch_size": 2})
+    result = await model.aembed([f"t{i}" for i in range(5)])
+    assert model.async_client.post.await_count == 3
+    assert result == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+
+
+def test_google_empty_input_makes_zero_requests():
+    model = _make_google()
+    assert model.embed([]) == []
+    assert model.client.post.call_count == 0
+
+
+def test_google_default_batch_size_is_250():
+    assert GoogleEmbeddingModel.MAX_BATCH_SIZE == 250
+    model = _make_google()
+    assert model._get_embed_batch_size() == 250
+
+
+# --- Vertex: multiple instances per :predict request -------------------------
+
+
+def _make_vertex(config=None):
+    with patch("subprocess.run") as mock_subprocess, patch.object(
+        VertexEmbeddingModel, "_create_http_clients", lambda self: None
+    ):
+        mock_subprocess.return_value.stdout = "mock_access_token"
+        mock_subprocess.return_value.returncode = 0
+        model = VertexEmbeddingModel(
+            vertex_project="test-project", model_name="textembedding-gecko", config=config or {}
+        )
+    model._get_access_token = Mock(return_value="mock_access_token")
+
+    def _texts_of(kwargs):
+        return [inst["content"] for inst in kwargs["json"]["instances"]]
+
+    def post(url, **kwargs):
+        resp = Mock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "predictions": [
+                {"embeddings": {"values": [_text_value(t)]}} for t in _texts_of(kwargs)
+            ]
+        }
+        return resp
+
+    async def apost(url, **kwargs):
+        return post(url, **kwargs)
+
+    model.client = Mock()
+    model.async_client = AsyncMock()
+    model.client.post.side_effect = post
+    model.async_client.post.side_effect = apost
+    return model
+
+
+def test_vertex_multi_batch_bundles_instances():
+    model = _make_vertex(config={"embed_batch_size": 2})
+    result = model.embed([f"t{i}" for i in range(5)])
+
+    assert model.client.post.call_count == 3
+    sizes = [len(c.kwargs["json"]["instances"]) for c in model.client.post.call_args_list]
+    assert sizes == [2, 2, 1]
+    assert result == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+
+
+def test_vertex_empty_input_makes_zero_requests():
+    model = _make_vertex()
+    assert model.embed([]) == []
+    assert model.client.post.call_count == 0

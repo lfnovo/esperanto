@@ -103,26 +103,45 @@ def __post_init__(self):
   - Transformers: Uses HuggingFace `sentence-transformers` library
   - Ollama: Can use HTTP (if remote) or local client
 
-### Batch Processing
+### Batch Processing (standardized)
 
-Most embedding APIs have batch limits:
+Embedding APIs cap how many texts one request may contain, so the base class
+auto-batches. **Do not hand-roll a batch loop** — use the shared helper:
 
-- OpenAI: 2048 texts per request
-- Google: 100-250 texts per request
-- Jina: 8192 texts per request
+1. Declare the provider's ceiling as a class attribute:
+   ```python
+   class MyEmbeddingModel(EmbeddingModel):
+       MAX_BATCH_SIZE: ClassVar[int] = 2048  # 0 = no cap (send whole list)
+   ```
+2. Wrap the existing single-request body in `self._iter_embed_batches(texts)`:
+   ```python
+   def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
+       texts = [self._clean_text(t) for t in texts]
+       results: List[List[float]] = []
+       for batch in self._iter_embed_batches(texts):
+           # build payload for `batch`, POST, parse
+           results.extend(...)
+       return results
+   ```
 
-Implement batching in `embed()` and `aembed()`:
+The base class owns the policy:
 
-```python
-def embed(self, texts: List[str], **kwargs) -> List[List[float]]:
-    batch_size = 2048
-    all_embeddings = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i+batch_size]
-        # Process batch...
-        all_embeddings.extend(batch_embeddings)
-    return all_embeddings
-```
+- `_get_embed_batch_size()` resolves the effective size — `MAX_BATCH_SIZE` by
+  default, overridable via `config={"embed_batch_size": N}` (clamped to
+  `MAX_BATCH_SIZE` with a `logging.debug`; `N <= 0` raises `ValueError`).
+- `_iter_embed_batches(texts)` yields ordered slices; **empty input yields
+  nothing** (zero API calls), so `embed([])` returns `[]`.
+- `embed_batch_size` is stripped in `_get_api_kwargs()` — it is a client-side
+  control and must never appear in the request body.
+
+Per-provider ceilings: OpenAI/Azure/OpenAI-compatible/Jina 2048, Voyage 1000,
+Cohere/OpenRouter 96, Mistral 64 (conservative — the reported bug fired at 220),
+Google/Vertex 250 (native `:batchEmbedContents` / multi-instance `:predict`),
+Ollama 0 (passthrough). `transformers` keeps its own internal batching.
+
+When enumerating a batch's response for `validate_and_decode_embedding(idx, ...)`,
+start at `len(results)` so error messages report the original input index, not a
+batch-relative one.
 
 ## Integration
 
