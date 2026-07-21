@@ -1,0 +1,24 @@
+CONTRIBUTING.md
+  s_f4d8690bbc9227::t_a24a9f6c32e89a 69-80
+  s_f4d8690bbc9227::t_5373df083f2060 91
+README.md
+  s_f4d8690bbc9227::t_554137da5bd0dd 803,805-806,811-814
+Makefile
+  s_f4d8690bbc9227::t_0b97a293146d0d 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "88733275c4f505ac35656412659dc72fd880f716",
+  "prompts": {},
+  "sessions": {
+    "s_f4d8690bbc9227": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cda25992-92c0-47af-952a-101092b4a1ab",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
