@@ -877,6 +877,7 @@ def test_google_langchain_conversion():
 
 def test_google_to_langchain_forwards_custom_base_url():
     """A custom Gemini-compatible endpoint is forwarded (without /v1beta suffix)."""
+    pytest.importorskip("langchain_google_genai")
     with patch.dict(os.environ, {"GEMINI_API_BASE_URL": "https://custom.gemini.internal"}):
         model = GoogleLanguageModel(api_key="test-key", model_name="gemini-2.0-flash")
     with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockChat:
@@ -886,6 +887,7 @@ def test_google_to_langchain_forwards_custom_base_url():
 
 def test_google_to_langchain_omits_default_base_url():
     """The default endpoint is not forwarded (ChatGoogleGenerativeAI uses its own default)."""
+    pytest.importorskip("langchain_google_genai")
     model = GoogleLanguageModel(api_key="test-key", model_name="gemini-2.0-flash")
     with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockChat:
         model.to_langchain()
