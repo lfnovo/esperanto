@@ -11,8 +11,12 @@ from esperanto.providers.vertex_auth import VertexAuthMixin
 class VertexEmbeddingModel(VertexAuthMixin, EmbeddingModel):
     """Google Vertex AI embedding model implementation."""
 
-    # Vertex AI's :predict endpoint accepts up to 250 instances per request.
-    MAX_BATCH_SIZE: ClassVar[int] = 250
+    # Vertex AI's :predict endpoint caps a request at 250 instances *and* 20,000
+    # tokens. Since we don't count tokens, keep a conservative instance count so
+    # typical inputs stay under the token ceiling (a request that was fine one
+    # text at a time must not start failing once batched). Users with short texts
+    # can raise it via config="embed_batch_size".
+    MAX_BATCH_SIZE: ClassVar[int] = 25
 
     def __init__(self, vertex_project: Optional[str] = None, vertex_location: Optional[str] = None, **kwargs):
         # Extract vertex_project before calling super().__init__

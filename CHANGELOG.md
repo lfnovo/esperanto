@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   worked on one provider no longer breaks after a provider swap (applies the
   Hot-Swap-First Defaults principle to embeddings). Ceilings: OpenAI / Azure /
   OpenAI-compatible / Jina 2048, Voyage 1000, Cohere / OpenRouter 96, Mistral 64,
-  Google / Vertex 250, Ollama unbatched; `transformers` keeps its own internal
+  Google 250, Vertex 25 (conservative — `:predict` also caps at 20k tokens),
+  Ollama unbatched; `transformers` keeps its own internal
   batching. Lower it per model with `config={"embed_batch_size": N}` (clamped to
   the provider maximum; `N <= 0` raises `ValueError`); `embed([])` makes zero API
   calls. Google and Vertex now use the native `:batchEmbedContents` /

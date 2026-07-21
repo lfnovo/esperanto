@@ -19,6 +19,9 @@ from esperanto.providers.embedding.google import GoogleEmbeddingModel
 from esperanto.providers.embedding.mistral import MistralEmbeddingModel
 from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
 from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
+from esperanto.providers.embedding.openai_compatible import (
+    OpenAICompatibleEmbeddingModel,
+)
 from esperanto.providers.embedding.openrouter import OpenRouterEmbeddingModel
 from esperanto.providers.embedding.vertex import VertexEmbeddingModel
 from esperanto.providers.embedding.voyage import VoyageEmbeddingModel
@@ -491,3 +494,41 @@ def test_vertex_empty_input_makes_zero_requests():
     model = _make_vertex()
     assert model.embed([]) == []
     assert model.client.post.call_count == 0
+
+
+# --- OpenAI-compatible: batches like OpenAI (2048), needs a base_url ----------
+
+
+def _make_openai_compatible(config=None):
+    return _make_model(
+        OpenAICompatibleEmbeddingModel,
+        _data_response,
+        config=config,
+        base_url="http://localhost:1234/v1",
+    )
+
+
+def test_openai_compatible_multi_batch_sync():
+    model = _make_openai_compatible(config={"embed_batch_size": 2})
+    result = model.embed([f"t{i}" for i in range(5)])
+    assert model.client.post.call_count == 3
+    assert _sent_batches(model.client) == [["t0", "t1"], ["t2", "t3"], ["t4"]]
+    assert result == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_multi_batch_async():
+    model = _make_openai_compatible(config={"embed_batch_size": 2})
+    result = await model.aembed([f"t{i}" for i in range(5)])
+    assert model.async_client.post.await_count == 3
+    assert result == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+
+
+def test_openai_compatible_empty_input_makes_zero_requests():
+    model = _make_openai_compatible()
+    assert model.embed([]) == []
+    assert model.client.post.call_count == 0
+
+
+def test_openai_compatible_default_batch_size_is_2048():
+    assert OpenAICompatibleEmbeddingModel.MAX_BATCH_SIZE == 2048

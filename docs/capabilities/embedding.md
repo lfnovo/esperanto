@@ -72,7 +72,7 @@ vectors = [item.embedding for item in response.data]
 ### Automatic Batching
 
 Embedding providers cap how many texts a single request may contain (OpenAI 2048,
-Voyage 1000, Cohere/OpenRouter 96, Mistral 64, Google/Vertex 250, …). Esperanto
+Voyage 1000, Cohere/OpenRouter 96, Mistral 64, Google 250, Vertex 25, …). Esperanto
 **batches automatically**: `embed()` / `aembed()` split a large input into
 sequential requests under the provider's limit and concatenate the results in
 input order, so the same code works when you switch providers. Empty input makes

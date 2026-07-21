@@ -136,7 +136,8 @@ The base class owns the policy:
 
 Per-provider ceilings: OpenAI/Azure/OpenAI-compatible/Jina 2048, Voyage 1000,
 Cohere/OpenRouter 96, Mistral 64 (conservative — the reported bug fired at 220),
-Google/Vertex 250 (native `:batchEmbedContents` / multi-instance `:predict`),
+Google 250 and Vertex 25 (native `:batchEmbedContents` / multi-instance
+`:predict`; Vertex is conservative because `:predict` also caps at 20k tokens),
 Ollama 0 (passthrough). `transformers` keeps its own internal batching.
 
 When enumerating a batch's response for `validate_and_decode_embedding(idx, ...)`,
