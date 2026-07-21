@@ -1,7 +1,7 @@
 """Jina AI embedding model implementation."""
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 import httpx
 
@@ -14,6 +14,9 @@ from .base import EmbeddingModel
 
 class JinaEmbeddingModel(EmbeddingModel):
     """Jina AI embeddings with native support for all advanced features."""
+
+    # Jina's embeddings API accepts up to 2048 inputs per request.
+    MAX_BATCH_SIZE: ClassVar[int] = 2048
 
     # Jina supports all advanced features natively
     SUPPORTED_FEATURES = ["task_type", "late_chunking", "output_dimensions", "truncate_at_max_length"]
@@ -148,34 +151,35 @@ class JinaEmbeddingModel(EmbeddingModel):
         if not texts:
             return []
 
-        payload = self._build_request_payload(texts)
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            payload = self._build_request_payload(batch)
 
-        try:
-            response = self.client.post(
-                self.base_url or "",
-                json=payload,
-                headers=self._get_headers()
-            )
+            try:
+                response = self.client.post(
+                    self.base_url or "",
+                    json=payload,
+                    headers=self._get_headers()
+                )
 
-            if response.status_code != 200:
-                self._handle_error(response)
+                if response.status_code != 200:
+                    self._handle_error(response)
 
-            response_data = response.json()
+                response_data = response.json()
 
-            # Extract embeddings from response
-            embeddings = []
-            for idx, item in enumerate(response_data.get("data", [])):
-                embedding = item.get("embedding")
-                embeddings.append(validate_and_decode_embedding(idx, embedding))
+                # Extract embeddings from response
+                for idx, item in enumerate(response_data.get("data", []), start=len(results)):
+                    embedding = item.get("embedding")
+                    results.append(validate_and_decode_embedding(idx, embedding))
 
-            return embeddings
+            except httpx.TimeoutException:
+                raise RuntimeError("Request to Jina API timed out")
+            except httpx.RequestError as e:
+                raise RuntimeError(f"Network error calling Jina API: {str(e)}")
+            finally:
+                pass  # Client is reused, don't close
 
-        except httpx.TimeoutException:
-            raise RuntimeError("Request to Jina API timed out")
-        except httpx.RequestError as e:
-            raise RuntimeError(f"Network error calling Jina API: {str(e)}")
-        finally:
-            pass  # Client is reused, don't close
+        return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -190,32 +194,33 @@ class JinaEmbeddingModel(EmbeddingModel):
         if not texts:
             return []
 
-        payload = self._build_request_payload(texts)
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            payload = self._build_request_payload(batch)
 
-        try:
-            response = await self.async_client.post(
-                self.base_url or "",
-                json=payload,
-                headers=self._get_headers()
-            )
+            try:
+                response = await self.async_client.post(
+                    self.base_url or "",
+                    json=payload,
+                    headers=self._get_headers()
+                )
 
-            if response.status_code != 200:
-                self._handle_error(response)
+                if response.status_code != 200:
+                    self._handle_error(response)
 
-            response_data = response.json()
+                response_data = response.json()
 
-            # Extract embeddings from response
-            embeddings = []
-            for idx, item in enumerate(response_data.get("data", [])):
-                embedding = item.get("embedding")
-                embeddings.append(validate_and_decode_embedding(idx, embedding))
+                # Extract embeddings from response
+                for idx, item in enumerate(response_data.get("data", []), start=len(results)):
+                    embedding = item.get("embedding")
+                    results.append(validate_and_decode_embedding(idx, embedding))
 
-            return embeddings
+            except httpx.TimeoutException:
+                raise RuntimeError("Request to Jina API timed out")
+            except httpx.RequestError as e:
+                raise RuntimeError(f"Network error calling Jina API: {str(e)}")
 
-        except httpx.TimeoutException:
-            raise RuntimeError("Request to Jina API timed out")
-        except httpx.RequestError as e:
-            raise RuntimeError(f"Network error calling Jina API: {str(e)}")
+        return results
 
     @property
     def provider(self) -> str:

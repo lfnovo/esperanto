@@ -2,7 +2,7 @@
 
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from esperanto.common_types import Model
 from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
@@ -11,6 +11,9 @@ from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
 @dataclass
 class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
     """OpenRouter embedding model implementation using OpenAI-compatible API."""
+
+    # OpenRouter accepts up to 96 inputs per embeddings request.
+    MAX_BATCH_SIZE: ClassVar[int] = 96
 
     base_url: Optional[str] = None
     api_key: Optional[str] = None
@@ -72,23 +75,29 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
         # Clean texts using enhanced text cleaning
         texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload
-        payload = {
-            "input": texts,
-            "model": self.get_model_name(),
-            **{**self._get_api_kwargs(), **kwargs}
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload
+            payload = {
+                "input": batch,
+                "model": self.get_model_name(),
+                **{**self._get_api_kwargs(), **kwargs}
+            }
 
-        response = self.client.post(
-            f"{self.base_url}/embeddings",
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
+            response = self.client.post(
+                f"{self.base_url}/embeddings",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
 
-        # Parse response
-        response_data = response.json()
-        return [[float(value) for value in data["embedding"]] for data in response_data["data"]]
+            # Parse response
+            response_data = response.json()
+            results.extend(
+                [float(value) for value in data["embedding"]]
+                for data in response_data["data"]
+            )
+        return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -103,23 +112,29 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
         # Clean texts using enhanced text cleaning
         texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload
-        payload = {
-            "input": texts,
-            "model": self.get_model_name(),
-            **{**self._get_api_kwargs(), **kwargs}
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload
+            payload = {
+                "input": batch,
+                "model": self.get_model_name(),
+                **{**self._get_api_kwargs(), **kwargs}
+            }
 
-        response = await self.async_client.post(
-            f"{self.base_url}/embeddings",
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
+            response = await self.async_client.post(
+                f"{self.base_url}/embeddings",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
 
-        # Parse response
-        response_data = response.json()
-        return [[float(value) for value in data["embedding"]] for data in response_data["data"]]
+            # Parse response
+            response_data = response.json()
+            results.extend(
+                [float(value) for value in data["embedding"]]
+                for data in response_data["data"]
+            )
+        return results
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
