@@ -12,10 +12,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from esperanto.providers.embedding.azure import AzureEmbeddingModel
 from esperanto.providers.embedding.base import EmbeddingModel
 from esperanto.providers.embedding.cohere import CohereEmbeddingModel
 from esperanto.providers.embedding.mistral import MistralEmbeddingModel
+from esperanto.providers.embedding.ollama import OllamaEmbeddingModel
 from esperanto.providers.embedding.openai import OpenAIEmbeddingModel
+from esperanto.providers.embedding.openrouter import OpenRouterEmbeddingModel
 from esperanto.providers.embedding.voyage import VoyageEmbeddingModel
 
 # --- response builders -------------------------------------------------------
@@ -43,17 +46,21 @@ PROVIDERS = {
     "voyage": (VoyageEmbeddingModel, "input", _data_response, 1000),
     "mistral": (MistralEmbeddingModel, "input", _data_response, 64),
     "cohere": (CohereEmbeddingModel, "texts", _cohere_response, 96),
+    "openrouter": (OpenRouterEmbeddingModel, "input", _data_response, 96),
 }
 
 
-def _make_model(cls, response_builder, config=None):
+def _make_model(cls, response_builder, config=None, **extra):
     """Build a provider instance with mocked sync/async HTTP clients.
 
     Each POST inspects the request payload and returns a response sized to the
-    batch it was given, so batching behaviour is exercised end to end.
+    batch it was given, so batching behaviour is exercised end to end. ``extra``
+    forwards provider-specific constructor kwargs (e.g. Azure's endpoint).
     """
+    ctor = {"model_name": "test-model", "api_key": "test-key", "config": config or {}}
+    ctor.update(extra)
     with patch.object(cls, "_create_http_clients", lambda self: None):
-        model = cls(model_name="test-model", api_key="test-key", config=config or {})
+        model = cls(**ctor)
 
     def _batch_from(kwargs):
         payload = kwargs["json"]
@@ -267,3 +274,102 @@ def test_iter_batches_no_cap_single_yield():
     texts = [f"t{i}" for i in range(50)]
     batches = list(model._iter_embed_batches(texts))
     assert batches == [texts]
+
+
+# --- regression: embed_batch_size must stay client-side ----------------------
+
+
+@pytest.mark.parametrize("provider", list(PROVIDERS))
+def test_embed_batch_size_not_leaked_into_payload(provider):
+    """The override is a client-side control; it must never reach the API body."""
+    cls, _key, builder, _max = PROVIDERS[provider]
+    model = _make_model(cls, builder, config={"embed_batch_size": 2})
+
+    model.embed([f"t{i}" for i in range(3)])
+
+    for call in model.client.post.call_args_list:
+        assert "embed_batch_size" not in call.kwargs["json"]
+
+
+# --- regression: batch offset preserves the original input index -------------
+
+
+def test_error_index_is_global_across_batches():
+    """An invalid embedding in a later batch reports its original input index."""
+    model = _make_model(OpenAIEmbeddingModel, _data_response, config={"embed_batch_size": 2})
+
+    seen = []
+
+    def spy(idx, raw):
+        seen.append(idx)
+        return [float(idx)]
+
+    with patch("esperanto.providers.embedding.openai.validate_and_decode_embedding", spy):
+        model.embed([f"t{i}" for i in range(5)])
+
+    # Global indices, not per-batch (which would be [0, 1, 0, 1, 0]).
+    assert seen == [0, 1, 2, 3, 4]
+
+
+# --- Azure: distinct payload/construction path -------------------------------
+
+
+def _make_azure(config=None):
+    return _make_model(
+        AzureEmbeddingModel,
+        _data_response,
+        config=config,
+        azure_endpoint="https://test.openai.azure.com",
+        api_version="2024-02-01",
+    )
+
+
+def test_azure_multi_batch_sync():
+    model = _make_azure(config={"embed_batch_size": 2})
+    result = model.embed([f"t{i}" for i in range(5)])
+    assert model.client.post.call_count == 3
+    assert _sent_batches(model.client) == [["t0", "t1"], ["t2", "t3"], ["t4"]]
+    assert result == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+
+
+@pytest.mark.asyncio
+async def test_azure_multi_batch_async():
+    model = _make_azure(config={"embed_batch_size": 2})
+    result = await model.aembed([f"t{i}" for i in range(5)])
+    assert model.async_client.post.await_count == 3
+    assert result == [[0.0], [1.0], [2.0], [3.0], [4.0]]
+
+
+def test_azure_empty_input_makes_zero_requests():
+    model = _make_azure()
+    assert model.embed([]) == []
+    assert model.client.post.call_count == 0
+
+
+# --- Ollama: empty input returns [] (batching contract), no request ----------
+
+
+def _ollama_response(batch):
+    return {"embeddings": [[_text_value(t)] for t in batch]}
+
+
+def _make_ollama(config=None):
+    return _make_model(
+        OllamaEmbeddingModel,
+        _ollama_response,
+        config=config,
+        base_url="http://localhost:11434",
+    )
+
+
+def test_ollama_empty_input_returns_empty():
+    model = _make_ollama()
+    assert model.embed([]) == []
+    assert model.client.post.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_ollama_empty_input_returns_empty_async():
+    model = _make_ollama()
+    assert await model.aembed([]) == []
+    assert model.async_client.post.await_count == 0

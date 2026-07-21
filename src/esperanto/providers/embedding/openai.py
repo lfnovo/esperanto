@@ -90,7 +90,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
             # Parse response
             response_data = response.json()
-            for idx, data in enumerate(response_data["data"]):
+            for idx, data in enumerate(response_data["data"], start=len(results)):
                 raw = data.get("embedding")
                 results.append(validate_and_decode_embedding(idx, raw))
         return results
@@ -127,7 +127,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
             # Parse response
             response_data = response.json()
-            for idx, data in enumerate(response_data["data"]):
+            for idx, data in enumerate(response_data["data"], start=len(results)):
                 raw = data.get("embedding")
                 results.append(validate_and_decode_embedding(idx, raw))
         return results

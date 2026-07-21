@@ -168,7 +168,7 @@ class JinaEmbeddingModel(EmbeddingModel):
                 response_data = response.json()
 
                 # Extract embeddings from response
-                for idx, item in enumerate(response_data.get("data", [])):
+                for idx, item in enumerate(response_data.get("data", []), start=len(results)):
                     embedding = item.get("embedding")
                     results.append(validate_and_decode_embedding(idx, embedding))
 
@@ -211,7 +211,7 @@ class JinaEmbeddingModel(EmbeddingModel):
                 response_data = response.json()
 
                 # Extract embeddings from response
-                for idx, item in enumerate(response_data.get("data", [])):
+                for idx, item in enumerate(response_data.get("data", []), start=len(results)):
                     embedding = item.get("embedding")
                     results.append(validate_and_decode_embedding(idx, embedding))
 

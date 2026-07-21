@@ -65,7 +65,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             ValueError: If text is None or empty.
         """
         if not texts:
-            raise ValueError("Texts cannot be empty")
+            return []
 
         # Validate texts
         for text in texts:
@@ -97,7 +97,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
                 self._handle_error(response)
 
                 response_data = response.json()
-                for idx, embedding in enumerate(response_data["embeddings"]):
+                for idx, embedding in enumerate(response_data["embeddings"], start=len(results)):
                     results.append(validate_and_decode_embedding(idx, embedding))
             except Exception as e:
                 raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
@@ -118,7 +118,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             ValueError: If text is None or empty.
         """
         if not texts:
-            raise ValueError("Texts cannot be empty")
+            return []
 
         # Validate texts
         for text in texts:
@@ -150,7 +150,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
                 self._handle_error(response)
 
                 response_data = response.json()
-                for idx, embedding in enumerate(response_data["embeddings"]):
+                for idx, embedding in enumerate(response_data["embeddings"], start=len(results)):
                     results.append(validate_and_decode_embedding(idx, embedding))
             except Exception as e:
                 raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e

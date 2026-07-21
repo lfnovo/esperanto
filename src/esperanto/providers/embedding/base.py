@@ -283,6 +283,9 @@ class EmbeddingModel(HttpConnectionMixin, ABC):
         kwargs.pop("api_key", None)
         kwargs.pop("base_url", None)
         kwargs.pop("organization", None)
+        # Client-side batching control — never send it in the request body, or
+        # providers that reject unknown fields would fail on a valid override.
+        kwargs.pop("embed_batch_size", None)
 
         # Filter out unsupported advanced features
         kwargs = self._filter_unsupported_params(kwargs)
