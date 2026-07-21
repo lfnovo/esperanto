@@ -811,4 +811,4 @@ source .venv/bin/activate
 make test
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
+See [CONTRIBUTING.md](https://github.com/lfnovo/esperanto/blob/main/CONTRIBUTING.md) for the full development guide.
