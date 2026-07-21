@@ -1,0 +1,19 @@
+tests/providers/test_base_url_normalization.py
+  s_f4d8690bbc9227::t_b031c971201f4f 355-359
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "b541e2ecc6078ca4f6a70f942882d24eb1ca994d",
+  "prompts": {},
+  "sessions": {
+    "s_f4d8690bbc9227": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cda25992-92c0-47af-952a-101092b4a1ab",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
