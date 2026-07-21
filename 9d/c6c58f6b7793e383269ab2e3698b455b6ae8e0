@@ -1,0 +1,51 @@
+CHANGELOG.md
+  s_f4d8690bbc9227::t_7a1504fc37c2ce 10-24
+src/esperanto/providers/embedding/google.py
+  s_f4d8690bbc9227::t_60113cc0bc2d8e 113,119-125,127,129,132,134-136
+  s_f4d8690bbc9227::t_6807bffb0e4f42 4,14-17
+  s_f4d8690bbc9227::t_bbbfb75f79344e 150,156-162,164,166,169,171-173,177-199
+  s_f4d8690bbc9227::t_dc191d632d58ab 200
+tests/providers/embedding/test_embed_batching.py
+  s_f4d8690bbc9227::t_f18c3be6edd1df 18,23
+  s_f4d8690bbc9227::t_a960b428e0997e 378-493
+docs/capabilities/embedding.md
+  s_f4d8690bbc9227::t_9c9ccbcde96bc2 265
+  s_f4d8690bbc9227::t_a010be9146e680 70-84
+  s_f4d8690bbc9227::t_d613897d4c523b 33
+tests/providers/embedding/test_google_task_translation.py
+  s_f4d8690bbc9227::t_dbcbc72e24e338 138,155,237,258
+  s_f4d8690bbc9227::t_239db9fd2ab5f9 13,15-17
+  s_f4d8690bbc9227::t_5b2115227203b5 214
+  s_f4d8690bbc9227::t_557f7a38b47555 278,281-285,291,295-297,299-304
+  s_f4d8690bbc9227::t_6e2c7601e29fad 101
+  s_f4d8690bbc9227::t_3bc8f94ec66496 121
+  s_f4d8690bbc9227::t_2188ad1ab7bca8 100,120
+tests/providers/embedding/test_embedding_providers.py
+  s_f4d8690bbc9227::t_e1aae01268b4c8 578,602
+  s_f4d8690bbc9227::t_437b245f609ef7 665-666,672,675,679
+  s_f4d8690bbc9227::t_b7652df21514dd 690,692,694,698,701,705
+  s_f4d8690bbc9227::t_9473e7ded05985 580-582,604-606
+src/esperanto/providers/embedding/CLAUDE.md
+  s_f4d8690bbc9227::t_eb4b0d36b1ecd7 106-144
+src/esperanto/providers/embedding/vertex.py
+  s_f4d8690bbc9227::t_bfda50dac6b889 85-86,88-92,100,102-106
+  s_f4d8690bbc9227::t_978cbdf97eea01 3,14-15
+  s_f4d8690bbc9227::t_f85ff2cdf06d57 121-122,124-128,136,138-142
+  s_f4d8690bbc9227::t_c76dd03552c6c9 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "9dc6c58f6b7793e383269ab2e3698b455b6ae8e0",
+  "prompts": {},
+  "sessions": {
+    "s_f4d8690bbc9227": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cda25992-92c0-47af-952a-101092b4a1ab",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
