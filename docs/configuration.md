@@ -117,6 +117,29 @@ DEEPSEEK_API_KEY=...
 
 → **[Full DeepSeek Setup Guide](./providers/deepseek.md)**
 
+#### SiliconFlow
+```bash
+SILICONFLOW_API_KEY=...
+# Optional: use the Global endpoint instead of the default CN endpoint
+SILICONFLOW_BASE_URL=https://api.siliconflow.com/v1
+```
+
+```python
+from esperanto.factory import AIFactory
+
+# Default CN endpoint: https://api.siliconflow.cn/v1
+model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
+
+# Global endpoint override
+model = AIFactory.create_language(
+    "siliconflow",
+    "deepseek-ai/DeepSeek-V3.1-Terminus",
+    config={"base_url": "https://api.siliconflow.com/v1"},
+)
+```
+
+→ **[Full SiliconFlow Setup Guide](./providers/siliconflow.md)**
+
 #### Perplexity
 ```bash
 PERPLEXITY_API_KEY=...
