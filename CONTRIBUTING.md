@@ -22,6 +22,11 @@ For non-trivial changes (new features, new providers, architectural changes), **
 
 ## How to Contribute
 
+### Reporting Security Vulnerabilities
+
+**Do not report security issues through public issues or PRs.** Please follow our
+[Security Policy](SECURITY.md) to report them privately.
+
 ### Reporting Bugs
 
 Before creating bug reports, check the issue list. When creating a bug report, include:
