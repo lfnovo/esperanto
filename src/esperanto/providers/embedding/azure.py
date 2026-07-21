@@ -1,7 +1,7 @@
 """Azure OpenAI embedding model provider."""
 
 import os
-from typing import Dict, List
+from typing import ClassVar, Dict, List
 
 import httpx
 
@@ -11,6 +11,9 @@ from esperanto.utils import validate_and_decode_embedding
 
 class AzureEmbeddingModel(EmbeddingModel):
     """Azure OpenAI embedding model implementation using direct HTTP."""
+
+    # Azure OpenAI accepts up to 2048 inputs per embeddings request.
+    MAX_BATCH_SIZE: ClassVar[int] = 2048
 
     def __init__(self, **kwargs):
         """Initialize Azure embedding provider.
@@ -110,32 +113,33 @@ class AzureEmbeddingModel(EmbeddingModel):
         # Clean texts using enhanced text cleaning
         texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload
-        payload = {
-            "input": texts,
-            "model": self.deployment_name,
-            **self._get_api_kwargs(),
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload
+            payload = {
+                "input": batch,
+                "model": self.deployment_name,
+                **self._get_api_kwargs(),
+            }
 
-        # Add any runtime kwargs like dimensions
-        if "dimensions" in kwargs:
-            payload["dimensions"] = kwargs["dimensions"]
+            # Add any runtime kwargs like dimensions
+            if "dimensions" in kwargs:
+                payload["dimensions"] = kwargs["dimensions"]
 
-        # Make HTTP request
-        url = self._build_url()
-        response = self.client.post(
-            url,
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
+            # Make HTTP request
+            url = self._build_url()
+            response = self.client.post(
+                url,
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
 
-        # Parse response
-        response_data = response.json()
-        results = []
-        for idx, data in enumerate(response_data["data"]):
-            raw = data.get("embedding")
-            results.append(validate_and_decode_embedding(idx, raw))
+            # Parse response
+            response_data = response.json()
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
@@ -151,32 +155,33 @@ class AzureEmbeddingModel(EmbeddingModel):
         # Clean texts using enhanced text cleaning
         texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload
-        payload = {
-            "input": texts,
-            "model": self.deployment_name,
-            **self._get_api_kwargs(),
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload
+            payload = {
+                "input": batch,
+                "model": self.deployment_name,
+                **self._get_api_kwargs(),
+            }
 
-        # Add any runtime kwargs like dimensions
-        if "dimensions" in kwargs:
-            payload["dimensions"] = kwargs["dimensions"]
+            # Add any runtime kwargs like dimensions
+            if "dimensions" in kwargs:
+                payload["dimensions"] = kwargs["dimensions"]
 
-        # Make HTTP request
-        url = self._build_url()
-        response = await self.async_client.post(
-            url,
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
+            # Make HTTP request
+            url = self._build_url()
+            response = await self.async_client.post(
+                url,
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
 
-        # Parse response
-        response_data = response.json()
-        results = []
-        for idx, data in enumerate(response_data["data"]):
-            raw = data.get("embedding")
-            results.append(validate_and_decode_embedding(idx, raw))
+            # Parse response
+            response_data = response.json()
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     def _get_default_model(self) -> str:

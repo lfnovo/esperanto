@@ -1,6 +1,6 @@
 """Mistral embedding model provider."""
 import os
-from typing import Dict, List
+from typing import ClassVar, Dict, List
 
 import httpx
 
@@ -10,6 +10,9 @@ from esperanto.utils import validate_and_decode_embedding
 
 class MistralEmbeddingModel(EmbeddingModel):
     """Mistral embedding model implementation."""
+
+    # Mistral accepts up to 64 inputs per embeddings request.
+    MAX_BATCH_SIZE: ClassVar[int] = 64
 
     def __post_init__(self):
         """Initialize HTTP clients."""
@@ -49,56 +52,58 @@ class MistralEmbeddingModel(EmbeddingModel):
         """Create embeddings for the given texts."""
         # Clean texts using enhanced text cleaning
         texts = [self._clean_text(text) for text in texts]
-        
-        # Prepare request payload - Mistral uses 'input' instead of 'inputs'
-        payload = {
-            "model": self.get_model_name(),
-            "input": texts,
-            **self._get_api_kwargs(),
-            **kwargs
-        }
 
-        # Make HTTP request
-        response = self.client.post(
-            f"{self.base_url}/embeddings",
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
-        
-        response_data = response.json()
-        results = []
-        for idx, data in enumerate(response_data["data"]):
-            raw = data.get("embedding")
-            results.append(validate_and_decode_embedding(idx, raw))
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload - Mistral uses 'input' instead of 'inputs'
+            payload = {
+                "model": self.get_model_name(),
+                "input": batch,
+                **self._get_api_kwargs(),
+                **kwargs
+            }
+
+            # Make HTTP request
+            response = self.client.post(
+                f"{self.base_url}/embeddings",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            response_data = response.json()
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously."""
         # Clean texts using enhanced text cleaning
         texts = [self._clean_text(text) for text in texts]
-        
-        # Prepare request payload - Mistral uses 'input' instead of 'inputs'
-        payload = {
-            "model": self.get_model_name(),
-            "input": texts,
-            **self._get_api_kwargs(),
-            **kwargs
-        }
 
-        # Make async HTTP request
-        response = await self.async_client.post(
-            f"{self.base_url}/embeddings",
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
-        
-        response_data = response.json()
-        results = []
-        for idx, data in enumerate(response_data["data"]):
-            raw = data.get("embedding")
-            results.append(validate_and_decode_embedding(idx, raw))
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload - Mistral uses 'input' instead of 'inputs'
+            payload = {
+                "model": self.get_model_name(),
+                "input": batch,
+                **self._get_api_kwargs(),
+                **kwargs
+            }
+
+            # Make async HTTP request
+            response = await self.async_client.post(
+                f"{self.base_url}/embeddings",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            response_data = response.json()
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     def _get_default_model(self) -> str:

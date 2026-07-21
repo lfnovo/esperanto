@@ -1,7 +1,7 @@
 """Voyage AI embedding model provider."""
 
 import os
-from typing import Dict, List
+from typing import ClassVar, Dict, List
 
 import httpx
 
@@ -11,6 +11,9 @@ from esperanto.utils import validate_and_decode_embedding
 
 class VoyageEmbeddingModel(EmbeddingModel):
     """Voyage AI embedding model implementation."""
+
+    # Voyage accepts up to 1000 inputs per embeddings request.
+    MAX_BATCH_SIZE: ClassVar[int] = 1000
 
     def __init__(self, **kwargs):
         """Initialize the model.
@@ -67,27 +70,28 @@ class VoyageEmbeddingModel(EmbeddingModel):
         # Clean texts by replacing newlines with spaces
         texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload
-        payload = {
-            "input": texts,
-            "model": self.get_model_name(),
-            **self._get_api_kwargs(),
-            **kwargs
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload
+            payload = {
+                "input": batch,
+                "model": self.get_model_name(),
+                **self._get_api_kwargs(),
+                **kwargs
+            }
 
-        # Make HTTP request
-        response = self.client.post(
-            f"{self.base_url}/embeddings",
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
-        
-        response_data = response.json()
-        results = []
-        for idx, data in enumerate(response_data["data"]):
-            raw = data.get("embedding")
-            results.append(validate_and_decode_embedding(idx, raw))
+            # Make HTTP request
+            response = self.client.post(
+                f"{self.base_url}/embeddings",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            response_data = response.json()
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
@@ -103,27 +107,28 @@ class VoyageEmbeddingModel(EmbeddingModel):
         # Clean texts by replacing newlines with spaces
         texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload
-        payload = {
-            "input": texts,
-            "model": self.get_model_name(),
-            **self._get_api_kwargs(),
-            **kwargs
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(texts):
+            # Prepare request payload
+            payload = {
+                "input": batch,
+                "model": self.get_model_name(),
+                **self._get_api_kwargs(),
+                **kwargs
+            }
 
-        # Make async HTTP request
-        response = await self.async_client.post(
-            f"{self.base_url}/embeddings",
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
-        
-        response_data = response.json()
-        results = []
-        for idx, data in enumerate(response_data["data"]):
-            raw = data.get("embedding")
-            results.append(validate_and_decode_embedding(idx, raw))
+            # Make async HTTP request
+            response = await self.async_client.post(
+                f"{self.base_url}/embeddings",
+                headers=self._get_headers(),
+                json=payload
+            )
+            self._handle_error(response)
+
+            response_data = response.json()
+            for idx, data in enumerate(response_data["data"]):
+                raw = data.get("embedding")
+                results.append(validate_and_decode_embedding(idx, raw))
         return results
 
     def _get_default_model(self) -> str:

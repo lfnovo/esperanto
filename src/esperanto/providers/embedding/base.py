@@ -1,10 +1,11 @@
 """Base embedding model interface."""
 
+import logging
 import re
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, Iterator, List, Optional
 
 from esperanto.common_types import Model
 from esperanto.common_types.task_type import EmbeddingTaskType
@@ -14,6 +15,13 @@ from esperanto.utils.connect import HttpConnectionMixin
 @dataclass
 class EmbeddingModel(HttpConnectionMixin, ABC):
     """Base class for all embedding models."""
+
+    # Per-provider hard ceiling on how many texts a single embedding request may
+    # contain. 0 means the provider imposes no cap (send the whole list in one
+    # request). Providers override this with their API's documented limit; the
+    # base class uses it to auto-batch large inputs so switching providers never
+    # breaks otherwise-correct user code (ARCHITECTURE.md "Hot-Swap-First Defaults").
+    MAX_BATCH_SIZE: ClassVar[int] = 0
 
     api_key: Optional[str] = None
     base_url: Optional[str] = None
@@ -283,6 +291,53 @@ class EmbeddingModel(HttpConnectionMixin, ABC):
         kwargs = self._serialize_config_for_api(kwargs)
 
         return kwargs
+
+    def _get_embed_batch_size(self) -> Optional[int]:
+        """Resolve the effective number of texts to send per embedding request.
+
+        Returns the batch size, or ``None`` when no chunking should be applied
+        (the whole input goes in a single request). The provider ceiling comes
+        from ``MAX_BATCH_SIZE`` (0 = no cap); users may lower it via
+        ``config={"embed_batch_size": N}``.
+
+        Resolution rules:
+        - unset → ``MAX_BATCH_SIZE`` (or ``None`` when that is 0);
+        - ``N > MAX_BATCH_SIZE`` → silently clamped to ``MAX_BATCH_SIZE`` with a
+          ``logging.debug`` message (a request-shape sanitize, not a feature drop);
+        - ``N <= 0`` → ``ValueError``.
+        """
+        override = self._config.get("embed_batch_size")
+        if override is not None:
+            if not isinstance(override, int) or isinstance(override, bool) or override <= 0:
+                raise ValueError(
+                    f"embed_batch_size must be a positive integer, got {override!r}"
+                )
+            if 0 < self.MAX_BATCH_SIZE < override:
+                logging.debug(
+                    "embed_batch_size=%s exceeds %s MAX_BATCH_SIZE=%s; clamping to %s",
+                    override,
+                    type(self).__name__,
+                    self.MAX_BATCH_SIZE,
+                    self.MAX_BATCH_SIZE,
+                )
+                return self.MAX_BATCH_SIZE
+            return override
+        return self.MAX_BATCH_SIZE if self.MAX_BATCH_SIZE > 0 else None
+
+    def _iter_embed_batches(self, texts: List[str]) -> Iterator[List[str]]:
+        """Yield successive slices of ``texts`` respecting the resolved batch size.
+
+        Empty input yields nothing, so callers make zero API calls. When batching
+        is disabled or the input already fits, the whole list is yielded once.
+        """
+        if not texts:
+            return
+        size = self._get_embed_batch_size()
+        if not size or size >= len(texts):
+            yield list(texts)
+            return
+        for start in range(0, len(texts), size):
+            yield texts[start : start + size]
 
     @property
     @abstractmethod
