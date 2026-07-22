@@ -157,6 +157,9 @@ class GoogleLanguageModel(LanguageModel):
                 "top_p": self.top_p,
                 "google_api_key": self.api_key,
             }
+            base_host = (self.base_url or "").removesuffix("/v1beta")
+            if base_host and base_host != "https://generativelanguage.googleapis.com":
+                kwargs["client_options"] = {"api_endpoint": base_host}
             resolved_structured = resolve_structured_output(
                 self.structured,
                 allow_string_json_alias=True,

@@ -286,6 +286,19 @@ def test_to_langchain():
     # Skip API key check since it's masked
 
 
+def test_to_langchain_forwards_custom_base_url():
+    """Test LangChain conversion preserves a custom Gemini endpoint."""
+    with patch.dict(
+        os.environ, {"GEMINI_API_BASE_URL": "https://gemini.example.com/"}
+    ):
+        with patch("langchain_google_genai.ChatGoogleGenerativeAI") as mock_chat_class:
+            GoogleLanguageModel(api_key="test-key").to_langchain()
+
+    assert mock_chat_class.call_args.kwargs["client_options"] == {
+        "api_endpoint": "https://gemini.example.com"
+    }
+
+
 def test_to_langchain_json_mode_sets_response_mime_type():
     """Test LangChain conversion passes JSON mode settings."""
     mock_chat_google = MagicMock()
