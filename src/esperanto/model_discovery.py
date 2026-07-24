@@ -942,6 +942,69 @@ def get_openai_compatible_models(
         raise RuntimeError(f"Failed to fetch OpenAI-compatible models: {e}")
 
 
+_MINIMAX_CONTEXT_WINDOWS = {
+    "MiniMax-M3": 1_000_000,
+    "MiniMax-M2.7": 204_800,
+    "MiniMax-M2.7-highspeed": 204_800,
+    "MiniMax-M2.5": 204_800,
+    "MiniMax-M2.5-highspeed": 204_800,
+    "MiniMax-M2.1": 204_800,
+    "MiniMax-M2.1-highspeed": 204_800,
+    "MiniMax-M2": 204_800,
+}
+
+
+def get_minimax_models(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    model_type: Optional[str] = None,
+) -> List[Model]:
+    """Discover current MiniMax language models and known TTS models."""
+    models: List[Model] = []
+    if model_type in (None, "language"):
+        api_key = api_key or os.getenv("MINIMAX_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "MiniMax API key not found. Provide api_key or set MINIMAX_API_KEY "
+                "environment variable."
+            )
+        resolved_base_url = (
+            base_url
+            or os.getenv("MINIMAX_BASE_URL")
+            or "https://api.minimax.io/v1"
+        ).rstrip("/")
+        discovered = get_openai_compatible_models(
+            base_url=resolved_base_url,
+            api_key=api_key,
+        )
+        models.extend(
+            Model(
+                id=model.id,
+                owned_by=model.owned_by or "MiniMax",
+                context_window=_MINIMAX_CONTEXT_WINDOWS.get(
+                    model.id, model.context_window
+                ),
+                type="language",
+            )
+            for model in discovered
+        )
+
+    if model_type in (None, "text_to_speech"):
+        from esperanto.providers.tts.minimax import MINIMAX_TTS_MODELS
+
+        models.extend(
+            Model(
+                id=model_id,
+                owned_by="MiniMax",
+                context_window=None,
+                type="text_to_speech",
+            )
+            for model_id in MINIMAX_TTS_MODELS
+        )
+
+    return models
+
+
 def get_transformers_models(
     cache_dir: Optional[str] = None,
 ) -> List[Model]:
@@ -1119,4 +1182,5 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "transformers": get_transformers_models,
     "deepgram": get_deepgram_models,
     "cohere": get_cohere_models,
+    "minimax": get_minimax_models,
 }

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MiniMax M3 and text-to-speech support.** MiniMax now defaults to
+  `MiniMax-M3` with its 1M-token context window and supports native TTS through
+  `/v1/t2a_v2`, including sync/async generation and account voice discovery.
+
 - **Automatic embedding batching across all providers.** `embed()` / `aembed()`
   now transparently split large inputs into requests that respect each provider's
   per-request limit and concatenate the results in input order, so a list that

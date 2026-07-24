@@ -139,8 +139,19 @@ DASHSCOPE_API_KEY=...
 → **[Full DashScope Setup Guide](./providers/dashscope.md)**
 
 #### MiniMax
+
+> [!IMPORTANT]
+> MiniMax keys are region-specific. Use `api.minimaxi.com` for mainland China
+> keys and `api.minimax.io` for international keys. A region mismatch is
+> returned by MiniMax as `invalid api key`.
+
 ```bash
 MINIMAX_API_KEY=...
+# International endpoint (default)
+MINIMAX_BASE_URL=https://api.minimax.io/v1
+
+# Mainland China endpoint (keys are region-specific)
+MINIMAX_BASE_URL=https://api.minimaxi.com/v1
 ```
 
 → **[Full MiniMax Setup Guide](./providers/minimax.md)**

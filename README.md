@@ -47,7 +47,7 @@ Whether you're building a quick prototype or a production application serving mi
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
   - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
-  - MiniMax (MiniMax-M2.5)
+  - MiniMax (MiniMax-M3 with 1M context, Text-to-Speech)
   - PayPerQ / PPQ (pay-as-you-go gateway to hundreds of models)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
@@ -155,7 +155,7 @@ pip install "langchain_deepseek>=0.1.3"
 | Cohere       | ✅          | ✅               | ✅                | ❌             | ❌             | ✅        |
 | xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
 | DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
-| MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| MiniMax      | ✅          | ❌               | ❌                | ❌             | ✅             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | PayPerQ (PPQ)| ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 
@@ -181,7 +181,7 @@ print(providers)
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter', 'cohere'],
 #     'reranker': ['jina', 'voyage', 'transformers', 'cohere'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs', 'openai-compatible', 'azure', 'google', 'mistral', 'deepgram'],
-#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible', 'azure', 'xai', 'mistral', 'deepgram']
+#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible', 'azure', 'xai', 'mistral', 'deepgram', 'minimax']
 # }
 
 # Create model instances
