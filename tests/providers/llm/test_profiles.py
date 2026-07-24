@@ -327,21 +327,21 @@ class TestProfileBehavior:
 
     def test_minimax_creation(self):
         model = AIFactory.create_language(
-            "minimax", "MiniMax-M2.5", config={"api_key": "test-key"}
+            "minimax", "MiniMax-M3", config={"api_key": "test-key"}
         )
         assert model.provider == "minimax"
         assert model.base_url == "https://api.minimax.io/v1"
-        assert model._get_default_model() == "MiniMax-M2.5"
+        assert model._get_default_model() == "MiniMax-M3"
 
     def test_minimax_env_var(self):
         with patch.dict(os.environ, {"MINIMAX_API_KEY": "env-key"}, clear=False):
-            model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+            model = AIFactory.create_language("minimax", "MiniMax-M3")
             assert model.api_key == "env-key"
 
     def test_minimax_missing_api_key_raises(self):
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="MiniMax API key not found"):
-                AIFactory.create_language("minimax", "MiniMax-M2.5")
+                AIFactory.create_language("minimax", "MiniMax-M3")
 
     def test_ppq_creation(self):
         model = AIFactory.create_language(

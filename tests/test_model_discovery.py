@@ -17,6 +17,7 @@ from esperanto.model_discovery import (
     get_anthropic_models,
     get_cohere_models,
     get_google_models,
+    get_minimax_models,
     get_openai_compatible_models,
     get_openai_models,
 )
@@ -430,6 +431,42 @@ class TestOpenAICompatibleDiscovery:
         assert call_args.args[0] == "http://localhost:1234/v1/models"
 
 
+class TestMiniMaxDiscovery:
+    """Test MiniMax language and TTS model discovery."""
+
+    @patch("esperanto.model_discovery.get_openai_compatible_models")
+    def test_get_minimax_models_enriches_context_and_adds_tts(self, mock_discovery):
+        mock_discovery.return_value = [
+            Model(id="MiniMax-M3", owned_by="minimax"),
+            Model(id="MiniMax-M2.7", owned_by="minimax"),
+        ]
+
+        models = get_minimax_models(api_key="test-key")
+
+        by_id = {model.id: model for model in models}
+        assert by_id["MiniMax-M3"].context_window == 1_000_000
+        assert by_id["MiniMax-M3"].type == "language"
+        assert by_id["MiniMax-M2.7"].context_window == 204_800
+        assert by_id["speech-2.8-hd"].type == "text_to_speech"
+        mock_discovery.assert_called_once_with(
+            base_url="https://api.minimax.io/v1",
+            api_key="test-key",
+        )
+
+    @patch("esperanto.model_discovery.get_openai_compatible_models")
+    def test_get_minimax_models_can_filter_tts_without_http(self, mock_discovery):
+        with patch.dict(os.environ, {}, clear=True):
+            models = get_minimax_models(model_type="text_to_speech")
+
+        assert models
+        assert all(model.type == "text_to_speech" for model in models)
+        mock_discovery.assert_not_called()
+
+    def test_get_minimax_models_requires_api_key(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="MiniMax API key not found"):
+                get_minimax_models()
+
 class TestProviderRegistry:
     """Test the provider registry."""
 
@@ -438,7 +475,7 @@ class TestProviderRegistry:
         expected_providers = [
             "openai", "openai-compatible", "anthropic", "google", "vertex", "mistral",
             "groq", "deepseek", "ollama", "openrouter", "xai",
-            "perplexity", "jina", "voyage", "azure", "transformers"
+            "perplexity", "jina", "voyage", "azure", "transformers", "minimax"
         ]
 
         for provider in expected_providers:
@@ -494,6 +531,19 @@ class TestAIFactoryIntegration:
             # Should pass model_type in config
             call_args = mock_func.call_args
             assert call_args.kwargs.get("model_type") == "embedding"
+
+    def test_get_provider_models_passes_model_type_to_minimax(self):
+        with patch.dict("esperanto.model_discovery.PROVIDER_MODELS_REGISTRY") as mock_registry:
+            mock_func = MagicMock(return_value=[])
+            mock_registry["minimax"] = mock_func
+
+            AIFactory.get_provider_models(
+                "minimax", api_key="test", model_type="text_to_speech"
+            )
+
+            mock_func.assert_called_once_with(
+                api_key="test", model_type="text_to_speech"
+            )
 
     def test_get_provider_models_flattens_config_dict(self):
         """Test provider model discovery accepts the same config dict shape as factory creation."""

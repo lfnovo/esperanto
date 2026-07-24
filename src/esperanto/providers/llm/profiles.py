@@ -150,7 +150,7 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         base_url="https://api.minimax.io/v1",
         api_key_env="MINIMAX_API_KEY",
         base_url_env="MINIMAX_BASE_URL",
-        default_models={"language": "MiniMax-M2.5"},
+        default_models={"language": "MiniMax-M3"},
         owned_by="MiniMax",
         display_name="MiniMax",
     ),
