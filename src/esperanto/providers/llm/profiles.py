@@ -76,6 +76,20 @@ class OpenAICompatibleProfile:
     display_name: Optional[str] = None
     """Human-readable name for error messages (e.g., 'DeepSeek'). Defaults to name."""
 
+    anthropic_base_url: Optional[str] = None
+    """Optional Anthropic-compatible endpoint base URL for providers that also
+    expose an Anthropic-protocol API alongside their OpenAI-compatible endpoint
+    (e.g. MiniMax). When set, callers can route the native Anthropic provider to
+    this URL via ``base_url``. The value corresponds to one of the provider's
+    regional endpoints (see ``regional_endpoints``)."""
+
+    regional_endpoints: Optional[Dict[str, Dict[str, str]]] = None
+    """Optional per-region endpoint map for providers that maintain separate
+    regional endpoints. Each region key maps to a dict of endpoint URLs, e.g.
+    ``{"openai_base_url": ..., "anthropic_base_url": ..., "docs_root": ...}``.
+    The global ``base_url``/``anthropic_base_url`` correspond to one of these
+    regions; the others let callers select a region by overriding ``base_url``."""
+
     requires_api_key: bool = True
     """Whether the endpoint requires an API key. Set False for local/no-auth
     endpoints (e.g. oMLX): a missing key then falls back to 'not-required'
@@ -109,6 +123,17 @@ class OpenAICompatibleProfile:
         # for every caller. Store immutable copies instead.
         object.__setattr__(self, "capabilities", frozenset(self.capabilities))
         object.__setattr__(self, "default_models", MappingProxyType(models))
+        if self.regional_endpoints is not None:
+            object.__setattr__(
+                self,
+                "regional_endpoints",
+                MappingProxyType(
+                    {
+                        region: MappingProxyType(dict(endpoints))
+                        for region, endpoints in self.regional_endpoints.items()
+                    }
+                ),
+            )
 
     def default_model_for(self, modality: Modality) -> Optional[str]:
         """Return the default model for a modality, or None if none is set."""
@@ -153,6 +178,19 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         default_models={"language": "MiniMax-M2.5"},
         owned_by="MiniMax",
         display_name="MiniMax",
+        anthropic_base_url="https://api.minimax.io/anthropic",
+        regional_endpoints={
+            "global_en": {
+                "openai_base_url": "https://api.minimax.io/v1",
+                "anthropic_base_url": "https://api.minimax.io/anthropic",
+                "docs_root": "https://platform.minimax.io/docs",
+            },
+            "cn_zh": {
+                "openai_base_url": "https://api.minimaxi.com/v1",
+                "anthropic_base_url": "https://api.minimaxi.com/anthropic",
+                "docs_root": "https://platform.minimaxi.com/docs",
+            },
+        },
     ),
     "novita": OpenAICompatibleProfile(
         name="novita",

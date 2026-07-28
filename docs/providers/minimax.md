@@ -36,6 +36,42 @@ MINIMAX_API_KEY="your-api-key"
 
 **Default base URL:** `https://api.minimax.io/v1`
 
+### Regional endpoints
+
+MiniMax keys are region-specific. Override `MINIMAX_BASE_URL` to select the
+matching region, otherwise the international endpoint is used.
+
+| Region | OpenAI-compatible | Anthropic-compatible | Docs |
+|--------|-------------------|----------------------|------|
+| International (`global_en`) | `https://api.minimax.io/v1` | `https://api.minimax.io/anthropic` | https://platform.minimax.io/docs |
+| Mainland China (`cn_zh`) | `https://api.minimaxi.com/v1` | `https://api.minimaxi.com/anthropic` | https://platform.minimaxi.com/docs |
+
+```bash
+# Mainland China endpoint (keys are region-specific)
+MINIMAX_BASE_URL="https://api.minimaxi.com/v1"
+```
+
+### Anthropic-compatible endpoint
+
+MiniMax also exposes an Anthropic-protocol API. Route Esperanto's native
+Anthropic provider at it by passing `base_url`:
+
+```python
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_language(
+    "anthropic",
+    "MiniMax-M3",
+    config={
+        "api_key": "your-minimax-key",
+        "base_url": "https://api.minimax.io/anthropic",
+    },
+)
+```
+
+The declared regional Anthropic URLs are also available on the MiniMax profile
+under `regional_endpoints`.
+
 ## Quick Start
 
 ```python

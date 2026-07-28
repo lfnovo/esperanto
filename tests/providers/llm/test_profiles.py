@@ -338,6 +338,38 @@ class TestProfileBehavior:
             model = AIFactory.create_language("minimax", "MiniMax-M2.5")
             assert model.api_key == "env-key"
 
+    def test_minimax_regional_endpoints(self):
+        profile = get_profile("minimax")
+        assert profile is not None
+        assert profile.anthropic_base_url == "https://api.minimax.io/anthropic"
+        regions = profile.regional_endpoints
+        assert regions is not None
+        assert set(regions) == {"global_en", "cn_zh"}
+        global_en = regions["global_en"]
+        assert global_en["openai_base_url"] == "https://api.minimax.io/v1"
+        assert global_en["anthropic_base_url"] == "https://api.minimax.io/anthropic"
+        assert global_en["docs_root"] == "https://platform.minimax.io/docs"
+        cn_zh = regions["cn_zh"]
+        assert cn_zh["openai_base_url"] == "https://api.minimaxi.com/v1"
+        assert cn_zh["anthropic_base_url"] == "https://api.minimaxi.com/anthropic"
+        assert cn_zh["docs_root"] == "https://platform.minimaxi.com/docs"
+        # The global defaults align with the international (global_en) region.
+        assert profile.base_url == global_en["openai_base_url"]
+        assert profile.anthropic_base_url == global_en["anthropic_base_url"]
+
+    def test_regional_endpoints_are_frozen(self):
+        profile = OpenAICompatibleProfile(
+            name="test",
+            base_url="http://localhost",
+            api_key_env="TEST_KEY",
+            default_model="m",
+            regional_endpoints={
+                "global_en": {"openai_base_url": "http://localhost"},
+            },
+        )
+        with pytest.raises(TypeError):
+            profile.regional_endpoints["global_en"]["openai_base_url"] = "x"
+
     def test_minimax_missing_api_key_raises(self):
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="MiniMax API key not found"):
