@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.25.2] - 2026-07-29
+
 ### Added
 
 - **Automatic embedding batching across all providers.** `embed()` / `aembed()`
@@ -32,6 +34,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `base_url`, so the custom host is now forwarded (with the `/v1beta` suffix
   stripped). The default endpoint is still omitted so LangChain uses its own
   default. Completes the `to_langchain()` base URL audit started in #229. (#248)
+
+- **Every non-Whisper OpenAI and Azure transcription model now works.** Both
+  providers requested `response_format=verbose_json` for any model that didn't
+  match a narrow `gpt-4o-*-transcribe` name shape (Azure hardcoded it outright),
+  so `gpt-transcribe`, `gpt-4o-transcribe-diarize`, `gpt-live-transcribe` and
+  every Azure `gpt-4o-*-transcribe` deployment failed before transcription
+  started with `response_format 'verbose_json' is not compatible with model ...`.
+  `verbose_json` is a Whisper-only capability, so the check is now an allowlist:
+  Whisper models get `verbose_json`, anything unrecognized degrades to `json`
+  (`segments` and `duration` stay `None`) instead of hard-failing — a new model
+  no longer breaks on arrival. `config={"response_format": ...}` overrides the
+  detection, which matters on Azure where the deployment name is user-chosen and
+  may not reveal the underlying model. (#269, #263)
 
 ## [2.25.1] - 2026-07-19
 

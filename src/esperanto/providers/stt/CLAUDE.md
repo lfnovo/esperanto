@@ -152,10 +152,19 @@ return TranscriptionResponse(
 
 #### Hot-Swap-First Defaults
 
-For Whisper-family providers (OpenAI, Groq, Azure), Esperanto always requests
+For Whisper-family providers (OpenAI, Groq, Azure), Esperanto requests
 `response_format="verbose_json"` in `_get_api_kwargs()` so callers get segments
 and duration without any opt-in. Mistral and other providers that natively
 return segments must NOT set `response_format`.
+
+`verbose_json` is a **Whisper-only** capability — every other model on the
+OpenAI-compatible `/audio/transcriptions` endpoint (`gpt-4o-transcribe`,
+`gpt-transcribe`, `gpt-4o-transcribe-diarize`, …) rejects it with a 400 before
+transcription starts. So `_resolve_transcription_response_format()` in `base.py`
+is an **allowlist**: Whisper gets `verbose_json`, everything unrecognized
+degrades to `json` (segments/duration stay `None`). Never invert this — a
+denylist keyed on today's model names hard-fails on tomorrow's. Callers can
+force a format with `config={"response_format": ...}`.
 
 #### Unsupported Response Fields Stay None
 
@@ -205,8 +214,10 @@ the provider's real capabilities.
 - Max file size: 25MB
 - Returns language, duration, and segments with timestamps
 - Supports prompt for context and spelling hints
-- Esperanto always sends `response_format="verbose_json"` so segments/duration
-  come back without callers having to opt in
+- Esperanto sends `response_format="verbose_json"` for Whisper models so
+  segments/duration come back without callers having to opt in. Non-Whisper
+  models (`gpt-4o-transcribe`, `gpt-transcribe`, …) get `json` and return no
+  segments or duration.
 
 ### Google Speech-to-Text
 
@@ -236,8 +247,13 @@ the provider's real capabilities.
 - URL is built from `{azure_endpoint}/openai/deployments/{deployment_name}/audio/transcriptions?api-version={api_version}`,
   so `model_name` is the *deployment name*, not the underlying model.
 - Same OpenAI Whisper response shape, including `verbose_json` (segments,
-  duration, language). Esperanto always sends `response_format="verbose_json"`
-  so callers get the segments + duration for free.
+  duration, language). Esperanto sends `response_format="verbose_json"` for
+  Whisper deployments so callers get the segments + duration for free.
+- Azure serves the `gpt-4o-*-transcribe` family through the same deployment API
+  and those models reject `verbose_json`, so unrecognized deployment names get
+  `json`. **Gotcha**: the deployment name is user-chosen, so a Whisper
+  deployment named e.g. `prod-stt` falls through to `json` and loses its
+  segments — set `config={"response_format": "verbose_json"}` to force it.
 - Same file size/format limits as OpenAI (25 MB, MP3/MP4/MPEG/MPGA/M4A/WAV/WEBM).
 
 ### Mistral Voxtral
