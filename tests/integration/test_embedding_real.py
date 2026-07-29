@@ -43,6 +43,38 @@ def _assert_valid_embedding(result: list, expected_len: int) -> None:
         assert all(isinstance(v, float) for v in emb), "Embedding values must be floats"
 
 
+# --- Auto-batching (split + concatenate) -----------------------------------
+#
+# The plain test_batch_embed cases above send 3 texts, which is under every
+# provider ceiling — they never exercise the split. These helpers force a small
+# batch size so the request actually fans out against the real API, then check
+# the results come back in input order across the batch boundaries.
+
+# 10 texts at batch size 4 => 3 requests (4 + 4 + 2). The last text repeats the
+# first, so it lands in a different request: if the concatenation ever scrambled
+# order, these two vectors would stop matching.
+BATCH_SPLIT_SIZE = 4
+TEXTS_OVER_CEILING = [f"Batch item number {i}" for i in range(9)] + ["Batch item number 0"]
+
+
+def _assert_batches_in_input_order(result: list) -> None:
+    """Identical texts must embed identically regardless of which request they landed in."""
+    _assert_valid_embedding(result, len(TEXTS_OVER_CEILING))
+    assert result[0] == result[-1], (
+        "First and last text are identical but embedded differently — "
+        "results were not concatenated in input order across batches"
+    )
+    assert result[0] != result[1], "Distinct texts unexpectedly produced identical vectors"
+
+
+def _assert_splits_across_requests(provider: str, model: str, **config) -> None:
+    """Embed more texts than the forced batch size and verify order survives."""
+    embed_model = AIFactory.create_embedding(
+        provider, model, config={"embed_batch_size": BATCH_SPLIT_SIZE, **config}
+    )
+    _assert_batches_in_input_order(embed_model.embed(TEXTS_OVER_CEILING))
+
+
 # =============================================================================
 # OpenAI Tests
 # =============================================================================
@@ -103,6 +135,10 @@ class TestOpenAIEmbedding:
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
 
+    def test_batch_embed_splits_across_requests(self):
+        """Input above the batch size fans out and comes back in order."""
+        _assert_splits_across_requests("openai", "text-embedding-3-small")
+
 
 # =============================================================================
 # Google Tests
@@ -134,6 +170,13 @@ class TestGoogleEmbedding:
         model = AIFactory.create_embedding("google", "gemini-embedding-001", config={"api_key": api_key})
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
+
+    def test_batch_embed_splits_across_requests(self):
+        """Google fans out over the native :batchEmbedContents endpoint, in order."""
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        _assert_splits_across_requests(
+            "google", "gemini-embedding-001", api_key=api_key
+        )
 
     def test_task_type_embed(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -174,6 +217,18 @@ class TestVertexEmbedding:
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
 
+    def test_batch_embed_splits_across_requests(self):
+        """Vertex fans out over the multi-instance :predict endpoint, in order."""
+        _assert_splits_across_requests("vertex", "text-embedding-005")
+
+    def test_batch_embed_over_native_ceiling(self):
+        """Vertex's real default ceiling is 25 — cross it without forcing a size."""
+        model = AIFactory.create_embedding("vertex", "text-embedding-005")
+        texts = [f"Native ceiling item {i}" for i in range(29)] + ["Native ceiling item 0"]
+        result = model.embed(texts)
+        _assert_valid_embedding(result, 30)
+        assert result[0] == result[-1], "Vertex batches were not concatenated in input order"
+
 
 # =============================================================================
 # Azure Tests
@@ -191,7 +246,7 @@ class TestVertexEmbedding:
 class TestAzureEmbedding:
     """Real integration tests for Azure OpenAI embeddings."""
 
-    def _make_model(self):
+    def _make_model(self, **extra_config):
         return AIFactory.create_embedding(
             "azure",
             os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_EMBEDDING", "text-embedding-3-small"),
@@ -205,6 +260,7 @@ class TestAzureEmbedding:
                     or os.getenv("OPENAI_API_VERSION")
                     or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
                 ),
+                **extra_config,
             },
         )
 
@@ -222,6 +278,11 @@ class TestAzureEmbedding:
         model = self._make_model()
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
+
+    def test_batch_embed_splits_across_requests(self):
+        """Input above the batch size fans out and comes back in order."""
+        model = self._make_model(embed_batch_size=BATCH_SPLIT_SIZE)
+        _assert_batches_in_input_order(model.embed(TEXTS_OVER_CEILING))
 
 
 # =============================================================================
@@ -251,6 +312,10 @@ class TestJinaEmbedding:
         model = AIFactory.create_embedding("jina", "jina-embeddings-v3")
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
+
+    def test_batch_embed_splits_across_requests(self):
+        """Input above the batch size fans out and comes back in order."""
+        _assert_splits_across_requests("jina", "jina-embeddings-v3")
 
     def test_task_type_embed(self):
         model = AIFactory.create_embedding(
@@ -297,6 +362,10 @@ class TestVoyageEmbedding:
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
 
+    def test_batch_embed_splits_across_requests(self):
+        """Input above the batch size fans out and comes back in order."""
+        _assert_splits_across_requests("voyage", "voyage-3-large")
+
 
 # =============================================================================
 # Mistral Tests
@@ -325,6 +394,18 @@ class TestMistralEmbedding:
         model = AIFactory.create_embedding("mistral", "mistral-embed")
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
+
+    def test_batch_embed_splits_across_requests(self):
+        """Input above the batch size fans out and comes back in order."""
+        _assert_splits_across_requests("mistral", "mistral-embed")
+
+    def test_batch_embed_over_native_ceiling(self):
+        """Mistral's real default ceiling is 64 — cross it without forcing a size."""
+        model = AIFactory.create_embedding("mistral", "mistral-embed")
+        texts = [f"Native ceiling item {i}" for i in range(69)] + ["Native ceiling item 0"]
+        result = model.embed(texts)
+        _assert_valid_embedding(result, 70)
+        assert result[0] == result[-1], "Mistral batches were not concatenated in input order"
 
 
 # =============================================================================
@@ -355,6 +436,12 @@ class TestTransformersEmbedding:
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
 
+    def test_batch_embed_splits_across_requests(self):
+        """transformers keeps its own internal batching — order must still hold."""
+        _assert_splits_across_requests(
+            "transformers", "sentence-transformers/all-MiniLM-L6-v2"
+        )
+
 
 # =============================================================================
 # Ollama Tests
@@ -369,9 +456,11 @@ class TestTransformersEmbedding:
 class TestOllamaEmbedding:
     """Real integration tests for Ollama embeddings."""
 
-    def _make_model(self):
+    def _make_model(self, **extra_config):
         base_url = os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_BASE")
-        return AIFactory.create_embedding("ollama", "nomic-embed-text", config={"base_url": base_url})
+        return AIFactory.create_embedding(
+            "ollama", "nomic-embed-text", config={"base_url": base_url, **extra_config}
+        )
 
     def test_sync_embed(self):
         model = self._make_model()
@@ -387,6 +476,11 @@ class TestOllamaEmbedding:
         model = self._make_model()
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
+
+    def test_batch_embed_splits_across_requests(self):
+        """Ollama is unbatched by default; an explicit size must still split cleanly."""
+        model = self._make_model(embed_batch_size=BATCH_SPLIT_SIZE)
+        _assert_batches_in_input_order(model.embed(TEXTS_OVER_CEILING))
 
 
 # =============================================================================
@@ -417,6 +511,10 @@ class TestOpenRouterEmbedding:
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
 
+    def test_batch_embed_splits_across_requests(self):
+        """Input above the batch size fans out and comes back in order."""
+        _assert_splits_across_requests("openrouter", "openai/text-embedding-3-small")
+
 
 # =============================================================================
 # OpenAI-Compatible Tests
@@ -434,7 +532,7 @@ class TestOpenRouterEmbedding:
 class TestOpenAICompatibleEmbedding:
     """Real integration tests for OpenAI-compatible embeddings."""
 
-    def _make_model(self):
+    def _make_model(self, **extra_config):
         api_key = (
             os.getenv("OPENAI_COMPATIBLE_API_KEY_EMBEDDING") or os.getenv("OPENAI_COMPATIBLE_API_KEY")
         )
@@ -445,7 +543,7 @@ class TestOpenAICompatibleEmbedding:
         return AIFactory.create_embedding(
             "openai-compatible",
             model_name,
-            config={"api_key": api_key, "base_url": base_url},
+            config={"api_key": api_key, "base_url": base_url, **extra_config},
         )
 
     def test_sync_embed(self):
@@ -462,3 +560,8 @@ class TestOpenAICompatibleEmbedding:
         model = self._make_model()
         result = model.embed(TEXTS_BATCH)
         _assert_valid_embedding(result, 3)
+
+    def test_batch_embed_splits_across_requests(self):
+        """Input above the batch size fans out and comes back in order."""
+        model = self._make_model(embed_batch_size=BATCH_SPLIT_SIZE)
+        _assert_batches_in_input_order(model.embed(TEXTS_OVER_CEILING))
