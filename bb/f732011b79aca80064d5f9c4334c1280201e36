@@ -1,0 +1,20 @@
+tests/integration/test_stt_real.py
+  s_c3c22871a45ca0::t_42c869a9a0b54f 212-237
+  s_c3c22871a45ca0::t_0682d750cf98a7 72-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "bbf732011b79aca80064d5f9c4334c1280201e36",
+  "prompts": {},
+  "sessions": {
+    "s_c3c22871a45ca0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26065e54-2651-4c93-a50e-9f2d72c37878",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
