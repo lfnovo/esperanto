@@ -1,0 +1,53 @@
+tests/providers/stt/test_azure.py
+  s_c3c22871a45ca0::t_0ed85043d2a8d3 398-504
+src/esperanto/providers/stt/openai.py
+  s_c3c22871a45ca0::t_c4923b891edb81 124-129
+  s_c3c22871a45ca0::t_88570cef999ae7 16
+  s_c3c22871a45ca0::t_6125205950aebe 98-101,104-106
+docs/providers/openai.md
+  s_c3c22871a45ca0::t_4adae16d35f29c 321-323
+  s_c3c22871a45ca0::t_e1943646f71a64 342-347
+src/esperanto/providers/stt/azure.py
+  s_c3c22871a45ca0::t_94a0ff0ce9326e 122-133,137-139
+  s_c3c22871a45ca0::t_11495e008be13c 175,214
+  s_c3c22871a45ca0::t_f7fec1f688c251 18
+  s_c3c22871a45ca0::t_1ac8f1d5c31205 152-157
+src/esperanto/providers/stt/CLAUDE.md
+  s_c3c22871a45ca0::t_62ad71f9bd891d 250-256
+  s_c3c22871a45ca0::t_90ae327d9e49dc 155,160-167
+  s_c3c22871a45ca0::t_6146d26a0314f0 217-220
+  s_c3c22871a45ca0::t_90b278a78e8e94 168
+docs/capabilities/speech-to-text.md
+  s_c3c22871a45ca0::t_2f1b9e9f4570b5 142-154
+  s_c3c22871a45ca0::t_bbbc9c06640fc0 122-123
+CHANGELOG.md
+  s_c3c22871a45ca0::t_73bb552c04e0b4 38-50
+  s_c3c22871a45ca0::t_34d1ef655ae6cb 10-11
+pyproject.toml
+  s_c3c22871a45ca0::t_8cbb8f4c3801ee 3
+tests/providers/stt/test_openai.py
+  s_c3c22871a45ca0::t_852121fc855213 609-693
+docs/providers/azure.md
+  s_c3c22871a45ca0::t_934c0ba6bf757b 363-377
+  s_c3c22871a45ca0::t_fe822d25efbd35 347-348
+src/esperanto/providers/stt/base.py
+  s_c3c22871a45ca0::t_0b41ff7b8eaf7d 40-62
+uv.lock
+  s_c3c22871a45ca0::t_cfbb3422d99b0c 537
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "30a46ab33e13919dfab1206367364e85cfce427c",
+  "prompts": {},
+  "sessions": {
+    "s_c3c22871a45ca0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26065e54-2651-4c93-a50e-9f2d72c37878",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
