@@ -69,6 +69,30 @@ class TestOpenAISTT:
         result = asyncio.run(_run())
         assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
 
+    def test_sync_transcribe_whisper_returns_segments(self):
+        """Whisper opts into verbose_json, so segments and duration come back."""
+        model = AIFactory.create_speech_to_text("openai", "whisper-1")
+        result = model.transcribe(str(SAMPLE_AUDIO))
+
+        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        assert result.segments, "Whisper should return timestamped segments"
+        assert result.duration is not None
+
+    def test_sync_transcribe_non_whisper_model(self):
+        """A non-Whisper model must transcribe rather than 400 on the format.
+
+        These models reject response_format=verbose_json, so Esperanto has to
+        send json instead. The whisper-1 tests above can't catch a regression
+        here — that's how #269 shipped. Segments and duration are legitimately
+        absent from a json payload.
+        """
+        model = AIFactory.create_speech_to_text("openai", "gpt-4o-mini-transcribe")
+        result = model.transcribe(str(SAMPLE_AUDIO))
+
+        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        assert result.segments is None
+        assert result.duration is None
+
 
 # =============================================================================
 # Groq Tests
@@ -184,6 +208,32 @@ class TestAzureSTT:
 
         result = asyncio.run(_run())
         assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+
+    @pytest.mark.skipif(
+        not os.getenv("AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE"),
+        reason="Set AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE to a gpt-4o-*-transcribe deployment to cover #263",
+    )
+    def test_sync_transcribe_non_whisper_deployment(self):
+        """A gpt-4o-*-transcribe deployment must transcribe, not 400.
+
+        Azure serves that family through the same deployment API and it rejects
+        response_format=verbose_json, which Azure used to hardcode (#263).
+        Opt in by pointing AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE at such a
+        deployment — the whisper-1 tests above cannot catch this.
+        """
+        model = AIFactory.create_speech_to_text(
+            "azure",
+            os.getenv("AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE"),
+            config={
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_STT"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_STT"),
+            },
+        )
+        result = model.transcribe(str(SAMPLE_AUDIO))
+
+        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        assert result.segments is None
+        assert result.duration is None
 
 
 # =============================================================================
