@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `gemini-1.5-flash` and `gemini-pro` in favor of `gemini-2.5-flash` /
   `gemini-2.5-pro`. Docs updated to stop recommending the retired model.
 
+  Note when upgrading: `gemini-2.5-flash` is a *thinking* model, and its
+  reasoning tokens are drawn from the same budget as the answer. If you pass a
+  tight `max_tokens` (roughly under a few hundred) you may now see truncated
+  output where `gemini-2.0-flash` fit comfortably — raise the budget or pass an
+  explicit `model_name`.
+
 - **`to_langchain()` now forwards a custom base URL for Google.** Converting a
   Google (Gemini) model configured with a custom endpoint (`GEMINI_API_BASE_URL`)
   to LangChain previously reconnected to the official

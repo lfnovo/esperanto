@@ -71,7 +71,10 @@ def test_google_structured_output_real():
     model = AIFactory.create_language(
         "google", "gemini-2.5-flash", config=STRUCTURED_CONFIG
     )
-    response = model.chat_complete(PROMPT, max_tokens=100)
+    # gemini-2.5-flash is a thinking model: reasoning tokens are drawn from the
+    # same budget as the answer, so a 100-token cap truncates the JSON roughly
+    # two runs in three. This is about the model's budget, not the schema.
+    response = model.chat_complete(PROMPT, max_tokens=800)
     _assert_capital(response)
 
 
