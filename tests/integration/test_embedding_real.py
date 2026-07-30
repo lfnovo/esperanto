@@ -51,20 +51,34 @@ def _assert_valid_embedding(result: list, expected_len: int) -> None:
 # the results come back in input order across the batch boundaries.
 
 # 10 texts at batch size 4 => 3 requests (4 + 4 + 2). The last text repeats the
-# first, so it lands in a different request: if the concatenation ever scrambled
-# order, these two vectors would stop matching.
+# first, so the two land in *different* requests: if the concatenation ever
+# scrambled order, the repeat would stop lining up with the original.
 BATCH_SPLIT_SIZE = 4
 TEXTS_OVER_CEILING = [f"Batch item number {i}" for i in range(9)] + ["Batch item number 0"]
 
 
+def _cosine(a: list, b: list) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    norm = (sum(x * x for x in a) ** 0.5) * (sum(y * y for y in b) ** 0.5)
+    return dot / norm if norm else 0.0
+
+
 def _assert_batches_in_input_order(result: list) -> None:
-    """Identical texts must embed identically regardless of which request they landed in."""
+    """The repeated text must line up with its original across a batch boundary.
+
+    Compared by cosine similarity rather than equality: OpenAI, Voyage and
+    Mistral return float-level differences for the same text across separate
+    requests, so `==` fails on providers whose ordering is perfectly correct.
+    Similarity is also threshold-free here — we assert the repeat's *nearest*
+    vector is the original, which a scrambled concatenation could not satisfy.
+    """
     _assert_valid_embedding(result, len(TEXTS_OVER_CEILING))
-    assert result[0] == result[-1], (
-        "First and last text are identical but embedded differently — "
+    originals = result[:-1]
+    nearest = max(range(len(originals)), key=lambda i: _cosine(result[-1], originals[i]))
+    assert nearest == 0, (
+        f"The repeated text is nearest to input {nearest}, not input 0 — "
         "results were not concatenated in input order across batches"
     )
-    assert result[0] != result[1], "Distinct texts unexpectedly produced identical vectors"
 
 
 def _assert_splits_across_requests(provider: str, model: str, **config) -> None:
@@ -227,7 +241,8 @@ class TestVertexEmbedding:
         texts = [f"Native ceiling item {i}" for i in range(29)] + ["Native ceiling item 0"]
         result = model.embed(texts)
         _assert_valid_embedding(result, 30)
-        assert result[0] == result[-1], "Vertex batches were not concatenated in input order"
+        nearest = max(range(29), key=lambda i: _cosine(result[-1], result[i]))
+        assert nearest == 0, "Vertex batches were not concatenated in input order"
 
 
 # =============================================================================
@@ -405,7 +420,8 @@ class TestMistralEmbedding:
         texts = [f"Native ceiling item {i}" for i in range(69)] + ["Native ceiling item 0"]
         result = model.embed(texts)
         _assert_valid_embedding(result, 70)
-        assert result[0] == result[-1], "Mistral batches were not concatenated in input order"
+        nearest = max(range(69), key=lambda i: _cosine(result[-1], result[i]))
+        assert nearest == 0, "Mistral batches were not concatenated in input order"
 
 
 # =============================================================================

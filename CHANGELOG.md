@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Google and Vertex no longer default to a retired model.** Google has
+  withdrawn `gemini-2.0-flash` — it still appears in the models listing but any
+  `generateContent` call returns "This model is no longer available", so
+  `create_language("google")` without an explicit `model_name` failed outright.
+  Both providers now default to `gemini-2.5-flash`, and the hardcoded fallback
+  model lists drop the withdrawn `gemini-2.0-flash`, `gemini-1.5-pro`,
+  `gemini-1.5-flash` and `gemini-pro` in favor of `gemini-2.5-flash` /
+  `gemini-2.5-pro`. Docs updated to stop recommending the retired model.
+
 - **`to_langchain()` now forwards a custom base URL for Google.** Converting a
   Google (Gemini) model configured with a custom endpoint (`GEMINI_API_BASE_URL`)
   to LangChain previously reconnected to the official

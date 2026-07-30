@@ -1038,7 +1038,7 @@ class TestGoogleToolCalling:
         # Google provider accepts either GOOGLE_API_KEY or GEMINI_API_KEY
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         model = AIFactory.create_language(
-            "google", "gemini-2.0-flash", config={"api_key": api_key}
+            "google", "gemini-2.5-flash", config={"api_key": api_key}
         )
 
         response = model.chat_complete(
@@ -1070,7 +1070,7 @@ class TestGoogleToolCalling:
         """Test multi-turn conversation with tool result."""
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         model = AIFactory.create_language(
-            "google", "gemini-2.0-flash", config={"api_key": api_key}
+            "google", "gemini-2.5-flash", config={"api_key": api_key}
         )
 
         # First call - should get tool call

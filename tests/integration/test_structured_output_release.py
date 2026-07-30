@@ -69,7 +69,7 @@ def test_anthropic_structured_output_real():
 )
 def test_google_structured_output_real():
     model = AIFactory.create_language(
-        "google", "gemini-2.0-flash", config=STRUCTURED_CONFIG
+        "google", "gemini-2.5-flash", config=STRUCTURED_CONFIG
     )
     response = model.chat_complete(PROMPT, max_tokens=100)
     _assert_capital(response)

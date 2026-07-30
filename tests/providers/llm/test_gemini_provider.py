@@ -258,7 +258,7 @@ def test_to_langchain():
     
     # Mock the LangChain classes to avoid credential issues
     mock_chat_google = Mock()
-    mock_chat_google.model = "gemini-2.0-flash"  # Match what the provider actually uses
+    mock_chat_google.model = "gemini-2.5-flash"  # Match what the provider actually uses
     mock_chat_google.temperature = 1.0
     mock_chat_google.top_p = 0.9
     
@@ -271,11 +271,11 @@ def test_to_langchain():
         langchain_model = model.to_langchain()
 
         # Test model configuration  
-        assert langchain_model.model == "gemini-2.0-flash"
+        assert langchain_model.model == "gemini-2.5-flash"
         
         # Verify ChatGoogleGenerativeAI was called with correct parameters
         mock_chat_class.assert_called_once_with(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             temperature=model.temperature,
             max_tokens=model.max_tokens,
             top_p=model.top_p,

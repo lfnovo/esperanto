@@ -288,11 +288,11 @@ class TestGoogleProviderBasic:
         assert google_model.provider == "google"
 
     def test_default_model(self, google_model):
-        """Test default model is gemini-2.0-flash."""
+        """Test default model is gemini-2.5-flash."""
         model = GoogleLanguageModel(api_key="test-key")
         # Override client to avoid actual HTTP calls
         model.client = Mock()
-        assert model._get_default_model() == "gemini-2.0-flash"
+        assert model._get_default_model() == "gemini-2.5-flash"
 
 
 class TestToolConversion:
