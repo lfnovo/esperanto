@@ -265,7 +265,12 @@ class TestCohereStructuredOutput:
         # Request shape: json_object + schema present.
         payload = model.client.post.call_args[1]["json"]
         assert payload["response_format"]["type"] == "json_object"
-        assert payload["response_format"]["schema"] == CityInfo.model_json_schema()
+        # The schema carries additionalProperties: false — added for OpenAI and
+        # Anthropic strict modes, and accepted by Cohere (verified live).
+        assert payload["response_format"]["schema"] == {
+            **CityInfo.model_json_schema(),
+            "additionalProperties": False,
+        }
 
         # Parsed structured result is a validated Pydantic instance.
         assert isinstance(response.structured, CityInfo)
@@ -287,7 +292,12 @@ class TestCohereStructuredOutput:
 
         payload = model.client.post.call_args[1]["json"]
         assert payload["response_format"]["type"] == "json_object"
-        assert payload["response_format"]["schema"] == schema
+        assert payload["response_format"]["schema"] == {
+            **schema,
+            "additionalProperties": False,
+        }
+        # The caller's dict is normalized on a copy, never mutated in place.
+        assert "additionalProperties" not in schema
 
         assert response.structured == {"city": "Rome", "country": "Italy"}
 
