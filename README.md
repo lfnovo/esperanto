@@ -234,9 +234,9 @@ for model in claude_models:
     print(f"{model.id} - Context: {model.context_window} tokens")
 
 # Example output:
-# claude-3-5-sonnet-20241022 - Context: 200000 tokens
-# claude-3-5-haiku-20241022 - Context: 200000 tokens
-# claude-3-opus-20240229 - Context: 200000 tokens
+# claude-sonnet-5 - Context: 200000 tokens
+# claude-haiku-4-5-20251001 - Context: 200000 tokens
+# claude-opus-5 - Context: 200000 tokens
 
 # OpenAI-compatible endpoints (requires base_url)
 local_models = AIFactory.get_provider_models(

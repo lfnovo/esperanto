@@ -158,12 +158,11 @@ def get_anthropic_models(
 
     # Hardcoded list of known Anthropic models (they don't have a models API)
     models = [
-        Model(id="claude-3-5-sonnet-20241022", owned_by="anthropic", context_window=200000),
-        Model(id="claude-3-5-sonnet-20240620", owned_by="anthropic", context_window=200000),
-        Model(id="claude-3-5-haiku-20241022", owned_by="anthropic", context_window=200000),
-        Model(id="claude-3-opus-20240229", owned_by="anthropic", context_window=200000),
-        Model(id="claude-3-sonnet-20240229", owned_by="anthropic", context_window=200000),
-        Model(id="claude-3-haiku-20240307", owned_by="anthropic", context_window=200000),
+        Model(id="claude-opus-5", owned_by="anthropic", context_window=200000),
+        Model(id="claude-sonnet-5", owned_by="anthropic", context_window=200000),
+        Model(id="claude-opus-4-5-20251101", owned_by="anthropic", context_window=200000),
+        Model(id="claude-sonnet-4-5-20250929", owned_by="anthropic", context_window=200000),
+        Model(id="claude-haiku-4-5-20251001", owned_by="anthropic", context_window=200000),
     ]
 
     # Cache results

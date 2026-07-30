@@ -163,7 +163,7 @@ The beauty of Esperanto is that switching providers is as simple as changing two
 model = AIFactory.create_language("openai", "gpt-4")
 
 # Switch to Anthropic
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 
 # Switch to Google
 model = AIFactory.create_language("google", "gemini-pro")
@@ -315,7 +315,7 @@ from esperanto.factory import AIFactory
 # Setup models
 embedder = AIFactory.create_embedding("openai", "text-embedding-3-small")
 reranker = AIFactory.create_reranker("jina", "jina-reranker-v2-base-multilingual")
-llm = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+llm = AIFactory.create_language("anthropic", "claude-sonnet-5")
 
 # Your knowledge base
 documents = [

@@ -216,7 +216,7 @@ Maximum timeout for async background processing:
 # Long-running document analysis
 analyzer = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={"timeout": 3600.0}  # 1 hour max
 )
 
@@ -408,7 +408,7 @@ def create_model_with_fallback(primary_config, fallback_config):
         return model, "fallback"
 
 # Usage
-primary = {"provider": "anthropic", "model_name": "claude-3-5-sonnet-20241022"}
+primary = {"provider": "anthropic", "model_name": "claude-sonnet-5"}
 fallback = {"provider": "groq", "model_name": "mixtral-8x7b-32768"}
 
 model, used = create_model_with_fallback(primary, fallback)
@@ -577,7 +577,7 @@ groq_model = AIFactory.create_language(
 
 # Slower providers - longer timeout
 anthropic_model = AIFactory.create_language(
-    "anthropic", "claude-3-5-sonnet-20241022",
+    "anthropic", "claude-sonnet-5",
     config={"timeout": 120.0}  # Claude can be slower
 )
 ```
@@ -626,7 +626,7 @@ class ModelFactory:
     @staticmethod
     def create_analysis_model():
         return AIFactory.create_language(
-            "anthropic", "claude-3-5-sonnet-20241022",
+            "anthropic", "claude-sonnet-5",
             config={"timeout": ModelFactory.TIMEOUT_STANDARD}
         )
 ```

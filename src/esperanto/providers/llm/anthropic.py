@@ -174,22 +174,22 @@ class AnthropicLanguageModel(LanguageModel):
             # Fallback to known models if API call fails
             return [
                 Model(
-                    id="claude-3-7-sonnet-20250219",
+                    id="claude-sonnet-5",
                     owned_by="Anthropic",
                     context_window=200000,
                 ),
                 Model(
-                    id="claude-3-opus-20240229",
+                    id="claude-opus-5",
                     owned_by="Anthropic",
                     context_window=200000,
                 ),
                 Model(
-                    id="claude-3-sonnet-20240229",
+                    id="claude-sonnet-4-5-20250929",
                     owned_by="Anthropic",
                     context_window=200000,
                 ),
                 Model(
-                    id="claude-3-haiku-20240307",
+                    id="claude-haiku-4-5-20251001",
                     owned_by="Anthropic",
                     context_window=200000,
                 ),
@@ -551,7 +551,7 @@ class AnthropicLanguageModel(LanguageModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "claude-3-7-sonnet-20250219"
+        return "claude-sonnet-5"
 
     @property
     def provider(self) -> str:

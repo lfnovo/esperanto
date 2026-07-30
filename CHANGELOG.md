@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Anthropic no longer defaults to a retired model.** Anthropic has withdrawn
+  the entire `claude-3` family, and every Anthropic model hardcoded in Esperanto
+  belonged to it — including the default, `claude-3-7-sonnet-20250219`, so
+  `create_language("anthropic")` without an explicit `model_name` failed
+  outright. The default is now `claude-sonnet-5`, and the provider's fallback
+  list plus `get_provider_models("anthropic")` now carry the current family
+  (`claude-opus-5`, `claude-sonnet-5`, `claude-opus-4-5-20251101`,
+  `claude-sonnet-4-5-20250929`, `claude-haiku-4-5-20251001`). Docs updated.
+
+  Note that `claude-sonnet-5` is an undated alias: it tracks Anthropic's current
+  Sonnet 5 release rather than staying fixed. Pass a dated id
+  (e.g. `claude-sonnet-4-5-20250929`) when you need the model pinned.
 - **Schema-driven structured output works again on OpenAI and Anthropic.**
   `structured={"type": "json_schema", "schema": <PydanticModel>}` was rejected
   before the request ever ran: OpenAI's strict mode requires

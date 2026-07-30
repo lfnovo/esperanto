@@ -278,7 +278,7 @@ speaker = AIFactory.create_text_to_speech("openai", "tts-1")
 from esperanto.factory import AIFactory
 
 # Best-in-class for each capability
-llm = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+llm = AIFactory.create_language("anthropic", "claude-sonnet-5")
 embedder = AIFactory.create_embedding("jina", "jina-embeddings-v3")
 reranker = AIFactory.create_reranker("voyage", "rerank-2")
 speaker = AIFactory.create_text_to_speech("elevenlabs", "eleven_multilingual_v2")
