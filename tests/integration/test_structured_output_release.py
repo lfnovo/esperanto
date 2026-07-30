@@ -56,7 +56,7 @@ def test_openai_structured_output_real():
 )
 def test_anthropic_structured_output_real():
     model = AIFactory.create_language(
-        "anthropic", "claude-3-5-haiku-latest", config=STRUCTURED_CONFIG
+        "anthropic", "claude-haiku-4-5-20251001", config=STRUCTURED_CONFIG
     )
     response = model.chat_complete(PROMPT, max_tokens=100)
     _assert_capital(response)

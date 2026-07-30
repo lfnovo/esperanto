@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Anthropic no longer defaults to a retired model.** Anthropic has withdrawn
+  the entire `claude-3` family, and every Anthropic model hardcoded in Esperanto
+  belonged to it — including the default, `claude-3-7-sonnet-20250219`, so
+  `create_language("anthropic")` without an explicit `model_name` failed
+  outright. The default is now `claude-sonnet-5`, and the provider's fallback
+  list plus `get_provider_models("anthropic")` now carry the current family
+  (`claude-opus-5`, `claude-sonnet-5`, `claude-opus-4-5-20251101`,
+  `claude-sonnet-4-5-20250929`, `claude-haiku-4-5-20251001`). Docs updated.
+
+  Note that `claude-sonnet-5` is an undated alias: it tracks Anthropic's current
+  Sonnet 5 release rather than staying fixed. Pass a dated id
+  (e.g. `claude-sonnet-4-5-20250929`) when you need the model pinned.
+
 - **Google and Vertex no longer default to a retired model.** Google has
   withdrawn `gemini-2.0-flash` — it still appears in the models listing but any
   `generateContent` call returns "This model is no longer available", so
