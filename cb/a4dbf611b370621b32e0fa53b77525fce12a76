@@ -1,0 +1,21 @@
+CHANGELOG.md
+  s_c3c22871a45ca0::t_a4673114ebf7ea 37-42
+tests/integration/test_structured_output_release.py
+  s_c3c22871a45ca0::t_12f3c478bc70ad 74-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "cba4dbf611b370621b32e0fa53b77525fce12a76",
+  "prompts": {},
+  "sessions": {
+    "s_c3c22871a45ca0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26065e54-2651-4c93-a50e-9f2d72c37878",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
