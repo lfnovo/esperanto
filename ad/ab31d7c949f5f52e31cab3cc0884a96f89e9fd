@@ -1,0 +1,50 @@
+src/esperanto/providers/llm/google.py
+  s_c3c22871a45ca0::t_0acfffeaf03457 109-110,124
+tests/integration/test_embedding_real.py
+  s_c3c22871a45ca0::t_a95f86f4962b03 245,423-424
+  s_c3c22871a45ca0::t_520137d68d0eab 54-55,60-65,67-74,76-79
+  s_c3c22871a45ca0::t_072609be45b179 244
+tests/integration/test_chat_completion_real.py
+  s_c3c22871a45ca0::t_d971b9288446e3 163,171,179,190,220,227,234,244
+tests/providers/llm/test_gemini_provider.py
+  s_c3c22871a45ca0::t_c987cf9dc11f00 261,274,278
+tests/providers/llm/test_vertex_provider.py
+  s_c3c22871a45ca0::t_c987cf9dc11f00 256,261
+docs/providers/vertex.md
+  s_c3c22871a45ca0::t_d971b9288446e3 106,164,188,439,563
+tests/integration/test_tool_calling_real.py
+  s_c3c22871a45ca0::t_d971b9288446e3 1041,1073
+tests/integration/test_structured_output_release.py
+  s_c3c22871a45ca0::t_d971b9288446e3 72
+tests/providers/stt/test_google.py
+  s_c3c22871a45ca0::t_c987cf9dc11f00 125,127-128
+ARCHITECTURE.md
+  s_c3c22871a45ca0::t_d971b9288446e3 13
+tests/providers/llm/test_google_provider.py
+  s_c3c22871a45ca0::t_c987cf9dc11f00 291,295
+src/esperanto/providers/llm/vertex.py
+  s_c3c22871a45ca0::t_0acfffeaf03457 108,113,126
+CHANGELOG.md
+  s_c3c22871a45ca0::t_feb50570e1b7c6 28-36
+tests/integration/test_stt_real.py
+  s_c3c22871a45ca0::t_3117cafabe54a7 59,66,76,87,94,109,131,141,165,179,210,227,251,273,283,308,314,324,349,363,385,393,403
+  s_c3c22871a45ca0::t_d5f94c430b5b5f 25-41
+docs/providers/google.md
+  s_c3c22871a45ca0::t_d971b9288446e3 61,80,101,112,130,158,182,205,575,586,604
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "adab31d7c949f5f52e31cab3cc0884a96f89e9fd",
+  "prompts": {},
+  "sessions": {
+    "s_c3c22871a45ca0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26065e54-2651-4c93-a50e-9f2d72c37878",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
