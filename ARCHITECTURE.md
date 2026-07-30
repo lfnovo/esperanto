@@ -10,7 +10,7 @@ Esperanto's entire value proposition is a **consistent, provider-agnostic interf
 # Same code, different provider — this is the promise
 model = AIFactory.create_language("openai", "gpt-4o")
 model = AIFactory.create_language("anthropic", "claude-sonnet-4-20250514")
-model = AIFactory.create_language("google", "gemini-2.0-flash")
+model = AIFactory.create_language("google", "gemini-2.5-flash")
 
 response = model.chat_complete(messages)  # identical API for all
 ```

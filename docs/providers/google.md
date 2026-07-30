@@ -58,7 +58,7 @@ The `GEMINI_API_BASE_URL` environment variable allows you to override the defaul
 from esperanto.factory import AIFactory
 
 # Language model
-model = AIFactory.create_language("google", "gemini-2.0-flash")
+model = AIFactory.create_language("google", "gemini-2.5-flash")
 
 # Embedding model
 embedder = AIFactory.create_embedding("google", "text-embedding-004")
@@ -77,7 +77,7 @@ from esperanto.providers.text_to_speech.google import GoogleTextToSpeech
 # Language model
 llm = GoogleLanguageModel(
     api_key="your-api-key",
-    model_name="gemini-2.0-flash"
+    model_name="gemini-2.5-flash"
 )
 
 # Embedding model
@@ -98,7 +98,7 @@ tts = GoogleTextToSpeech(
 ### Language Models (LLM)
 
 **Available Models:**
-- **gemini-2.0-flash** - Latest, fast and capable model
+- **gemini-2.5-flash** - Latest, fast and capable model
 - **gemini-1.5-pro** - Most capable Gemini 1.5 model
 - **gemini-1.5-flash** - Fast and efficient
 
@@ -109,7 +109,7 @@ from esperanto.factory import AIFactory
 
 model = AIFactory.create_language(
     "google",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash",
     config={
         "temperature": 0.7,           # Randomness (0.0 - 2.0)
         "max_tokens": 1000,           # Maximum response length
@@ -127,7 +127,7 @@ model = AIFactory.create_language(
 from esperanto.factory import AIFactory
 
 # Create model
-model = AIFactory.create_language("google", "gemini-2.0-flash")
+model = AIFactory.create_language("google", "gemini-2.5-flash")
 
 # Chat completion
 messages = [
@@ -155,7 +155,7 @@ async for chunk in model.achat_complete(messages, stream=True):
 ```python
 model = AIFactory.create_language(
     "google",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash",
     config={"structured": {"type": "json"}}
 )
 
@@ -179,7 +179,7 @@ class CityInfo(BaseModel):
 
 model = AIFactory.create_language(
     "google",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash",
     config={
         "structured": {
             "type": "json_schema",
@@ -202,7 +202,7 @@ print(response.structured)   # validated CityInfo
 import os
 os.environ["GEMINI_API_BASE_URL"] = "https://custom-proxy.com"
 
-model = AIFactory.create_language("google", "gemini-2.0-flash")
+model = AIFactory.create_language("google", "gemini-2.5-flash")
 # Will use custom base URL
 ```
 
@@ -572,7 +572,7 @@ import os
 os.environ["GEMINI_API_BASE_URL"] = "https://custom-proxy.com"
 
 # All Google providers will use this URL
-model = AIFactory.create_language("google", "gemini-2.0-flash")
+model = AIFactory.create_language("google", "gemini-2.5-flash")
 embedder = AIFactory.create_embedding("google", "text-embedding-004")
 ```
 
@@ -583,7 +583,7 @@ Customize request timeouts:
 # LLM with custom timeout
 model = AIFactory.create_language(
     "google",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash",
     config={"timeout": 120.0}  # 2 minutes
 )
 
@@ -601,7 +601,7 @@ Convert to LangChain models:
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_language("google", "gemini-2.0-flash")
+model = AIFactory.create_language("google", "gemini-2.5-flash")
 langchain_model = model.to_langchain()
 
 # Use with LangChain

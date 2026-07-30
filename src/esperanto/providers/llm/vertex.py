@@ -105,24 +105,14 @@ class VertexLanguageModel(VertexAuthMixin, LanguageModel):
         """List all available models for this provider."""
         return [
             Model(
-                id="gemini-2.0-flash",
+                id="gemini-2.5-flash",
                 owned_by="Google",
                 context_window=1000000,
             ),
             Model(
-                id="gemini-1.5-pro",
-                owned_by="Google",
-                context_window=2000000,
-            ),
-            Model(
-                id="gemini-1.5-flash",
+                id="gemini-2.5-pro",
                 owned_by="Google",
                 context_window=1000000,
-            ),
-            Model(
-                id="gemini-pro",
-                owned_by="Google",
-                context_window=30720,
             ),
         ]
 
@@ -133,7 +123,7 @@ class VertexLanguageModel(VertexAuthMixin, LanguageModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "gemini-2.0-flash"
+        return "gemini-2.5-flash"
 
     def _format_messages(self, messages: List[Dict[str, Any]]) -> tuple:
         """Return (formatted_messages, system_instruction) tuple.
