@@ -37,6 +37,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Note that `claude-sonnet-5` is an undated alias: it tracks Anthropic's current
   Sonnet 5 release rather than staying fixed. Pass a dated id
   (e.g. `claude-sonnet-4-5-20250929`) when you need the model pinned.
+- **Schema-driven structured output works again on OpenAI and Anthropic.**
+  `structured={"type": "json_schema", "schema": <PydanticModel>}` was rejected
+  before the request ever ran: OpenAI's strict mode requires
+  `additionalProperties: false` on every object, Anthropic's `output_config`
+  requires the same, and Pydantic's `model_json_schema()` emits neither. The
+  schema is now normalized — recursively, so nested models under `$defs` are
+  covered too — on a copy, leaving a caller's own dict untouched. Verified live
+  against OpenAI, Anthropic, Google, Groq, Mistral and Cohere.
+
+  OpenAI's strict mode additionally requires *every* property to be listed in
+  `required`, which a schema with optional fields cannot satisfy. Rather than
+  fail the call or silently promote optional fields to required (which would
+  change your schema's meaning), such a request is sent with `strict: false` and
+  a debug log. The response is still validated against the schema locally, so
+  nothing is weakened beyond the provider-side guarantee.
 
 - **Google and Vertex no longer default to a retired model.** Google has
   withdrawn `gemini-2.0-flash` — it still appears in the models listing but any
