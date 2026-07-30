@@ -1,0 +1,56 @@
+tests/test_model_discovery.py
+  s_c3c22871a45ca0::t_b8b9022c1012e2 214-216
+docs/advanced/timeout-configuration.md
+  s_c3c22871a45ca0::t_6053e53cebb702 219,411,580,629
+src/esperanto/providers/llm/anthropic.py
+  s_c3c22871a45ca0::t_1f812f7bd54c14 177,182,187,192,554
+tests/integration/test_tool_calling_real.py
+  s_c3c22871a45ca0::t_b1e8d4a07d9d4e 214,243
+tests/providers/llm/test_anthropic_provider.py
+  s_c3c22871a45ca0::t_33be4312054470 1256-1286
+docs/quickstart.md
+  s_c3c22871a45ca0::t_6053e53cebb702 166,318
+docs/advanced/model-discovery.md
+  s_c3c22871a45ca0::t_435b29c691bdbb 198-200
+docs/advanced/langchain-integration.md
+  s_c3c22871a45ca0::t_6053e53cebb702 62,168,414,461,474
+README.md
+  s_c3c22871a45ca0::t_6053e53cebb702 237-239
+docs/capabilities/llm.md
+  s_c3c22871a45ca0::t_6053e53cebb702 259
+docs/providers/anthropic.md
+  s_c3c22871a45ca0::t_640846346ca7cf 82-89,372
+  s_c3c22871a45ca0::t_435b29c691bdbb 49,65,98,116,144,172,222,229,247,273,303,318,332,350,361
+CHANGELOG.md
+  s_c3c22871a45ca0::t_68e4209b0e9eb5 28-40
+tests/integration/test_chat_completion_real.py
+  s_c3c22871a45ca0::t_b1e8d4a07d9d4e 114,121,128,138
+src/esperanto/model_discovery.py
+  s_c3c22871a45ca0::t_1f812f7bd54c14 161-165
+docs/capabilities/reranking.md
+  s_c3c22871a45ca0::t_6053e53cebb702 165
+docs/configuration.md
+  s_c3c22871a45ca0::t_6053e53cebb702 73,677
+docs/providers/README.md
+  s_c3c22871a45ca0::t_6053e53cebb702 281
+docs/README.md
+  s_c3c22871a45ca0::t_6053e53cebb702 139,158
+tests/integration/test_structured_output_release.py
+  s_c3c22871a45ca0::t_b1e8d4a07d9d4e 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "160e4eb1d20a08ad96248389dbab5d61011e98f8",
+  "prompts": {},
+  "sessions": {
+    "s_c3c22871a45ca0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26065e54-2651-4c93-a50e-9f2d72c37878",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
