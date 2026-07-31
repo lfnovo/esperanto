@@ -21,6 +21,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [Z.ai](./zai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [oMLX](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [PayPerQ (PPQ)](./ppq.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
@@ -217,6 +218,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
 | [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 204K |
 | [Novita](./openai-compatible.md) | ✅ | ✅ | ✅ | Model-dependent |
+| [Z.ai](./zai.md) | ✅ | ✅ | ✅ | Model-dependent |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ✅ | Varies |
 | [Ollama](./ollama.md) | ✅ | ❌ | ✅ | Model-dependent |
 | [OpenAI-Compatible](./openai-compatible.md) | ✅ | ⚠️ | ⚠️ | Endpoint-dependent |
@@ -329,6 +331,7 @@ Require API keys, pay-per-use:
 - [xAI](./xai.md)
 - [OpenRouter](./openrouter.md)
 - [Novita](./openai-compatible.md) (OpenAI-compatible profile)
+- [Z.ai](./zai.md)
 - [PayPerQ (PPQ)](./ppq.md) (OpenAI-compatible profile)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
