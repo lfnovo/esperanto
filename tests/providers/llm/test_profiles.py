@@ -327,16 +327,48 @@ class TestProfileBehavior:
 
     def test_minimax_creation(self):
         model = AIFactory.create_language(
-            "minimax", "MiniMax-M2.5", config={"api_key": "test-key"}
+            "minimax", "MiniMax-M3", config={"api_key": "test-key"}
         )
         assert model.provider == "minimax"
         assert model.base_url == "https://api.minimax.io/v1"
-        assert model._get_default_model() == "MiniMax-M2.5"
+        assert model._get_default_model() == "MiniMax-M3"
 
     def test_minimax_env_var(self):
         with patch.dict(os.environ, {"MINIMAX_API_KEY": "env-key"}, clear=False):
-            model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+            model = AIFactory.create_language("minimax", "MiniMax-M3")
             assert model.api_key == "env-key"
+
+    def test_minimax_model_metadata(self):
+        profile = get_profile("minimax")
+        assert profile is not None
+        assert profile.default_models["language"] == "MiniMax-M3"
+        metadata = profile.model_metadata
+        assert metadata is not None
+        assert set(metadata) == {"MiniMax-M3", "MiniMax-M2.7"}
+        assert metadata["MiniMax-M3"] == {
+            "context_window": 1_000_000,
+            "pricing_usd_per_million_tokens": {
+                "input": 0.6,
+                "output": 2.4,
+                "cache_read": 0.12,
+                "cache_write": None,
+            },
+            "input_modalities": ("text", "image", "video"),
+            "thinking": ("adaptive", "disabled"),
+        }
+        assert metadata["MiniMax-M2.7"] == {
+            "context_window": 204_800,
+            "pricing_usd_per_million_tokens": {
+                "input": 0.3,
+                "output": 1.2,
+                "cache_read": 0.06,
+                "cache_write": 0.375,
+            },
+            "input_modalities": ("text",),
+            "thinking": ("always_on",),
+        }
+        with pytest.raises(TypeError):
+            metadata["MiniMax-M3"]["context_window"] = 1
 
     def test_minimax_regional_endpoints(self):
         profile = get_profile("minimax")
@@ -373,7 +405,7 @@ class TestProfileBehavior:
     def test_minimax_missing_api_key_raises(self):
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="MiniMax API key not found"):
-                AIFactory.create_language("minimax", "MiniMax-M2.5")
+                AIFactory.create_language("minimax", "MiniMax-M3")
 
     def test_ppq_creation(self):
         model = AIFactory.create_language(

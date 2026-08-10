@@ -2,13 +2,13 @@
 
 ## Overview
 
-MiniMax provides high-performance language models with large context windows (204K tokens) at competitive pricing through an OpenAI-compatible API.
+MiniMax provides high-performance language models with context windows up to one million tokens through an OpenAI-compatible API.
 
 **Supported Capabilities:**
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Language Models (LLM) | ✅ | MiniMax-M2.5 series |
+| Language Models (LLM) | ✅ | MiniMax-M3, MiniMax-M2.7 |
 | Embeddings | ❌ | Not available |
 | Reranking | ❌ | Not available |
 | Speech-to-Text | ❌ | Not available |
@@ -78,7 +78,7 @@ under `regional_endpoints`.
 from esperanto.factory import AIFactory
 
 # Create MiniMax model
-model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+model = AIFactory.create_language("minimax", "MiniMax-M3")
 
 # Chat completion
 messages = [{"role": "user", "content": "Explain quantum computing"}]
@@ -88,17 +88,21 @@ print(response.choices[0].message.content)
 
 ## Available Models
 
-| Model | Context Window | Best For |
-|-------|---------------|----------|
-| `MiniMax-M2.5` | 204K | Flagship model, complex tasks |
-| `MiniMax-M2.5-highspeed` | 204K | Faster variant, latency-sensitive tasks |
+| Model | Context Window | Input Modalities | Thinking | Input / Output per 1M tokens |
+|-------|----------------|------------------|----------|------------------------------|
+| `MiniMax-M3` | 1M | Text, image, video | Adaptive or disabled | $0.60 / $2.40 |
+| `MiniMax-M2.7` | 204.8K | Text | Always on | $0.30 / $1.20 |
+
+Cached input costs $0.12 per million tokens for MiniMax-M3 and $0.06 per
+million tokens for MiniMax-M2.7. MiniMax-M2.7 cache writes cost $0.375 per
+million tokens.
 
 ## Features
 
 ### Streaming
 
 ```python
-model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+model = AIFactory.create_language("minimax", "MiniMax-M3")
 
 for chunk in model.chat_complete(messages, stream=True):
     print(chunk.choices[0].delta.content, end="")
@@ -108,7 +112,7 @@ for chunk in model.chat_complete(messages, stream=True):
 
 ```python
 model = AIFactory.create_language(
-    "minimax", "MiniMax-M2.5",
+    "minimax", "MiniMax-M3",
     config={"structured": {"type": "json_object"}}
 )
 ```
@@ -124,7 +128,7 @@ response = await model.achat_complete(messages)
 ```python
 # With explicit API key
 model = AIFactory.create_language(
-    "minimax", "MiniMax-M2.5",
+    "minimax", "MiniMax-M3",
     config={"api_key": "your-key"}
 )
 ```

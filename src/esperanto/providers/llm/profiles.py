@@ -11,6 +11,14 @@ Modality = Literal["language", "embedding", "speech_to_text", "text_to_speech"]
 _VALID_MODALITIES: Set[str] = set(get_args(Modality))
 
 
+def _freeze_metadata(value: object) -> object:
+    if isinstance(value, dict):
+        return MappingProxyType({key: _freeze_metadata(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze_metadata(item) for item in value)
+    return value
+
+
 @dataclass(frozen=True)
 class OpenAICompatibleProfile:
     """Declarative configuration for an OpenAI-compatible provider.
@@ -90,6 +98,11 @@ class OpenAICompatibleProfile:
     The global ``base_url``/``anthropic_base_url`` correspond to one of these
     regions; the others let callers select a region by overriding ``base_url``."""
 
+    model_metadata: Optional[Dict[str, Dict[str, object]]] = None
+    """Optional static metadata for provider models when the provider's model
+    endpoint does not expose context, pricing, input modality, or thinking-mode
+    details. Model IDs are the keys and metadata fields are provider-defined."""
+
     requires_api_key: bool = True
     """Whether the endpoint requires an API key. Set False for local/no-auth
     endpoints (e.g. oMLX): a missing key then falls back to 'not-required'
@@ -134,6 +147,8 @@ class OpenAICompatibleProfile:
                     }
                 ),
             )
+        if self.model_metadata is not None:
+            object.__setattr__(self, "model_metadata", _freeze_metadata(self.model_metadata))
 
     def default_model_for(self, modality: Modality) -> Optional[str]:
         """Return the default model for a modality, or None if none is set."""
@@ -175,7 +190,7 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         base_url="https://api.minimax.io/v1",
         api_key_env="MINIMAX_API_KEY",
         base_url_env="MINIMAX_BASE_URL",
-        default_models={"language": "MiniMax-M2.5"},
+        default_models={"language": "MiniMax-M3"},
         owned_by="MiniMax",
         display_name="MiniMax",
         anthropic_base_url="https://api.minimax.io/anthropic",
@@ -189,6 +204,30 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
                 "openai_base_url": "https://api.minimaxi.com/v1",
                 "anthropic_base_url": "https://api.minimaxi.com/anthropic",
                 "docs_root": "https://platform.minimaxi.com/docs",
+            },
+        },
+        model_metadata={
+            "MiniMax-M3": {
+                "context_window": 1_000_000,
+                "pricing_usd_per_million_tokens": {
+                    "input": 0.6,
+                    "output": 2.4,
+                    "cache_read": 0.12,
+                    "cache_write": None,
+                },
+                "input_modalities": ["text", "image", "video"],
+                "thinking": ["adaptive", "disabled"],
+            },
+            "MiniMax-M2.7": {
+                "context_window": 204_800,
+                "pricing_usd_per_million_tokens": {
+                    "input": 0.3,
+                    "output": 1.2,
+                    "cache_read": 0.06,
+                    "cache_write": 0.375,
+                },
+                "input_modalities": ["text"],
+                "thinking": ["always_on"],
             },
         },
     ),
