@@ -765,21 +765,21 @@ class TestMiniMaxChat:
     """Real integration tests for MiniMax chat completion."""
 
     def test_sync_chat_complete(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = model.chat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     async def test_async_chat_complete(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = await model.achat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     def test_sync_streaming(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = model.chat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         for chunk in response:
@@ -789,7 +789,7 @@ class TestMiniMaxChat:
         assert len(total_content) > 0
 
     async def test_async_streaming(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = await model.achat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         async for chunk in response:

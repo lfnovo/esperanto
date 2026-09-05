@@ -243,6 +243,46 @@ class TestXAITTS:
 
 
 # =============================================================================
+# MiniMax Tests
+# =============================================================================
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("MINIMAX_API_KEY"),
+    reason="MINIMAX_API_KEY not configured",
+)
+class TestMiniMaxTTS:
+    """Real integration tests for MiniMax text-to-speech."""
+
+    def test_sync_generate_speech(self):
+        model = AIFactory.create_text_to_speech("minimax", "speech-2.8-hd")
+        response = model.generate_speech(
+            TEST_TEXT,
+            voice="English_Graceful_Lady",
+            language_boost="English",
+        )
+        assert response.audio_data
+        assert response.content_type.startswith("audio/")
+        assert response.provider == "minimax"
+
+    def test_async_agenerate_speech(self):
+        model = AIFactory.create_text_to_speech("minimax", "speech-2.8-hd")
+
+        async def _run() -> object:
+            return await model.agenerate_speech(
+                TEST_TEXT,
+                voice="English_Graceful_Lady",
+                language_boost="English",
+            )
+
+        response = asyncio.run(_run())
+        assert response.audio_data
+        assert response.content_type.startswith("audio/")
+        assert response.provider == "minimax"
+
+
+# =============================================================================
 # Mistral Tests
 # =============================================================================
 
