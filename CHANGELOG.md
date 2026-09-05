@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **SiliconFlow provider.** New built-in OpenAI-compatible profile (`siliconflow`)
+  for SiliconFlow's hosted DeepSeek / Qwen / GLM / Kimi models, with static model
+  discovery via `AIFactory.get_provider_models("siliconflow")`. Defaults to the
+  global endpoint (`api.siliconflow.com`); set `SILICONFLOW_BASE_URL` for a
+  mainland China (`api.siliconflow.cn`) account.
+
 ## [2.26.0] - 2026-07-29
 
 ### Added

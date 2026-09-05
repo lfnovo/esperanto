@@ -402,7 +402,7 @@ Now that you've got the basics, explore more:
 - **[Text-to-Speech Guide](./capabilities/text-to-speech.md)** - Voice generation
 
 ### Choose Providers
-- **[Provider Comparison](./providers/README.md)** - Compare all 17 providers
+- **[Provider Comparison](./providers/README.md)** - Compare all supported providers
 - **[Provider Setup Guides](./providers/)** - Detailed setup for each provider
 
 ### Advanced Features
