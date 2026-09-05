@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `anthropic` provider at MiniMax's Anthropic-protocol API via `base_url`, with
   the regional (international / mainland China) URLs. (#278)
 
+### Fixed
+
+- **Provider credentials are redacted from object representations.** API keys
+  and configuration dictionaries no longer appear in dataclass `repr` output,
+  preventing failed requests and test tracebacks from leaking credentials.
+
 ## [2.26.0] - 2026-07-29
 
 ### Added

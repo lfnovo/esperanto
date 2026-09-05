@@ -24,9 +24,9 @@ class TextToSpeechModel(HttpConnectionMixin, ABC):
     """
 
     model_name: Optional[str] = None
-    api_key: Optional[str] = None
+    api_key: Optional[str] = field(default=None, repr=False)
     base_url: Optional[str] = None
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = field(default=None, repr=False)
     timeout: Optional[float] = None
     _config: Dict[str, Any] = field(init=False, repr=False)
 

@@ -48,7 +48,7 @@ class PerplexityLanguageModel(LanguageModel):
     """Perplexity AI language model implementation using httpx."""
 
     base_url: Optional[str] = None
-    api_key: Optional[str] = None
+    api_key: Optional[str] = field(default=None, repr=False)
     search_domain_filter: Optional[List[str]] = field(default=None)
     return_images: Optional[bool] = field(default=None)
     return_related_questions: Optional[bool] = field(default=None)

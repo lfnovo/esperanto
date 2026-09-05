@@ -13,7 +13,7 @@ from esperanto.utils.connect import HttpConnectionMixin
 class LanguageModel(HttpConnectionMixin, ABC):
     """Base class for all language models."""
 
-    api_key: Optional[str] = None
+    api_key: Optional[str] = field(default=None, repr=False)
     base_url: Optional[str] = None
     model_name: Optional[str] = None
     max_tokens: int = 850
@@ -22,12 +22,12 @@ class LanguageModel(HttpConnectionMixin, ABC):
     top_p: float = 0.9
     structured: Optional[Dict[str, Any]] = None
     organization: Optional[str] = None
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = field(default=None, repr=False)
     # Tool-related fields
     tools: Optional[List[Tool]] = None
     tool_choice: Optional[Union[str, Dict[str, Any]]] = None
     parallel_tool_calls: Optional[bool] = None
-    _config: Dict[str, Any] = field(default_factory=dict)
+    _config: Dict[str, Any] = field(default_factory=dict, repr=False)
 
     @property
     def models(self) -> List[Model]:
