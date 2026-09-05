@@ -1,7 +1,7 @@
 """OpenRouter embedding model implementation."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar, Dict, List, Optional
 
 from esperanto.common_types import Model
@@ -16,7 +16,7 @@ class OpenRouterEmbeddingModel(OpenAIEmbeddingModel):
     MAX_BATCH_SIZE: ClassVar[int] = 96
 
     base_url: Optional[str] = None
-    api_key: Optional[str] = None
+    api_key: Optional[str] = field(default=None, repr=False)
 
     def __post_init__(self):
         """Initialize OpenRouter-specific configuration."""

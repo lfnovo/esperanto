@@ -1,7 +1,7 @@
 """OpenRouter language model implementation."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -39,7 +39,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
     """OpenRouter language model implementation using OpenAI-compatible API."""
 
     base_url: Optional[str] = None  # Changed type hint
-    api_key: Optional[str] = None  # Changed type hint
+    api_key: Optional[str] = field(default=None, repr=False)
 
     def __post_init__(self):
         # Extract api_key and base_url from config dict first (before parent sets OpenAI defaults)
