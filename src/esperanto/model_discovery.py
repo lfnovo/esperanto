@@ -639,6 +639,74 @@ def get_deepseek_models(
         raise RuntimeError(f"Failed to fetch DeepSeek models: {e}")
 
 
+def get_siliconflow_models(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> List[Model]:
+    """Get available models from SiliconFlow.
+
+    Args:
+        api_key: SiliconFlow API key (or SILICONFLOW_API_KEY env var)
+        base_url: Base URL for API (default: https://api.siliconflow.com/v1)
+
+    Returns:
+        List of available models
+
+    Raises:
+        ValueError: If API key is not provided
+        RuntimeError: If API request fails
+    """
+    api_key = api_key or os.getenv("SILICONFLOW_API_KEY")
+    if not api_key:
+        raise ValueError("SiliconFlow API key not found. Provide api_key or set SILICONFLOW_API_KEY environment variable.")
+
+    base_url = (
+        base_url or os.getenv("SILICONFLOW_BASE_URL") or "https://api.siliconflow.com/v1"
+    ).rstrip("/")
+
+    cache_key = _create_cache_key("siliconflow", api_key=api_key, base_url=base_url)
+    cached_models = _model_cache.get(cache_key)
+    if cached_models is not None:
+        return cached_models
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = httpx.get(
+            f"{base_url}/models",
+            headers=headers,
+            timeout=60.0
+        )
+
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"SiliconFlow API error: {error_message}")
+
+        models_data = response.json()
+
+        all_models = []
+        for model in models_data.get("data", []):
+            all_models.append(Model(
+                id=model["id"],
+                owned_by=model.get("owned_by") or "siliconflow",
+                context_window=model.get("context_window", None),
+            ))
+
+        _model_cache.set(cache_key, all_models)
+
+        return all_models
+
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"Failed to fetch SiliconFlow models: {e}")
+
+
 def get_openrouter_models(
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
@@ -941,6 +1009,69 @@ def get_openai_compatible_models(
         raise RuntimeError(f"Failed to fetch OpenAI-compatible models: {e}")
 
 
+_MINIMAX_CONTEXT_WINDOWS = {
+    "MiniMax-M3": 1_000_000,
+    "MiniMax-M2.7": 204_800,
+    "MiniMax-M2.7-highspeed": 204_800,
+    "MiniMax-M2.5": 204_800,
+    "MiniMax-M2.5-highspeed": 204_800,
+    "MiniMax-M2.1": 204_800,
+    "MiniMax-M2.1-highspeed": 204_800,
+    "MiniMax-M2": 204_800,
+}
+
+
+def get_minimax_models(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    model_type: Optional[str] = None,
+) -> List[Model]:
+    """Discover current MiniMax language models and known TTS models."""
+    models: List[Model] = []
+    if model_type in (None, "language"):
+        api_key = api_key or os.getenv("MINIMAX_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "MiniMax API key not found. Provide api_key or set MINIMAX_API_KEY "
+                "environment variable."
+            )
+        resolved_base_url = (
+            base_url
+            or os.getenv("MINIMAX_BASE_URL")
+            or "https://api.minimax.io/v1"
+        ).rstrip("/")
+        discovered = get_openai_compatible_models(
+            base_url=resolved_base_url,
+            api_key=api_key,
+        )
+        models.extend(
+            Model(
+                id=model.id,
+                owned_by="MiniMax",
+                context_window=_MINIMAX_CONTEXT_WINDOWS.get(
+                    model.id, model.context_window
+                ),
+                type="language",
+            )
+            for model in discovered
+        )
+
+    if model_type in (None, "text_to_speech"):
+        from esperanto.providers.tts.minimax import MINIMAX_TTS_MODELS
+
+        models.extend(
+            Model(
+                id=model_id,
+                owned_by="MiniMax",
+                context_window=None,
+                type="text_to_speech",
+            )
+            for model_id in MINIMAX_TTS_MODELS
+        )
+
+    return models
+
+
 def get_transformers_models(
     cache_dir: Optional[str] = None,
 ) -> List[Model]:
@@ -1108,6 +1239,7 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "mistral": get_mistral_models,
     "groq": get_groq_models,
     "deepseek": get_deepseek_models,
+    "siliconflow": get_siliconflow_models,
     "ollama": get_ollama_models,
     "openrouter": get_openrouter_models,
     "xai": get_xai_models,
@@ -1118,4 +1250,5 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "transformers": get_transformers_models,
     "deepgram": get_deepgram_models,
     "cohere": get_cohere_models,
+    "minimax": get_minimax_models,
 }
