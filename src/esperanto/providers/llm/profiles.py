@@ -127,7 +127,7 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
     ),
     "siliconflow": OpenAICompatibleProfile(
         name="siliconflow",
-        base_url="https://api.siliconflow.cn/v1",
+        base_url="https://api.siliconflow.com/v1",
         api_key_env="SILICONFLOW_API_KEY",
         base_url_env="SILICONFLOW_BASE_URL",
         default_models={"language": "deepseek-ai/DeepSeek-V3.1-Terminus"},

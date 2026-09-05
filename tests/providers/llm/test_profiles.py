@@ -73,7 +73,7 @@ class TestProfileRegistry:
         profile = get_profile("siliconflow")
         assert profile is not None
         assert profile.name == "siliconflow"
-        assert profile.base_url == "https://api.siliconflow.cn/v1"
+        assert profile.base_url == "https://api.siliconflow.com/v1"
         assert profile.api_key_env == "SILICONFLOW_API_KEY"
         assert profile.base_url_env == "SILICONFLOW_BASE_URL"
         assert profile.default_model_for("language") == "deepseek-ai/DeepSeek-V3.1-Terminus"
@@ -193,7 +193,7 @@ class TestFactoryIntegration:
             "siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus", config={"api_key": "test-key"}
         )
         assert model.provider == "siliconflow"
-        assert model.base_url == "https://api.siliconflow.cn/v1"
+        assert model.base_url == "https://api.siliconflow.com/v1"
         assert model.api_key == "test-key"
 
     def test_create_language_with_xai_profile(self):
@@ -305,12 +305,12 @@ class TestProfileBehavior:
             os.environ,
             {
                 "SILICONFLOW_API_KEY": "key",
-                "SILICONFLOW_BASE_URL": "https://api.siliconflow.com/v1",
+                "SILICONFLOW_BASE_URL": "https://api.siliconflow.cn/v1",
             },
             clear=False,
         ):
             model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
-            assert model.base_url == "https://api.siliconflow.com/v1"
+            assert model.base_url == "https://api.siliconflow.cn/v1"
 
     def test_config_overrides_profile_defaults(self):
         model = AIFactory.create_language(
@@ -323,16 +323,16 @@ class TestProfileBehavior:
         )
         assert model.base_url == "https://override.deepseek.com/v1"
 
-    def test_siliconflow_config_base_url_uses_global_endpoint(self):
+    def test_siliconflow_config_base_url_uses_cn_endpoint(self):
         model = AIFactory.create_language(
             "siliconflow",
             "deepseek-ai/DeepSeek-V3.1-Terminus",
             config={
                 "api_key": "test-key",
-                "base_url": "https://api.siliconflow.com/v1",
+                "base_url": "https://api.siliconflow.cn/v1",
             },
         )
-        assert model.base_url == "https://api.siliconflow.com/v1"
+        assert model.base_url == "https://api.siliconflow.cn/v1"
 
     def test_missing_api_key_raises_with_provider_name(self):
         with patch.dict(os.environ, {}, clear=True):

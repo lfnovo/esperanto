@@ -120,21 +120,21 @@ DEEPSEEK_API_KEY=...
 #### SiliconFlow
 ```bash
 SILICONFLOW_API_KEY=...
-# Optional: use the Global endpoint instead of the default CN endpoint
-SILICONFLOW_BASE_URL=https://api.siliconflow.com/v1
+# Optional: use the China endpoint instead of the default global endpoint
+SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
 ```
 
 ```python
 from esperanto.factory import AIFactory
 
-# Default CN endpoint: https://api.siliconflow.cn/v1
+# Default global endpoint: https://api.siliconflow.com/v1
 model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
 
-# Global endpoint override
+# China endpoint override
 model = AIFactory.create_language(
     "siliconflow",
     "deepseek-ai/DeepSeek-V3.1-Terminus",
-    config={"base_url": "https://api.siliconflow.com/v1"},
+    config={"base_url": "https://api.siliconflow.cn/v1"},
 )
 ```
 

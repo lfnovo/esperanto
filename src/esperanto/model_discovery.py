@@ -648,7 +648,7 @@ def get_siliconflow_models(
 
     Args:
         api_key: SiliconFlow API key (or SILICONFLOW_API_KEY env var)
-        base_url: Base URL for API (default: https://api.siliconflow.cn/v1)
+        base_url: Base URL for API (default: https://api.siliconflow.com/v1)
 
     Returns:
         List of available models
@@ -662,7 +662,7 @@ def get_siliconflow_models(
         raise ValueError("SiliconFlow API key not found. Provide api_key or set SILICONFLOW_API_KEY environment variable.")
 
     base_url = (
-        base_url or os.getenv("SILICONFLOW_BASE_URL") or "https://api.siliconflow.cn/v1"
+        base_url or os.getenv("SILICONFLOW_BASE_URL") or "https://api.siliconflow.com/v1"
     ).rstrip("/")
 
     cache_key = _create_cache_key("siliconflow", api_key=api_key, base_url=base_url)

@@ -14,7 +14,7 @@ SiliconFlow provides an OpenAI-compatible API for DeepSeek, Qwen, and other lang
 | Speech-to-Text | ❌ | Not exposed by this provider profile |
 | Text-to-Speech | ❌ | Not exposed by this provider profile |
 
-**Official Documentation:** https://docs.siliconflow.cn/
+**Official Documentation:** https://docs.siliconflow.com/ (China: https://docs.siliconflow.cn/)
 
 ## Prerequisites
 
@@ -33,18 +33,18 @@ SiliconFlow provides an OpenAI-compatible API for DeepSeek, Qwen, and other lang
 # SiliconFlow API key (required)
 SILICONFLOW_API_KEY="your-api-key"
 
-# Optional: override the default CN endpoint with the Global endpoint
-SILICONFLOW_BASE_URL="https://api.siliconflow.com/v1"
+# Optional: override the default global endpoint with the China endpoint
+SILICONFLOW_BASE_URL="https://api.siliconflow.cn/v1"
 ```
 
-**Default base URL:** `https://api.siliconflow.cn/v1`
+**Default base URL:** `https://api.siliconflow.com/v1`
 
 ## Quick Start
 
 ```python
 from esperanto.factory import AIFactory
 
-# Uses the default CN endpoint
+# Uses the default global endpoint
 model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
 
 messages = [{"role": "user", "content": "Explain retrieval augmented generation"}]
@@ -52,9 +52,9 @@ response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
-## Global Endpoint
+## China Endpoint
 
-Use the Global endpoint by setting `SILICONFLOW_BASE_URL` or by passing `config["base_url"]`.
+SiliconFlow runs separate platforms for global (`siliconflow.com`) and mainland China (`siliconflow.cn`) accounts, and keys only work on their own platform. If your account is on the China platform, point Esperanto at it by setting `SILICONFLOW_BASE_URL` or by passing `config["base_url"]`.
 
 ```python
 from esperanto.factory import AIFactory
@@ -62,7 +62,7 @@ from esperanto.factory import AIFactory
 model = AIFactory.create_language(
     "siliconflow",
     "deepseek-ai/DeepSeek-V3.1-Terminus",
-    config={"base_url": "https://api.siliconflow.com/v1"},
+    config={"base_url": "https://api.siliconflow.cn/v1"},
 )
 ```
 
@@ -115,13 +115,13 @@ model = AIFactory.create_language(
     config={"api_key": "your-key"},
 )
 
-# With explicit API key and Global endpoint
+# With explicit API key and China endpoint
 model = AIFactory.create_language(
     "siliconflow",
     "deepseek-ai/DeepSeek-V3.1-Terminus",
     config={
         "api_key": "your-key",
-        "base_url": "https://api.siliconflow.com/v1",
+        "base_url": "https://api.siliconflow.cn/v1",
     },
 )
 ```

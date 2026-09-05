@@ -453,7 +453,7 @@ class TestSiliconFlowDiscovery:
         assert len(models) == 2
         assert all(isinstance(m, Model) for m in models)
         assert models[0].id == "deepseek-ai/DeepSeek-V3.1-Terminus"
-        assert mock_get.call_args.args[0] == "https://api.siliconflow.cn/v1/models"
+        assert mock_get.call_args.args[0] == "https://api.siliconflow.com/v1/models"
 
     def test_get_siliconflow_models_no_api_key(self):
         """Test that ValueError is raised when API key is missing."""
@@ -462,8 +462,8 @@ class TestSiliconFlowDiscovery:
                 get_siliconflow_models()
 
     @patch("esperanto.model_discovery.httpx.get")
-    def test_get_siliconflow_models_global_base_url_param(self, mock_get):
-        """Test that explicit base_url can target the Global endpoint."""
+    def test_get_siliconflow_models_cn_base_url_param(self, mock_get):
+        """Test that explicit base_url can target the China endpoint."""
         _model_cache.clear()
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -472,10 +472,10 @@ class TestSiliconFlowDiscovery:
 
         get_siliconflow_models(
             api_key="test-key",
-            base_url="https://api.siliconflow.com/v1",
+            base_url="https://api.siliconflow.cn/v1",
         )
 
-        assert mock_get.call_args.args[0] == "https://api.siliconflow.com/v1/models"
+        assert mock_get.call_args.args[0] == "https://api.siliconflow.cn/v1/models"
 
     @patch("esperanto.model_discovery.httpx.get")
     def test_get_siliconflow_models_strips_trailing_slash(self, mock_get):
@@ -521,12 +521,12 @@ class TestSiliconFlowDiscovery:
             os.environ,
             {
                 "SILICONFLOW_API_KEY": "env-key",
-                "SILICONFLOW_BASE_URL": "https://api.siliconflow.com/v1",
+                "SILICONFLOW_BASE_URL": "https://api.siliconflow.cn/v1",
             },
         ):
             get_siliconflow_models()
 
-        assert mock_get.call_args.args[0] == "https://api.siliconflow.com/v1/models"
+        assert mock_get.call_args.args[0] == "https://api.siliconflow.cn/v1/models"
 
 
 class TestProviderRegistry:
