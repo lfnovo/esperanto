@@ -19,10 +19,10 @@ Commands remain canonical in `AGENTS.md` and `Makefile`; contribution and
 architecture policy remain in `CONTRIBUTING.md` and `ARCHITECTURE.md`.
 Read the relevant module-level `AGENTS.md` when reviewing its implementation.
 
-Review, triage and Discussions are configured. The owner confirmed `make tag`
-as the release trigger. The package-install gate is deferred to
-[issue #279](https://github.com/lfnovo/esperanto/issues/279), so release configuration
-remains incomplete until that command exists.
+Review, triage, Discussions and release are configured. The owner confirmed
+`make tag` as the release trigger. `make package-check` is the canonical
+clean-room package gate implemented by
+[issue #279](https://github.com/lfnovo/esperanto/issues/279).
 A valid profile is not evidence that release checks have passed.
 Discussions is enabled, with its live category IDs in `profile.toml`.
 The application smoke skill does not apply to this library. Real-provider

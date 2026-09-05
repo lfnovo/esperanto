@@ -10,7 +10,7 @@ Record passed, failed, not-run and not-applicable checks with revision and evide
 | Default mocked suite | commands.validator -> make test | pytest excludes release marker |
 | Lint | commands.ruff -> AGENTS.md | Same check as lint.yml |
 | Types | commands.mypy -> AGENTS.md | src/esperanto, as in lint.yml |
-| Packaging | artifacts.pypi.gate | Missing canonical clean-room gate; blocks release |
+| Packaging | artifacts.pypi.gate -> make package-check | Fresh wheel/sdist, metadata, packaged runtime files, clean-room imports, extras and SHA-256 identities |
 
 The setup target installs all extras. CI additionally installs mxbai-rerank.
 CI tests 3.10/3.11/3.12; package metadata also supports 3.13. Track actual coverage.
@@ -24,8 +24,6 @@ Do not claim a provider was exercised merely because a shared base test passed.
 
 ## Bucket B — investment candidates
 
-- Implement the package gate described in runbook.md, including wheel/sdist and extras
-  ([issue #279](https://github.com/lfnovo/esperanto/issues/279), deferred by the owner).
 - Add Python 3.13 CI coverage if the maintainer elects to cover the full declared range.
 - Reconcile the CI-specific mxbai-rerank setup with local validation documentation.
 

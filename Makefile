@@ -1,4 +1,4 @@
-.PHONY: setup ruff lint test
+.PHONY: setup ruff lint test package-check
 
 setup:
 	uv venv
@@ -13,6 +13,9 @@ ruff:
 test:
 	uv run pytest -v
 
+package-check:
+	uv run python scripts/package_check.py
+
 
 build-docs:
 	repomix . --include "**/*.py" --compress --style xml -o ai_docs/all_docs.txt
@@ -23,4 +26,3 @@ tag:
 	echo "Creating tag v$$version"; \
 	git tag "v$$version"; \
 	git push origin "v$$version"
-
