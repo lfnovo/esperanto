@@ -212,6 +212,9 @@ class TestAnthropicDiscovery:
         assert all(isinstance(m, Model) for m in models)
         assert all(m.owned_by == "anthropic" for m in models)
         assert any("claude" in m.id for m in models)
+        # Anthropic has withdrawn the entire claude-3 family — discovery must
+        # not recommend models that can no longer be called.
+        assert not any(m.id.startswith("claude-3") for m in models)
 
     def test_get_anthropic_models_caching(self):
         """Test that Anthropic models are cached."""

@@ -22,6 +22,23 @@ EXPECTED_TRANSCRIPT_FRAGMENT = "Supernova"
 SAMPLE_AUDIO = Path(__file__).parent.parent / "fixtures" / "sample.mp3"
 
 
+def _assert_transcribed(text: str) -> None:
+    """Assert the sample audio was transcribed, tolerating ASR word-splitting.
+
+    Providers legitimately disagree on whether a spoken brand name is one word
+    or two — Google returns "super nova" where OpenAI returns "Supernova". A
+    plain substring check turns that into an intermittent failure that says
+    nothing about the library, so compare with whitespace and punctuation
+    stripped.
+    """
+    def _normalize(value: str) -> str:
+        return "".join(ch for ch in value.lower() if ch.isalnum())
+
+    assert _normalize(EXPECTED_TRANSCRIPT_FRAGMENT) in _normalize(text), (
+        f"Expected {EXPECTED_TRANSCRIPT_FRAGMENT!r} in transcript, got: {text!r}"
+    )
+
+
 # =============================================================================
 # OpenAI Tests
 # =============================================================================
@@ -39,14 +56,14 @@ class TestOpenAISTT:
         """Test sync transcription with file-path input."""
         model = AIFactory.create_speech_to_text("openai", "whisper-1")
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_sync_transcribe_binary_io(self):
         """Test sync transcription with BinaryIO input."""
         model = AIFactory.create_speech_to_text("openai", "whisper-1")
         with open(SAMPLE_AUDIO, "rb") as f:
             result = model.transcribe(f)
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription with file-path input."""
@@ -56,7 +73,7 @@ class TestOpenAISTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe_binary_io(self):
         """Test async transcription with BinaryIO input."""
@@ -67,7 +84,31 @@ class TestOpenAISTT:
                 return await model.atranscribe(f)
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
+
+    def test_sync_transcribe_whisper_returns_segments(self):
+        """Whisper opts into verbose_json, so segments and duration come back."""
+        model = AIFactory.create_speech_to_text("openai", "whisper-1")
+        result = model.transcribe(str(SAMPLE_AUDIO))
+
+        _assert_transcribed(result.text)
+        assert result.segments, "Whisper should return timestamped segments"
+        assert result.duration is not None
+
+    def test_sync_transcribe_non_whisper_model(self):
+        """A non-Whisper model must transcribe rather than 400 on the format.
+
+        These models reject response_format=verbose_json, so Esperanto has to
+        send json instead. The whisper-1 tests above can't catch a regression
+        here — that's how #269 shipped. Segments and duration are legitimately
+        absent from a json payload.
+        """
+        model = AIFactory.create_speech_to_text("openai", "gpt-4o-mini-transcribe")
+        result = model.transcribe(str(SAMPLE_AUDIO))
+
+        _assert_transcribed(result.text)
+        assert result.segments is None
+        assert result.duration is None
 
 
 # =============================================================================
@@ -87,7 +128,7 @@ class TestGroqSTT:
         """Test sync transcription."""
         model = AIFactory.create_speech_to_text("groq", "whisper-large-v3")
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription."""
@@ -97,7 +138,7 @@ class TestGroqSTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
 
 # =============================================================================
@@ -121,7 +162,7 @@ class TestGoogleSTT:
             config={"api_key": os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")},
         )
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription."""
@@ -135,7 +176,7 @@ class TestGoogleSTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
 
 # =============================================================================
@@ -166,7 +207,7 @@ class TestAzureSTT:
             },
         )
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription."""
@@ -183,7 +224,33 @@ class TestAzureSTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
+
+    @pytest.mark.skipif(
+        not os.getenv("AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE"),
+        reason="Set AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE to a gpt-4o-*-transcribe deployment to cover #263",
+    )
+    def test_sync_transcribe_non_whisper_deployment(self):
+        """A gpt-4o-*-transcribe deployment must transcribe, not 400.
+
+        Azure serves that family through the same deployment API and it rejects
+        response_format=verbose_json, which Azure used to hardcode (#263).
+        Opt in by pointing AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE at such a
+        deployment — the whisper-1 tests above cannot catch this.
+        """
+        model = AIFactory.create_speech_to_text(
+            "azure",
+            os.getenv("AZURE_OPENAI_DEPLOYMENT_STT_TRANSCRIBE"),
+            config={
+                "api_key": os.getenv("AZURE_OPENAI_API_KEY_STT"),
+                "base_url": os.getenv("AZURE_OPENAI_ENDPOINT_STT"),
+            },
+        )
+        result = model.transcribe(str(SAMPLE_AUDIO))
+
+        _assert_transcribed(result.text)
+        assert result.segments is None
+        assert result.duration is None
 
 
 # =============================================================================
@@ -203,7 +270,7 @@ class TestMistralSTT:
         """Test sync transcription."""
         model = AIFactory.create_speech_to_text("mistral", "voxtral-mini-latest")
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription."""
@@ -213,7 +280,7 @@ class TestMistralSTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
 
 # =============================================================================
@@ -238,13 +305,13 @@ class TestElevenLabsSTT:
         """Test sync transcription (default model = scribe_v2)."""
         model = AIFactory.create_speech_to_text("elevenlabs")
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_sync_transcribe_scribe_v2_explicit(self):
         """Explicit scribe_v2 model_id transcribes the sample."""
         model = AIFactory.create_speech_to_text("elevenlabs", "scribe_v2")
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription (default model = scribe_v2)."""
@@ -254,7 +321,7 @@ class TestElevenLabsSTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
 
 # =============================================================================
@@ -279,7 +346,7 @@ class TestOpenAICompatibleSTT:
             config={"base_url": base_url},
         )
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription."""
@@ -293,7 +360,7 @@ class TestOpenAICompatibleSTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
 
 # =============================================================================
@@ -315,7 +382,7 @@ class TestOpenRouterSTT:
         """Test sync transcription with file-path input."""
         model = AIFactory.create_speech_to_text("openrouter", self.MODEL)
         result = model.transcribe(str(SAMPLE_AUDIO))
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
         assert result.provider == "openrouter"
 
     def test_sync_transcribe_binary_io(self):
@@ -323,7 +390,7 @@ class TestOpenRouterSTT:
         model = AIFactory.create_speech_to_text("openrouter", self.MODEL)
         with open(SAMPLE_AUDIO, "rb") as f:
             result = model.transcribe(f)
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)
 
     def test_async_atranscribe(self):
         """Test async transcription with file-path input."""
@@ -333,4 +400,4 @@ class TestOpenRouterSTT:
             return await model.atranscribe(str(SAMPLE_AUDIO))
 
         result = asyncio.run(_run())
-        assert EXPECTED_TRANSCRIPT_FRAGMENT.lower() in result.text.lower()
+        _assert_transcribed(result.text)

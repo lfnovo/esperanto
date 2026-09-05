@@ -30,7 +30,7 @@ embedder = AIFactory.create_embedding(
     model_name="jina-embeddings-v3",
     config={
         "timeout": 60.0,
-        "batch_size": 32
+        "embed_batch_size": 32
     }
 )
 ```
@@ -67,7 +67,21 @@ vectors = [item.embedding for item in response.data]
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `timeout` | float | 60.0 | Request timeout in seconds |
-| `batch_size` | int | Provider default | Number of texts to process per request |
+| `embed_batch_size` | int | Provider maximum | Texts to send per API request. Clamped to the provider's ceiling; values ≤ 0 raise `ValueError`. See [Automatic Batching](#automatic-batching). |
+
+### Automatic Batching
+
+Embedding providers cap how many texts a single request may contain (OpenAI 2048,
+Voyage 1000, Cohere/OpenRouter 96, Mistral 64, Google 250, Vertex 25, …). Esperanto
+**batches automatically**: `embed()` / `aembed()` split a large input into
+sequential requests under the provider's limit and concatenate the results in
+input order, so the same code works when you switch providers. Empty input makes
+zero API calls.
+
+Lower the batch size per model with `config={"embed_batch_size": N}` (e.g. to stay
+under a token budget). `N` is clamped to the provider maximum — you can never
+exceed the API's hard limit — and `N <= 0` raises `ValueError`. Local providers
+with no cap (Ollama) send everything in one request unless you set a size.
 
 ### Input Format
 
@@ -248,7 +262,7 @@ query_vector = query_embedder.embed(query)
 ```python
 embedder = AIFactory.create_embedding(
     "voyage", "voyage-2",
-    config={"batch_size": 50}
+    config={"embed_batch_size": 50}
 )
 
 large_corpus = [...]  # Many documents

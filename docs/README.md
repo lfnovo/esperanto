@@ -137,7 +137,7 @@ Choose best-in-class for each capability:
 
 ```python
 # Best reasoning
-llm = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+llm = AIFactory.create_language("anthropic", "claude-sonnet-5")
 
 # Best embeddings with advanced features
 embedder = AIFactory.create_embedding("jina", "jina-embeddings-v3")
@@ -156,7 +156,7 @@ local_llm = AIFactory.create_language("ollama", "llama3.2")
 local_embedder = AIFactory.create_embedding("transformers", "BAAI/bge-large-en-v1.5")
 
 # Cloud for specialized needs
-cloud_llm = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+cloud_llm = AIFactory.create_language("anthropic", "claude-sonnet-5")
 ```
 
 ## 📖 Documentation Conventions

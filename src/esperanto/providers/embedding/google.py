@@ -1,7 +1,7 @@
 """Google GenAI embedding model provider."""
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 import httpx
 
@@ -11,7 +11,10 @@ from esperanto.providers.embedding.base import EmbeddingModel, Model
 
 class GoogleEmbeddingModel(EmbeddingModel):
     """Google GenAI embedding model implementation with native task optimization support."""
-    
+
+    # Gemini's :batchEmbedContents endpoint accepts up to 250 requests per call.
+    MAX_BATCH_SIZE: ClassVar[int] = 250
+
     # Google supports native task types
     SUPPORTED_FEATURES = ["task_type"]
 
@@ -107,46 +110,30 @@ class GoogleEmbeddingModel(EmbeddingModel):
         Returns:
             List of embeddings, one for each input text.
         """
-        results = []
+        results: List[List[float]] = []
         model_name = self._get_model_path()
 
         # Get native task type parameter if available
         gemini_task_type = self._get_task_type_param()
 
-        for text in texts:
-            text = self._clean_text(text)
-            
-            # Apply task optimization via native API or fallback to base emulation
-            if gemini_task_type is None and self.task_type != EmbeddingTaskType.DEFAULT:
-                # Fallback to base class emulation if no native mapping
-                optimized_texts = self._apply_task_optimization([text])
-                text = optimized_texts[0] if optimized_texts else text
-            
-            # Prepare request payload
-            payload = {
-                "model": model_name,
-                "content": {
-                    "parts": [{
-                        "text": text
-                    }]
-                }
-            }
-            
-            # Add native task type if available
-            if gemini_task_type:
-                payload["task_type"] = gemini_task_type
+        for batch in self._iter_embed_batches(texts):
+            requests_payload = [
+                self._build_content_request(text, model_name, gemini_task_type)
+                for text in batch
+            ]
 
-            # Make HTTP request
+            # Send the whole batch in one native :batchEmbedContents call.
             response = self.client.post(
-                f"{self.base_url}/{model_name}:embedContent?key={self.api_key}",
+                f"{self.base_url}/{model_name}:batchEmbedContents?key={self.api_key}",
                 headers=self._get_headers(),
-                json=payload
+                json={"requests": requests_payload},
             )
             self._handle_error(response)
-            
+
             response_data = response.json()
-            # Convert embeddings to regular floats
-            results.append([float(value) for value in response_data["embedding"]["values"]])
+            # Embeddings come back in request order.
+            for item in response_data["embeddings"]:
+                results.append([float(value) for value in item["values"]])
 
         return results
 
@@ -160,48 +147,56 @@ class GoogleEmbeddingModel(EmbeddingModel):
         Returns:
             List of embeddings, one for each input text.
         """
-        results = []
+        results: List[List[float]] = []
         model_name = self._get_model_path()
 
         # Get native task type parameter if available
         gemini_task_type = self._get_task_type_param()
 
-        for text in texts:
-            text = self._clean_text(text)
-            
-            # Apply task optimization via native API or fallback to base emulation
-            if gemini_task_type is None and self.task_type != EmbeddingTaskType.DEFAULT:
-                # Fallback to base class emulation if no native mapping
-                optimized_texts = self._apply_task_optimization([text])
-                text = optimized_texts[0] if optimized_texts else text
-            
-            # Prepare request payload
-            payload = {
-                "model": model_name,
-                "content": {
-                    "parts": [{
-                        "text": text
-                    }]
-                }
-            }
-            
-            # Add native task type if available
-            if gemini_task_type:
-                payload["task_type"] = gemini_task_type
+        for batch in self._iter_embed_batches(texts):
+            requests_payload = [
+                self._build_content_request(text, model_name, gemini_task_type)
+                for text in batch
+            ]
 
-            # Make async HTTP request
+            # Send the whole batch in one native :batchEmbedContents call.
             response = await self.async_client.post(
-                f"{self.base_url}/{model_name}:embedContent?key={self.api_key}",
+                f"{self.base_url}/{model_name}:batchEmbedContents?key={self.api_key}",
                 headers=self._get_headers(),
-                json=payload
+                json={"requests": requests_payload},
             )
             self._handle_error(response)
-            
+
             response_data = response.json()
-            # Convert embeddings to regular floats
-            results.append([float(value) for value in response_data["embedding"]["values"]])
+            # Embeddings come back in request order.
+            for item in response_data["embeddings"]:
+                results.append([float(value) for value in item["values"]])
 
         return results
+
+    def _build_content_request(
+        self, text: str, model_name: str, gemini_task_type: Optional[str]
+    ) -> Dict[str, Any]:
+        """Build a single ``EmbedContentRequest`` for the batch endpoint.
+
+        Mirrors the payload the former per-text ``:embedContent`` call sent, so
+        cleaning and the task-type fallback behave identically — only the
+        envelope changes (one entry in a ``requests`` array).
+        """
+        text = self._clean_text(text)
+
+        # Apply task optimization via native API or fallback to base emulation.
+        if gemini_task_type is None and self.task_type != EmbeddingTaskType.DEFAULT:
+            optimized_texts = self._apply_task_optimization([text])
+            text = optimized_texts[0] if optimized_texts else text
+
+        request: Dict[str, Any] = {
+            "model": model_name,
+            "content": {"parts": [{"text": text}]},
+        }
+        if gemini_task_type:
+            request["task_type"] = gemini_task_type
+        return request
 
     def _get_default_model(self) -> str:
         """Get the default model name."""

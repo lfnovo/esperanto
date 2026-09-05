@@ -6,6 +6,8 @@ Covers the resolver (`resolve_structured_output`), the content parser
 (`is_json_schema_unsupported_error`) in isolation from any provider.
 """
 
+import copy
+
 import pytest
 from pydantic import BaseModel
 
@@ -265,3 +267,102 @@ def test_is_json_schema_unsupported_error(msg, expected):
 def test_resolved_is_schema_mode_property():
     assert ResolvedStructuredOutput("json_schema", {}).is_schema_mode is True
     assert ResolvedStructuredOutput("json_object", {}).is_schema_mode is False
+
+
+# ---------------------------------------------------------------------------
+# OpenAI strict-mode schema normalization
+# ---------------------------------------------------------------------------
+
+
+class Address(BaseModel):
+    street: str
+    city: str
+
+
+class Person(BaseModel):
+    name: str
+    address: Address
+    tags: list[str]
+
+
+class Loose(BaseModel):
+    city: str
+    nickname: str = "none"
+
+
+def test_strict_schema_gets_additional_properties_false():
+    """OpenAI rejects strict json_schema without additionalProperties: false."""
+    resolved = resolve_structured_output({"type": "json_schema", "schema": Capital})
+
+    schema = resolved.response_format["json_schema"]["schema"]
+    assert schema["additionalProperties"] is False
+    assert resolved.response_format["json_schema"]["strict"] is True
+
+
+def test_strict_schema_normalizes_nested_defs():
+    """Nested models live in $defs and each needs the flag too."""
+    resolved = resolve_structured_output({"type": "json_schema", "schema": Person})
+
+    schema = resolved.response_format["json_schema"]["schema"]
+    assert schema["additionalProperties"] is False
+    assert schema["$defs"]["Address"]["additionalProperties"] is False
+    assert resolved.response_format["json_schema"]["strict"] is True
+
+
+def test_optional_properties_downgrade_strict():
+    """Strict also demands every property be required — we don't fabricate that.
+
+    Promoting an optional field to required would change the caller's schema,
+    so the request drops to strict=false instead. Local validation is unchanged.
+    """
+    resolved = resolve_structured_output({"type": "json_schema", "schema": Loose})
+
+    js = resolved.response_format["json_schema"]
+    assert js["strict"] is False
+    # The flag is still added — it is semantically free and harmless.
+    assert js["schema"]["additionalProperties"] is False
+
+
+def test_explicit_strict_false_is_preserved():
+    resolved = resolve_structured_output(
+        {"type": "json_schema", "schema": Capital, "strict": False}
+    )
+    assert resolved.response_format["json_schema"]["strict"] is False
+
+
+def test_caller_additional_properties_is_not_overwritten():
+    schema = {
+        "type": "object",
+        "properties": {"city": {"type": "string"}},
+        "required": ["city"],
+        "additionalProperties": True,
+    }
+    resolved = resolve_structured_output({"type": "json_schema", "schema": schema})
+
+    assert resolved.response_format["json_schema"]["schema"]["additionalProperties"] is True
+
+
+def test_caller_schema_dict_is_not_mutated():
+    """The caller may reuse their dict — normalization must not leak into it."""
+    schema = {
+        "type": "object",
+        "properties": {"city": {"type": "string"}},
+        "required": ["city"],
+    }
+    original = copy.deepcopy(schema)
+
+    resolve_structured_output({"type": "json_schema", "schema": schema})
+
+    assert schema == original
+
+
+def test_normalization_applies_to_every_provider_shape():
+    """One normalized schema serves every provider, not just the OpenAI family.
+
+    Anthropic's output_config rejects an object schema without
+    additionalProperties: false exactly like OpenAI's strict mode does, and the
+    other native-schema providers accept it, so there is no per-provider split.
+    """
+    resolved = resolve_structured_output({"type": "json_schema", "schema": Capital})
+
+    assert resolved.response_format["json_schema"]["schema"]["additionalProperties"] is False

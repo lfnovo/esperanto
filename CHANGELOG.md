@@ -15,6 +15,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   global endpoint (`api.siliconflow.com`); set `SILICONFLOW_BASE_URL` for a
   mainland China (`api.siliconflow.cn`) account.
 
+## [2.26.0] - 2026-07-29
+
+### Added
+
+- **Automatic embedding batching across all providers.** `embed()` / `aembed()`
+  now transparently split large inputs into requests that respect each provider's
+  per-request limit and concatenate the results in input order, so a list that
+  worked on one provider no longer breaks after a provider swap (applies the
+  Hot-Swap-First Defaults principle to embeddings). Ceilings: OpenAI / Azure /
+  OpenAI-compatible / Jina 2048, Voyage 1000, Cohere / OpenRouter 96, Mistral 64,
+  Google 250, Vertex 25 (conservative — `:predict` also caps at 20k tokens),
+  Ollama unbatched; `transformers` keeps its own internal
+  batching. Lower it per model with `config={"embed_batch_size": N}` (clamped to
+  the provider maximum; `N <= 0` raises `ValueError`); `embed([])` makes zero API
+  calls. Google and Vertex now use the native `:batchEmbedContents` /
+  multi-instance `:predict` endpoints instead of one HTTP call per text — a large
+  speedup for big inputs. (#108, #203)
+
+### Fixed
+
+- **Anthropic no longer defaults to a retired model.** Anthropic has withdrawn
+  the entire `claude-3` family, and every Anthropic model hardcoded in Esperanto
+  belonged to it — including the default, `claude-3-7-sonnet-20250219`, so
+  `create_language("anthropic")` without an explicit `model_name` failed
+  outright. The default is now `claude-sonnet-5`, and the provider's fallback
+  list plus `get_provider_models("anthropic")` now carry the current family
+  (`claude-opus-5`, `claude-sonnet-5`, `claude-opus-4-5-20251101`,
+  `claude-sonnet-4-5-20250929`, `claude-haiku-4-5-20251001`). Docs updated.
+
+  Note that `claude-sonnet-5` is an undated alias: it tracks Anthropic's current
+  Sonnet 5 release rather than staying fixed. Pass a dated id
+  (e.g. `claude-sonnet-4-5-20250929`) when you need the model pinned.
+- **Schema-driven structured output works again on OpenAI and Anthropic.**
+  `structured={"type": "json_schema", "schema": <PydanticModel>}` was rejected
+  before the request ever ran: OpenAI's strict mode requires
+  `additionalProperties: false` on every object, Anthropic's `output_config`
+  requires the same, and Pydantic's `model_json_schema()` emits neither. The
+  schema is now normalized — recursively, so nested models under `$defs` are
+  covered too — on a copy, leaving a caller's own dict untouched. Verified live
+  against OpenAI, Anthropic, Google, Groq, Mistral and Cohere.
+
+  OpenAI's strict mode additionally requires *every* property to be listed in
+  `required`, which a schema with optional fields cannot satisfy. Rather than
+  fail the call or silently promote optional fields to required (which would
+  change your schema's meaning), such a request is sent with `strict: false` and
+  a debug log. The response is still validated against the schema locally, so
+  nothing is weakened beyond the provider-side guarantee.
+
+- **Google and Vertex no longer default to a retired model.** Google has
+  withdrawn `gemini-2.0-flash` — it still appears in the models listing but any
+  `generateContent` call returns "This model is no longer available", so
+  `create_language("google")` without an explicit `model_name` failed outright.
+  Both providers now default to `gemini-2.5-flash`, and the hardcoded fallback
+  model lists drop the withdrawn `gemini-2.0-flash`, `gemini-1.5-pro`,
+  `gemini-1.5-flash` and `gemini-pro` in favor of `gemini-2.5-flash` /
+  `gemini-2.5-pro`. Docs updated to stop recommending the retired model.
+
+  Note when upgrading: `gemini-2.5-flash` is a *thinking* model, and its
+  reasoning tokens are drawn from the same budget as the answer. If you pass a
+  tight `max_tokens` (roughly under a few hundred) you may now see truncated
+  output where `gemini-2.0-flash` fit comfortably — raise the budget or pass an
+  explicit `model_name`.
+
+- **`to_langchain()` now forwards a custom base URL for Google.** Converting a
+  Google (Gemini) model configured with a custom endpoint (`GEMINI_API_BASE_URL`)
+  to LangChain previously reconnected to the official
+  `generativelanguage.googleapis.com`. `ChatGoogleGenerativeAI` accepts a plain
+  `base_url`, so the custom host is now forwarded (with the `/v1beta` suffix
+  stripped). The default endpoint is still omitted so LangChain uses its own
+  default. Completes the `to_langchain()` base URL audit started in #229. (#248)
+
+- **Every non-Whisper OpenAI and Azure transcription model now works.** Both
+  providers requested `response_format=verbose_json` for any model that didn't
+  match a narrow `gpt-4o-*-transcribe` name shape (Azure hardcoded it outright),
+  so `gpt-transcribe`, `gpt-4o-transcribe-diarize`, `gpt-live-transcribe` and
+  every Azure `gpt-4o-*-transcribe` deployment failed before transcription
+  started with `response_format 'verbose_json' is not compatible with model ...`.
+  `verbose_json` is a Whisper-only capability, so the check is now an allowlist:
+  Whisper models get `verbose_json`, anything unrecognized degrades to `json`
+  (`segments` and `duration` stay `None`) instead of hard-failing — a new model
+  no longer breaks on arrival. `config={"response_format": ...}` overrides the
+  detection, which matters on Azure where the deployment name is user-chosen and
+  may not reveal the underlying model. (#269, #263)
+
 ## [2.25.1] - 2026-07-19
 
 ### Fixed

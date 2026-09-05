@@ -22,6 +22,11 @@ For non-trivial changes (new features, new providers, architectural changes), **
 
 ## How to Contribute
 
+### Reporting Security Vulnerabilities
+
+**Do not report security issues through public issues or PRs.** Please follow our
+[Security Policy](SECURITY.md) to report them privately.
+
 ### Reporting Bugs
 
 Before creating bug reports, check the issue list. When creating a bug report, include:
@@ -66,7 +71,18 @@ git clone https://github.com/lfnovo/esperanto.git
 cd esperanto
 ```
 
-2. Create a virtual environment and install dependencies:
+2. Bootstrap the environment in one step:
+```bash
+make setup
+```
+This creates the virtual environment and installs all dependencies (`uv venv && uv sync --all-extras`). Then activate it:
+```bash
+source .venv/bin/activate
+```
+
+<details>
+<summary>Or set it up manually</summary>
+
 ```bash
 uv venv
 source .venv/bin/activate
@@ -77,6 +93,7 @@ If you need the `transformers` extra (for local model support):
 ```bash
 uv sync --group dev --extra transformers
 ```
+</details>
 
 3. Activate the pre-commit hooks:
 ```bash

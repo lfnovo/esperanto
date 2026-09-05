@@ -1,4 +1,8 @@
-.PHONY: ruff lint test
+.PHONY: setup ruff lint test
+
+setup:
+	uv venv
+	uv sync --all-extras
 
 lint:
 	uv run python -m mypy .

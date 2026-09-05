@@ -106,9 +106,8 @@ class GoogleLanguageModel(LanguageModel):
         except Exception:
             # Fallback to known models if API call fails
             return [
-                Model(id="gemini-2.0-flash", owned_by="Google", context_window=1000000),
-                Model(id="gemini-1.5-pro", owned_by="Google", context_window=2000000),
-                Model(id="gemini-1.5-flash", owned_by="Google", context_window=1000000),
+                Model(id="gemini-2.5-flash", owned_by="Google", context_window=1000000),
+                Model(id="gemini-2.5-pro", owned_by="Google", context_window=1000000),
             ]
 
     @property
@@ -122,7 +121,7 @@ class GoogleLanguageModel(LanguageModel):
         Returns:
             str: The default model name.
         """
-        return "gemini-2.0-flash"
+        return "gemini-2.5-flash"
 
     def to_langchain(self):
         """Convert to a LangChain chat model.
@@ -171,6 +170,11 @@ class GoogleLanguageModel(LanguageModel):
                     )
                     if isinstance(schema_payload, dict):
                         kwargs["response_schema"] = schema_payload
+
+            _DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+            if self.base_url != _DEFAULT_BASE_URL:
+                custom_host = self.base_url[:-len("/v1beta")] if self.base_url.endswith("/v1beta") else self.base_url
+                kwargs["base_url"] = custom_host
 
             self._langchain_model = ChatGoogleGenerativeAI(**kwargs)
         return self._langchain_model

@@ -162,7 +162,7 @@ reranked = reranker.rerank(query, candidates, top_k=5)
 top_docs = [r.document for r in reranked.results]
 context = "\n\n".join(top_docs)
 
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 messages = [{
     "role": "user",
     "content": f"Context:\n{context}\n\nQuestion: {query}"

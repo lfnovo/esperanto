@@ -37,6 +37,29 @@ _WHISPER_SEGMENT_METADATA_KEYS = (
 )
 
 
+def _resolve_transcription_response_format(
+    model_name: str,
+    override: Optional[str] = None,
+) -> str:
+    """Pick the ``response_format`` to request for a transcription model.
+
+    ``verbose_json`` (segments + duration) is a Whisper-family capability. Every
+    other transcription model served by the OpenAI-compatible
+    ``/audio/transcriptions`` endpoint — ``gpt-4o-transcribe``,
+    ``gpt-transcribe``, ``gpt-4o-transcribe-diarize``, and whatever ships next —
+    rejects it with a 400 before transcription starts.
+
+    So the check is an allowlist, not a denylist: an unrecognized model degrades
+    to ``json`` (segments and duration stay ``None``) instead of failing
+    outright. ``override`` — ``config["response_format"]`` — wins over both, and
+    is the escape hatch for Azure deployments whose user-chosen name doesn't
+    reveal the underlying model.
+    """
+    if override:
+        return override
+    return "verbose_json" if "whisper" in model_name.lower() else "json"
+
+
 def _guess_audio_content_type(filename: Optional[str]) -> str:
     """Guess audio MIME type from filename, falling back to audio/mpeg.
 

@@ -70,7 +70,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ```python
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022", config={
+model = AIFactory.create_language("anthropic", "claude-sonnet-5", config={
     "api_key": "sk-ant-...",  # Or from env var
     "temperature": 0.7,
     "max_tokens": 1000,
@@ -570,7 +570,7 @@ embedder = AIFactory.create_embedding(
     config={
         # Performance
         "timeout": 60.0,
-        "batch_size": 32,       # Texts per request
+        "embed_batch_size": 32, # Texts per request (clamped to the provider max)
 
         # Advanced (provider-specific)
         "task_type": EmbeddingTaskType.RETRIEVAL_QUERY,  # Jina, Google
@@ -697,7 +697,7 @@ JINA_API_KEY=...
 ELEVENLABS_API_KEY=...
 
 # Use best provider for each task
-llm = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+llm = AIFactory.create_language("anthropic", "claude-sonnet-5")
 embedder = AIFactory.create_embedding("jina", "jina-embeddings-v3")
 speaker = AIFactory.create_text_to_speech("elevenlabs", "eleven_multilingual_v2")
 ```
