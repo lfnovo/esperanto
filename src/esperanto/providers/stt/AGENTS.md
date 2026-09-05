@@ -1,0 +1,330 @@
+# Speech-to-Text Providers
+
+Speech-to-text (STT) provider implementations for audio transcription.
+
+## Files
+
+- **`base.py`**: Abstract base class `SpeechToTextModel` defining the interface
+- **`openai.py`**: OpenAI Whisper API
+- **`groq.py`**: Groq Whisper inference
+- **`google.py`**: Google Cloud Speech-to-Text
+- **`azure.py`**: Azure Speech Service
+- **`elevenlabs.py`**: ElevenLabs speech recognition
+- **`openai_compatible.py`**: Generic OpenAI-compatible STT API
+
+## Patterns
+
+### Base Class Contract
+
+All providers inherit from `SpeechToTextModel` (base.py:14) and must:
+
+1. **Implement abstract methods**:
+   - `transcribe()`: Synchronous transcription
+   - `atranscribe()`: Async transcription
+   - `_get_models()`: Return list of available models
+   - `_get_default_model()`: Return default model name
+   - `provider` property: Return provider name string
+
+2. **Override `__post_init__()`**:
+   - Call `super().__post_init__()` first
+   - Set `api_key` from parameter or environment variable
+   - Set `base_url` (if applicable)
+   - Call `self._create_http_clients()` last
+
+3. **Return standardized response**:
+   - Use `TranscriptionResponse` from `esperanto.common_types`
+   - Contains `text`, optional `language`, `duration`, and provider-specific metadata
+
+### Audio File Handling
+
+`transcribe()` accepts two input types (base.py:53):
+
+1. **File path** (str): Read file from disk
+2. **File-like object** (BinaryIO): Read from memory/stream
+
+Handle both cases:
+
+```python
+def transcribe(self, audio_file: Union[str, BinaryIO], ...):
+    if isinstance(audio_file, str):
+        with open(audio_file, "rb") as f:
+            audio_data = f.read()
+    else:
+        audio_data = audio_file.read()
+    # Process audio_data...
+```
+
+For APIs that expect files, create multipart form data using `_guess_audio_content_type` (from `base.py`) to derive the MIME type from the filename rather than hardcoding it:
+
+```python
+from esperanto.providers.stt.base import _guess_audio_content_type
+
+files = {
+    "file": (filename, audio_data, _guess_audio_content_type(filename))
+}
+```
+
+### Language Support
+
+Language parameter is optional (base.py:56):
+
+- If provided: Use it to help model (improves accuracy)
+- If None: Model auto-detects language
+- Format: ISO 639-1 codes (e.g., "en", "es", "fr")
+
+Some providers (Google) use different language codes - map them:
+
+```python
+# Google uses BCP-47 (e.g., "en-US")
+if language:
+    language_code = f"{language}-US"  # or appropriate mapping
+```
+
+### Prompt/Context
+
+Optional `prompt` parameter (base.py:57) provides context:
+
+- Helps model understand domain-specific terms
+- Improves accuracy for technical/specialized content
+- Not all providers support this (check before using)
+
+### HTTP Client Pattern
+
+Same as other providers:
+
+```python
+def __post_init__(self):
+    super().__post_init__()
+    self.api_key = self.api_key or os.getenv("PROVIDER_API_KEY")
+    self.base_url = self.base_url or "https://api.provider.com/v1"
+    self._create_http_clients()
+```
+
+### Response Construction
+
+Build `TranscriptionResponse` from API results:
+
+```python
+from esperanto.common_types import (
+    TranscriptionResponse,
+    TranscriptionSegment,
+    TranscriptionUsage,
+)
+
+# Map provider-specific segments (if any) into TranscriptionSegment.
+# Per-item escape hatch: provider-specific extras go in `metadata`, not as
+# first-class fields. Use defensive key access — providers vary in which
+# per-segment fields they return (e.g. Mistral has no `avg_logprob`).
+_METADATA_KEYS = ("avg_logprob", "compression_ratio", "no_speech_prob")
+segments = [
+    TranscriptionSegment(
+        text=raw.get("text", ""),
+        start=float(raw.get("start", 0.0)),
+        end=float(raw.get("end", 0.0)),
+        metadata={k: raw[k] for k in _METADATA_KEYS if k in raw} or None,
+    )
+    for raw in api_response.get("segments") or []
+] or None
+
+# Many providers omit `usage` entirely — guard before indexing.
+usage_data = api_response.get("usage")
+usage = (
+    TranscriptionUsage(
+        input_seconds=usage_data.get("prompt_audio_seconds"),
+        input_tokens=usage_data.get("prompt_tokens"),
+        output_tokens=usage_data.get("completion_tokens"),
+        total_tokens=usage_data.get("total_tokens"),
+    )
+    if usage_data
+    else None
+)
+
+return TranscriptionResponse(
+    text=api_response["text"],
+    language=api_response.get("language"),  # if available
+    duration=api_response.get("duration"),  # if available
+    segments=segments,                       # None when provider has no segments
+    usage=usage,                             # None when provider has no usage block
+    model=self.get_model_name(),
+    provider=self.provider,
+)
+```
+
+#### Hot-Swap-First Defaults
+
+For Whisper-family providers (OpenAI, Groq, Azure), Esperanto requests
+`response_format="verbose_json"` in `_get_api_kwargs()` so callers get segments
+and duration without any opt-in. Mistral and other providers that natively
+return segments must NOT set `response_format`.
+
+`verbose_json` is a **Whisper-only** capability — every other model on the
+OpenAI-compatible `/audio/transcriptions` endpoint (`gpt-4o-transcribe`,
+`gpt-transcribe`, `gpt-4o-transcribe-diarize`, …) rejects it with a 400 before
+transcription starts. So `_resolve_transcription_response_format()` in `base.py`
+is an **allowlist**: Whisper gets `verbose_json`, everything unrecognized
+degrades to `json` (segments/duration stay `None`). Never invert this — a
+denylist keyed on today's model names hard-fails on tomorrow's. Callers can
+force a format with `config={"response_format": ...}`.
+
+#### Unsupported Response Fields Stay None
+
+Providers that don't return segments (ElevenLabs, Google) leave `segments=None`.
+Do NOT synthesize segments from `text` alone — that would lie to callers about
+the provider's real capabilities.
+
+## Integration
+
+- Imported by `factory.py` via `AIFactory._provider_modules["speech_to_text"]`
+- Uses `TranscriptionResponse` from `esperanto.common_types.stt`
+- Inherits mixins from `esperanto.utils.timeout` and `esperanto.utils.ssl`
+
+## Gotchas
+
+- **File format support**: Check provider docs for supported audio formats (WAV, MP3, FLAC, etc.)
+- **File size limits**: APIs have max file size (often 25MB) - check and chunk if needed
+- **Audio duration limits**: Some providers limit duration (e.g., 30 minutes)
+- **Multipart encoding**: When uploading files, use correct MIME type
+- **File pointer position**: If using BinaryIO, reset pointer with `seek(0)` if needed
+- **Language code formats**: Different providers use different formats (ISO 639-1 vs BCP-47)
+- **Model availability**: Not all models support all languages
+- **Timeout configuration**: Transcription can be slow - use longer timeouts via mixin
+- **Prompt ignored**: Some providers don't support prompt parameter - handle gracefully
+- **Deprecation warnings**: Use `_get_models()` internally (not `.models` property)
+- **Response formats**: Some APIs support SRT, VTT, JSON with timestamps - handle appropriately
+
+## When Adding a New Provider
+
+1. Create new file `provider_name.py`
+2. Import `SpeechToTextModel` from `esperanto.providers.stt.base`
+3. Import `TranscriptionResponse` from `esperanto.common_types`
+4. Define class inheriting from `SpeechToTextModel`
+5. Implement all abstract methods
+6. Add `__post_init__()` following the pattern
+7. Handle both file path and BinaryIO inputs
+8. Map language codes if provider uses different format
+9. Add provider to `factory.py` in `_provider_modules["speech_to_text"]` dict
+10. Write tests in `tests/providers/stt/test_provider_name.py`
+11. Add documentation in `docs/providers/provider_name.md`
+
+## Special Cases
+
+### OpenAI Whisper
+
+- Supports multiple formats: MP3, MP4, MPEG, MPGA, M4A, WAV, WEBM
+- Max file size: 25MB
+- Returns language, duration, and segments with timestamps
+- Supports prompt for context and spelling hints
+- Esperanto sends `response_format="verbose_json"` for Whisper models so
+  segments/duration come back without callers having to opt in. Non-Whisper
+  models (`gpt-4o-transcribe`, `gpt-transcribe`, …) get `json` and return no
+  segments or duration.
+
+### Google Speech-to-Text
+
+- Requires Google Cloud credentials (JSON key file or ADC)
+- Uses `google-cloud-speech` library (not just HTTP)
+- Different language code format (BCP-47: "en-US" not "en")
+- Supports long-running transcription for files >1 minute
+- Supports speaker diarization, word-level timestamps
+
+### Groq
+
+- Uses Whisper models but with fast inference
+- OpenAI-compatible API format
+- Same file size/format limits as OpenAI
+- Much faster than standard Whisper
+- Inherits segment + duration mapping from `OpenAISpeechToTextModel` — no
+  Groq-specific overrides needed
+
+### Azure OpenAI Whisper
+
+- Uses Azure-hosted OpenAI Whisper deployments via the REST `/audio/transcriptions`
+  endpoint (NOT the native Azure Speech Service, which is a separate product
+  with its own SDK, `Ocp-Apim-Subscription-Key` auth, and streaming protocol).
+- Authentication: `api-key` header (Azure OpenAI flavor), resolved from
+  `AZURE_OPENAI_API_KEY_STT` / `AZURE_OPENAI_API_KEY` env vars or
+  `config["api_key"]`.
+- URL is built from `{azure_endpoint}/openai/deployments/{deployment_name}/audio/transcriptions?api-version={api_version}`,
+  so `model_name` is the *deployment name*, not the underlying model.
+- Same OpenAI Whisper response shape, including `verbose_json` (segments,
+  duration, language). Esperanto sends `response_format="verbose_json"` for
+  Whisper deployments so callers get the segments + duration for free.
+- Azure serves the `gpt-4o-*-transcribe` family through the same deployment API
+  and those models reject `verbose_json`, so unrecognized deployment names get
+  `json`. **Gotcha**: the deployment name is user-chosen, so a Whisper
+  deployment named e.g. `prod-stt` falls through to `json` and loses its
+  segments — set `config={"response_format": "verbose_json"}` to force it.
+- Same file size/format limits as OpenAI (25 MB, MP3/MP4/MPEG/MPGA/M4A/WAV/WEBM).
+
+### Mistral Voxtral
+
+- Natively returns segments and a `usage` block with `prompt_audio_seconds`
+- Do NOT set `response_format` — Mistral rejects unknown fields and already
+  returns the verbose shape
+- Per-segment metadata: `confidence`, `speaker`, `language` (all mapped into
+  `segment.metadata`)
+
+## Common Implementation Patterns
+
+### Handling File Uploads
+
+```python
+def transcribe(self, audio_file: Union[str, BinaryIO], language: Optional[str] = None, prompt: Optional[str] = None):
+    # Read file
+    if isinstance(audio_file, str):
+        with open(audio_file, "rb") as f:
+            file_content = f.read()
+        filename = Path(audio_file).name
+    else:
+        file_content = audio_file.read()
+        filename = "audio.mp3"
+
+    # Create multipart request
+    files = {"file": (filename, file_content, _guess_audio_content_type(filename))}
+    data = {"model": self.get_model_name()}
+
+    if language:
+        data["language"] = language
+    if prompt:
+        data["prompt"] = prompt
+
+    # Make request
+    response = self.client.post(f"{self.base_url}/transcriptions", files=files, data=data)
+```
+
+### Error Handling
+
+```python
+try:
+    response = self.client.post(url, files=files, data=data)
+    response.raise_for_status()
+    result = response.json()
+except httpx.HTTPStatusError as e:
+    raise RuntimeError(f"Transcription failed: {e.response.text}")
+except Exception as e:
+    raise RuntimeError(f"Transcription error: {str(e)}")
+```
+
+### Async Implementation
+
+```python
+async def atranscribe(self, audio_file: Union[str, BinaryIO], language: Optional[str] = None, prompt: Optional[str] = None):
+    # Same file handling as sync version
+    if isinstance(audio_file, str):
+        with open(audio_file, "rb") as f:
+            file_content = f.read()
+        filename = Path(audio_file).name
+    else:
+        file_content = audio_file.read()
+        filename = "audio.mp3"
+
+    files = {"file": (filename, file_content, _guess_audio_content_type(filename))}
+    data = {"model": self.get_model_name()}
+
+    # Use async_client
+    response = await self.async_client.post(f"{self.base_url}/transcriptions", files=files, data=data)
+    response.raise_for_status()
+    result = response.json()
+
+    return TranscriptionResponse(text=result["text"], ...)
+```

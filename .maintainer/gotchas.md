@@ -2,20 +2,20 @@
 
 - Provider parity is a release concern. Changes to base classes, common types,
   factory registration or utilities require checks across affected providers.
-  Read ARCHITECTURE.md and module CLAUDE.md files before evaluating behavior.
+  Read ARCHITECTURE.md and module AGENTS.md files before evaluating behavior.
 - Base initialization must precede provider configuration; create HTTP clients
   after keys, URLs and inherited configuration have been resolved.
 - Bare installs must remain usable without the transformers or validation extras.
   Editable checkout imports do not prove that a built package works.
 - make test delegates to the default pytest suite. pyproject.toml excludes the
-  release marker, but new tests must still mock external calls. CLAUDE.md also
+  release marker, but new tests must still mock external calls. AGENTS.md also
   documents the narrower automated-agent validator; do not confuse its scope
   with all collected tests. Never run the release marker as ordinary validation.
 - CI test setup additionally installs mxbai-rerank; make setup does not. CI tests
   Python 3.10, 3.11 and 3.12, while the package permits 3.13 as well. Record which
   environments actually ran; do not claim the full supported range from one run.
 - make ruff uses --fix; the release check is the non-mutating command from
-  CLAUDE.md. make lint checks a broader scope than CI's mypy src/esperanto.
+  AGENTS.md. make lint checks a broader scope than CI's mypy src/esperanto.
 - make tag creates AND pushes a version tag. publish.yml publishes on v* tag
   pushes and manual dispatch. Neither path is a pre-publication validation step.
 - create-tag.yml is a separate tag-writing path. Its success message is not proof

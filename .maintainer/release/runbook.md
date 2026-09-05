@@ -1,7 +1,7 @@
 # Release runbook
 
 The human release-test playbook remains in CONTRIBUTING.md. Commands are defined
-in CLAUDE.md and Makefile and referenced through profile.toml. The oss-maintainer
+in AGENTS.md and Makefile and referenced through profile.toml. The oss-maintainer
 release skill supplies run records, gate evidence, notes and the GO decision.
 
 ## Preparation and bucket A
@@ -11,7 +11,7 @@ existing release-test playbook for a main-based release; never discard local wor
 Run commands.setup when dependencies need installation, then commands.validator,
 commands.ruff and commands.mypy. The validator references make test, whose pytest
 configuration excludes release tests. For an ordinary agent implementation task,
-use the narrower validator documented in CLAUDE.md.
+use the narrower validator documented in AGENTS.md.
 
 Record the candidate SHA, interpreter, command, exit status and evidence. CI's
 extra mxbai-rerank install and its Python matrix are documented in test.yml.

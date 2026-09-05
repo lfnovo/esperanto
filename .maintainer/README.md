@@ -15,9 +15,9 @@ repository policy and maintenance context; it is not a list of maintainers.
 | `profile.local.toml` | Ignored machine-specific preferences |
 | `state/` | Ignored run records and evidence |
 
-Commands remain canonical in `CLAUDE.md` and `Makefile`; contribution and
+Commands remain canonical in `AGENTS.md` and `Makefile`; contribution and
 architecture policy remain in `CONTRIBUTING.md` and `ARCHITECTURE.md`.
-Read the relevant module-level `CLAUDE.md` when reviewing its implementation.
+Read the relevant module-level `AGENTS.md` when reviewing its implementation.
 
 Review, triage and Discussions are configured. The owner confirmed `make tag`
 as the release trigger. The package-install gate is deferred to
@@ -33,9 +33,9 @@ someone will implement them, with verified bugs and explicit maintainer requests
 as exceptions. Close answered threads and threads whose graduated work has landed.
 Public responses use English and the sources listed in discussions.public_anchors.
 
-`AGENTS.md` points to the existing `CLAUDE.md`; the latter does not import
-`@AGENTS.md`. Claude-based sessions should explicitly read `.maintainer/` when
-starting maintenance workflows. The project instructions are not duplicated.
+Agent instructions live in `AGENTS.md`, at the root and in each documented
+module. Each corresponding `CLAUDE.md` contains only `@AGENTS.md`, importing the
+same instructions without duplication. The root instructions point to this profile.
 
 The plugin's init validator requires Python 3.11+, independently of the library's
 Python >=3.10,<3.14 support. Run the installed plugin's

@@ -5,7 +5,7 @@ schema_version = 1
 name = "Esperanto"
 repo = "lfnovo/esperanto"
 artifact = "pypi-library"
-commands_doc = "CLAUDE.md"
+commands_doc = "AGENTS.md"
 
 # Canonical Makefile targets; setup is a prerequisite, not a release gate.
 [commands.setup]
@@ -18,7 +18,7 @@ run = "make test"
 cwd = "."
 timeout = "15m"
 
-# Canonical checks documented in CLAUDE.md and enforced in lint.yml.
+# Canonical checks documented in AGENTS.md and enforced in lint.yml.
 # make ruff mutates files; make lint checks a different scope.
 [commands.ruff]
 run = "uv run ruff check ."
@@ -80,7 +80,7 @@ rules = ".maintainer/triage.md"
 batch_approval = "one-at-a-time"
 
 [review]
-docs = ["AGENTS.md", "CLAUDE.md", "ARCHITECTURE.md", "CONTRIBUTING.md", "SECURITY.md"]
+docs = ["AGENTS.md", "ARCHITECTURE.md", "CONTRIBUTING.md", "SECURITY.md"]
 reviewers = []
 
 [discussions]

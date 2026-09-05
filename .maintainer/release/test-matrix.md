@@ -8,8 +8,8 @@ Record passed, failed, not-run and not-applicable checks with revision and evide
 | Check | Canonical reference | Coverage |
 |---|---|---|
 | Default mocked suite | commands.validator -> make test | pytest excludes release marker |
-| Lint | commands.ruff -> CLAUDE.md | Same check as lint.yml |
-| Types | commands.mypy -> CLAUDE.md | src/esperanto, as in lint.yml |
+| Lint | commands.ruff -> AGENTS.md | Same check as lint.yml |
+| Types | commands.mypy -> AGENTS.md | src/esperanto, as in lint.yml |
 | Packaging | artifacts.pypi.gate | Missing canonical clean-room gate; blocks release |
 
 The setup target installs all extras. CI additionally installs mxbai-rerank.
