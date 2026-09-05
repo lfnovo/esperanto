@@ -12,12 +12,16 @@ Text-to-speech (TTS) provider implementations for generating audio from text.
 - **`azure.py`**: Azure Speech Service TTS
 - **`openai_compatible.py`**: Generic OpenAI-compatible TTS API
 - **`minimax.py`**: MiniMax native T2A v2 API (`/v1/t2a_v2`, hex-encoded audio)
+- **`xai.py`**: xAI TTS API
+- **`mistral.py`**: Mistral TTS API
+- **`deepgram.py`**: Deepgram TTS API
+- **`openrouter.py`**: OpenRouter TTS API
 
 ## Patterns
 
 ### Base Class Contract
 
-All providers inherit from `TextToSpeechModel` (base.py:16) and must:
+All providers inherit from `TextToSpeechModel` (base.py) and must:
 
 1. **Implement abstract methods**:
    - `generate_speech()`: Synchronous speech generation
@@ -38,10 +42,10 @@ All providers inherit from `TextToSpeechModel` (base.py:16) and must:
 
 ### Voice Management
 
-Each provider must implement `available_voices` property (base.py:107):
+Each provider must implement `available_voices` property (base.py):
 
 - Returns `Dict[str, Voice]` mapping voice ID → Voice object
-- `Voice` contains: `id`, `name`, `language`, `gender`, optional `description`
+- `Voice` contains: `id`, `name`, `language_code`, `gender`, optional `description`
 - Used for voice discovery and validation
 
 Example:
@@ -50,15 +54,15 @@ Example:
 @property
 def available_voices(self) -> Dict[str, Voice]:
     return {
-        "alloy": Voice(id="alloy", name="Alloy", language="en", gender="neutral"),
-        "echo": Voice(id="echo", name="Echo", language="en", gender="male"),
+        "alloy": Voice(id="alloy", name="Alloy", language_code="en", gender="neutral"),
+        "echo": Voice(id="echo", name="Echo", language_code="en", gender="male"),
         # ...
     }
 ```
 
 ### SSML Support
 
-Base class defines `COMMON_SSML_TAGS` (base.py:35):
+Base class defines `COMMON_SSML_TAGS` (base.py):
 
 - Standard SSML tags: speak, break, emphasis, prosody, say-as, voice, audio, p, s, phoneme, sub
 - Providers can override `get_supported_tags()` to return their specific tags
@@ -72,7 +76,7 @@ Some providers support SSML natively, others need custom handling:
 
 ### Parameter Validation
 
-Base class provides `validate_parameters()` (base.py:176):
+Base class provides `validate_parameters()` (base.py):
 
 - Checks text is non-empty string
 - Checks voice is non-empty string
@@ -87,12 +91,13 @@ def generate_speech(self, text: str, voice: str, output_file: Optional[Union[str
 
 ### File Saving
 
-Base class provides `save_audio()` helper (base.py:198):
+Base class provides `save_audio()` helper (base.py):
 
 - Saves audio bytes to file
 - Creates parent directories if needed
 - Returns absolute path to saved file
-- Handles IOError gracefully
+- Raises IOError if saving fails
+- The saved path is returned by `save_audio()`, not stored in `AudioResponse`
 
 Use in implementations:
 
@@ -104,7 +109,7 @@ if output_file:
 else:
     file_path = None
 
-return AudioResponse(audio_data=audio_data, format="mp3", output_file=file_path, ...)
+return AudioResponse(audio_data=audio_data, content_type="audio/mp3")
 ```
 
 ### HTTP Client Pattern
@@ -128,10 +133,9 @@ from esperanto.common_types.tts import AudioResponse
 
 return AudioResponse(
     audio_data=audio_bytes,
-    format="mp3",  # or "wav", "ogg", etc.
-    voice_used=voice,
-    model_used=self.get_model_name(),
-    output_file=file_path if output_file else None,
+    content_type="audio/mp3",  # or "audio/wav", "audio/ogg", etc.
+    voice=voice,
+    model=self.get_model_name(),
     duration=duration,  # if available
 )
 ```
@@ -263,10 +267,9 @@ def generate_speech(
 
     return AudioResponse(
         audio_data=audio_data,
-        format="mp3",
-        voice_used=voice,
-        model_used=self.get_model_name(),
-        output_file=file_path
+        content_type="audio/mp3",
+        voice=voice,
+        model=self.get_model_name(),
     )
 ```
 
@@ -303,7 +306,7 @@ def available_voices(self) -> Dict[str, Voice]:
             v["voice_id"]: Voice(
                 id=v["voice_id"],
                 name=v["name"],
-                language=v.get("language", "en"),
+                language_code=v.get("language", "en"),
                 gender=v.get("gender", "neutral")
             )
             for v in voices_data
@@ -346,9 +349,8 @@ async def agenerate_speech(
 
     return AudioResponse(
         audio_data=audio_data,
-        format="mp3",
-        voice_used=voice,
-        model_used=self.get_model_name(),
-        output_file=file_path
+        content_type="audio/mp3",
+        voice=voice,
+        model=self.get_model_name(),
     )
 ```

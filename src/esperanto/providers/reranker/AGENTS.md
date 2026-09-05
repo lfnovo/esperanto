@@ -92,7 +92,7 @@ results = [
 return RerankResponse(
     model=self.get_model_name(),
     results=results,
-    usage={"tokens": tokens_used}  # if available
+    usage=None  # Or a Usage with prompt_tokens, completion_tokens and total_tokens
 )
 ```
 

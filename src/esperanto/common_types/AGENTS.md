@@ -4,7 +4,7 @@ Shared type definitions and response models used across all provider types.
 
 ## Files
 
-- **`model.py`**: `Model` dataclass representing AI model metadata (id, owner, context_window)
+- **`model.py`**: `Model` Pydantic model representing AI model metadata (id, owned_by, context_window, type)
 - **`response.py`**: Chat completion response types (`ChatCompletion`, `ChatCompletionChunk`, `Message`, `Choice`, `Usage`) and tool types (`Tool`, `ToolFunction`, `ToolCall`, `FunctionCall`)
 - **`task_type.py`**: `EmbeddingTaskType` enum for task-aware embeddings
 - **`stt.py`**: `TranscriptionResponse`, `TranscriptionSegment`, and `TranscriptionUsage` for speech-to-text results
@@ -139,10 +139,12 @@ model = AIFactory.create_embedding("jina", "jina-embeddings-v2-base-en", config=
 TTS providers return `AudioResponse` (tts.py):
 
 - `audio_data`: bytes (raw audio content)
-- `format`: str (e.g., "mp3", "wav")
-- `voice_used`: str (voice ID used)
-- `model_used`: str (model name used)
-- `output_file`: Optional[str] (path if saved)
+- `content_type`: str (MIME type, default "audio/mp3")
+- `voice`: Optional[str] (voice ID used)
+- `model`: Optional[str] (model name used)
+- `usage`: Optional[Usage] (generation usage statistics)
+- `provider`: Optional[str] (provider name)
+- `metadata`: Optional[Dict[str, Any]] (provider-specific metadata)
 - `duration`: Optional[float] (duration in seconds)
 
 STT providers return `TranscriptionResponse` (stt.py):
@@ -181,7 +183,7 @@ Reranker providers return `RerankResponse` (reranker.py):
 
 - `model`: str (model used)
 - `results`: List[RerankResult] (ranked results)
-- `usage`: Optional[Dict] (token usage if available)
+- `usage`: Optional[Usage] (prompt_tokens, completion_tokens, total_tokens when available)
 
 Each `RerankResult` contains:
 

@@ -32,11 +32,11 @@ See detailed documentation in subdirectory AGENTS.md files.
 ## Module Documentation
 
 - **[src/esperanto/providers/](src/esperanto/providers/AGENTS.md)**: All provider implementations
-  - **[llm/](src/esperanto/providers/llm/AGENTS.md)**: Language models (OpenAI, Anthropic, Google, etc.)
-  - **[embedding/](src/esperanto/providers/embedding/AGENTS.md)**: Embedding models (OpenAI, Jina, Voyage, etc.)
-  - **[reranker/](src/esperanto/providers/reranker/AGENTS.md)**: Reranking models (Jina, Voyage, Transformers)
-  - **[stt/](src/esperanto/providers/stt/AGENTS.md)**: Speech-to-text (OpenAI, Groq, Google, Azure)
-  - **[tts/](src/esperanto/providers/tts/AGENTS.md)**: Text-to-speech (OpenAI, ElevenLabs, Google, Azure)
+  - **[llm/](src/esperanto/providers/llm/AGENTS.md)**: Language models
+  - **[embedding/](src/esperanto/providers/embedding/AGENTS.md)**: Embedding models
+  - **[reranker/](src/esperanto/providers/reranker/AGENTS.md)**: Reranking models
+  - **[stt/](src/esperanto/providers/stt/AGENTS.md)**: Speech-to-text
+  - **[tts/](src/esperanto/providers/tts/AGENTS.md)**: Text-to-speech
 - **[src/esperanto/common_types/](src/esperanto/common_types/AGENTS.md)**: Response types and models
 - **[src/esperanto/utils/](src/esperanto/utils/AGENTS.md)**: Timeout, SSL, caching utilities
 
@@ -243,7 +243,7 @@ All providers use utility mixins:
 - **Run specific test**: `uv run pytest tests/providers/llm/test_openai.py -v`
 - **Run integration tests**: `uv run pytest tests/integration/ -v`
 - **Check types**: `uv run mypy src/esperanto`
-- **Format code**: `uv run black src/ tests/`
+- **Fix lint issues**: `uv run ruff check . --fix`
 
 ## For Automated Agents
 

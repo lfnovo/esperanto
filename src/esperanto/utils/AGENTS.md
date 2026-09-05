@@ -77,8 +77,8 @@ def _create_http_clients(self):
 
 - Must be numeric (int or float)
 - Must be positive (> 0)
-- Must be finite (not inf/nan)
-- Maximum: 600 seconds (10 minutes)
+- Infinite values fail the range checks; NaN is not explicitly rejected by the current implementation
+- Maximum: 3600 seconds (1 hour)
 
 ### SSLMixin
 
@@ -258,7 +258,7 @@ def discover_openai_models(api_key: str = None) -> List[Model]:
 
 - **Must implement `_get_provider_type()`**: Abstract method - raises error if not implemented
 - **Timeout applies to entire request**: Including connection + read time
-- **No infinite timeout**: Maximum 600 seconds enforced
+- **No infinite timeout**: Maximum 3600 seconds enforced
 - **Environment variable format**: Must be numeric string (e.g., "120" not "2m")
 - **Provider type mismatch**: Using wrong type returns wrong default timeout
 - **Validation errors**: Invalid timeouts raise ValueError with clear message

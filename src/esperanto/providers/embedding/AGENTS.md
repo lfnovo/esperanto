@@ -195,17 +195,19 @@ batch-relative one.
 - Useful for self-hosted models (vLLM, text-embeddings-inference, etc.)
 - Configure via environment variables with `OPENAI_COMPATIBLE_` prefix
 
-### Task Type Support Matrix
+### Advanced Feature Support
 
-| Provider | task_type | late_chunking | output_dimensions |
-|----------|-----------|---------------|-------------------|
-| Jina | ✓ | ✓ | ✗ |
-| Voyage | ✓ | ✗ | ✗ |
-| Google | ✓ | ✗ | ✗ |
-| Transformers | ✓ | ✓ | ✗ |
-| OpenAI | ✗ | ✗ | ✓ |
-| Azure | ✗ | ✗ | ✓ |
-| Mistral | ✗ | ✗ | ✗ |
-| Others | ✗ | ✗ | ✗ |
+Check each implementation's `SUPPORTED_FEATURES`, request builder and preprocessing
+methods before claiming support. The base `_filter_unsupported_params()` removes
+advanced parameters that the provider does not declare; hosted API capabilities
+alone do not prove that the Esperanto adapter forwards those parameters.
 
-Providers without native support use prefix-based task optimization from base class.
+- Jina and Transformers declare `task_type`, `late_chunking`, `output_dimensions`
+  and `truncate_at_max_length`.
+- Google declares `task_type`.
+- OpenAI and Azure do not declare `output_dimensions` support in their adapters;
+  do not infer support from the upstream API.
+
+For other providers, inspect their implementation directly rather than assuming
+native task support or prefix-based optimization. Providers can override the
+base preprocessing and parameter-handling behavior.

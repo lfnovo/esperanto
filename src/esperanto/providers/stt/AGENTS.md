@@ -8,15 +8,18 @@ Speech-to-text (STT) provider implementations for audio transcription.
 - **`openai.py`**: OpenAI Whisper API
 - **`groq.py`**: Groq Whisper inference
 - **`google.py`**: Google Cloud Speech-to-Text
-- **`azure.py`**: Azure Speech Service
+- **`azure.py`**: Azure OpenAI Whisper REST `/audio/transcriptions`
 - **`elevenlabs.py`**: ElevenLabs speech recognition
 - **`openai_compatible.py`**: Generic OpenAI-compatible STT API
+- **`mistral.py`**: Mistral transcription API
+- **`deepgram.py`**: Deepgram transcription API
+- **`openrouter.py`**: OpenRouter transcription API
 
 ## Patterns
 
 ### Base Class Contract
 
-All providers inherit from `SpeechToTextModel` (base.py:14) and must:
+All providers inherit from `SpeechToTextModel` (base.py) and must:
 
 1. **Implement abstract methods**:
    - `transcribe()`: Synchronous transcription
@@ -37,7 +40,7 @@ All providers inherit from `SpeechToTextModel` (base.py:14) and must:
 
 ### Audio File Handling
 
-`transcribe()` accepts two input types (base.py:53):
+`transcribe()` accepts two input types (base.py):
 
 1. **File path** (str): Read file from disk
 2. **File-like object** (BinaryIO): Read from memory/stream
@@ -66,7 +69,7 @@ files = {
 
 ### Language Support
 
-Language parameter is optional (base.py:56):
+Language parameter is optional (base.py):
 
 - If provided: Use it to help model (improves accuracy)
 - If None: Model auto-detects language
@@ -82,7 +85,7 @@ if language:
 
 ### Prompt/Context
 
-Optional `prompt` parameter (base.py:57) provides context:
+Optional `prompt` parameter (base.py) provides context:
 
 - Helps model understand domain-specific terms
 - Improves accuracy for technical/specialized content
