@@ -38,7 +38,8 @@ All providers inherit from `TextToSpeechModel` (base.py) and must:
 
 3. **Return standardized response**:
    - Use `AudioResponse` from `esperanto.common_types.tts`
-   - Contains `audio_data` (bytes), `format`, `duration`, `voice_used`
+   - Contains `audio_data` (bytes), `content_type` (MIME type), and optional
+     `duration`, `voice`, `model`, `usage`, `provider` and `metadata`
 
 ### Voice Management
 
