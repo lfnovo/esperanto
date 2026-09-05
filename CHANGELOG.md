@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MiniMax M3 and text-to-speech support.** MiniMax now defaults to
+  `MiniMax-M3` with its 1M-token context window and supports native TTS through
+  `/v1/t2a_v2`, including sync/async generation and account voice discovery.
+
 - **SiliconFlow provider.** New built-in OpenAI-compatible profile (`siliconflow`)
   for SiliconFlow's hosted DeepSeek / Qwen / GLM / Kimi models, with static model
   discovery via `AIFactory.get_provider_models("siliconflow")`. Defaults to the
@@ -24,10 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.26.0] - 2026-07-29
 
 ### Added
-
-- **MiniMax M3 and text-to-speech support.** MiniMax now defaults to
-  `MiniMax-M3` with its 1M-token context window and supports native TTS through
-  `/v1/t2a_v2`, including sync/async generation and account voice discovery.
 
 - **Automatic embedding batching across all providers.** `embed()` / `aembed()`
   now transparently split large inputs into requests that respect each provider's
