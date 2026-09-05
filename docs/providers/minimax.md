@@ -180,3 +180,33 @@ model = AIFactory.create_language(
     config={"api_key": "your-key"}
 )
 ```
+
+## Anthropic-compatible endpoint
+
+MiniMax also serves its models over an Anthropic-protocol API. Point Esperanto's
+native `anthropic` provider at it by overriding `base_url`:
+
+```python
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_language(
+    "anthropic",
+    "MiniMax-M3",
+    config={
+        "api_key": "your-minimax-key",
+        "base_url": "https://api.minimax.io/anthropic/v1",
+    },
+)
+```
+
+Note the trailing `/v1`: Esperanto's `anthropic` provider appends `/messages` to
+`base_url`, so the base URL must include the `/v1` segment (MiniMax's docs quote
+`.../anthropic` because the official Anthropic SDK adds `/v1` itself).
+
+Like the OpenAI-compatible endpoint, the Anthropic-compatible one is regional
+and keys only work against their own region:
+
+| Region | Anthropic-compatible base URL |
+|--------|-------------------------------|
+| International | `https://api.minimax.io/anthropic/v1` |
+| Mainland China | `https://api.minimax.cn/anthropic/v1` (the legacy `https://api.minimaxi.com/anthropic/v1` host also responds) |

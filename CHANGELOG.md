@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   global endpoint (`api.siliconflow.com`); set `SILICONFLOW_BASE_URL` for a
   mainland China (`api.siliconflow.cn`) account.
 
+### Documentation
+
+- **MiniMax Anthropic-compatible endpoint.** Documented how to route the native
+  `anthropic` provider at MiniMax's Anthropic-protocol API via `base_url`, with
+  the regional (international / mainland China) URLs.
+
 ## [2.26.0] - 2026-07-29
 
 ### Added
