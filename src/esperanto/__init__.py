@@ -144,6 +144,11 @@ except ImportError:
     OpenRouterSpeechToTextModel = None  # type: ignore[assignment,misc]
 
 try:
+    from esperanto.providers.tts.minimax import MiniMaxTextToSpeechModel
+except ImportError:
+    MiniMaxTextToSpeechModel = None  # type: ignore[assignment,misc]
+
+try:
     from esperanto.providers.llm.cohere import CohereLanguageModel
 except ImportError:
     CohereLanguageModel = None  # type: ignore[assignment,misc]
@@ -208,6 +213,7 @@ __all__ = [
     "DeepgramSpeechToTextModel",
     "OpenRouterTextToSpeechModel",
     "OpenRouterSpeechToTextModel",
+    "MiniMaxTextToSpeechModel",
     "CohereLanguageModel",
     "CohereEmbeddingModel",
     "CohereRerankerModel",

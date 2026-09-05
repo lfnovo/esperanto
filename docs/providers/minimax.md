@@ -7,9 +7,10 @@ OpenAI-compatible API, plus a native Text-to-Speech API.
 
 > [!IMPORTANT]
 > MiniMax API keys are region-specific. Mainland China keys must use
-> `https://api.minimaxi.com/v1`; international keys use
-> `https://api.minimax.io/v1`. Using the wrong endpoint returns an
-> `invalid api key` error even when the key is valid.
+> `https://api.minimax.cn/v1` (the legacy `https://api.minimaxi.com/v1` host
+> also responds); international keys use `https://api.minimax.io/v1`. Using
+> the wrong endpoint returns an `invalid api key` error even when the key is
+> valid.
 
 **Supported Capabilities:**
 
@@ -42,8 +43,8 @@ MINIMAX_API_KEY="your-api-key"
 # International endpoint (default)
 MINIMAX_BASE_URL="https://api.minimax.io/v1"
 
-# Mainland China endpoint
-MINIMAX_BASE_URL="https://api.minimaxi.com/v1"
+# Mainland China endpoint (legacy api.minimaxi.com also works)
+MINIMAX_BASE_URL="https://api.minimax.cn/v1"
 ```
 
 `MINIMAX_BASE_URL` is used for both LLM and TTS requests. The TTS provider

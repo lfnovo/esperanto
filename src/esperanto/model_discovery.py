@@ -980,7 +980,7 @@ def get_minimax_models(
         models.extend(
             Model(
                 id=model.id,
-                owned_by=model.owned_by or "MiniMax",
+                owned_by="MiniMax",
                 context_window=_MINIMAX_CONTEXT_WINDOWS.get(
                     model.id, model.context_window
                 ),

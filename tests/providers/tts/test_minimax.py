@@ -96,9 +96,9 @@ def test_init_from_environment(monkeypatch):
 def test_mainland_china_base_url_is_normalized():
     model = MiniMaxTextToSpeechModel(
         api_key="test-key",
-        base_url="https://api.minimaxi.com/v1",
+        base_url="https://api.minimax.cn/v1",
     )
-    assert model._build_url("t2a_v2") == "https://api.minimaxi.com/v1/t2a_v2"
+    assert model._build_url("t2a_v2") == "https://api.minimax.cn/v1/t2a_v2"
 
 
 def test_missing_api_key(monkeypatch):
@@ -183,6 +183,7 @@ def test_generate_speech_maps_common_and_native_parameters(tts_model):
         "channel": 2,
     }
     assert payload["language_boost"] == "English"
+    assert payload["pronunciation_dict"] == {"tone": ["API/A P I"]}
 
     assert response.audio_data == RAW_AUDIO
     assert response.duration == 1.25
