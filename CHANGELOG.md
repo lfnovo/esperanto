@@ -12,18 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MiniMax M3 and text-to-speech support.** MiniMax now defaults to
   `MiniMax-M3` with its 1M-token context window and supports native TTS through
   `/v1/t2a_v2`, including sync/async generation and account voice discovery.
+  (#265)
 
 - **SiliconFlow provider.** New built-in OpenAI-compatible profile (`siliconflow`)
   for SiliconFlow's hosted DeepSeek / Qwen / GLM / Kimi models, with static model
   discovery via `AIFactory.get_provider_models("siliconflow")`. Defaults to the
   global endpoint (`api.siliconflow.com`); set `SILICONFLOW_BASE_URL` for a
-  mainland China (`api.siliconflow.cn`) account.
+  mainland China (`api.siliconflow.cn`) account. (#235)
 
 ### Documentation
 
 - **MiniMax Anthropic-compatible endpoint.** Documented how to route the native
   `anthropic` provider at MiniMax's Anthropic-protocol API via `base_url`, with
-  the regional (international / mainland China) URLs.
+  the regional (international / mainland China) URLs. (#278)
 
 ## [2.26.0] - 2026-07-29
 
