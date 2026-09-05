@@ -147,7 +147,7 @@ Profiles are defined in `src/esperanto/providers/llm/profiles.py` and resolved b
     name="minimax",
     base_url="https://api.minimax.io/v1",
     api_key_env="MINIMAX_API_KEY",
-    default_model="MiniMax-M2.5",
+    default_model="MiniMax-M3",
     owned_by="MiniMax",
     display_name="MiniMax",
 ),

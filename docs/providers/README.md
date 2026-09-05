@@ -20,7 +20,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Perplexity](./perplexity.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [oMLX](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
 | [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -54,7 +54,6 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[Groq](./groq.md)**: LLM + STT (fastest inference)
 - **[Vertex AI](./vertex.md)**: LLM + Embedding + TTS (Google Cloud)
 - **[ElevenLabs](./elevenlabs.md)**: STT + TTS (premium voice quality)
-
 #### Need Privacy/Local Deployment?
 
 **Fully Local:**
@@ -220,7 +219,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Perplexity](./perplexity.md) | ✅ | ✅ | ❌ | 32K |
 | [xAI](./xai.md) | ✅ | ❌ | ✅ | 128K |
 | [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
-| [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 204K |
+| [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 1M |
 | [Novita](./openai-compatible.md) | ✅ | ✅ | ✅ | Model-dependent |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ✅ | Varies |
 | [Ollama](./ollama.md) | ✅ | ❌ | ✅ | Model-dependent |

@@ -69,6 +69,7 @@ class AIFactory:
             "mistral": "esperanto.providers.tts.mistral:MistralTextToSpeechModel",
             "deepgram": "esperanto.providers.tts.deepgram:DeepgramTextToSpeechModel",
             "openrouter": "esperanto.providers.tts.openrouter:OpenRouterTextToSpeechModel",
+            "minimax": "esperanto.providers.tts.minimax:MiniMaxTextToSpeechModel",
         },
         "reranker": {
             "jina": "esperanto.providers.reranker.jina:JinaRerankerModel",
@@ -260,8 +261,8 @@ class AIFactory:
         # Get the discovery function for this provider
         discovery_func = PROVIDER_MODELS_REGISTRY[provider]
 
-        # For OpenAI, pass model_type as a parameter if provided
-        if provider == "openai" and model_type is not None:
+        # Providers with multi-modality discovery use model_type for filtering.
+        if provider in {"openai", "minimax"} and model_type is not None:
             config["model_type"] = model_type
 
         # Call the discovery function with config

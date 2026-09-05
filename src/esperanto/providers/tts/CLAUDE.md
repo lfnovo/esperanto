@@ -11,6 +11,7 @@ Text-to-speech (TTS) provider implementations for generating audio from text.
 - **`vertex.py`**: Google Vertex AI TTS
 - **`azure.py`**: Azure Speech Service TTS
 - **`openai_compatible.py`**: Generic OpenAI-compatible TTS API
+- **`minimax.py`**: MiniMax native T2A v2 API (`/v1/t2a_v2`, hex-encoded audio)
 
 ## Patterns
 
@@ -212,6 +213,16 @@ return AudioResponse(
 - Google's Vertex AI TTS (different from Cloud TTS)
 - Similar to Google TTS but integrated with Vertex platform
 - Requires Vertex AI setup and permissions
+
+### MiniMax
+
+- Native `/v1/t2a_v2` endpoint (not OpenAI-compatible); audio comes back as a hex string inside JSON
+- Shares `MINIMAX_API_KEY` / `MINIMAX_BASE_URL` with the language profile; a trailing `/v1` on the base URL is normalized away
+- Keys are region-specific: international `api.minimax.io`, mainland China `api.minimax.cn` (legacy `api.minimaxi.com` still responds)
+- API errors can arrive as HTTP 200 with a non-zero `base_resp.status_code`; `_response_json()` checks both
+- Voice discovery via `POST /v1/get_voice` (system, cloned, generated voices); gender is not exposed, so voices are `NEUTRAL`
+- Flat kwargs (`speed`, `volume`, `pitch`, `emotion`, `sample_rate`, `bitrate`, `channels`) map to MiniMax's nested `voice_setting` / `audio_setting`
+- Streaming and non-hex `output_format` raise `ValueError` (not exposed through `generate_speech()`)
 
 ## Common Implementation Patterns
 
