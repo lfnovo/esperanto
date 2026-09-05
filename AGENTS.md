@@ -242,6 +242,7 @@ All providers use utility mixins:
 - **Run all tests**: `uv run pytest -v`
 - **Run specific test**: `uv run pytest tests/providers/llm/test_openai.py -v`
 - **Run integration tests**: `uv run pytest tests/integration/ -v`
+- **Validate package artifacts**: `make package-check`
 - **Check types**: `uv run mypy src/esperanto`
 - **Fix lint issues**: `uv run ruff check . --fix`
 

@@ -16,20 +16,19 @@ use the narrower validator documented in AGENTS.md.
 Record the candidate SHA, interpreter, command, exit status and evidence. CI's
 extra mxbai-rerank install and its Python matrix are documented in test.yml.
 
-## Package gate — missing canonical command
+## Package gate
 
-TODO: define and validate a canonical build-and-clean-room-install command in
-AGENTS.md or Makefile, then replace artifacts.pypi.gate with its reference.
-The owner deferred implementation to [issue #279](https://github.com/lfnovo/esperanto/issues/279).
-The existing uv build step in publish.yml is build-only; it cannot satisfy this gate.
+Run `make package-check`. The command builds fresh wheel and sdist artifacts in
+a temporary directory, checks their metadata and packaged runtime files, and
+records SHA-256 identities. It installs the wheel outside the checkout with
+isolated Python, verifies a bare import and credential-free factory discovery,
+then builds a second wheel from the sdist and repeats the clean-room smoke. It
+also resolves the `transformers` and `validation` extras independently. The
+existing uv build step in publish.yml is build-only and cannot satisfy this gate.
 
-The gate must build wheel and sdist into a clean output location, check metadata
-against the candidate version, inspect packaged assets, install the wheel outside
-the checkout with isolated Python imports, import Esperanto and exercise a
-credential-free public API call. Confirm optional dependencies stay optional and
-that both transformers and validation extras resolve. Verify the sdist can build
-an installable wheel. Record SHA-256 identities and actual module origins.
-No package-gate pass or release GO is possible until this evidence exists.
+Capture the command output as release evidence. It includes the interpreter,
+artifact identities and actual module origins. A package-gate pass applies only
+to those exact locally built artifacts and candidate revision.
 
 ## Bucket C — maintainer-run integrations
 
@@ -68,8 +67,19 @@ Publish rebuilds the artifacts: distinguish tested local builds from index build
 If creating GitHub release notes, attach approved notes to the existing tag and
 verify the release page; publish.yml does not create a GitHub Release itself.
 
-TODO: document canonical index-install verification commands alongside the package
-gate. This verification completes publication; it cannot run before publication.
+Install the exact published version outside the checkout with:
+
+```bash
+check_dir="$(mktemp -d)"
+cd "$check_dir"
+uv run --isolated --no-project --with "esperanto==<version>" \
+  python -I -c 'import esperanto; print(esperanto.__file__)'
+```
+
+Repeat with `esperanto[transformers]==<version>` and
+`esperanto[validation]==<version>`, download the wheel and sdist from PyPI, and
+record their SHA-256 identities. This verification completes publication; it
+cannot run before publication.
 
 ## Cleanup
 

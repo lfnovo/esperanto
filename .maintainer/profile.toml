@@ -57,7 +57,7 @@ merge_own_prs = "ask-once-per-session"
 
 [artifacts.pypi]
 package = "esperanto"
-gate = "TODO implement canonical package-check gate in issue #279; see .maintainer/release/runbook.md"
+gate = "make package-check"
 surfaces = ["library"]
 extras = ["transformers", "validation"]
 identity = "sha256"
