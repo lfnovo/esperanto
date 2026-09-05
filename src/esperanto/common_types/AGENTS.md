@@ -1,0 +1,418 @@
+# Common Types
+
+Shared type definitions and response models used across all provider types.
+
+## Files
+
+- **`model.py`**: `Model` Pydantic model representing AI model metadata (id, owned_by, context_window, type)
+- **`response.py`**: Chat completion response types (`ChatCompletion`, `ChatCompletionChunk`, `Message`, `Choice`, `Usage`) and tool types (`Tool`, `ToolFunction`, `ToolCall`, `FunctionCall`)
+- **`task_type.py`**: `EmbeddingTaskType` enum for task-aware embeddings
+- **`stt.py`**: `TranscriptionResponse`, `TranscriptionSegment`, and `TranscriptionUsage` for speech-to-text results
+- **`tts.py`**: `AudioResponse` and `Voice` for text-to-speech
+- **`reranker.py`**: `RerankResponse` and `RerankResult` for document reranking
+- **`exceptions.py`**: `ToolCallValidationError` for tool call validation failures
+- **`validation.py`**: Tool call validation utilities (`validate_tool_call`, `validate_tool_calls`, `find_tool_by_name`)
+
+## Patterns
+
+### Pydantic Models
+
+All response types use Pydantic BaseModel for:
+
+- **Validation**: Automatic type checking and conversion
+- **Serialization**: `model_dump()` for dict conversion
+- **Immutability**: Most use `frozen=True` config
+- **Dict-like access**: Some implement `__getitem__` for backward compatibility
+
+Example:
+
+```python
+from pydantic import BaseModel, Field
+
+class Message(BaseModel):
+    content: Optional[str] = Field(default=None, description="The content of the message")
+    role: Optional[str] = Field(default=None, description="The role of the message sender")
+```
+
+### Response Standardization
+
+All providers convert their API responses to Esperanto's common types:
+
+- **LLM**: Returns `ChatCompletion` (non-streaming) or yields `ChatCompletionChunk` (streaming)
+- **Embedding**: Returns `List[List[float]]` (not a custom type)
+- **Reranker**: Returns `RerankResponse` with list of `RerankResult`
+- **STT**: Returns `TranscriptionResponse`
+- **TTS**: Returns `AudioResponse`
+
+### Message Structure
+
+Chat messages follow OpenAI-style format (response.py:34):
+
+```python
+Message(
+    content="Hello, world!",
+    role="user",  # or "assistant", "system"
+    function_call=None,  # Optional function call
+    tool_calls=None,     # Optional tool calls
+    structured=None,     # Optional parsed structured output (schema mode)
+)
+```
+
+`Message.structured` is the source of truth for schema-driven structured output
+(a validated Pydantic instance or parsed dict). `ChatCompletion.structured` is a
+read-only `@property` that mirrors `content` — it surfaces
+`choices[0].message.structured` — so multi-choice (`n>1`) responses each keep
+their own parsed value on the choice.
+
+### Message Thinking Properties
+
+The `Message` class provides properties for handling models that include reasoning traces (like Qwen3, DeepSeek R1):
+
+- **`thinking`**: Extracts content inside `<think>` tags (returns `None` if no tags)
+- **`cleaned_content`**: Returns content with `<think>` tags removed
+
+```python
+# Response from a model with reasoning traces
+msg = Message(
+    content="<think>Let me analyze this...</think>\n\n{\"answer\": 42}",
+    role="assistant"
+)
+
+msg.content          # "<think>Let me analyze this...</think>\n\n{\"answer\": 42}"
+msg.thinking         # "Let me analyze this..."
+msg.cleaned_content  # "{\"answer\": 42}"
+```
+
+Multiple `<think>` blocks are concatenated with `\n\n`. If content has no `<think>` tags, `thinking` returns `None` and `cleaned_content` returns the full content.
+
+### Usage Tracking
+
+Token usage is standardized in `Usage` class (response.py:19):
+
+```python
+Usage(
+    prompt_tokens=10,
+    completion_tokens=20,
+    total_tokens=30
+)
+```
+
+All counts must be >= 0 (enforced by Pydantic).
+
+### Streaming vs Non-Streaming
+
+- **Non-streaming**: `ChatCompletion` with `choices` list containing full `Message`
+- **Streaming**: `ChatCompletionChunk` with `choices` containing `DeltaMessage` (partial content)
+
+Providers yield chunks for streaming:
+
+```python
+def chat_complete(self, messages, stream=True):
+    if stream:
+        for chunk in api_stream:
+            yield ChatCompletionChunk(...)
+    else:
+        return ChatCompletion(...)
+```
+
+### Task Type Enum
+
+`EmbeddingTaskType` (task_type.py:7) defines universal task types:
+
+- **Retrieval**: `RETRIEVAL_QUERY`, `RETRIEVAL_DOCUMENT`
+- **Similarity**: `SIMILARITY`, `CLASSIFICATION`, `CLUSTERING`
+- **Code**: `CODE_RETRIEVAL`
+- **Q&A**: `QUESTION_ANSWERING`, `FACT_VERIFICATION`
+- **Default**: `DEFAULT` (no optimization)
+
+Use for task-aware embeddings:
+
+```python
+from esperanto.common_types import EmbeddingTaskType
+
+config = {"task_type": EmbeddingTaskType.RETRIEVAL_QUERY}
+model = AIFactory.create_embedding("jina", "jina-embeddings-v2-base-en", config=config)
+```
+
+### Audio Response
+
+TTS providers return `AudioResponse` (tts.py):
+
+- `audio_data`: bytes (raw audio content)
+- `content_type`: str (MIME type, default "audio/mp3")
+- `voice`: Optional[str] (voice ID used)
+- `model`: Optional[str] (model name used)
+- `usage`: Optional[Usage] (generation usage statistics)
+- `provider`: Optional[str] (provider name)
+- `metadata`: Optional[Dict[str, Any]] (provider-specific metadata)
+- `duration`: Optional[float] (duration in seconds)
+
+STT providers return `TranscriptionResponse` (stt.py):
+
+- `text`: str (transcribed text)
+- `language`: Optional[str] (detected/specified language)
+- `duration`: Optional[float] (audio duration in seconds)
+- `segments`: Optional[List[TranscriptionSegment]] (timestamped segments — `None`
+  when the provider doesn't return them; never synthesized from `text`)
+- `usage`: Optional[TranscriptionUsage] (STT-specific usage with
+  `input_seconds` + token counts; `None` when the provider doesn't return one)
+
+`TranscriptionSegment` (stt.py) carries one timestamped span:
+
+- `text`: str (segment text)
+- `start`: float (start time in seconds)
+- `end`: float (end time in seconds)
+- `metadata`: Optional[Dict[str, Any]] (provider-specific extras such as
+  `avg_logprob`, `compression_ratio`, `confidence`, `speaker` — per-item escape
+  hatch so provider-specific fields don't leak into the top-level interface)
+
+`TranscriptionUsage` (stt.py) is the STT-aware usage type:
+
+- `input_seconds`: Optional[float] (audio seconds billed — unique to STT)
+- `input_tokens`: Optional[int] (prompt tokens, when applicable)
+- `output_tokens`: Optional[int] (completion tokens, when applicable)
+- `total_tokens`: Optional[int] (total tokens, when applicable)
+
+Note: `TranscriptionResponse.usage` is `TranscriptionUsage`, not the LLM `Usage`
+type — STT providers historically left usage `None`, so this type tightening
+is safe in practice.
+
+### Reranker Response
+
+Reranker providers return `RerankResponse` (reranker.py):
+
+- `model`: str (model used)
+- `results`: List[RerankResult] (ranked results)
+- `usage`: Optional[Usage] (prompt_tokens, completion_tokens, total_tokens when available)
+
+Each `RerankResult` contains:
+
+- `index`: int (original index in input documents)
+- `document`: str (the document text)
+- `relevance_score`: float (relevance score, typically 0-1)
+
+## Integration
+
+- Imported by all provider implementations
+- Used for type hints in provider methods
+- Ensures consistency across different providers
+- Enables seamless provider switching
+
+## Gotchas
+
+- **Frozen models**: Most models use `frozen=True` - create new instances instead of modifying
+- **Optional fields**: Many fields are Optional - always check for None before use
+- **Dict conversion**: Use `model_dump()` not `dict()` for Pydantic v2
+- **Backward compatibility**: `Message` implements `__getitem__` for dict-like access - avoid in new code
+- **Enum string conversion**: `EmbeddingTaskType` has custom `__str__()` returning `.value` not `.name`
+- **Validation errors**: Pydantic raises ValidationError for invalid data - catch and handle
+- **Model validators**: `Message` and `Choice` have custom validators - be aware when constructing
+- **Choice vs StreamChoice**: Different types for non-streaming vs streaming (both in response.py)
+- **Content can be None**: Message.content is Optional - providers may return None for tool calls
+- **Function calls vs tool calls**: Both exist for backward compatibility - use tool_calls for new code
+
+## Tool Types
+
+Tool calling is supported across all major providers through unified types in `response.py`:
+
+### Tool Definition Types
+
+```python
+from esperanto.common_types import Tool, ToolFunction
+
+# ToolFunction defines the function signature
+function = ToolFunction(
+    name="get_weather",              # Function name (required)
+    description="Get weather",       # Description (required)
+    parameters={                     # JSON Schema (required)
+        "type": "object",
+        "properties": {"city": {"type": "string"}},
+        "required": ["city"]
+    },
+    strict=True                      # OpenAI-only: strict mode
+)
+
+# Tool wraps the function
+tool = Tool(
+    type="function",                 # Always "function"
+    function=function
+)
+```
+
+### Tool Call Response Types
+
+```python
+from esperanto.common_types import ToolCall, FunctionCall
+
+# FunctionCall contains the actual call data
+function_call = FunctionCall(
+    name="get_weather",
+    arguments='{"city": "Tokyo"}'    # Always a JSON string
+)
+
+# ToolCall wraps the function call
+tool_call = ToolCall(
+    id="call_abc123",                # Unique ID for this call
+    type="function",                 # Always "function"
+    function=function_call,
+    index=0                          # Optional: for streaming
+)
+```
+
+### Validation Utilities
+
+```python
+from esperanto.common_types import (
+    validate_tool_call,
+    validate_tool_calls,
+    find_tool_by_name,
+    ToolCallValidationError
+)
+
+# Validate a single tool call against its schema
+try:
+    validate_tool_call(tool_call, tool)
+except ToolCallValidationError as e:
+    print(f"Tool '{e.tool_name}' failed: {e.errors}")
+
+# Validate all tool calls in a response
+validate_tool_calls(message.tool_calls, tools)
+
+# Find a tool by function name
+tool = find_tool_by_name(tools, "get_weather")
+```
+
+### Tool Message Format
+
+When sending tool results back to the model:
+
+```python
+# Assistant message with tool calls
+{
+    "role": "assistant",
+    "tool_calls": [
+        {
+            "id": "call_abc123",
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "arguments": '{"city": "Tokyo"}'
+            }
+        }
+    ]
+}
+
+# Tool result message
+{
+    "role": "tool",
+    "tool_call_id": "call_abc123",
+    "content": '{"temperature": 22, "condition": "sunny"}'
+}
+```
+
+## When Adding New Response Types
+
+1. Create new file or add to existing file in this directory
+2. Use Pydantic BaseModel for validation
+3. Add clear Field descriptions
+4. Make fields Optional if they might not be present
+5. Add to `__init__.py` exports
+6. Consider frozen=True for immutability
+7. Add custom validators if needed
+8. Document in this AGENTS.md file
+
+## Common Type Usage Examples
+
+### Creating a ChatCompletion
+
+```python
+from esperanto.common_types import ChatCompletion, Choice, Message, Usage
+
+completion = ChatCompletion(
+    id="chatcmpl-123",
+    choices=[
+        Choice(
+            index=0,
+            message=Message(content="Hello!", role="assistant"),
+            finish_reason="stop"
+        )
+    ],
+    usage=Usage(prompt_tokens=10, completion_tokens=5, total_tokens=15),
+    model="gpt-4",
+    created=1234567890
+)
+```
+
+### Creating a StreamChunk
+
+```python
+from esperanto.common_types import ChatCompletionChunk, StreamChoice, DeltaMessage
+
+chunk = ChatCompletionChunk(
+    id="chatcmpl-123",
+    choices=[
+        StreamChoice(
+            index=0,
+            delta=DeltaMessage(content="Hello", role="assistant"),
+            finish_reason=None
+        )
+    ],
+    model="gpt-4",
+    created=1234567890
+)
+```
+
+### Using EmbeddingTaskType
+
+```python
+from esperanto.common_types import EmbeddingTaskType
+
+# String value
+task_type = EmbeddingTaskType.RETRIEVAL_QUERY
+print(task_type.value)  # "retrieval.query"
+print(str(task_type))   # "retrieval.query"
+
+# Enum name
+print(task_type.name)   # "RETRIEVAL_QUERY"
+```
+
+### Accessing Message Fields
+
+```python
+from esperanto.common_types import Message
+
+msg = Message(content="Hello", role="user")
+
+# Pydantic way (preferred)
+print(msg.content)  # "Hello"
+
+# Dict-like way (backward compatibility)
+print(msg["content"])  # "Hello"
+
+# Convert to dict
+msg_dict = msg.model_dump()  # {"content": "Hello", "role": "user", ...}
+```
+
+### Handling Reasoning Traces
+
+```python
+from esperanto import AIFactory
+
+# Models like Qwen3, DeepSeek R1 include <think> tags
+model = AIFactory.create_language("openai-compatible", "qwen/qwen3-4b", config={...})
+response = model.chat_complete([{"role": "user", "content": "What is 2+2?"}])
+
+msg = response.choices[0].message
+
+# Full response with reasoning
+print(msg.content)
+# "<think>I need to add 2 and 2...</think>\n\n4"
+
+# Just the reasoning (useful for debugging/logging)
+print(msg.thinking)
+# "I need to add 2 and 2..."
+
+# Just the answer (useful for parsing/display)
+print(msg.cleaned_content)
+# "4"
+```
