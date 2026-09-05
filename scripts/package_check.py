@@ -224,7 +224,16 @@ def main() -> int:
         check_extra(
             wheel,
             "transformers",
-            ["transformers", "torch", "sentence-transformers"],
+            [
+                "transformers",
+                "torch",
+                "tokenizers",
+                "sentence-transformers",
+                "scikit-learn",
+                "numpy",
+                "einops",
+                "accelerate",
+            ],
             clean_room,
         )
         check_extra(wheel, "validation", ["jsonschema"], clean_room)

@@ -18,3 +18,14 @@ been made by this profile bootstrap.
   .github/workflows/publish.yml; verified GitHub settings, categories and labels;
   https://github.com/lfnovo/esperanto/issues/279.
 - This authorizes profile adoption and repository setup, not a release publication.
+
+## 2026-09-05 — Implement the package gate for 2.27.0
+
+- Decision: implement issue #279 now and make `make package-check` the mandatory
+  clean-room artifact gate for the 2.27.0 release.
+- Decision: the gate verifies fresh wheel and sdist builds, isolated bare
+  installs, a wheel rebuilt from the sdist, every declared optional extra and
+  SHA-256 artifact identities.
+- Evidence: explicit maintainer approval during the 2.27.0 release session and
+  local execution of `make package-check` on Python 3.13.11.
+- This decision configures the gate; it does not authorize merging or publishing.
