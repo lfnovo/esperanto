@@ -9,3 +9,7 @@
 #   - two PRs renaming/restructuring the same section heading
 # In either case, fall back to a manual rebase + resolve.
 CHANGELOG.md merge=union
+
+# Keep the maintainer profile out of Git-generated tarballs
+.maintainer export-ignore
+.maintainer/** export-ignore

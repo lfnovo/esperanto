@@ -1,0 +1,105 @@
+# oss-maintainer schema v1. Paths are relative to the repository root.
+schema_version = 1
+
+[project]
+name = "Esperanto"
+repo = "lfnovo/esperanto"
+artifact = "pypi-library"
+commands_doc = "CLAUDE.md"
+
+# Canonical Makefile targets; setup is a prerequisite, not a release gate.
+[commands.setup]
+run = "make setup"
+cwd = "."
+timeout = "20m"
+
+[commands.validator]
+run = "make test"
+cwd = "."
+timeout = "15m"
+
+# Canonical checks documented in CLAUDE.md and enforced in lint.yml.
+# make ruff mutates files; make lint checks a different scope.
+[commands.ruff]
+run = "uv run ruff check ."
+cwd = "."
+timeout = "5m"
+
+[commands.mypy]
+run = "uv run mypy src/esperanto"
+cwd = "."
+timeout = "10m"
+
+[contributing]
+conventions = "CONTRIBUTING.md"
+
+[release]
+process_doc = ".maintainer/release/runbook.md"
+changelog = "CHANGELOG.md"
+version_files = ["pyproject.toml", "uv.lock"]
+lock_command = "uv sync --all-extras"
+distribution_trigger = "make tag"
+publish_workflow = ".github/workflows/publish.yml"
+notes_source = "CHANGELOG.md"
+consumer_surfaces = [
+  "public exports and factory methods",
+  "provider method signatures and sync/async/streaming behavior",
+  "common response types and exceptions",
+  "provider profiles, configuration keys and environment variables",
+  "optional extras and supported Python versions",
+]
+
+[release.gates]
+mandatory = ["validator", "ruff", "mypy", "package-gate", "bucket-c", "notes-approved"]
+optional = ["security-alerts"]
+not_gates = []
+merge_own_prs = "ask-once-per-session"
+
+[artifacts.pypi]
+package = "esperanto"
+gate = "TODO implement canonical package-check gate in issue #279; see .maintainer/release/runbook.md"
+surfaces = ["library"]
+extras = ["transformers", "validation"]
+identity = "sha256"
+
+# Labels verified in GitHub; missing preset labels were created with owner approval.
+[labels]
+needs_triage = "needs-triage"
+needs_design = "needs-design"
+needs_vision = "needs-vision"
+awaiting_demand = "awaiting-demand"
+ready = "ready"
+released = "released"
+bug = "bug"
+
+[triage]
+preset = "maturity-ladder"
+assignable = ["close", "needs-design", "ready"]
+extra_states = {}
+rules = ".maintainer/triage.md"
+batch_approval = "one-at-a-time"
+
+[review]
+docs = ["AGENTS.md", "CLAUDE.md", "ARCHITECTURE.md", "CONTRIBUTING.md", "SECURITY.md"]
+reviewers = []
+
+[discussions]
+public_anchors = ["README.md", "docs/README.md", "ARCHITECTURE.md", "CONTRIBUTING.md", "SECURITY.md"]
+never_cite = [".env", "google-credentials.json", "notebooks/", "specs/", ".maintainer/profile.local.toml", ".maintainer/state/", ".harny/"]
+graduation = "pull"
+close_on = ["answer", "graduated-work-landed"]
+
+# Live GraphQL category IDs, queried after enabling Discussions on 2026-09-05.
+[discussions.categories]
+"Announcements" = "DIC_kwDONT0hi84DE9dY"
+"General" = "DIC_kwDONT0hi84DE9dZ"
+"Ideas" = "DIC_kwDONT0hi84DE9db"
+"Polls" = "DIC_kwDONT0hi84DE9dd"
+"Q&A" = "DIC_kwDONT0hi84DE9da"
+"Show and tell" = "DIC_kwDONT0hi84DE9dc"
+
+# No deployed application to smoke-test; intentionally omit [smoke].
+[comms]
+owner_language = "pt-BR"
+public_language = "en"
+agent_attribution = "none"

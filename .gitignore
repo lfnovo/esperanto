@@ -128,3 +128,7 @@ output/
 
 # Playwright MCP scratch (snapshots / screenshots from doc-verification runs)
 .playwright-mcp/
+
+# oss-maintainer local state
+.maintainer/profile.local.toml
+.maintainer/state/
