@@ -898,3 +898,84 @@ class TestZaiChat:
             if chunk.choices[0].delta.content:
                 total_content += chunk.choices[0].delta.content
         assert len(total_content) > 0
+
+
+# =============================================================================
+# Eden AI Tests
+# =============================================================================
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("EDENAI_API_KEY"),
+    reason="EDENAI_API_KEY not configured",
+)
+class TestEdenAIChat:
+    """Real integration tests for Eden AI chat and model discovery."""
+
+    MODEL = "openai/gpt-5.5"
+    EMBEDDING_MODEL = "openai/text-embedding-3-small"
+
+    def test_sync_chat_complete(self):
+        model = AIFactory.create_language("edenai", self.MODEL)
+        response = model.chat_complete(messages=MESSAGES)
+        assert isinstance(response, ChatCompletion)
+        assert response.choices[0].message.content
+
+    async def test_async_chat_complete(self):
+        model = AIFactory.create_language("edenai", self.MODEL)
+        response = await model.achat_complete(messages=MESSAGES)
+        assert isinstance(response, ChatCompletion)
+        assert response.choices[0].message.content
+
+    def test_sync_streaming(self):
+        model = AIFactory.create_language("edenai", self.MODEL)
+        response = model.chat_complete(messages=MESSAGES, stream=True)
+        total_content = ""
+        for chunk in response:
+            assert isinstance(chunk, ChatCompletionChunk)
+            if chunk.choices[0].delta.content:
+                total_content += chunk.choices[0].delta.content
+        assert total_content
+
+    async def test_async_streaming(self):
+        model = AIFactory.create_language("edenai", self.MODEL)
+        response = await model.achat_complete(messages=MESSAGES, stream=True)
+        total_content = ""
+        async for chunk in response:
+            assert isinstance(chunk, ChatCompletionChunk)
+            if chunk.choices[0].delta.content:
+                total_content += chunk.choices[0].delta.content
+        assert total_content
+
+    def test_language_discovery_excludes_embeddings(self):
+        """/v3/models carries the chat catalog and no embedding ids."""
+        models = AIFactory.get_provider_models("edenai", model_type="language")
+        ids = {model.id for model in models}
+        assert self.MODEL in ids
+        assert self.EMBEDDING_MODEL not in ids
+        assert all(model.type == "language" for model in models)
+
+    def test_embedding_discovery_uses_the_embeddings_listing(self):
+        """The advertised default embedding model lives on the other endpoint."""
+        models = AIFactory.get_provider_models("edenai", model_type="embedding")
+        ids = {model.id for model in models}
+        assert self.EMBEDDING_MODEL in ids
+        assert all(model.type == "embedding" for model in models)
+
+    def test_discovery_without_filter_returns_both_modalities(self):
+        models = AIFactory.get_provider_models("edenai")
+        types = {model.type for model in models}
+        assert types == {"language", "embedding"}
+
+    def test_eu_endpoint_serves_a_smaller_catalog(self):
+        """The EU endpoint keeps inference inside the EU, so it lists less."""
+        eu_models = AIFactory.get_provider_models(
+            "edenai",
+            model_type="embedding",
+            base_url="https://api.eu.edenai.run/v3",
+        )
+        global_models = AIFactory.get_provider_models(
+            "edenai", model_type="embedding"
+        )
+        assert 0 < len(eu_models) < len(global_models)

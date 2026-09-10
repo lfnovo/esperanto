@@ -706,6 +706,118 @@ def get_siliconflow_models(
         raise RuntimeError(f"Failed to fetch SiliconFlow models: {e}")
 
 
+def _fetch_edenai_listing(
+    url: str,
+    headers: Dict[str, str],
+    model_type: Literal["language", "embedding"],
+) -> List[Model]:
+    """Fetch one Eden AI listing endpoint and tag every entry with its type."""
+    response = httpx.get(url, headers=headers, timeout=60.0)
+
+    if response.status_code >= 400:
+        try:
+            error_data = response.json()
+            error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+        except Exception:
+            error_message = f"HTTP {response.status_code}: {response.text}"
+        raise RuntimeError(f"Eden AI API error: {error_message}")
+
+    return [
+        Model(
+            id=model["id"],
+            # Eden AI reports the upstream vendor, which is also the first
+            # segment of the model id.
+            owned_by=model.get("owned_by") or "edenai",
+            context_window=model.get("context_length", None),
+            type=model_type,
+        )
+        for model in response.json().get("data", [])
+    ]
+
+
+def get_edenai_models(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    model_type: Optional[str] = None,
+) -> List[Model]:
+    """Get available models from Eden AI.
+
+    Eden AI is a French company and the gateway runs on EU infrastructure. Two
+    endpoints share the same API surface and the same key: the default
+    ``https://api.edenai.run/v3``, which serves the full catalog, and
+    ``https://api.eu.edenai.run/v3``, which keeps inference inside the EU and
+    therefore serves only the subset of the catalog available there. Pass
+    ``base_url`` or set ``EDENAI_BASE_URL`` to switch; model ids are identical.
+
+    Language and embedding models are listed on two separate endpoints,
+    ``/models`` and ``/embeddings/models``, and an id present on one is absent
+    from the other. Both are queried unless ``model_type`` narrows the request.
+    See https://www.edenai.co/docs/v3/llms/embeddings.
+
+    Neither listing requires authentication, so ``api_key`` is optional here,
+    as it is for OpenRouter.
+
+    Args:
+        api_key: Eden AI API key (or EDENAI_API_KEY env var). Optional for
+            model listing.
+        base_url: Base URL for API (default: https://api.edenai.run/v3)
+        model_type: Restrict discovery to 'language' or 'embedding'. None
+            returns both.
+
+    Returns:
+        List of available models
+
+    Raises:
+        RuntimeError: If API request fails
+    """
+    # Get API key (optional for Eden AI model listing)
+    api_key = api_key or os.getenv("EDENAI_API_KEY")
+
+    # Set defaults
+    base_url = (
+        base_url or os.getenv("EDENAI_BASE_URL") or "https://api.edenai.run/v3"
+    ).rstrip("/")
+
+    # Check cache
+    cache_key = _create_cache_key(
+        "edenai",
+        api_key=api_key or "",
+        base_url=base_url,
+        model_type=model_type or "",
+    )
+    cached_models = _model_cache.get(cache_key)
+    if cached_models is not None:
+        return cached_models
+
+    # Prepare headers
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    # Make request
+    try:
+        all_models: List[Model] = []
+
+        if model_type in (None, "language"):
+            all_models.extend(
+                _fetch_edenai_listing(f"{base_url}/models", headers, "language")
+            )
+
+        if model_type in (None, "embedding"):
+            all_models.extend(
+                _fetch_edenai_listing(
+                    f"{base_url}/embeddings/models", headers, "embedding"
+                )
+            )
+
+        _model_cache.set(cache_key, all_models)
+
+        return all_models
+
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"Failed to fetch Eden AI models: {e}")
+
+
 def get_openrouter_models(
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
@@ -1236,6 +1348,7 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "groq": get_groq_models,
     "deepseek": get_deepseek_models,
     "siliconflow": get_siliconflow_models,
+    "edenai": get_edenai_models,
     "ollama": get_ollama_models,
     "openrouter": get_openrouter_models,
     "xai": get_xai_models,

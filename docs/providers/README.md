@@ -26,6 +26,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [oMLX](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [PayPerQ (PPQ)](./ppq.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
+| [Eden AI](./edenai.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Voyage](./voyage.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -121,6 +122,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[OpenRouter](./openrouter.md)**: Hundreds of models from many providers
 - **[Novita](./openai-compatible.md)**: 200+ open-source models (OpenAI-compatible profile)
 - **[PayPerQ (PPQ)](./ppq.md)**: hundreds of models across LLM/embedding/STT/TTS, pay-as-you-go with one key
+- **[Eden AI](./edenai.md)**: LLM + Embedding through one European gateway, with a dedicated EU endpoint
 
 **Local Deployment:**
 - **[Ollama](./ollama.md)**: Llama, Mistral, Qwen, etc.
@@ -338,6 +340,7 @@ Require API keys, pay-per-use:
 - [Novita](./openai-compatible.md) (OpenAI-compatible profile)
 - [Z.ai](./zai.md)
 - [PayPerQ (PPQ)](./ppq.md) (OpenAI-compatible profile)
+- [Eden AI](./edenai.md) (OpenAI-compatible profile)
 - [Jina](./jina.md)
 - [Voyage](./voyage.md)
 - [Cohere](./cohere.md)

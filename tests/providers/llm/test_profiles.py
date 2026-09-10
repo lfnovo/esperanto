@@ -60,6 +60,7 @@ class TestProfileRegistry:
         assert "siliconflow" in BUILTIN_PROFILES
         assert "xai" in BUILTIN_PROFILES
         assert "novita" in BUILTIN_PROFILES
+        assert "edenai" in BUILTIN_PROFILES
 
     def test_get_builtin_profile(self):
         profile = get_profile("deepseek")
@@ -131,6 +132,25 @@ class TestProfileRegistry:
         assert profile.default_model_for("language") == "glm-5.2"
         assert profile.model_prefix_filter == "glm"
 
+    def test_get_edenai_profile(self):
+        profile = get_profile("edenai")
+        assert profile is not None
+        assert profile.name == "edenai"
+        assert profile.base_url == "https://api.edenai.run/v3"
+        assert profile.api_key_env == "EDENAI_API_KEY"
+        assert profile.base_url_env == "EDENAI_BASE_URL"
+        assert profile.default_model_for("language") == "openai/gpt-5.5"
+        assert profile.display_name == "Eden AI"
+        assert profile.owned_by == "Eden AI"
+
+    def test_edenai_serves_language_and_embedding_only(self):
+        profile = get_profile("edenai")
+        assert profile.capabilities == {"language", "embedding"}
+        assert (
+            profile.default_model_for("embedding")
+            == "openai/text-embedding-3-small"
+        )
+
     def test_get_unknown_profile_returns_none(self):
         assert get_profile("unknown-provider") is None
 
@@ -173,6 +193,7 @@ class TestProfileRegistry:
         assert "siliconflow" in names
         assert "xai" in names
         assert "novita" in names
+        assert "edenai" in names
 
     def test_get_all_profile_names_includes_user(self):
         register_profile(
@@ -245,6 +266,8 @@ class TestFactoryIntegration:
         assert "siliconflow" in providers["language"]
         assert "xai" in providers["language"]
         assert "novita" in providers["language"]
+        assert "edenai" in providers["language"]
+        assert "edenai" in providers["embedding"]
         # Class-based providers also present
         assert "openai" in providers["language"]
 
@@ -388,6 +411,47 @@ class TestProfileBehavior:
         with patch.dict(os.environ, {"NOVITA_API_KEY": "env-key"}, clear=False):
             model = AIFactory.create_language("novita", "moonshotai/kimi-k2.5")
             assert model.api_key == "env-key"
+
+    @pytest.fixture
+    def isolate_edenai_env(self):
+        """Drop EDENAI_* so the default-URL assertions do not depend on the shell.
+
+        A developer with EDENAI_BASE_URL set to the EU endpoint would otherwise
+        see test_edenai_creation fail. The override tests below set the
+        variables themselves inside the fixture's clean environment.
+        """
+        with patch.dict(
+            os.environ,
+            {k: v for k, v in os.environ.items() if not k.startswith("EDENAI_")},
+            clear=True,
+        ):
+            yield
+
+    def test_edenai_creation(self, isolate_edenai_env):
+        model = AIFactory.create_language(
+            "edenai", "openai/gpt-5.5", config={"api_key": "test-key"}
+        )
+        assert model.provider == "edenai"
+        assert model.base_url == "https://api.edenai.run/v3"
+        assert model._get_default_model() == "openai/gpt-5.5"
+
+    def test_edenai_env_var(self, isolate_edenai_env):
+        with patch.dict(os.environ, {"EDENAI_API_KEY": "env-key"}, clear=False):
+            model = AIFactory.create_language("edenai", "openai/gpt-5.5")
+            assert model.api_key == "env-key"
+
+    def test_edenai_eu_endpoint_override(self, isolate_edenai_env):
+        """EDENAI_BASE_URL switches to the EU endpoint, same key and ids."""
+        with patch.dict(
+            os.environ,
+            {
+                "EDENAI_API_KEY": "env-key",
+                "EDENAI_BASE_URL": "https://api.eu.edenai.run/v3",
+            },
+            clear=False,
+        ):
+            model = AIFactory.create_language("edenai", "openai/gpt-5.5")
+            assert model.base_url == "https://api.eu.edenai.run/v3"
 
     def test_novita_missing_api_key_raises(self):
         with patch.dict(os.environ, {}, clear=True):

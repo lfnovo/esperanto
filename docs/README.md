@@ -33,6 +33,7 @@ Complete setup guides for each provider:
 - [Mistral](./providers/mistral.md) - European AI
 - [DeepSeek](./providers/deepseek.md) - Cost-effective reasoning
 - [SiliconFlow](./providers/siliconflow.md) - Cost-effective OpenAI-compatible models
+- [Eden AI](./providers/edenai.md) - European gateway to many vendors, with an EU endpoint
 - [Perplexity](./providers/perplexity.md) - Web-search LLM
 - [xAI](./providers/xai.md) - Grok models
 - [OpenRouter](./providers/openrouter.md) - 100+ models, one API
@@ -88,7 +89,7 @@ Deep dives into specialized features:
 → [Groq](./providers/groq.md)
 
 **"I want cost optimization"**
-→ [DeepSeek](./providers/deepseek.md), [SiliconFlow](./providers/siliconflow.md), [Ollama](./providers/ollama.md), or [OpenRouter](./providers/openrouter.md)
+→ [DeepSeek](./providers/deepseek.md), [SiliconFlow](./providers/siliconflow.md), [Ollama](./providers/ollama.md), [OpenRouter](./providers/openrouter.md), or [Eden AI](./providers/edenai.md)
 
 ### By Provider
 

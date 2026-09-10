@@ -51,6 +51,7 @@ Whether you're building a quick prototype or a production application serving mi
   - MiniMax (MiniMax-M3 with 1M context, Text-to-Speech)
   - Z.ai (GLM models: glm-5.2, glm-4.5-flash)
   - PayPerQ / PPQ (pay-as-you-go gateway to hundreds of models)
+  - Eden AI (European gateway to many vendors, with a dedicated EU endpoint)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
   - Cohere (LLM, Embeddings, Reranking)
@@ -162,6 +163,7 @@ pip install "langchain-mistralai>=1.1.1,<2.0.0"
 | Z.ai         | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | PayPerQ (PPQ)| ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
+| Eden AI      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
 
@@ -181,11 +183,11 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'siliconflow', 'vertex', 'xai', 'zai'],
-#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter', 'cohere'],
+#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'edenai', 'google', 'groq', 'minimax', 'mistral', 'novita', 'ollama', 'omlx', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'siliconflow', 'vertex', 'xai', 'zai'],
+#     'embedding': ['azure', 'cohere', 'edenai', 'google', 'jina', 'mistral', 'ollama', 'omlx', 'openai', 'openai-compatible', 'openrouter', 'ppq', 'transformers', 'vertex', 'voyage'],
+#     'speech_to_text': ['azure', 'deepgram', 'elevenlabs', 'google', 'groq', 'mistral', 'openai', 'openai-compatible', 'openrouter', 'ppq'],
+#     'text_to_speech': ['azure', 'deepgram', 'elevenlabs', 'google', 'minimax', 'mistral', 'openai', 'openai-compatible', 'openrouter', 'ppq', 'vertex', 'xai'],
 #     'reranker': ['jina', 'voyage', 'transformers', 'cohere'],
-#     'speech_to_text': ['openai', 'groq', 'elevenlabs', 'openai-compatible', 'azure', 'google', 'mistral', 'deepgram'],
-#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible', 'azure', 'xai', 'mistral', 'deepgram', 'minimax']
 # }
 
 # Create model instances

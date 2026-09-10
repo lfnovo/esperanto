@@ -140,6 +140,40 @@ model = AIFactory.create_language(
 
 → **[Full SiliconFlow Setup Guide](./providers/siliconflow.md)**
 
+#### Eden AI
+```bash
+EDENAI_API_KEY=...
+# Optional: use the EU endpoint instead of the default one
+EDENAI_BASE_URL=https://api.eu.edenai.run/v3
+```
+
+Eden AI is a French company and the gateway runs on EU infrastructure. It exposes
+two endpoints on the same API surface and the same key: the default
+`https://api.edenai.run/v3`, which serves the full catalog, and
+`https://api.eu.edenai.run/v3`, which keeps inference inside the EU and therefore
+serves only the subset of the catalog available there. Model ids are identical on
+both, so a model that resolves on the default endpoint may not be reachable
+through the EU one.
+
+```python
+from esperanto.factory import AIFactory
+
+# Default endpoint: https://api.edenai.run/v3
+model = AIFactory.create_language("edenai", "openai/gpt-5.5")
+
+# EU endpoint override
+model = AIFactory.create_language(
+    "edenai",
+    "mistral/mistral-large-latest",
+    config={"base_url": "https://api.eu.edenai.run/v3"},
+)
+
+# Embeddings resolve under the same profile
+embedder = AIFactory.create_embedding("edenai", "openai/text-embedding-3-small")
+```
+
+→ **[Full Eden AI Setup Guide](./providers/edenai.md)**
+
 #### Perplexity
 ```bash
 PERPLEXITY_API_KEY=...
