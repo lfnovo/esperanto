@@ -117,6 +117,17 @@ model = AIFactory.create_language(
 )
 ```
 
+**Timeouts (`timeout`):**
+
+The language-model timeout applies to native requests and to both the synchronous
+and asynchronous clients returned by `.to_langchain()`. Set it with
+`config={"timeout": 180}` for slow local inference. An explicit config value takes
+precedence over `ESPERANTO_LLM_TIMEOUT`; otherwise the default is 60 seconds.
+
+These are HTTPX operation timeouts, not a total generation deadline. For streaming,
+the read timeout bounds inactivity while waiting for data, not the duration of an
+actively producing stream. Existing SSL verification settings are preserved.
+
 **Context Window (`num_ctx`):**
 
 Esperanto uses a default context window of **8,192 tokens** for Ollama models. This default was chosen to work reliably on hardware with 8 GB VRAM — Ollama's built-in default of 2,048 tokens is too small for typical chat workloads, while a 128K default causes out-of-memory errors on common consumer GPUs. 8,192 strikes a balance that works out of the box on most hardware.

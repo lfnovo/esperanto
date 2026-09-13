@@ -685,11 +685,11 @@ class OllamaLanguageModel(LanguageModel):
             else:
                 langchain_kwargs["format"] = "json"
 
-        # Pass SSL verification settings to LangChain via client_kwargs
-        # ChatOllama uses httpx internally and passes these kwargs to the client
+        # ChatOllama forwards these settings to both of its owned HTTP clients.
+        client_kwargs: Dict[str, Any] = {"timeout": self._get_timeout()}
         ssl_verify = self._get_ssl_verify()
         if ssl_verify is not True:  # Only set if SSL is disabled or custom CA bundle
-            client_kwargs = {"verify": ssl_verify}
-            langchain_kwargs["client_kwargs"] = client_kwargs
+            client_kwargs["verify"] = ssl_verify
+        langchain_kwargs["client_kwargs"] = client_kwargs
 
         return ChatOllama(**self._clean_config(langchain_kwargs))
