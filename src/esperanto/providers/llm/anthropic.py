@@ -961,12 +961,18 @@ class AnthropicLanguageModel(LanguageModel):
                 .get("schema")
             )
             if isinstance(schema_payload, dict):
-                model_kwargs["output_config"] = {
+                output_config = {
                     "format": {
                         "type": "json_schema",
                         "schema": schema_payload,
                     }
                 }
+                # langchain-anthropic >= 1.7 declares output_config as a field
+                # and warns when it arrives through model_kwargs.
+                if "output_config" in getattr(ChatAnthropic, "model_fields", {}):
+                    kwargs["output_config"] = output_config
+                else:
+                    model_kwargs["output_config"] = output_config
         if model_kwargs:
             kwargs["model_kwargs"] = model_kwargs
 
