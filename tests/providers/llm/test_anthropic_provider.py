@@ -1497,7 +1497,12 @@ def test_json_schema_mode_does_not_warn(anthropic_model):
 # Forced tool choice on models that reject it (#298)                          #
 # --------------------------------------------------------------------------- #
 
-NO_FORCED_TOOL_CHOICE_MODELS = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1"]
+NO_FORCED_TOOL_CHOICE_MODELS = [
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-fable-5-1",
+    "claude-mythos-5-1",
+]
 FORCED_TOOL_CHOICES = [
     "required",
     {"type": "function", "function": {"name": "get_weather"}},
@@ -1602,7 +1607,11 @@ def test_unforced_tool_choice_does_not_warn(model_name, tool_choice, expected, s
         warnings.simplefilter("error")
         model.chat_complete([{"role": "user", "content": "Hi"}], tools=sample_tools, tool_choice=tool_choice)
 
-    assert model.client.post.call_args[1]["json"].get("tool_choice") == expected
+    payload = model.client.post.call_args[1]["json"]
+    if expected is None:
+        assert "tool_choice" not in payload
+    else:
+        assert payload["tool_choice"] == expected
 
 
 @pytest.mark.parametrize("model_name", ["claude-sonnet-5", "claude-opus-5", "claude-haiku-4-5-20251001"])

@@ -94,8 +94,8 @@ Each id names one model generation: `claude-sonnet-5` does not move to Sonnet
 Claude Opus 5.5 and Fable 5.1 always think, and Sonnet 5.5 thinks by default.
 Thinking counts against `max_tokens`, so leave enough room for the answer (see
 [Empty Structured Responses](#empty-structured-responses-and-thinking-budgets)).
-These models also reject forced tool choice (`tool_choice="required"` or a
-specific tool). Esperanto sends `tool_choice="auto"` instead and emits a
+These models (and Claude Mythos 5.1) also reject forced tool choice
+(`tool_choice="required"` or a specific tool). Esperanto sends `tool_choice="auto"` instead and emits a
 `UserWarning`, so the same code keeps working, but a tool call is no longer
 guaranteed. Name the tool in the prompt to steer the model, or use
 `structured={"type": "json_schema", ...}` when you only need JSON back.

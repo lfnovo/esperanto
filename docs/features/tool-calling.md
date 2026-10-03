@@ -450,7 +450,7 @@ for chunk in model.chat_complete(messages, tools=tools, stream=True):
 #### Anthropic
 - Tools are converted to Anthropic's `input_schema` format automatically
 - `tool_choice="required"` maps to `{"type": "any"}`
-- Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 do not support forced tool choice (`"required"` or a specific tool). Esperanto sends `"auto"` for them and emits a `UserWarning`, so a tool call is not guaranteed on these models
+- Claude Opus 5.5, Sonnet 5.5, Fable 5.1 and Mythos 5.1 do not support forced tool choice (`"required"` or a specific tool). Esperanto sends `"auto"` for them and emits a `UserWarning`, so a tool call is not guaranteed on these models
 - `parallel_tool_calls=False` maps to `disable_parallel_tool_use`
 
 #### Google (Gemini)

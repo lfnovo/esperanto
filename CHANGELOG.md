@@ -44,8 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Forced tool choice no longer fails on Claude Opus 5.5, Sonnet 5.5 and
-  Fable 5.1.** These models reject `tool_choice="required"` and a specific tool
+- **Forced tool choice no longer fails on Claude Opus 5.5, Sonnet 5.5, Fable
+  5.1 and Mythos 5.1.** These models reject `tool_choice="required"` and a specific tool
   with a 400. Esperanto now sends `tool_choice="auto"` for them (keeping
   `parallel_tool_calls=False`) and emits a `UserWarning` saying the tool call is
   no longer guaranteed. Other models are unchanged. (#298)
