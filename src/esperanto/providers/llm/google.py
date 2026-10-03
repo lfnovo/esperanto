@@ -155,6 +155,7 @@ class GoogleLanguageModel(LanguageModel):
                 "max_tokens": self.max_tokens,
                 "top_p": self.top_p,
                 "google_api_key": self.api_key,
+                "timeout": self._get_timeout(),
             }
             resolved_structured = resolve_structured_output(
                 self.structured,

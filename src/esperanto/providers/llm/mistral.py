@@ -1,6 +1,7 @@
 """Mistral language model provider."""
 
 import json
+import math
 import os
 from typing import (
     TYPE_CHECKING,
@@ -543,4 +544,8 @@ class MistralLanguageModel(LanguageModel):
 
         lc_kwargs = {k: v for k, v in lc_kwargs.items() if v is not None}
         
+        # ChatMistralAI's timeout is an integer number of seconds; round up so a
+        # fractional timeout never becomes shorter (or zero).
+        lc_kwargs["timeout"] = math.ceil(self._get_timeout())
+
         return ChatMistralAI(**lc_kwargs)  # type: ignore[arg-type]

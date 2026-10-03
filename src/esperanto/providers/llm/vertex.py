@@ -775,6 +775,7 @@ class VertexLanguageModel(VertexAuthMixin, LanguageModel):
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 top_p=self.top_p,
+                timeout=self._get_timeout(),
             )
             resolved_structured = resolve_structured_output(
                 self.structured,

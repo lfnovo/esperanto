@@ -718,4 +718,6 @@ class CohereLanguageModel(LanguageModel):
             if base_url and base_url != "https://api.cohere.com":
                 kwargs["base_url"] = base_url
 
+        kwargs["timeout_seconds"] = self._get_timeout()
+
         return ChatCohere(**kwargs)  # type: ignore[arg-type]
