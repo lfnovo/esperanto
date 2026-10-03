@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   GLM models, defaulting to `glm-5.2`. Configure with `ZAI_API_KEY`; override the
   endpoint with `ZAI_BASE_URL`. (#234)
 
+### Fixed
+
+- **Ollama timeout preserved in LangChain conversion.** `.to_langchain()` now
+  passes the configured timeout to both sync and async `ChatOllama` clients,
+  which previously waited indefinitely. Precedence is unchanged: `config["timeout"]`,
+  then `ESPERANTO_LLM_TIMEOUT`, then 60 seconds. Slow local inference may need a
+  higher timeout. (#290)
+
 ## [2.27.0] - 2026-09-05
 
 ### Added
