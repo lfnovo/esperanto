@@ -262,13 +262,14 @@ response = model.chat_complete(messages)
 Claude Opus 5.5 always thinks, and its `max_tokens` covers thinking **plus** the answer. When thinking uses up the whole budget, or the model refuses, the response has no text. In any structured mode, when a response has no text and no tool calls, Esperanto raises `EmptyCompletionError` instead of returning empty content:
 
 ```python
-from esperanto import EmptyCompletionError
+from esperanto import AIFactory, EmptyCompletionError
 
 model = AIFactory.create_language(
     "anthropic",
     "claude-opus-5-5",
     config={"structured": {"type": "json"}, "max_tokens": 4096}
 )
+messages = [{"role": "user", "content": "List three fruits and their colors as JSON"}]
 
 try:
     response = model.chat_complete(messages)
