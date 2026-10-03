@@ -108,6 +108,11 @@ Per-provider request shape (schema mode):
 - Ollama: `format=<schema dict>`
 - Cohere: `response_format={"type": "json_object", "schema": ...}`
 
+Anthropic forced tool choice: models matching `_NO_FORCED_TOOL_CHOICE_PREFIXES`
+(Opus 5.5, Sonnet 5.5, Fable 5.1, Mythos 5.1) reject `tool_choice` "any"/"tool"
+with a 400; `_convert_tool_choice_to_anthropic()` sends "auto" instead and warns.
+Add new model ids there when Anthropic ships more models with this restriction.
+
 Anthropic has no enforceable JSON mode: `{"type": "json"}` sends no constraint
 (prompt-guided only) and emits a `UserWarning`; only `json_schema` is enforced.
 Anthropic `stop_reason` maps to OpenAI `finish_reason` vocabulary
