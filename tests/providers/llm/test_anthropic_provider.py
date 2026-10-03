@@ -312,12 +312,38 @@ async def test_json_schema_structured_output_streaming_not_supported_async(
 def test_to_langchain_json_schema_structured_output(anthropic_model):
     anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
     langchain_model = anthropic_model.to_langchain()
-    output_config = (
+    output_config = getattr(langchain_model, "output_config", None) or (
         langchain_model.model_kwargs.get("output_config", {})
-        if hasattr(langchain_model, "model_kwargs")
-        else {}
     )
     assert output_config.get("format", {}).get("type") == "json_schema"
+
+
+@pytest.mark.parametrize("declares_field", [True, False])
+def test_to_langchain_output_config_follows_langchain_version(
+    anthropic_model, monkeypatch, declares_field
+):
+    """output_config goes to the field when ChatAnthropic declares it, else to model_kwargs."""
+    import langchain_anthropic
+
+    captured = {}
+
+    class FakeChatAnthropic:
+        model_fields = {"output_config": None} if declares_field else {}
+
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(langchain_anthropic, "ChatAnthropic", FakeChatAnthropic)
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    anthropic_model.to_langchain()
+
+    if declares_field:
+        output_config = captured["output_config"]
+        assert "model_kwargs" not in captured
+    else:
+        output_config = captured["model_kwargs"]["output_config"]
+        assert "output_config" not in captured
+    assert output_config["format"]["type"] == "json_schema"
 
 
 @pytest.fixture

@@ -63,6 +63,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Anthropic `to_langchain()` no longer warns with `json_schema` on
+  langchain-anthropic 1.7+.** langchain-anthropic 1.7 declares `output_config`
+  as a field and warns when it arrives through `model_kwargs`, so every
+  conversion with `structured={"type": "json_schema", ...}` emitted a
+  `UserWarning`. Esperanto now passes `output_config` directly when
+  `ChatAnthropic` declares it, and keeps `model_kwargs` for older versions. The
+  schema reached the request either way.
 - **Perplexity works again without an explicit model.** The default
   Perplexity model, `llama-3-sonar-large-32k-online`, is rejected by
   Perplexity as invalid, so `create_language("perplexity")` failed. The default
