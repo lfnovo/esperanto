@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Z.ai provider.** New built-in OpenAI-compatible profile (`zai`) for Z.ai's
   GLM models, defaulting to `glm-5.2`. Configure with `ZAI_API_KEY`; override the
   endpoint with `ZAI_BASE_URL`. (#234)
+
 ### Fixed
 
 - **Gemini 3.8 TTS audio no longer ends in a burst of noise.**
@@ -20,9 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   header as samples. Google TTS now passes WAV responses through unchanged and
   wraps only raw PCM, using the sample rate from the response mime type when
   present. Both 3.8 models are now listed. (#291)
-
-### Fixed
-
 - **Ollama timeout preserved in LangChain conversion.** `.to_langchain()` now
   passes the configured timeout to both sync and async `ChatOllama` clients,
   which previously waited indefinitely. Precedence is unchanged: `config["timeout"]`,

@@ -103,10 +103,12 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         audio_bytes = base64.b64decode(inline_data["data"])
         mime_type = inline_data.get("mimeType", "").lower()
 
-        if mime_type.startswith(("audio/wav", "audio/x-wav")) or audio_bytes.startswith(b"RIFF"):
+        is_wav_container = audio_bytes[:4] == b"RIFF" and audio_bytes[8:12] == b"WAVE"
+        if mime_type.startswith(("audio/wav", "audio/x-wav")) or is_wav_container:
             return audio_bytes
 
-        match = re.search(r"rate=(\d+)", mime_type)
+        # Match the `rate` parameter only, not the tail of e.g. `bitrate=`.
+        match = re.search(r"(?:^|;)\s*rate=(\d+)", mime_type)
         sample_rate = int(match.group(1)) if match else DEFAULT_SAMPLE_RATE
         return self._convert_pcm_to_wav(audio_bytes, sample_rate=sample_rate)
 

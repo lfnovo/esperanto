@@ -316,3 +316,28 @@ def test_gemini_38_models_are_listed():
     model = GoogleTextToSpeechModel(api_key="test-key")
     model_ids = {m.id for m in model._get_models()}
     assert {"gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"} <= model_ids
+
+
+def test_bitrate_parameter_is_not_read_as_sample_rate():
+    model = GoogleTextToSpeechModel(api_key="test-key")
+    model.client = Mock()
+    model.client.post.return_value = _make_audio_response(
+        PCM, "audio/L16;bitrate=384000;rate=16000"
+    )
+
+    response = model.generate_speech(text="Hello world", voice="kore")
+
+    with wave.open(io.BytesIO(response.audio_data)) as wav_file:
+        assert wav_file.getframerate() == 16000
+
+
+def test_riff_bytes_without_wave_marker_are_treated_as_pcm():
+    """Only a real WAV container (RIFF....WAVE) is passed through unlabelled."""
+    model = GoogleTextToSpeechModel(api_key="test-key")
+    model.client = Mock()
+    not_wav = b"RIFF\x00\x00\x00\x00AVI " + PCM
+    model.client.post.return_value = _make_audio_response(not_wav, "")
+
+    response = model.generate_speech(text="Hello world", voice="kore")
+
+    assert response.audio_data == _wav_bytes(not_wav)
