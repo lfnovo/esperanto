@@ -10,7 +10,7 @@ Shared type definitions and response models used across all provider types.
 - **`stt.py`**: `TranscriptionResponse`, `TranscriptionSegment`, and `TranscriptionUsage` for speech-to-text results
 - **`tts.py`**: `AudioResponse` and `Voice` for text-to-speech
 - **`reranker.py`**: `RerankResponse` and `RerankResult` for document reranking
-- **`exceptions.py`**: `ToolCallValidationError` for tool call validation failures
+- **`exceptions.py`**: `EsperantoError` root, `EmptyCompletionError` (structured output requested but no content returned; carries `model` and `finish_reason`), `ToolCallValidationError` for tool call validation failures, `StructuredOutputValidationError`
 - **`validation.py`**: Tool call validation utilities (`validate_tool_call`, `validate_tool_calls`, `find_tool_by_name`)
 
 ## Patterns

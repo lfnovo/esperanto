@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import uuid
+import warnings
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -46,6 +47,27 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from langchain_anthropic import ChatAnthropic
+
+# Anthropic stop_reason values mapped to the OpenAI finish_reason vocabulary
+# used by the other providers. Unlisted values pass through unchanged.
+_FINISH_REASONS = {
+    "end_turn": "stop",
+    "tool_use": "tool_calls",
+    "max_tokens": "length",
+    "refusal": "content_filter",
+}
+
+_JSON_MODE_WARNING = (
+    'Anthropic does not enforce structured={"type": "json"}; output is '
+    'prompt-guided only. Use {"type": "json_schema", "schema": ...} for '
+    "guaranteed JSON."
+)
+
+
+def _warn_if_json_mode(resolved_structured: Optional[ResolvedStructuredOutput]) -> None:
+    """Warn that JSON mode is best-effort on Anthropic (only json_schema is enforced)."""
+    if resolved_structured and resolved_structured.mode == "json_object":
+        warnings.warn(_JSON_MODE_WARNING, UserWarning, stacklevel=3)
 
 
 @dataclass
@@ -317,13 +339,7 @@ class AnthropicLanguageModel(LanguageModel):
 
         # Map Anthropic stop_reason to standard finish_reason
         stop_reason = response_data.get("stop_reason", "stop")
-        # Anthropic uses "tool_use" when model wants to call tools
-        if stop_reason == "tool_use":
-            finish_reason = "tool_calls"
-        elif stop_reason == "end_turn":
-            finish_reason = "stop"
-        else:
-            finish_reason = stop_reason
+        finish_reason = _FINISH_REASONS.get(stop_reason, stop_reason)
 
         return ChatCompletion(
             id=response_data.get("id", str(uuid.uuid4())),
@@ -487,12 +503,7 @@ class AnthropicLanguageModel(LanguageModel):
             delta = event_data.get("delta", {})
             stop_reason = delta.get("stop_reason", "stop")
             # Map Anthropic stop_reason to standard finish_reason
-            if stop_reason == "tool_use":
-                finish_reason = "tool_calls"
-            elif stop_reason == "end_turn":
-                finish_reason = "stop"
-            else:
-                finish_reason = stop_reason
+            finish_reason = _FINISH_REASONS.get(stop_reason, stop_reason)
 
             return ChatCompletionChunk(
                 id=str(uuid.uuid4()),
@@ -700,6 +711,7 @@ class AnthropicLanguageModel(LanguageModel):
             self.structured,
             allow_string_json_alias=True,
         )
+        _warn_if_json_mode(resolved_structured)
 
         if resolved_structured and resolved_structured.is_schema_mode and should_stream:
             raise ValueError(
@@ -816,6 +828,7 @@ class AnthropicLanguageModel(LanguageModel):
             self.structured,
             allow_string_json_alias=True,
         )
+        _warn_if_json_mode(resolved_structured)
 
         if resolved_structured and resolved_structured.is_schema_mode and should_stream:
             raise ValueError(
@@ -907,6 +920,7 @@ class AnthropicLanguageModel(LanguageModel):
             self.structured,
             allow_string_json_alias=True,
         )
+        _warn_if_json_mode(resolved_structured)
         if resolved_structured and resolved_structured.is_schema_mode:
             schema_payload = (
                 resolved_structured.response_format

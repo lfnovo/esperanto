@@ -1,10 +1,12 @@
 import os
+import warnings
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from pydantic import BaseModel
 
 from esperanto.common_types import (
+    EmptyCompletionError,
     FunctionCall,
     StructuredOutputValidationError,
     Tool,
@@ -131,7 +133,8 @@ def test_to_langchain(anthropic_model):
     # Test with structured output warning
     anthropic_model.structured = "json"
 
-    langchain_model = anthropic_model.to_langchain()
+    with pytest.warns(UserWarning, match="does not enforce"):
+        langchain_model = anthropic_model.to_langchain()
 
     # Test model configuration
     assert langchain_model.model == "claude-3-opus-20240229"
@@ -1284,3 +1287,172 @@ def test_fallback_model_list_has_no_withdrawn_models():
     assert ids, "fallback list must not be empty"
     assert not any(model_id.startswith("claude-3") for model_id in ids)
     assert all(m.owned_by == "Anthropic" for m in model._get_models())
+
+
+# --------------------------------------------------------------------------- #
+# Empty structured responses, finish reasons and JSON-mode warning (#292)     #
+# --------------------------------------------------------------------------- #
+
+STRUCTURED_MODES = [
+    {"type": "json"},
+    {"type": "json_schema", "schema": TripPlan},
+]
+
+
+def _anthropic_response(stop_reason, content):
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = {
+        "id": "msg_empty",
+        "content": content,
+        "model": "claude-opus-5-5",
+        "role": "assistant",
+        "stop_reason": stop_reason,
+        "type": "message",
+        "usage": {"input_tokens": 10, "output_tokens": 3000},
+    }
+    return response
+
+
+THINKING_ONLY = [{"type": "thinking", "thinking": "", "signature": "sig"}]
+
+
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@pytest.mark.parametrize("structured", STRUCTURED_MODES)
+@pytest.mark.parametrize(
+    "stop_reason,finish_reason",
+    [("max_tokens", "length"), ("refusal", "content_filter")],
+)
+def test_empty_structured_response_raises(
+    anthropic_model, structured, stop_reason, finish_reason
+):
+    anthropic_model.structured = structured
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = _anthropic_response(stop_reason, THINKING_ONLY)
+
+    with pytest.raises(EmptyCompletionError) as exc_info:
+        anthropic_model.chat_complete([{"role": "user", "content": "Plan a trip"}])
+
+    assert exc_info.value.finish_reason == finish_reason
+    assert exc_info.value.model == "claude-opus-5-5"
+    assert "test-key" not in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@pytest.mark.parametrize("structured", STRUCTURED_MODES)
+@pytest.mark.parametrize(
+    "stop_reason,finish_reason",
+    [("max_tokens", "length"), ("refusal", "content_filter")],
+)
+async def test_empty_structured_response_raises_async(
+    anthropic_model, structured, stop_reason, finish_reason
+):
+    anthropic_model.structured = structured
+    anthropic_model.async_client.post.side_effect = None
+    anthropic_model.async_client.post.return_value = _anthropic_response(
+        stop_reason, THINKING_ONLY
+    )
+
+    with pytest.raises(EmptyCompletionError) as exc_info:
+        await anthropic_model.achat_complete([{"role": "user", "content": "Plan a trip"}])
+
+    assert exc_info.value.finish_reason == finish_reason
+
+
+def test_structured_response_with_tool_calls_and_no_content_returns(anthropic_model):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = _anthropic_response(
+        "tool_use",
+        [{"type": "tool_use", "id": "toolu_1", "name": "get_weather", "input": {"city": "Paris"}}],
+    )
+
+    response = anthropic_model.chat_complete([{"role": "user", "content": "Plan a trip"}])
+
+    assert response.structured is None
+    assert response.choices[0].finish_reason == "tool_calls"
+    assert response.choices[0].message.tool_calls
+
+
+@pytest.mark.parametrize(
+    "stop_reason,finish_reason",
+    [
+        ("max_tokens", "length"),
+        ("refusal", "content_filter"),
+        ("end_turn", "stop"),
+        ("stop_sequence", "stop_sequence"),
+    ],
+)
+def test_empty_plain_response_returns_normalized_finish_reason(
+    anthropic_model, stop_reason, finish_reason
+):
+    anthropic_model.structured = None
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = _anthropic_response(stop_reason, THINKING_ONLY)
+
+    response = anthropic_model.chat_complete([{"role": "user", "content": "Hi"}])
+
+    assert response.choices[0].finish_reason == finish_reason
+    assert not response.choices[0].message.content
+
+
+@pytest.mark.parametrize(
+    "stop_reason,finish_reason",
+    [("max_tokens", "length"), ("refusal", "content_filter"), ("end_turn", "stop")],
+)
+def test_stream_finish_reason_is_normalized(anthropic_model, stop_reason, finish_reason):
+    chunk = anthropic_model._normalize_stream_event(
+        {"type": "message_delta", "delta": {"stop_reason": stop_reason}}
+    )
+    assert chunk.choices[0].finish_reason == finish_reason
+
+
+@pytest.mark.parametrize("structured", [{"type": "json"}, {"type": "json_object"}, "json"])
+def test_json_mode_warns_in_chat_complete(anthropic_model, structured):
+    anthropic_model.structured = structured
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = _anthropic_response(
+        "end_turn", [{"type": "text", "text": '{"a": 1}'}]
+    )
+
+    with pytest.warns(UserWarning, match="does not enforce") as record:
+        anthropic_model.chat_complete([{"role": "user", "content": "Hi"}])
+
+    # stacklevel points at the caller, not at Esperanto internals
+    assert record[0].filename == __file__
+
+
+@pytest.mark.asyncio
+async def test_json_mode_warns_in_achat_complete(anthropic_model):
+    anthropic_model.structured = {"type": "json"}
+    anthropic_model.async_client.post.side_effect = None
+    anthropic_model.async_client.post.return_value = _anthropic_response(
+        "end_turn", [{"type": "text", "text": '{"a": 1}'}]
+    )
+
+    with pytest.warns(UserWarning, match="does not enforce"):
+        await anthropic_model.achat_complete([{"role": "user", "content": "Hi"}])
+
+
+def test_json_mode_warns_in_to_langchain(anthropic_model):
+    anthropic_model.structured = {"type": "json"}
+
+    with pytest.warns(UserWarning, match="does not enforce") as record:
+        anthropic_model.to_langchain()
+
+    assert record[0].filename == __file__
+
+
+def test_json_schema_mode_does_not_warn(anthropic_model):
+    anthropic_model.structured = {"type": "json_schema", "schema": TripPlan}
+    anthropic_model.client.post.side_effect = None
+    anthropic_model.client.post.return_value = _anthropic_response(
+        "end_turn",
+        [{"type": "text", "text": '{"summary": "s", "next_steps": []}'}],
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        anthropic_model.chat_complete([{"role": "user", "content": "Plan a trip"}])
+        anthropic_model.to_langchain()
