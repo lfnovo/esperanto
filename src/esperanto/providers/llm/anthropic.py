@@ -62,6 +62,21 @@ ANTHROPIC_MODELS = (
     ("claude-haiku-4-5-20251001", 200_000),
 )
 
+# Models that reject forced tool use (tool_choice "any" / "tool") with a 400.
+# Matched by prefix so suffixed or dated variants are covered.
+_NO_FORCED_TOOL_CHOICE_PREFIXES = (
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-fable-5-1",
+    "claude-mythos-5-1",
+)
+
+
+def _rejects_forced_tool_choice(model_name: str) -> bool:
+    """Whether the model rejects tool_choice "any" / "tool"."""
+    return bool(model_name) and model_name.startswith(_NO_FORCED_TOOL_CHOICE_PREFIXES)
+
+
 # Anthropic stop_reason values mapped to the OpenAI finish_reason vocabulary
 # used by the other providers. Unlisted values pass through unchanged.
 _FINISH_REASONS = {
@@ -181,6 +196,28 @@ class AnthropicLanguageModel(LanguageModel):
         elif tool_choice is not None:
             # Pass through if it's already in Anthropic format
             result["type"] = str(tool_choice)
+
+        # Newer models reject forced tool use. Fall back to "auto" so code that
+        # works on other providers keeps working, and warn that the tool call
+        # is no longer guaranteed.
+        if result.get("type") in ("any", "tool"):
+            model_name = self.get_model_name()
+            if _rejects_forced_tool_choice(model_name):
+                tool_name = result.pop("name", None)
+                result["type"] = "auto"
+                hint = (
+                    f" Name the '{tool_name}' tool in the prompt to steer the model."
+                    if tool_name
+                    else ""
+                )
+                warnings.warn(
+                    f"Anthropic model '{model_name}' does not support forced tool "
+                    f"choice; sending tool_choice='auto' instead, so a tool call is "
+                    f"no longer guaranteed.{hint} For guaranteed JSON output, use "
+                    'structured={"type": "json_schema", ...}.',
+                    UserWarning,
+                    stacklevel=4,
+                )
 
         # Handle parallel tool calls - Anthropic uses disable_parallel_tool_use
         if parallel_tool_calls is False:

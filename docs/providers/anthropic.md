@@ -94,8 +94,11 @@ Each id names one model generation: `claude-sonnet-5` does not move to Sonnet
 Claude Opus 5.5 and Fable 5.1 always think, and Sonnet 5.5 thinks by default.
 Thinking counts against `max_tokens`, so leave enough room for the answer (see
 [Empty Structured Responses](#empty-structured-responses-and-thinking-budgets)).
-These models also reject forced tool choice (`tool_choice="required"` or a
-specific tool) with an API error; use `"auto"` and name the tool in the prompt.
+These models (and Claude Mythos 5.1) also reject forced tool choice
+(`tool_choice="required"` or a specific tool). Esperanto sends `tool_choice="auto"` instead and emits a
+`UserWarning`, so the same code keeps working, but a tool call is no longer
+guaranteed. Name the tool in the prompt to steer the model, or use
+`structured={"type": "json_schema", ...}` when you only need JSON back.
 
 **Configuration:**
 
@@ -375,7 +378,7 @@ chain = ConversationChain(llm=langchain_model)
 **Best for:** Most use cases, balanced performance
 - Strong reasoning and analysis at moderate cost
 - 1M token context window
-- Sonnet 5.5 is the current Sonnet; it thinks by default and rejects forced tool choice
+- Sonnet 5.5 is the current Sonnet; it thinks by default and does not support forced tool choice (Esperanto falls back to `auto` with a warning)
 
 ```python
 model = AIFactory.create_language("anthropic", "claude-sonnet-5")    # default
@@ -386,7 +389,7 @@ model = AIFactory.create_language("anthropic", "claude-sonnet-5-5")  # current S
 **Best for:** Complex reasoning and agentic work
 - Current Opus; thinking is always on and counts against `max_tokens`
 - 1M token context window
-- Rejects forced tool choice
+- Does not support forced tool choice (Esperanto falls back to `auto` with a warning)
 
 ```python
 model = AIFactory.create_language("anthropic", "claude-opus-5-5")

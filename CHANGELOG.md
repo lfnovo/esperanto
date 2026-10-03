@@ -55,6 +55,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Forced tool choice no longer fails on Claude Opus 5.5, Sonnet 5.5, Fable
+  5.1 and Mythos 5.1.** These models reject `tool_choice="required"` and a specific tool
+  with a 400. Esperanto now sends `tool_choice="auto"` for them (keeping
+  `parallel_tool_calls=False`) and emits a `UserWarning` saying the tool call is
+  no longer guaranteed. Other models are unchanged. (#298)
 - **Gemini 3.8 TTS audio no longer ends in a burst of noise.**
   `gemini-3.8-flash-tts` and `gemini-3.8-flash-lite-tts` return a complete WAV
   file, which Esperanto wrapped in a second WAV header, so players read the inner

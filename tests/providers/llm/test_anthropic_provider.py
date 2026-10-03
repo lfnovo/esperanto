@@ -1491,3 +1491,145 @@ def test_json_schema_mode_does_not_warn(anthropic_model):
         warnings.simplefilter("error")
         anthropic_model.chat_complete([{"role": "user", "content": "Plan a trip"}])
         anthropic_model.to_langchain()
+
+
+# --------------------------------------------------------------------------- #
+# Forced tool choice on models that reject it (#298)                          #
+# --------------------------------------------------------------------------- #
+
+NO_FORCED_TOOL_CHOICE_MODELS = [
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-fable-5-1",
+    "claude-mythos-5-1",
+]
+FORCED_TOOL_CHOICES = [
+    "required",
+    {"type": "function", "function": {"name": "get_weather"}},
+]
+
+
+def _tool_model(model_name, response):
+    model = AnthropicLanguageModel(api_key="test-key", model_name=model_name)
+    model.client = Mock()
+    model.client.post.return_value = response
+    model.async_client = AsyncMock()
+    model.async_client.post.return_value = response
+    return model
+
+
+def _text_response():
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = {
+        "id": "msg_1",
+        "content": [{"type": "text", "text": "ok"}],
+        "model": "claude-opus-5-5",
+        "role": "assistant",
+        "stop_reason": "end_turn",
+        "type": "message",
+        "usage": {"input_tokens": 1, "output_tokens": 1},
+    }
+    return response
+
+
+@pytest.mark.parametrize("model_name", NO_FORCED_TOOL_CHOICE_MODELS)
+@pytest.mark.parametrize("tool_choice", FORCED_TOOL_CHOICES)
+def test_forced_tool_choice_falls_back_to_auto(model_name, tool_choice, sample_tools):
+    model = _tool_model(model_name, _text_response())
+
+    with pytest.warns(UserWarning, match="does not support forced tool choice") as record:
+        model.chat_complete([{"role": "user", "content": "Hi"}], tools=sample_tools, tool_choice=tool_choice)
+
+    payload = model.client.post.call_args[1]["json"]
+    assert payload["tool_choice"] == {"type": "auto"}
+    assert model_name in str(record[0].message)
+    # stacklevel points at the caller, not at Esperanto internals
+    assert record[0].filename == __file__
+
+
+def test_forced_specific_tool_warning_names_the_tool(sample_tools):
+    model = _tool_model("claude-opus-5-5", _text_response())
+
+    with pytest.warns(UserWarning, match="Name the 'get_weather' tool"):
+        model.chat_complete(
+            [{"role": "user", "content": "Hi"}],
+            tools=sample_tools,
+            tool_choice={"type": "function", "function": {"name": "get_weather"}},
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("tool_choice", FORCED_TOOL_CHOICES)
+async def test_forced_tool_choice_falls_back_to_auto_async(tool_choice, sample_tools):
+    model = _tool_model("claude-sonnet-5-5", _text_response())
+
+    with pytest.warns(UserWarning, match="does not support forced tool choice") as record:
+        await model.achat_complete(
+            [{"role": "user", "content": "Hi"}], tools=sample_tools, tool_choice=tool_choice
+        )
+
+    payload = model.async_client.post.call_args[1]["json"]
+    assert payload["tool_choice"] == {"type": "auto"}
+    assert record[0].filename == __file__
+
+
+def test_forced_tool_choice_fallback_keeps_parallel_setting(sample_tools):
+    model = _tool_model("claude-fable-5-1", _text_response())
+
+    with pytest.warns(UserWarning):
+        model.chat_complete(
+            [{"role": "user", "content": "Hi"}],
+            tools=sample_tools,
+            tool_choice="required",
+            parallel_tool_calls=False,
+        )
+
+    payload = model.client.post.call_args[1]["json"]
+    assert payload["tool_choice"] == {"type": "auto", "disable_parallel_tool_use": True}
+
+
+def test_forced_tool_choice_fallback_matches_suffixed_ids(sample_tools):
+    model = _tool_model("claude-opus-5-5-20261001", _text_response())
+
+    with pytest.warns(UserWarning):
+        model.chat_complete([{"role": "user", "content": "Hi"}], tools=sample_tools, tool_choice="required")
+
+    assert model.client.post.call_args[1]["json"]["tool_choice"] == {"type": "auto"}
+
+
+@pytest.mark.parametrize("model_name", NO_FORCED_TOOL_CHOICE_MODELS)
+@pytest.mark.parametrize("tool_choice,expected", [("auto", {"type": "auto"}), ("none", None)])
+def test_unforced_tool_choice_does_not_warn(model_name, tool_choice, expected, sample_tools):
+    model = _tool_model(model_name, _text_response())
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        model.chat_complete([{"role": "user", "content": "Hi"}], tools=sample_tools, tool_choice=tool_choice)
+
+    payload = model.client.post.call_args[1]["json"]
+    if expected is None:
+        assert "tool_choice" not in payload
+    else:
+        assert payload["tool_choice"] == expected
+
+
+@pytest.mark.parametrize("model_name", ["claude-sonnet-5", "claude-opus-5", "claude-haiku-4-5-20251001"])
+@pytest.mark.parametrize(
+    "tool_choice,expected",
+    [
+        ("required", {"type": "any"}),
+        (
+            {"type": "function", "function": {"name": "get_weather"}},
+            {"type": "tool", "name": "get_weather"},
+        ),
+    ],
+)
+def test_older_models_keep_forced_tool_choice(model_name, tool_choice, expected, sample_tools):
+    model = _tool_model(model_name, _text_response())
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        model.chat_complete([{"role": "user", "content": "Hi"}], tools=sample_tools, tool_choice=tool_choice)
+
+    assert model.client.post.call_args[1]["json"]["tool_choice"] == expected
