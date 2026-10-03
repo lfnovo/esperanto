@@ -60,7 +60,7 @@ _FINISH_REASONS = {
 _JSON_MODE_WARNING = (
     'Anthropic does not enforce structured={"type": "json"}; output is '
     'prompt-guided only. Use {"type": "json_schema", "schema": ...} for '
-    "guaranteed JSON."
+    "guaranteed JSON (requires a Claude 4.5 model or newer)."
 )
 
 

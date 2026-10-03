@@ -90,7 +90,7 @@ supported. Shared machinery lives in `structured_output.py`:
 - `resolve_structured_output()` normalizes `self.structured` into a
   `ResolvedStructuredOutput` (canonical OpenAI-shaped `response_format`).
 - `apply_structured_output(result, resolved)` centralizes the tool-calls guard
-  (skip the choice when the model returned tool calls), the empty-content check
+  (skip parsing when the model returned tool calls; the choice is kept unchanged), the empty-content check
   (any structured mode: empty/whitespace content raises `EmptyCompletionError`
   with the choice's `finish_reason`), and schema-mode per-choice parsing; it sets
   `message.structured` on each choice.

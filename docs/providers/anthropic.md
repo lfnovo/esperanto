@@ -239,9 +239,9 @@ focused_response = focused_model.chat_complete(messages)
 ## Advanced Features
 
 ### JSON Mode
-`structured={"type": "json"}` is **prompt-guided only** on Anthropic. The Anthropic API has no generic JSON mode: current models reject assistant prefill, and `output_config` only accepts a concrete schema. Esperanto therefore sends no constraint, and the model usually returns JSON because the prompt asks for it. Esperanto emits a `UserWarning` when you use this mode with Anthropic, both in `chat_complete()` and in `to_langchain()`.
+`structured={"type": "json"}` is **prompt-guided only** on Anthropic. The Anthropic API has no generic JSON mode: current models reject assistant prefill, and `output_config` only accepts a concrete schema. Esperanto therefore sends no constraint, and the model usually returns JSON because the prompt asks for it. Esperanto emits a `UserWarning` when you use this mode with Anthropic, in `chat_complete()`, `achat_complete()` and `to_langchain()`.
 
-For guaranteed JSON, use [schema-driven structured output](#schema-driven-structured-output-v1) (`{"type": "json_schema", "schema": ...}`), which Anthropic enforces.
+For guaranteed JSON, use [schema-driven structured output](#schema-driven-structured-output-v1) (`{"type": "json_schema", "schema": ...}`), which Anthropic enforces on Claude 4.5 models and newer (Opus 4.5+, Sonnet 4.5+, Haiku 4.5).
 
 ```python
 model = AIFactory.create_language(
@@ -259,10 +259,16 @@ response = model.chat_complete(messages)
 ```
 
 ### Empty Structured Responses and Thinking Budgets
-Claude Opus 5.5 always thinks, and its `max_tokens` covers thinking **plus** the answer. When thinking uses up the whole budget, or the model refuses, the response has no text. In any structured mode, Esperanto raises `EmptyCompletionError` instead of returning empty content:
+Claude Opus 5.5 always thinks, and its `max_tokens` covers thinking **plus** the answer. When thinking uses up the whole budget, or the model refuses, the response has no text. In any structured mode, when a response has no text and no tool calls, Esperanto raises `EmptyCompletionError` instead of returning empty content:
 
 ```python
 from esperanto import EmptyCompletionError
+
+model = AIFactory.create_language(
+    "anthropic",
+    "claude-opus-5-5",
+    config={"structured": {"type": "json"}, "max_tokens": 4096}
+)
 
 try:
     response = model.chat_complete(messages)
@@ -306,7 +312,7 @@ print(response.structured)   # Parsed/validated TravelPlan instance
 
 Notes:
 - Schema mode is currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
-- An empty response raises `EmptyCompletionError` (see [Empty Structured Responses](#empty-structured-responses-and-thinking-budgets)).
+- A response with empty content and no tool calls raises `EmptyCompletionError` (see [Empty Structured Responses](#empty-structured-responses-and-thinking-budgets)).
 - Anthropic strict tool-use schema enforcement (`tools[].strict`) is a separate feature and is not part of this v1 schema-output path.
 
 ### Temperature and Top-P Priority

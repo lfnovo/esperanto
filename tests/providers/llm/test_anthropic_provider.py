@@ -1358,6 +1358,8 @@ async def test_empty_structured_response_raises_async(
         await anthropic_model.achat_complete([{"role": "user", "content": "Plan a trip"}])
 
     assert exc_info.value.finish_reason == finish_reason
+    assert exc_info.value.model == "claude-opus-5-5"
+    assert "test-key" not in str(exc_info.value)
 
 
 def test_structured_response_with_tool_calls_and_no_content_returns(anthropic_model):
