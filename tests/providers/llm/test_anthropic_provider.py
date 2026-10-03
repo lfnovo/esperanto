@@ -1289,6 +1289,39 @@ def test_fallback_model_list_has_no_withdrawn_models():
     assert all(m.owned_by == "Anthropic" for m in model._get_models())
 
 
+def test_fallback_model_list_includes_current_generation():
+    model = AnthropicLanguageModel(api_key="test-key")
+    model.client = Mock()
+    model.client.get.side_effect = Exception("no network")
+
+    windows = {m.id: m.context_window for m in model._get_models()}
+
+    assert windows["claude-opus-5-5"] == 1_000_000
+    assert windows["claude-sonnet-5-5"] == 1_000_000
+    assert windows["claude-fable-5-1"] == 1_000_000
+    assert windows["claude-haiku-4-5-20251001"] == 200_000
+    assert model._get_default_model() in windows
+
+
+def test_live_model_list_uses_max_input_tokens_as_context_window():
+    """max_tokens is the output cap; the context window is max_input_tokens."""
+    model = AnthropicLanguageModel(api_key="test-key")
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = {
+        "data": [
+            {"id": "claude-opus-5-5", "max_input_tokens": 1_000_000, "max_tokens": 128_000},
+            {"id": "claude-legacy"},
+        ]
+    }
+    model.client = Mock()
+    model.client.get.return_value = response
+
+    windows = {m.id: m.context_window for m in model._get_models()}
+
+    assert windows == {"claude-opus-5-5": 1_000_000, "claude-legacy": None}
+
+
 # --------------------------------------------------------------------------- #
 # Empty structured responses, finish reasons and JSON-mode warning (#292)     #
 # --------------------------------------------------------------------------- #

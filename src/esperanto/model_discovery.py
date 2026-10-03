@@ -156,13 +156,12 @@ def get_anthropic_models(
     if cached_models is not None:
         return cached_models
 
-    # Hardcoded list of known Anthropic models (they don't have a models API)
+    # Static list of known Anthropic models (no API key needed for discovery)
+    from esperanto.providers.llm.anthropic import ANTHROPIC_MODELS
+
     models = [
-        Model(id="claude-opus-5", owned_by="anthropic", context_window=200000),
-        Model(id="claude-sonnet-5", owned_by="anthropic", context_window=200000),
-        Model(id="claude-opus-4-5-20251101", owned_by="anthropic", context_window=200000),
-        Model(id="claude-sonnet-4-5-20250929", owned_by="anthropic", context_window=200000),
-        Model(id="claude-haiku-4-5-20251001", owned_by="anthropic", context_window=200000),
+        Model(id=model_id, owned_by="anthropic", context_window=context_window)
+        for model_id, context_window in ANTHROPIC_MODELS
     ]
 
     # Cache results

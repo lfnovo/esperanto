@@ -48,6 +48,20 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from langchain_anthropic import ChatAnthropic
 
+# Known Anthropic models and their context windows (max input tokens), as
+# reported by the Models API. Used when the live /models call is unavailable
+# and by static model discovery.
+ANTHROPIC_MODELS = (
+    ("claude-opus-5-5", 1_000_000),
+    ("claude-sonnet-5-5", 1_000_000),
+    ("claude-fable-5-1", 1_000_000),
+    ("claude-opus-5", 1_000_000),
+    ("claude-sonnet-5", 1_000_000),
+    ("claude-opus-4-5-20251101", 200_000),
+    ("claude-sonnet-4-5-20250929", 1_000_000),
+    ("claude-haiku-4-5-20251001", 200_000),
+)
+
 # Anthropic stop_reason values mapped to the OpenAI finish_reason vocabulary
 # used by the other providers. Unlisted values pass through unchanged.
 _FINISH_REASONS = {
@@ -188,33 +202,15 @@ class AnthropicLanguageModel(LanguageModel):
                 Model(
                     id=model["id"],
                     owned_by="Anthropic",
-                    context_window=model.get("max_tokens", 200000),
+                    context_window=model.get("max_input_tokens"),
                 )
                 for model in models_data.get("data", [])
             ]
         except Exception:
             # Fallback to known models if API call fails
             return [
-                Model(
-                    id="claude-sonnet-5",
-                    owned_by="Anthropic",
-                    context_window=200000,
-                ),
-                Model(
-                    id="claude-opus-5",
-                    owned_by="Anthropic",
-                    context_window=200000,
-                ),
-                Model(
-                    id="claude-sonnet-4-5-20250929",
-                    owned_by="Anthropic",
-                    context_window=200000,
-                ),
-                Model(
-                    id="claude-haiku-4-5-20251001",
-                    owned_by="Anthropic",
-                    context_window=200000,
-                ),
+                Model(id=model_id, owned_by="Anthropic", context_window=context_window)
+                for model_id, context_window in ANTHROPIC_MODELS
             ]
 
     def _prepare_messages(

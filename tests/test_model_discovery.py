@@ -217,6 +217,18 @@ class TestAnthropicDiscovery:
         # not recommend models that can no longer be called.
         assert not any(m.id.startswith("claude-3") for m in models)
 
+    def test_get_anthropic_models_matches_provider_fallback(self):
+        """Static discovery and the provider's offline fallback share one list."""
+        from esperanto.providers.llm.anthropic import ANTHROPIC_MODELS
+
+        _model_cache.clear()
+        models = get_anthropic_models()
+
+        assert [(m.id, m.context_window) for m in models] == list(ANTHROPIC_MODELS)
+        assert {"claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1"} <= {
+            m.id for m in models
+        }
+
     def test_get_anthropic_models_caching(self):
         """Test that Anthropic models are cached."""
         _model_cache.clear()

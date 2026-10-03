@@ -79,14 +79,23 @@ print(response.choices[0].message.content)
 
 | Model | Context Window | Best For |
 |-------|----------------|----------|
-| **claude-sonnet-5** | 200K tokens | Default. Balanced performance and speed |
-| **claude-opus-5** | 200K tokens | Complex tasks, highest capability |
-| **claude-sonnet-4-5-20250929** | 200K tokens | Pinned Sonnet, stable across releases |
+| **claude-opus-5-5** | 1M tokens | Current Opus. Complex tasks |
+| **claude-sonnet-5-5** | 1M tokens | Current Sonnet. Fast, capable everyday work |
+| **claude-fable-5-1** | 1M tokens | Most capable model, for the hardest reasoning tasks |
+| **claude-sonnet-5** | 1M tokens | Default. Balanced performance and speed |
+| **claude-opus-5** | 1M tokens | Previous Opus |
+| **claude-opus-4-5-20251101** | 200K tokens | Pinned Opus 4.5 |
+| **claude-sonnet-4-5-20250929** | 1M tokens | Pinned Sonnet 4.5 |
 | **claude-haiku-4-5-20251001** | 200K tokens | Fast responses, cost-effective |
 
-The undated aliases (`claude-sonnet-5`, `claude-opus-5`) track Anthropic's
-current release of that tier; pin a dated id when you need the model to stay
-fixed.
+Each id names one model generation: `claude-sonnet-5` does not move to Sonnet
+5.5. Change the id to use a newer generation.
+
+Claude Opus 5.5 and Fable 5.1 always think, and Sonnet 5.5 thinks by default.
+Thinking counts against `max_tokens`, so leave enough room for the answer (see
+[Empty Structured Responses](#empty-structured-responses-and-thinking-budgets)).
+These models also reject forced tool choice (`tool_choice="required"` or a
+specific tool) with an API error; use `"auto"` and name the tool in the prompt.
 
 **Configuration:**
 
