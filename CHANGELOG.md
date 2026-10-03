@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.0] - 2026-10-03
+
 ### Added
 
 - **Z.ai provider.** New built-in OpenAI-compatible profile (`zai`) for Z.ai's
@@ -47,7 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which kept installs on transformers 4.57, a version with published security
   advisories fixed only in 5.x. The caps are now `<6` and `<7`; local embedding
   and reranking were verified on transformers 5.18 and sentence-transformers
-  6.1. The development lockfile is refreshed to current releases.
+  6.1. The transformers reranker now passes `dtype` instead of the deprecated
+  `torch_dtype`. The development lockfile is refreshed to current releases.
+  (#312)
 
 ### Documentation
 
@@ -76,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conversion with `structured={"type": "json_schema", ...}` emitted a
   `UserWarning`. Esperanto now passes `output_config` directly when
   `ChatAnthropic` declares it, and keeps `model_kwargs` for older versions. The
-  schema reached the request either way.
+  schema reached the request either way. (#311)
 - **Perplexity works again without an explicit model.** The default
   Perplexity model, `llama-3-sonar-large-32k-online`, is rejected by
   Perplexity as invalid, so `create_language("perplexity")` failed. The default
