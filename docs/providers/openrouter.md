@@ -338,7 +338,12 @@ vectors = embedder.embed(["Hello world", "Esperanto makes provider swaps easy"])
 print(len(vectors), len(vectors[0]))
 
 # Async
-vectors = await embedder.aembed(["Hello world"])
+import asyncio
+
+async def embed_async():
+    return await embedder.aembed(["Hello world"])
+
+vectors = asyncio.run(embed_async())
 ```
 
 Large inputs are split automatically into requests of up to 96 texts each and
