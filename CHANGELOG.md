@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `UserWarning` recommending `{"type": "json_schema", "schema": ...}`. Request
   behavior is unchanged. (#292)
 
+- **The `transformers` extra accepts transformers 5 and sentence-transformers 6.**
+  The extra previously capped `transformers<5` and `sentence-transformers<6`,
+  which kept installs on transformers 4.57, a version with published security
+  advisories fixed only in 5.x. The caps are now `<6` and `<7`; local embedding
+  and reranking were verified on transformers 5.18 and sentence-transformers
+  6.1. The development lockfile is refreshed to current releases.
+
 ### Documentation
 
 - **OpenRouter page refreshed.** Model ids checked against OpenRouter's live
