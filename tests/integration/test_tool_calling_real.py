@@ -303,7 +303,7 @@ class TestGroqToolCalling:
 
     def test_basic_tool_call(self, weather_tools):
         """Test that Groq returns a tool call for a weather query."""
-        model = AIFactory.create_language("groq", "llama-3.3-70b-versatile")
+        model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
 
         response = model.chat_complete(
             messages=TOOL_TRIGGER_MESSAGE,
@@ -332,7 +332,7 @@ class TestGroqToolCalling:
 
     def test_multi_turn_with_tool_result(self, weather_tools):
         """Test multi-turn conversation with tool result."""
-        model = AIFactory.create_language("groq", "llama-3.3-70b-versatile")
+        model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
 
         # First call - should get tool call
         response1 = model.chat_complete(

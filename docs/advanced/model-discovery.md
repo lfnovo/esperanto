@@ -228,9 +228,10 @@ for model in models:
     print(f"{model.id}")
 
 # Example output:
-# mixtral-8x7b-32768
-# llama3-70b-8192
-# llama3-8b-8192
+# openai/gpt-oss-120b
+# openai/gpt-oss-20b
+# qwen/qwen3.8-27b
+# ...
 ```
 
 ### Mistral

@@ -157,7 +157,7 @@ Short timeouts for interactive applications:
 # Chatbot with quick response requirement
 chatbot = AIFactory.create_language(
     "groq",
-    "mixtral-8x7b-32768",  # Fast inference
+    "openai/gpt-oss-120b",  # Fast inference
     config={"timeout": 30.0}  # 30 seconds max
 )
 
@@ -267,7 +267,7 @@ class AIServiceConfig:
         )
 
 # Usage in services
-quick_chat = AIServiceConfig.create_quick_llm("groq", "llama3-8b-8192")
+quick_chat = AIServiceConfig.create_quick_llm("groq", "openai/gpt-oss-20b")
 standard_embedder = AIServiceConfig.create_standard_embedder("openai", "text-embedding-3-small")
 batch_transcriber = AIServiceConfig.create_batch_transcriber("openai")
 ```
@@ -409,7 +409,7 @@ def create_model_with_fallback(primary_config, fallback_config):
 
 # Usage
 primary = {"provider": "anthropic", "model_name": "claude-sonnet-5"}
-fallback = {"provider": "groq", "model_name": "mixtral-8x7b-32768"}
+fallback = {"provider": "groq", "model_name": "openai/gpt-oss-120b"}
 
 model, used = create_model_with_fallback(primary, fallback)
 print(f"Using {used} model")
@@ -571,7 +571,7 @@ long_running_model = AIFactory.create_language(
 ```python
 # Fast providers - shorter timeout
 groq_model = AIFactory.create_language(
-    "groq", "mixtral-8x7b-32768",
+    "groq", "openai/gpt-oss-120b",
     config={"timeout": 30.0}  # Groq is very fast
 )
 

@@ -141,7 +141,7 @@ def _build_azure(response_data):
 
 
 def _build_groq(response_data):
-    model = GroqLanguageModel(api_key="test-key", model_name="llama-3.1-8b-instant")
+    model = GroqLanguageModel(api_key="test-key", model_name="openai/gpt-oss-20b")
     model.client = _mock_client(response_data)
     model.async_client = AsyncMock()
     return model

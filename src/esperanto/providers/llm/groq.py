@@ -91,7 +91,7 @@ class GroqLanguageModel(LanguageModel):
             Model(
                 id=model["id"],
                 owned_by="Groq",
-                context_window=128000,  # All Groq models currently support 128k context
+                context_window=model.get("context_window"),
             )
             for model in models_data["data"]
         ]
@@ -501,7 +501,7 @@ class GroqLanguageModel(LanguageModel):
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        return "mixtral-8x7b-32768"
+        return "openai/gpt-oss-120b"
 
     @property
     def provider(self) -> str:

@@ -164,7 +164,7 @@ def mock_groq_response():
     mock_response = MagicMock()
     mock_response.id = "chatcmpl-123"
     mock_response.created = 1677858242
-    mock_response.model = "mixtral-8x7b-32768"
+    mock_response.model = "openai/gpt-oss-120b"
 
     mock_message = MagicMock()
     mock_message.content = "Test response"
@@ -199,7 +199,7 @@ def groq_model():
     mock_response_data = {
         "id": "chatcmpl-123",
         "created": 1677858242,
-        "model": "mixtral-8x7b-32768",
+        "model": "openai/gpt-oss-120b",
         "object": "chat.completion",
         "choices": [
             {

@@ -63,6 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Groq works again without an explicit model.** The default Groq model,
+  `mixtral-8x7b-32768`, was retired by Groq, so `create_language("groq")`
+  failed. The default is now `openai/gpt-oss-120b`. Groq model discovery
+  reports each model's real context window instead of a fixed 128K, and the
+  Groq docs and examples use current models. (#304)
 - **Forced tool choice no longer fails on Claude Opus 5.5, Sonnet 5.5, Fable
   5.1 and Mythos 5.1.** These models reject `tool_choice="required"` and a specific tool
   with a 400. Esperanto now sends `tool_choice="auto"` for them (keeping

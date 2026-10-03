@@ -81,7 +81,7 @@ def test_chat_complete(groq_model):
     # Check request payload
     json_payload = call_args[1]["json"]
     assert json_payload["messages"] == messages
-    assert json_payload["model"] == "mixtral-8x7b-32768"
+    assert json_payload["model"] == "openai/gpt-oss-120b"
     assert json_payload["temperature"] == 1.0
     assert not json_payload["stream"]
     
@@ -108,7 +108,7 @@ async def test_achat_complete(groq_model):
     # Check request payload
     json_payload = call_args[1]["json"]
     assert json_payload["messages"] == messages
-    assert json_payload["model"] == "mixtral-8x7b-32768"
+    assert json_payload["model"] == "openai/gpt-oss-120b"
     assert json_payload["temperature"] == 1.0
     assert not json_payload["stream"]
     
@@ -121,7 +121,7 @@ def test_to_langchain(groq_model):
     langchain_model = groq_model.to_langchain()
 
     assert isinstance(langchain_model, ChatGroq)
-    assert langchain_model.model_name == "mixtral-8x7b-32768"
+    assert langchain_model.model_name == "openai/gpt-oss-120b"
     assert langchain_model.temperature == 1.0
     assert langchain_model.max_tokens == 850
     # assert langchain_model.model_kwargs["top_p"] == 0.9 # top_p is not stored in model_kwargs by default
@@ -143,7 +143,7 @@ def test_response_normalization(groq_model):
 
     assert response.id == "chatcmpl-123"
     assert response.created == 1677858242
-    assert response.model == "mixtral-8x7b-32768"
+    assert response.model == "openai/gpt-oss-120b"
     assert response.provider == "groq"
     assert len(response.choices) == 1
 
@@ -171,7 +171,7 @@ def test_json_schema_structured_output_payload_and_parsed_result(groq_model):
         "id": "chatcmpl-structured-123",
         "object": "chat.completion",
         "created": 1677652288,
-        "model": "mixtral-8x7b-32768",
+        "model": "openai/gpt-oss-120b",
         "choices": [
             {
                 "index": 0,
@@ -214,7 +214,7 @@ def test_json_schema_invalid_json_raises(groq_model):
         "id": "chatcmpl-structured-bad",
         "object": "chat.completion",
         "created": 1677652288,
-        "model": "mixtral-8x7b-32768",
+        "model": "openai/gpt-oss-120b",
         "choices": [
             {"index": 0, "message": {"role": "assistant", "content": "not-json"}, "finish_reason": "stop"}
         ],
@@ -272,7 +272,7 @@ def mock_groq_tool_call_response():
         "id": "chatcmpl-tool-123",
         "object": "chat.completion",
         "created": 1677652288,
-        "model": "mixtral-8x7b-32768",
+        "model": "openai/gpt-oss-120b",
         "choices": [
             {
                 "index": 0,
@@ -304,7 +304,7 @@ def mock_groq_tool_call_response():
 @pytest.fixture
 def groq_model_with_tool_response(mock_groq_tool_call_response):
     """Create a Groq model with tool call response mocked."""
-    model = GroqLanguageModel(api_key="test-key", model_name="mixtral-8x7b-32768")
+    model = GroqLanguageModel(api_key="test-key", model_name="openai/gpt-oss-120b")
 
     client = Mock()
     async_client = AsyncMock()
@@ -440,7 +440,7 @@ class TestInstanceLevelTools:
         """Test that instance-level tools are used when not passed at call time."""
         model = GroqLanguageModel(
             api_key="test-key",
-            model_name="mixtral-8x7b-32768",
+            model_name="openai/gpt-oss-120b",
             tools=sample_tools
         )
 
@@ -466,7 +466,7 @@ class TestInstanceLevelTools:
         )
         model = GroqLanguageModel(
             api_key="test-key",
-            model_name="mixtral-8x7b-32768",
+            model_name="openai/gpt-oss-120b",
             tools=[instance_tool]
         )
 
@@ -514,7 +514,7 @@ class TestToolCallValidation:
             "id": "chatcmpl-invalid",
             "object": "chat.completion",
             "created": 1677652288,
-            "model": "mixtral-8x7b-32768",
+            "model": "openai/gpt-oss-120b",
             "choices": [
                 {
                     "index": 0,
@@ -538,7 +538,7 @@ class TestToolCallValidation:
             "usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20}
         }
 
-        model = GroqLanguageModel(api_key="test-key", model_name="mixtral-8x7b-32768")
+        model = GroqLanguageModel(api_key="test-key", model_name="openai/gpt-oss-120b")
         client = Mock()
         response = Mock()
         response.status_code = 200
@@ -576,3 +576,33 @@ class TestParameterOverrides:
         assert "max_tokens" not in json_payload, (
             "Default 850 with no per-call override should be filtered out"
         )
+
+
+def test_default_model_is_current():
+    """The default must be a model Groq still serves (mixtral-8x7b-32768 was retired)."""
+    model = GroqLanguageModel(api_key="test-key")
+    assert model._get_default_model() == "openai/gpt-oss-120b"
+    assert model.get_model_name() == "openai/gpt-oss-120b"
+
+
+def test_get_models_reads_context_window_from_api():
+    model = GroqLanguageModel(api_key="test-key")
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = {
+        "data": [
+            {"id": "openai/gpt-oss-120b", "context_window": 131072},
+            {"id": "allam-2-7b", "context_window": 4096},
+            {"id": "unknown-model"},
+        ]
+    }
+    model.client = Mock()
+    model.client.get.return_value = response
+
+    windows = {m.id: m.context_window for m in model._get_models()}
+
+    assert windows == {
+        "openai/gpt-oss-120b": 131072,
+        "allam-2-7b": 4096,
+        "unknown-model": None,
+    }
