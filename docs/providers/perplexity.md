@@ -211,8 +211,13 @@ for chunk in model.chat_complete(messages, stream=True):
     print(chunk.choices[0].delta.content, end="", flush=True)
 
 # Async streaming
-async for chunk in model.achat_complete(messages, stream=True):
-    print(chunk.choices[0].delta.content, end="", flush=True)
+import asyncio
+
+async def stream_async():
+    async for chunk in await model.achat_complete(messages, stream=True):
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+asyncio.run(stream_async())
 ```
 
 **Example - Multi-turn Conversation:**
@@ -378,8 +383,8 @@ model = AIFactory.create_language("perplexity", "llama-3.1-sonar-large-128k-onli
 langchain_model = model.to_langchain()
 
 # Use with LangChain
-from langchain.chains import ConversationChain
-chain = ConversationChain(llm=langchain_model)
+response = langchain_model.invoke("Hello!")
+print(response.content)
 ```
 
 ## Model Selection Guide

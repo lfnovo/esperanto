@@ -121,17 +121,17 @@ This installs:
 If you plan to use any of the `.to_langchain()` methods, you need to install the correct LangChain SDKs manually:
 
 ```bash
-# Core LangChain dependencies (required)
-pip install "langchain>=0.3.8,<0.4.0" "langchain-core>=0.3.29,<0.4.0"
+# Core LangChain dependency (required); add "langchain>=1.2.4,<2.0.0" for agents
+pip install "langchain-core>=1.2.7,<2.0.0"
 
 # Provider-specific LangChain packages (install only what you need)
-pip install "langchain-openai>=0.2.9"
-pip install "langchain-anthropic>=0.3.0"
-pip install "langchain-google-genai>=2.1.2"
-pip install "langchain-ollama>=0.2.0"
-pip install "langchain-groq>=0.2.1"
-pip install "langchain_mistralai>=0.2.1"
-pip install "langchain_deepseek>=0.1.3"
+pip install "langchain-openai>=1.1.7,<2.0.0"
+pip install "langchain-anthropic>=1.3.1,<2.0.0"
+pip install "langchain-google-genai>=4.2.0,<5.0.0"
+pip install "langchain-ollama>=1.0.1,<2.0.0"
+pip install "langchain-groq>=1.1.1,<2.0.0"
+pip install "langchain-mistralai>=1.1.1,<2.0.0"
+# DeepSeek, xAI, OpenRouter and other OpenAI-compatible providers use langchain-openai
 ```
 
 ## Provider Support Matrix
@@ -329,12 +329,17 @@ print(response.usage.total_tokens)          # Token usage information
 print(response.content)          # Shortcut for response.choices[0].message.content
 
 # For streaming responses
-for chunk in model.chat_complete(messages):
+for chunk in model.chat_complete(messages, stream=True):
     print(chunk.choices[0].delta.content, end="", flush=True)
 
 # Async streaming
-async for chunk in model.achat_complete(messages):
-    print(chunk.choices[0].delta.content, end="", flush=True)
+import asyncio
+
+async def stream_async():
+    async for chunk in await model.achat_complete(messages, stream=True):
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+asyncio.run(stream_async())
 ```
 
 #### Handling Reasoning Traces
@@ -708,8 +713,13 @@ for chunk in model.chat_complete(messages):
     print(chunk.choices[0].delta.content, end="", flush=True)
 
 # Async streaming
-async for chunk in model.achat_complete(messages):
-    print(chunk.choices[0].delta.content, end="", flush=True)
+import asyncio
+
+async def stream_async():
+    async for chunk in await model.achat_complete(messages):
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+asyncio.run(stream_async())
 ```
 
 ## Structured Output 📊
@@ -774,8 +784,8 @@ model = OpenAILanguageModel(api_key="your-api-key")
 langchain_model = model.to_langchain()
 
 # Use with LangChain
-from langchain.chains import ConversationChain
-chain = ConversationChain(llm=langchain_model)
+response = langchain_model.invoke("Hello!")
+print(response.content)
 ```
 
 ## Documentation 📚
