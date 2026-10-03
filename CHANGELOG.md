@@ -68,6 +68,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failed. The default is now `openai/gpt-oss-120b`. Groq model discovery
   reports each model's real context window instead of a fixed 128K, and the
   Groq docs and examples use current models. (#304)
+- **`to_langchain()` keeps the configured timeout on every provider.**
+  Anthropic, Google, Vertex, Mistral, OpenRouter and Cohere dropped
+  Esperanto's timeout when converting to LangChain, so converted models used
+  the LangChain/SDK default instead. They now pass the resolved timeout
+  (`config["timeout"]`, then `ESPERANTO_LLM_TIMEOUT`, then 60 seconds).
+  Mistral's LangChain timeout is whole seconds, so fractional values round
+  up. OpenRouter now also gives LangChain its own HTTP clients with
+  Esperanto's SSL settings, as OpenAI does. (#305)
 - **Forced tool choice no longer fails on Claude Opus 5.5, Sonnet 5.5, Fable
   5.1 and Mythos 5.1.** These models reject `tool_choice="required"` and a specific tool
   with a 400. Esperanto now sends `tool_choice="auto"` for them (keeping

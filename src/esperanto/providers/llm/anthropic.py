@@ -984,4 +984,6 @@ class AnthropicLanguageModel(LanguageModel):
             if base_url and base_url != "https://api.anthropic.com":
                 kwargs["base_url"] = base_url
 
+        kwargs["timeout"] = self._get_timeout()
+
         return ChatAnthropic(**kwargs)  # type: ignore[arg-type]

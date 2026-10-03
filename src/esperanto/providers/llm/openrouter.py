@@ -460,7 +460,7 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
             elif self.get_model_name().lower().startswith(("openai/", "gpt-")):
                 model_kwargs["response_format"] = resolved_structured.response_format
 
-        langchain_kwargs = {
+        langchain_kwargs: Dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
@@ -481,5 +481,15 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
         if not model_name:
             raise ValueError("Model name is required for Langchain integration.")
         langchain_kwargs["model"] = model_name  # Update model name in kwargs
+
+        # Give LangChain its own HTTP clients with the same timeout/SSL/proxy
+        # settings, as OpenAILanguageModel.to_langchain() does.
+        try:
+            sync_client, async_client = self._create_langchain_http_clients()
+            langchain_kwargs["http_client"] = sync_client
+            langchain_kwargs["http_async_client"] = async_client
+        except (TypeError, AttributeError):
+            # httpx types might be mocked in tests, skip passing clients
+            pass
 
         return ChatOpenAI(**self._clean_config(langchain_kwargs))
