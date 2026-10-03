@@ -50,7 +50,7 @@ model = AIFactory.create_language(
 
 ## Supported Providers
 
-The `.to_langchain()` method works with all language model providers in Esperanto. The model, temperature, max tokens and base URL you set in Esperanto carry over to the LangChain model, and so does structured output (except on Cohere). Timeouts carry over for OpenAI, Azure, Groq, Ollama, Perplexity and OpenAI-compatible providers; for the others, set the timeout on the LangChain model.
+The `.to_langchain()` method works with all language model providers in Esperanto. The model, temperature, max tokens and base URL you set in Esperanto carry over to the LangChain model, and so does schema-mode structured output (`{"type": "json_schema", ...}`, except on Cohere). JSON mode (`{"type": "json"}`) carries over only where the provider enforces it; on Anthropic it is prompt-guided. Timeouts carry over for OpenAI, Azure, Groq, Ollama, Perplexity and OpenAI-compatible providers; for the others, set the timeout on the LangChain model.
 
 ### OpenAI
 

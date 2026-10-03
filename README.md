@@ -131,7 +131,7 @@ pip install "langchain-google-genai>=4.2.0,<5.0.0"
 pip install "langchain-ollama>=1.0.1,<2.0.0"
 pip install "langchain-groq>=1.1.1,<2.0.0"
 pip install "langchain-mistralai>=1.1.1,<2.0.0"
-pip install "langchain-deepseek>=1.0.1,<2.0.0"
+# DeepSeek, xAI, OpenRouter and other OpenAI-compatible providers use langchain-openai
 ```
 
 ## Provider Support Matrix
