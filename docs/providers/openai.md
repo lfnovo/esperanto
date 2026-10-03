@@ -318,9 +318,9 @@ async def transcribe_async():
 
 **Example - Segments and Duration:**
 
-OpenAI Whisper returns timestamped segments by default. Esperanto always
-requests `response_format=verbose_json`, so callers get them without any extra
-configuration:
+OpenAI Whisper returns timestamped segments by default. Esperanto requests
+`response_format=verbose_json` for Whisper models, so callers get them without
+any extra configuration:
 
 ```python
 response = model.transcribe("audio.mp3")
@@ -338,6 +338,12 @@ if response.segments:
             if confidence_signal is not None:
                 print(f"  avg_logprob: {confidence_signal:.3f}")
 ```
+
+> **Note:** `verbose_json` is a Whisper-only capability. The newer transcription
+> models (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`, `gpt-transcribe`, …)
+> reject it, so Esperanto sends `response_format=json` for them — they
+> transcribe normally, but `response.segments` and `response.duration` come back
+> as `None`. Use a Whisper model when you need timestamps.
 
 ### Text-to-Speech
 

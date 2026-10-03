@@ -61,11 +61,6 @@ class GoogleSpeechToTextModel(SpeechToTextModel):
                 owned_by="Google",
                 context_window=1000000,
             ),
-            Model(
-                id="gemini-2.0-flash",
-                owned_by="Google",
-                context_window=1000000,
-            ),
         ]
 
     def _get_headers(self) -> Dict[str, str]:

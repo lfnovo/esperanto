@@ -119,8 +119,8 @@ result = transcriber.transcribe("audio.mp3")
 
 ### Verbose JSON Format
 
-Whisper-family providers (OpenAI, Groq, Azure) auto-opt-in to verbose JSON so
-that segments and duration are always available on the returned
+Whisper models on the OpenAI, Groq and Azure providers auto-opt-in to verbose
+JSON so that segments and duration are available on the returned
 `TranscriptionResponse`. You don't need to pass any config:
 
 ```python
@@ -137,6 +137,19 @@ if response.segments:
         print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {segment.text}")
         # Whisper-specific extras live in segment.metadata:
         # avg_logprob, compression_ratio, no_speech_prob, temperature, tokens, id, seek
+```
+
+Verbose JSON is a **Whisper-only** capability. The newer transcription models
+served through the same endpoints (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`,
+`gpt-transcribe`, …) reject it, so Esperanto sends `response_format=json` for
+them: they transcribe normally, but `response.segments` and `response.duration`
+come back as `None`. Reach for a Whisper model when you need timestamps, or
+force the format explicitly:
+
+```python
+transcriber = AIFactory.create_speech_to_text(
+    "azure", "prod-stt", config={"response_format": "verbose_json"}
+)
 ```
 
 Mistral natively returns segments as well, and exposes per-audio billing on

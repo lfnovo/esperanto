@@ -288,11 +288,11 @@ class TestGoogleProviderBasic:
         assert google_model.provider == "google"
 
     def test_default_model(self, google_model):
-        """Test default model is gemini-2.0-flash."""
+        """Test default model is gemini-2.5-flash."""
         model = GoogleLanguageModel(api_key="test-key")
         # Override client to avoid actual HTTP calls
         model.client = Mock()
-        assert model._get_default_model() == "gemini-2.0-flash"
+        assert model._get_default_model() == "gemini-2.5-flash"
 
 
 class TestToolConversion:
@@ -873,3 +873,22 @@ def test_google_langchain_conversion():
     assert langchain_model.temperature == 0.7
     assert langchain_model.max_output_tokens == 100
     assert langchain_model.top_p == 0.9
+
+
+def test_google_to_langchain_forwards_custom_base_url():
+    """A custom Gemini-compatible endpoint is forwarded (without /v1beta suffix)."""
+    pytest.importorskip("langchain_google_genai")
+    with patch.dict(os.environ, {"GEMINI_API_BASE_URL": "https://custom.gemini.internal"}):
+        model = GoogleLanguageModel(api_key="test-key", model_name="gemini-2.0-flash")
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockChat:
+        model.to_langchain()
+    assert MockChat.call_args.kwargs["base_url"] == "https://custom.gemini.internal"
+
+
+def test_google_to_langchain_omits_default_base_url():
+    """The default endpoint is not forwarded (ChatGoogleGenerativeAI uses its own default)."""
+    pytest.importorskip("langchain_google_genai")
+    model = GoogleLanguageModel(api_key="test-key", model_name="gemini-2.0-flash")
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockChat:
+        model.to_langchain()
+    assert "base_url" not in MockChat.call_args.kwargs

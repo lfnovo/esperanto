@@ -46,8 +46,9 @@ Whether you're building a quick prototype or a production application serving mi
   - Azure OpenAI (Chat, Embedding, Whisper, TTS)
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
+  - SiliconFlow (DeepSeek, Qwen, and other OpenAI-compatible models)
   - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
-  - MiniMax (MiniMax-M2.5)
+  - MiniMax (MiniMax-M3 with 1M context, Text-to-Speech)
   - Z.ai (GLM models: glm-5.2, glm-4.5-flash)
   - PayPerQ / PPQ (pay-as-you-go gateway to hundreds of models)
   - Voyage (Embeddings, Reranking)
@@ -77,7 +78,7 @@ Whether you're building a quick prototype or a production application serving mi
 - [Text-to-Speech](https://github.com/lfnovo/esperanto/blob/main/docs/capabilities/text-to-speech.md) - Voice generation
 
 ### By Provider
-- [Provider Setup Guides](https://github.com/lfnovo/esperanto/blob/main/docs/providers/) - Complete setup for all 17 providers
+- [Provider Setup Guides](https://github.com/lfnovo/esperanto/blob/main/docs/providers/) - Complete setup for all supported providers
 
 ### Advanced Topics
 - [Task-Aware Embeddings](https://github.com/lfnovo/esperanto/blob/main/docs/advanced/task-aware-embeddings.md)
@@ -151,12 +152,13 @@ pip install "langchain_deepseek>=0.1.3"
 | Azure OpenAI | ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 | Mistral      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| SiliconFlow  | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Cohere       | ✅          | ✅               | ✅                | ❌             | ❌             | ✅        |
 | xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
 | DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
-| MiniMax      | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| MiniMax      | ✅          | ❌               | ❌                | ❌             | ✅             | ✅        |
 | Z.ai         | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | PayPerQ (PPQ)| ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
@@ -179,16 +181,11 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['anthropic', 'azure', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'vertex', 'xai', 'zai'],
-#     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter'],
-#     'reranker': ['jina', 'voyage', 'transformers'],
-#     'speech_to_text': ['openai', 'openai-compatible', 'groq', 'elevenlabs', 'azure', 'google'],
-#     'text_to_speech': ['openai', 'openai-compatible', 'elevenlabs', 'google', 'vertex', 'azure', 'deepgram']
-#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'vertex', 'xai'],
+#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'siliconflow', 'vertex', 'xai', 'zai'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter', 'cohere'],
 #     'reranker': ['jina', 'voyage', 'transformers', 'cohere'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs', 'openai-compatible', 'azure', 'google', 'mistral', 'deepgram'],
-#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible', 'azure', 'xai', 'mistral', 'deepgram']
+#     'text_to_speech': ['openai', 'elevenlabs', 'google', 'vertex', 'openai-compatible', 'azure', 'xai', 'mistral', 'deepgram', 'minimax']
 # }
 
 # Create model instances
@@ -241,9 +238,9 @@ for model in claude_models:
     print(f"{model.id} - Context: {model.context_window} tokens")
 
 # Example output:
-# claude-3-5-sonnet-20241022 - Context: 200000 tokens
-# claude-3-5-haiku-20241022 - Context: 200000 tokens
-# claude-3-opus-20240229 - Context: 200000 tokens
+# claude-sonnet-5 - Context: 200000 tokens
+# claude-haiku-4-5-20251001 - Context: 200000 tokens
+# claude-opus-5 - Context: 200000 tokens
 
 # OpenAI-compatible endpoints (requires base_url)
 local_models = AIFactory.get_provider_models(
@@ -788,12 +785,16 @@ Complete documentation is available in the [docs](https://github.com/lfnovo/espe
 - **[Documentation Index](https://github.com/lfnovo/esperanto/blob/main/docs/README.md)** - Navigation hub for all documentation
 - **[Provider Comparison](https://github.com/lfnovo/esperanto/blob/main/docs/providers/README.md)** - Compare and choose providers
 - **[Capability Guides](https://github.com/lfnovo/esperanto/tree/main/docs/capabilities)** - Learn about LLM, Embeddings, Reranking, STT, TTS
-- **[Provider Setup Guides](https://github.com/lfnovo/esperanto/tree/main/docs/providers)** - Setup instructions for all 17 providers
+- **[Provider Setup Guides](https://github.com/lfnovo/esperanto/tree/main/docs/providers)** - Setup instructions for all supported providers
 - **[Advanced Topics](https://github.com/lfnovo/esperanto/tree/main/docs/advanced)** - Task-aware embeddings, LangChain, timeouts, and more
 
 ## Contributing 🤝
 
 We welcome contributions! Please see our [Contributing Guidelines](https://github.com/lfnovo/esperanto/blob/main/CONTRIBUTING.md) for details on how to get started.
+
+## Security 🔒
+
+Found a security vulnerability? Please report it privately — see our [Security Policy](https://github.com/lfnovo/esperanto/blob/main/SECURITY.md). Do not open a public issue for security reports.
 
 ## License 📄
 
@@ -807,11 +808,15 @@ git clone https://github.com/lfnovo/esperanto.git
 cd esperanto
 ```
 
-2. Install dependencies:
+2. Bootstrap the environment (creates a venv and installs all dependencies):
 ```bash
-pip install -r requirements.txt
+make setup
+source .venv/bin/activate
 ```
 
 3. Run tests:
 ```bash
-pytest
+make test
+```
+
+See [CONTRIBUTING.md](https://github.com/lfnovo/esperanto/blob/main/CONTRIBUTING.md) for the full development guide.

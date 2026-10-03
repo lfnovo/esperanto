@@ -344,8 +344,8 @@ async def transcribe_batch():
 **Example - Segments and Duration:**
 
 Azure's Whisper deployments return the same `verbose_json` shape as OpenAI.
-Esperanto requests it automatically, so you get timestamped segments and
-duration without any extra configuration:
+Esperanto requests it automatically for deployments it recognizes as Whisper, so
+you get timestamped segments and duration without any extra configuration:
 
 ```python
 response = model.transcribe("meeting.mp3")
@@ -359,6 +359,21 @@ if response.segments:
         # Whisper extras (avg_logprob, compression_ratio, no_speech_prob,
         # temperature, tokens, id, seek) live in segment.metadata.
 ```
+
+> **Note:** `verbose_json` is a Whisper-only capability — Azure's
+> `gpt-4o-transcribe` / `gpt-4o-mini-transcribe` deployments reject it, so
+> Esperanto sends `response_format=json` for any deployment it can't recognize
+> as Whisper (`response.segments` and `response.duration` stay `None`).
+>
+> Because Azure deployment names are user-chosen, a Whisper deployment named
+> something opaque like `prod-stt` falls into that bucket too. Force the format
+> when that happens:
+>
+> ```python
+> model = AIFactory.create_speech_to_text(
+>     "azure", "prod-stt", config={"response_format": "verbose_json"}
+> )
+> ```
 
 ### Text-to-Speech
 

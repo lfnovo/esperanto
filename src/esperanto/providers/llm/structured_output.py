@@ -1,14 +1,18 @@
 """Helpers for schema-driven structured outputs."""
 
+import copy
 import json
+import logging
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Type, Union, cast
+from typing import Any, Dict, Optional, Tuple, Type, Union, cast
 
 from pydantic import BaseModel, ValidationError
 
 from esperanto.common_types.exceptions import StructuredOutputValidationError
 from esperanto.common_types.response import ChatCompletion
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -19,7 +23,6 @@ class ResolvedStructuredOutput:
     response_format: Dict[str, Any]
     schema_source: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None
     schema_name: Optional[str] = None
-
     @property
     def is_schema_mode(self) -> bool:
         """Whether this config enforces a JSON schema."""
@@ -54,6 +57,84 @@ def _validate_strict(strict: Any) -> bool:
     if not isinstance(strict, bool):
         raise TypeError("structured['strict'] must be a boolean")
     return strict
+
+
+# Keywords whose values are themselves schemas (or collections of schemas), and
+# so must be walked when normalizing a JSON Schema tree.
+_SCHEMA_MAP_KEYWORDS = ("properties", "$defs", "definitions", "patternProperties")
+_SCHEMA_LIST_KEYWORDS = ("anyOf", "oneOf", "allOf", "prefixItems")
+_SCHEMA_VALUE_KEYWORDS = ("items", "not", "additionalProperties", "contains")
+
+
+def _normalize_schema_for_strict(node: Any) -> bool:
+    """Add ``additionalProperties: false`` to every object schema, in place.
+
+    Returns whether the whole tree can satisfy OpenAI's strict mode, which
+    demands two things of every object: ``additionalProperties: false`` (which
+    we can always add) and a ``required`` array listing *every* property (which
+    we must not fabricate — forcing an optional field to be required would
+    change the caller's schema semantics).
+    """
+    if isinstance(node, list):
+        return all([_normalize_schema_for_strict(item) for item in node])
+    if not isinstance(node, dict):
+        return True
+
+    satisfiable = True
+    properties = node.get("properties")
+    if isinstance(properties, dict) or node.get("type") == "object":
+        if "additionalProperties" not in node:
+            node["additionalProperties"] = False
+        if isinstance(properties, dict):
+            required = node.get("required")
+            required_names = set(required) if isinstance(required, list) else set()
+            if set(properties) - required_names:
+                satisfiable = False
+
+    for keyword in _SCHEMA_MAP_KEYWORDS:
+        child = node.get(keyword)
+        if isinstance(child, dict):
+            for value in child.values():
+                satisfiable &= _normalize_schema_for_strict(value)
+    for keyword in _SCHEMA_LIST_KEYWORDS:
+        child = node.get(keyword)
+        if isinstance(child, list):
+            satisfiable &= _normalize_schema_for_strict(child)
+    for keyword in _SCHEMA_VALUE_KEYWORDS:
+        child = node.get(keyword)
+        if isinstance(child, dict):
+            satisfiable &= _normalize_schema_for_strict(child)
+
+    return satisfiable
+
+
+def _prepare_schema(schema_dict: Dict[str, Any], strict: bool, name: str) -> Tuple[Dict[str, Any], bool]:
+    """Return a schema safe to send, plus the strict flag actually usable.
+
+    OpenAI-family endpoints reject a ``strict: true`` json_schema request
+    outright unless every object carries ``additionalProperties: false`` and a
+    complete ``required`` array — Pydantic's ``model_json_schema()`` emits
+    neither. We add the former (semantically free: the schema already lists the
+    properties it wants) and, when a caller's optional fields make the latter
+    impossible, downgrade to ``strict: false`` rather than fail the call or
+    silently promote optional fields to required.
+
+    Downgrading costs nothing in correctness: the response is still validated
+    against the schema on our side by ``parse_structured_output_content``.
+    Follows ARCHITECTURE.md, "Model Quirks vs Unsupported Features" — sanitize
+    the request with a debug log rather than make users learn the quirk.
+    """
+    prepared = copy.deepcopy(schema_dict)
+    fully_strict = _normalize_schema_for_strict(prepared)
+    if strict and not fully_strict:
+        logger.debug(
+            "structured output schema %r has optional properties, which OpenAI's "
+            "strict mode forbids; sending strict=false. The response is still "
+            "validated against the schema locally.",
+            name,
+        )
+        return prepared, False
+    return prepared, strict
 
 
 def resolve_structured_output(
@@ -104,7 +185,9 @@ def resolve_structured_output(
     if _is_pydantic_model_class(schema):
         schema_name = structured.get("name", schema.__name__)
         schema_name = _validate_schema_name(schema_name)
-        schema_dict = schema.model_json_schema()
+        schema_dict, effective_strict = _prepare_schema(
+            schema.model_json_schema(), strict, schema_name
+        )
         return ResolvedStructuredOutput(
             mode="json_schema",
             response_format={
@@ -112,7 +195,7 @@ def resolve_structured_output(
                 "json_schema": {
                     "name": schema_name,
                     "schema": schema_dict,
-                    "strict": strict,
+                    "strict": effective_strict,
                 },
             },
             schema_source=schema,
@@ -122,14 +205,15 @@ def resolve_structured_output(
     if isinstance(schema, dict):
         schema_name = structured.get("name", "structured_output")
         schema_name = _validate_schema_name(schema_name)
+        schema_dict, effective_strict = _prepare_schema(schema, strict, schema_name)
         return ResolvedStructuredOutput(
             mode="json_schema",
             response_format={
                 "type": "json_schema",
                 "json_schema": {
                     "name": schema_name,
-                    "schema": schema,
-                    "strict": strict,
+                    "schema": schema_dict,
+                    "strict": effective_strict,
                 },
             },
             schema_source=schema,

@@ -13,6 +13,7 @@ from esperanto.providers.stt.base import (
     SpeechToTextModel,
     _build_transcription_response,
     _guess_audio_content_type,
+    _resolve_transcription_response_format,
 )
 
 
@@ -94,13 +95,15 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         """Get kwargs for API calls.
 
         Requests ``verbose_json`` for Whisper-family models so segments and
-        duration are returned without any opt-in. For gpt-4o-*-transcribe
-        models, which do not support ``verbose_json``, falls back to ``json``;
-        those models return no segments or duration (fields stay ``None``).
+        duration are returned without any opt-in. Every other transcription
+        model rejects ``verbose_json``, so it gets ``json`` and returns no
+        segments or duration (fields stay ``None``). ``config["response_format"]``
+        overrides both.
         """
         model_name = self.get_model_name()
-        is_transcribe_family = model_name.startswith("gpt-4o") and model_name.endswith("-transcribe")
-        response_format = "json" if is_transcribe_family else "verbose_json"
+        response_format = _resolve_transcription_response_format(
+            model_name, self._config.get("response_format")
+        )
         kwargs: Dict[str, Any] = {
             "model": model_name,
             "response_format": response_format,
@@ -118,7 +121,12 @@ class OpenAISpeechToTextModel(SpeechToTextModel):
         response_data: Dict[str, Any],
         language: Optional[str] = None,
     ) -> TranscriptionResponse:
-        """Build a TranscriptionResponse from a Whisper ``verbose_json`` payload."""
+        """Build a TranscriptionResponse from a transcription payload.
+
+        Tolerates both the Whisper ``verbose_json`` shape and the plain ``json``
+        shape returned by the non-Whisper models — missing ``segments`` and
+        ``duration`` stay ``None``.
+        """
         return _build_transcription_response(
             response_data,
             model=self.get_model_name(),

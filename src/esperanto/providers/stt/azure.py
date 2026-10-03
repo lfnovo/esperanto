@@ -15,6 +15,7 @@ from esperanto.providers.stt.base import (
     SpeechToTextModel,
     _build_transcription_response,
     _guess_audio_content_type,
+    _resolve_transcription_response_format,
 )
 
 
@@ -118,15 +119,24 @@ class AzureSpeechToTextModel(SpeechToTextModel):
     def _get_api_kwargs(
         self, language: Optional[str] = None, prompt: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Get kwargs for the Azure OpenAI Whisper request.
+        """Get kwargs for the Azure OpenAI transcription request.
 
-        Always requests ``verbose_json`` so segments and duration are returned,
-        matching the OpenAI provider's Hot-Swap-First Defaults behavior. Azure
-        OpenAI Whisper accepts the same request shape as OpenAI Whisper.
+        Requests ``verbose_json`` for Whisper deployments so segments and
+        duration are returned, matching the OpenAI provider. Azure serves the
+        ``gpt-4o-*-transcribe`` family through the same deployment API and those
+        models reject ``verbose_json``, so anything not recognizable as Whisper
+        gets ``json`` instead.
+
+        Azure deployment names are user-chosen and need not mention the
+        underlying model, so a Whisper deployment named e.g. ``prod-stt`` falls
+        through to ``json`` and loses its segments. Set
+        ``config={"response_format": "verbose_json"}`` to force it.
         """
         data: Dict[str, Any] = {
             "model": self.deployment_name,
-            "response_format": "verbose_json",
+            "response_format": _resolve_transcription_response_format(
+                self.deployment_name, self._config.get("response_format")
+            ),
         }
         if language:
             data["language"] = language
@@ -139,7 +149,12 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         response_data: Dict[str, Any],
         language: Optional[str] = None,
     ) -> TranscriptionResponse:
-        """Build a TranscriptionResponse from an Azure OpenAI Whisper ``verbose_json`` payload."""
+        """Build a TranscriptionResponse from an Azure OpenAI transcription payload.
+
+        Tolerates both the Whisper ``verbose_json`` shape and the plain ``json``
+        shape returned by the non-Whisper deployments — missing ``segments`` and
+        ``duration`` stay ``None``.
+        """
         return _build_transcription_response(
             response_data,
             model=self.deployment_name,
@@ -157,7 +172,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Transcribe audio using Azure OpenAI."""
         url = self._build_url("audio/transcriptions")
 
-        # Prepare API kwargs (always requests verbose_json)
+        # Prepare API kwargs (response_format resolved per deployment)
         data = self._get_api_kwargs(language=language, prompt=prompt)
 
         # Handle file input
@@ -196,7 +211,7 @@ class AzureSpeechToTextModel(SpeechToTextModel):
         """Async transcribe audio using Azure OpenAI."""
         url = self._build_url("audio/transcriptions")
 
-        # Prepare API kwargs (always requests verbose_json)
+        # Prepare API kwargs (response_format resolved per deployment)
         data = self._get_api_kwargs(language=language, prompt=prompt)
 
         # Handle file input

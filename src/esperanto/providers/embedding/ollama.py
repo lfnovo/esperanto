@@ -1,7 +1,7 @@
 """Ollama embedding model provider."""
 
 import os
-from typing import Any, Dict, List
+from typing import Any, ClassVar, Dict, List
 
 import httpx
 
@@ -11,6 +11,10 @@ from esperanto.utils import validate_and_decode_embedding
 
 class OllamaEmbeddingModel(EmbeddingModel):
     """Ollama embedding model implementation."""
+
+    # Ollama imposes no documented per-request cap; send the whole list in one
+    # request by default (users may still lower it via embed_batch_size).
+    MAX_BATCH_SIZE: ClassVar[int] = 0
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -61,7 +65,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             ValueError: If text is None or empty.
         """
         if not texts:
-            raise ValueError("Texts cannot be empty")
+            return []
 
         # Validate texts
         for text in texts:
@@ -73,30 +77,31 @@ class OllamaEmbeddingModel(EmbeddingModel):
         # Clean all texts
         cleaned_texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload - use batch processing with input array
-        payload = {
-            "model": self.get_model_name(),
-            "input": cleaned_texts,
-            **self._get_api_kwargs(),
-            **kwargs
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(cleaned_texts):
+            # Prepare request payload - use batch processing with input array
+            payload = {
+                "model": self.get_model_name(),
+                "input": batch,
+                **self._get_api_kwargs(),
+                **kwargs
+            }
 
-        try:
-            # Make HTTP request to new /api/embed endpoint
-            response = self.client.post(
-                f"{self.base_url}/api/embed",
-                headers=self._get_headers(),
-                json=payload
-            )
-            self._handle_error(response)
+            try:
+                # Make HTTP request to new /api/embed endpoint
+                response = self.client.post(
+                    f"{self.base_url}/api/embed",
+                    headers=self._get_headers(),
+                    json=payload
+                )
+                self._handle_error(response)
 
-            response_data = response.json()
-            results = []
-            for idx, embedding in enumerate(response_data["embeddings"]):
-                results.append(validate_and_decode_embedding(idx, embedding))
-            return results
-        except Exception as e:
-            raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
+                response_data = response.json()
+                for idx, embedding in enumerate(response_data["embeddings"], start=len(results)):
+                    results.append(validate_and_decode_embedding(idx, embedding))
+            except Exception as e:
+                raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
+        return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
         """Create embeddings for the given texts asynchronously.
@@ -113,7 +118,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
             ValueError: If text is None or empty.
         """
         if not texts:
-            raise ValueError("Texts cannot be empty")
+            return []
 
         # Validate texts
         for text in texts:
@@ -125,30 +130,31 @@ class OllamaEmbeddingModel(EmbeddingModel):
         # Clean all texts
         cleaned_texts = [self._clean_text(text) for text in texts]
 
-        # Prepare request payload - use batch processing with input array
-        payload = {
-            "model": self.get_model_name(),
-            "input": cleaned_texts,
-            **self._get_api_kwargs(),
-            **kwargs
-        }
+        results: List[List[float]] = []
+        for batch in self._iter_embed_batches(cleaned_texts):
+            # Prepare request payload - use batch processing with input array
+            payload = {
+                "model": self.get_model_name(),
+                "input": batch,
+                **self._get_api_kwargs(),
+                **kwargs
+            }
 
-        try:
-            # Make async HTTP request to new /api/embed endpoint
-            response = await self.async_client.post(
-                f"{self.base_url}/api/embed",
-                headers=self._get_headers(),
-                json=payload
-            )
-            self._handle_error(response)
+            try:
+                # Make async HTTP request to new /api/embed endpoint
+                response = await self.async_client.post(
+                    f"{self.base_url}/api/embed",
+                    headers=self._get_headers(),
+                    json=payload
+                )
+                self._handle_error(response)
 
-            response_data = response.json()
-            results = []
-            for idx, embedding in enumerate(response_data["embeddings"]):
-                results.append(validate_and_decode_embedding(idx, embedding))
-            return results
-        except Exception as e:
-            raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
+                response_data = response.json()
+                for idx, embedding in enumerate(response_data["embeddings"], start=len(results)):
+                    results.append(validate_and_decode_embedding(idx, embedding))
+            except Exception as e:
+                raise RuntimeError(f"Failed to get embeddings: {str(e)}") from e
+        return results
 
     def _get_default_model(self) -> str:
         """Get the default model name."""

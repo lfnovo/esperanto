@@ -59,7 +59,7 @@ from esperanto import AIFactory
 
 model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     api_key="your-api-key"
 )
 
@@ -165,7 +165,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
 # Create model
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 langchain_model = model.to_langchain()
 
 # Create prompt template
@@ -411,7 +411,7 @@ fast_model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
 fast_langchain = fast_model.to_langchain()
 
 # Powerful model for final output
-powerful_model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+powerful_model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 powerful_langchain = powerful_model.to_langchain()
 
 # Chain 1: Fast initial analysis
@@ -458,7 +458,7 @@ fast_model = AIFactory.create_language("groq", "llama3-8b-8192")
 fast_chain = LLMChain(llm=fast_model.to_langchain(), prompt=simple_prompt)
 
 # Use powerful models for complex reasoning
-powerful_model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+powerful_model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 complex_chain = LLMChain(llm=powerful_model.to_langchain(), prompt=complex_prompt)
 ```
 
@@ -471,7 +471,7 @@ def create_langchain_model(provider="openai", model_name="gpt-4"):
     return esperanto_model.to_langchain()
 
 # Switch providers with a config change
-langchain_model = create_langchain_model("anthropic", "claude-3-5-haiku-20241022")
+langchain_model = create_langchain_model("anthropic", "claude-haiku-4-5-20251001")
 ```
 
 ### 3. Handle Errors Gracefully

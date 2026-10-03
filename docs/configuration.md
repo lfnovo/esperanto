@@ -70,7 +70,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ```python
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022", config={
+model = AIFactory.create_language("anthropic", "claude-sonnet-5", config={
     "api_key": "sk-ant-...",  # Or from env var
     "temperature": 0.7,
     "max_tokens": 1000,
@@ -117,6 +117,29 @@ DEEPSEEK_API_KEY=...
 
 → **[Full DeepSeek Setup Guide](./providers/deepseek.md)**
 
+#### SiliconFlow
+```bash
+SILICONFLOW_API_KEY=...
+# Optional: use the China endpoint instead of the default global endpoint
+SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
+```
+
+```python
+from esperanto.factory import AIFactory
+
+# Default global endpoint: https://api.siliconflow.com/v1
+model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
+
+# China endpoint override
+model = AIFactory.create_language(
+    "siliconflow",
+    "deepseek-ai/DeepSeek-V3.1-Terminus",
+    config={"base_url": "https://api.siliconflow.cn/v1"},
+)
+```
+
+→ **[Full SiliconFlow Setup Guide](./providers/siliconflow.md)**
+
 #### Perplexity
 ```bash
 PERPLEXITY_API_KEY=...
@@ -139,8 +162,19 @@ DASHSCOPE_API_KEY=...
 → **[Full DashScope Setup Guide](./providers/dashscope.md)**
 
 #### MiniMax
+
+> [!IMPORTANT]
+> MiniMax keys are region-specific. Use `api.minimax.cn` for mainland China
+> keys and `api.minimax.io` for international keys. A region mismatch is
+> returned by MiniMax as `invalid api key`.
+
 ```bash
 MINIMAX_API_KEY=...
+# International endpoint (default)
+MINIMAX_BASE_URL=https://api.minimax.io/v1
+
+# Mainland China endpoint (keys are region-specific; legacy api.minimaxi.com also works)
+MINIMAX_BASE_URL=https://api.minimax.cn/v1
 ```
 
 → **[Full MiniMax Setup Guide](./providers/minimax.md)**
@@ -554,7 +588,7 @@ embedder = AIFactory.create_embedding(
     config={
         # Performance
         "timeout": 60.0,
-        "batch_size": 32,       # Texts per request
+        "embed_batch_size": 32, # Texts per request (clamped to the provider max)
 
         # Advanced (provider-specific)
         "task_type": EmbeddingTaskType.RETRIEVAL_QUERY,  # Jina, Google
@@ -681,7 +715,7 @@ JINA_API_KEY=...
 ELEVENLABS_API_KEY=...
 
 # Use best provider for each task
-llm = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+llm = AIFactory.create_language("anthropic", "claude-sonnet-5")
 embedder = AIFactory.create_embedding("jina", "jina-embeddings-v3")
 speaker = AIFactory.create_text_to_speech("elevenlabs", "eleven_multilingual_v2")
 ```

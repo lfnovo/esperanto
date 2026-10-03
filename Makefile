@@ -1,4 +1,8 @@
-.PHONY: ruff lint test
+.PHONY: setup ruff lint test package-check
+
+setup:
+	uv venv
+	uv sync --all-extras
 
 lint:
 	uv run python -m mypy .
@@ -8,6 +12,9 @@ ruff:
 
 test:
 	uv run pytest -v
+
+package-check:
+	uv run python scripts/package_check.py
 
 
 build-docs:
@@ -19,4 +26,3 @@ tag:
 	echo "Creating tag v$$version"; \
 	git tag "v$$version"; \
 	git push origin "v$$version"
-

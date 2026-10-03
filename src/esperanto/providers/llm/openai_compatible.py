@@ -1,6 +1,6 @@
 """OpenAI-compatible language model implementation."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -39,7 +39,7 @@ class OpenAICompatibleLanguageModel(ProfileAwareMixin, OpenAILanguageModel):
     """OpenAI-compatible language model implementation for custom endpoints."""
 
     base_url: Optional[str] = None
-    api_key: Optional[str] = None
+    api_key: Optional[str] = field(default=None, repr=False)
 
     def __post_init__(self):
         """Initialize OpenAI-compatible configuration."""

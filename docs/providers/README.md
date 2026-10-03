@@ -16,10 +16,11 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Ollama](./ollama.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | [Mistral](./mistral.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | [DeepSeek](./deepseek.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [SiliconFlow](./siliconflow.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Perplexity](./perplexity.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [MiniMax](./minimax.md) | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Z.ai](./zai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [oMLX](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
@@ -54,7 +55,6 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[Groq](./groq.md)**: LLM + STT (fastest inference)
 - **[Vertex AI](./vertex.md)**: LLM + Embedding + TTS (Google Cloud)
 - **[ElevenLabs](./elevenlabs.md)**: STT + TTS (premium voice quality)
-
 #### Need Privacy/Local Deployment?
 
 **Fully Local:**
@@ -82,6 +82,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[Transformers](./transformers.md)**: Free (local deployment)
 - **[OpenAI-Compatible](./openai-compatible.md)**: Free (local deployment)
 - **[DeepSeek](./deepseek.md)**: Low API costs, strong performance
+- **[SiliconFlow](./siliconflow.md)**: Cost-effective access to DeepSeek, Qwen, and other models
 - **[OpenRouter](./openrouter.md)**: Compare prices across providers, some free models
 
 **Good Value:**
@@ -99,6 +100,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 **Best for Reasoning:**
 - **[Anthropic](./anthropic.md)**: Claude 3.5 Sonnet, Opus (complex reasoning)
 - **[DeepSeek](./deepseek.md)**: deepseek-reasoner (step-by-step reasoning)
+- **[SiliconFlow](./siliconflow.md)**: DeepSeek and Qwen model access through one OpenAI-compatible API
 - **[OpenAI](./openai.md)**: o1, o3, o4 series (advanced reasoning)
 
 **Fastest Inference:**
@@ -109,6 +111,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[OpenAI](./openai.md)**: GPT-4o, o1 series
 - **[Anthropic](./anthropic.md)**: Claude 3.5 Sonnet
 - **[DeepSeek](./deepseek.md)**: Strong coding capabilities
+- **[SiliconFlow](./siliconflow.md)**: DeepSeek and Qwen coding models
 
 **Real-Time Information:**
 - **[Perplexity](./perplexity.md)**: Web search integration, citations
@@ -213,10 +216,11 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Groq](./groq.md) | ✅ | ✅ | ❌ | 8K-32K |
 | [Mistral](./mistral.md) | ✅ | ✅ | ✅ | 128K |
 | [DeepSeek](./deepseek.md) | ✅ | ✅ | ✅ | 64K |
+| [SiliconFlow](./siliconflow.md) | ✅ | ✅ | ✅ | Model-dependent |
 | [Perplexity](./perplexity.md) | ✅ | ✅ | ❌ | 32K |
 | [xAI](./xai.md) | ✅ | ❌ | ✅ | 128K |
 | [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
-| [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 204K |
+| [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 1M |
 | [Novita](./openai-compatible.md) | ✅ | ✅ | ✅ | Model-dependent |
 | [Z.ai](./zai.md) | ✅ | ✅ | ✅ | Model-dependent |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ✅ | Varies |
@@ -280,7 +284,7 @@ speaker = AIFactory.create_text_to_speech("openai", "tts-1")
 from esperanto.factory import AIFactory
 
 # Best-in-class for each capability
-llm = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+llm = AIFactory.create_language("anthropic", "claude-sonnet-5")
 embedder = AIFactory.create_embedding("jina", "jina-embeddings-v3")
 reranker = AIFactory.create_reranker("voyage", "rerank-2")
 speaker = AIFactory.create_text_to_speech("elevenlabs", "eleven_multilingual_v2")
@@ -325,6 +329,7 @@ Require API keys, pay-per-use:
 - [Groq](./groq.md)
 - [Mistral](./mistral.md)
 - [DeepSeek](./deepseek.md)
+- [SiliconFlow](./siliconflow.md)
 - [DashScope (Qwen)](./dashscope.md)
 - [MiniMax](./minimax.md)
 - [Perplexity](./perplexity.md)

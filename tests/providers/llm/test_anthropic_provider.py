@@ -1253,3 +1253,34 @@ def test_anthropic_to_langchain_omits_default_base_url():
     with patch("langchain_anthropic.ChatAnthropic") as MockChat:
         model.to_langchain()
     assert "base_url" not in MockChat.call_args.kwargs
+
+
+# ---------------------------------------------------------------------------
+# Default model / model list
+#
+# Nothing pinned these, which is how the whole hardcoded set rotted into
+# withdrawn models without a single test going red.
+# ---------------------------------------------------------------------------
+
+
+def test_default_model_is_current():
+    """The default must be a model Anthropic still serves."""
+    model = AnthropicLanguageModel(api_key="test-key")
+    assert model._get_default_model() == "claude-sonnet-5"
+
+
+def test_fallback_model_list_has_no_withdrawn_models():
+    """The offline fallback list must not advertise retired models.
+
+    Anthropic has withdrawn the entire claude-3 family. Listing them makes
+    get_provider_models() recommend models that cannot be called.
+    """
+    model = AnthropicLanguageModel(api_key="test-key")
+    model.client = Mock()
+    model.client.get.side_effect = Exception("no network")
+
+    ids = [m.id for m in model._get_models()]
+
+    assert ids, "fallback list must not be empty"
+    assert not any(model_id.startswith("claude-3") for model_id in ids)
+    assert all(m.owned_by == "Anthropic" for m in model._get_models())

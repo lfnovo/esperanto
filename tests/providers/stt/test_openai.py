@@ -606,3 +606,88 @@ def test_gpt4o_mini_transcribe_sends_json_response_format(audio_file, mock_gpt4o
     assert response.text == "Hello from gpt-4o transcribe."
     assert response.segments is None
     assert response.duration is None
+
+
+# ---------------------------------------------------------------------------
+# response_format is an allowlist, not a denylist (issue #269)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "model_name",
+    [
+        "gpt-transcribe",
+        "gpt-transcribe-api-ev3",
+        "gpt-4o-transcribe-diarize",
+        "gpt-live-transcribe",
+        "some-future-model",
+    ],
+)
+def test_non_whisper_models_send_json_response_format(
+    model_name, audio_file, mock_gpt4o_httpx_clients
+):
+    """Any model that isn't Whisper must get json, not verbose_json.
+
+    verbose_json is a Whisper-only capability, so an unrecognized model has to
+    degrade to json rather than hard-fail with a 400 from the API.
+    """
+    model = OpenAISpeechToTextModel(api_key="test-key", model_name=model_name)
+    model.client, model.async_client = mock_gpt4o_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "json"
+    assert call_args[1]["data"]["model"] == model_name
+    # A json payload carries no segments / duration — those stay None.
+    assert response.text == "Hello from gpt-4o transcribe."
+    assert response.segments is None
+    assert response.duration is None
+
+
+@pytest.mark.parametrize(
+    "model_name",
+    ["whisper-1", "whisper-large-v3", "distil-whisper-large-v3-en"],
+)
+def test_whisper_family_models_send_verbose_json(
+    model_name, audio_file, mock_verbose_httpx_clients
+):
+    """Whisper-family names keep opting into verbose_json."""
+    model = OpenAISpeechToTextModel(api_key="test-key", model_name=model_name)
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "verbose_json"
+
+
+def test_response_format_config_overrides_detection(audio_file, mock_gpt4o_httpx_clients):
+    """config['response_format'] wins over the name-based default."""
+    model = OpenAISpeechToTextModel(
+        api_key="test-key",
+        model_name="whisper-1",
+        config={"response_format": "json"},
+    )
+    model.client, model.async_client = mock_gpt4o_httpx_clients
+
+    model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "json"
+
+
+@pytest.mark.asyncio
+async def test_non_whisper_model_async_sends_json_response_format(
+    audio_file, mock_gpt4o_httpx_clients
+):
+    """Async path resolves the format the same way."""
+    model = OpenAISpeechToTextModel(api_key="test-key", model_name="gpt-transcribe")
+    model.client, model.async_client = mock_gpt4o_httpx_clients
+
+    response = await model.atranscribe(audio_file)
+
+    call_args = model.async_client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "json"
+    assert response.segments is None
+    assert response.duration is None

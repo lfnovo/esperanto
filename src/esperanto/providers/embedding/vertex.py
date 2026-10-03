@@ -1,6 +1,6 @@
 """Google Vertex AI embedding model provider."""
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 import httpx
 
@@ -10,6 +10,13 @@ from esperanto.providers.vertex_auth import VertexAuthMixin
 
 class VertexEmbeddingModel(VertexAuthMixin, EmbeddingModel):
     """Google Vertex AI embedding model implementation."""
+
+    # Vertex AI's :predict endpoint caps a request at 250 instances *and* 20,000
+    # tokens. Since we don't count tokens, keep a conservative instance count so
+    # typical inputs stay under the token ceiling (a request that was fine one
+    # text at a time must not start failing once batched). Users with short texts
+    # can raise it via config="embed_batch_size".
+    MAX_BATCH_SIZE: ClassVar[int] = 25
 
     def __init__(self, vertex_project: Optional[str] = None, vertex_location: Optional[str] = None, **kwargs):
         # Extract vertex_project before calling super().__init__
@@ -79,18 +86,14 @@ class VertexEmbeddingModel(VertexAuthMixin, EmbeddingModel):
         """
         # Clean texts by replacing newlines with spaces
         texts = [self._clean_text(text) for text in texts]
-        
-        results = []
+
+        results: List[List[float]] = []
         model_path = self._get_model_path()
-        
-        for text in texts:
-            # Prepare request payload for Vertex AI embedding
-            payload = {
-                "instances": [{
-                    "content": text
-                }]
-            }
-            
+
+        for batch in self._iter_embed_batches(texts):
+            # Vertex :predict accepts multiple instances per request.
+            payload = {"instances": [{"content": text} for text in batch]}
+
             # Make HTTP request
             response = self.client.post(
                 f"{self.base_url}/{model_path}:predict",
@@ -98,12 +101,13 @@ class VertexEmbeddingModel(VertexAuthMixin, EmbeddingModel):
                 json=payload
             )
             self._handle_error(response)
-            
+
             response_data = response.json()
-            # Extract embedding from response
-            embedding = response_data["predictions"][0]["embeddings"]["values"]
-            results.append([float(value) for value in embedding])
-        
+            # Predictions come back in instance order.
+            for prediction in response_data["predictions"]:
+                embedding = prediction["embeddings"]["values"]
+                results.append([float(value) for value in embedding])
+
         return results
 
     async def aembed(self, texts: List[str], **kwargs) -> List[List[float]]:
@@ -118,18 +122,14 @@ class VertexEmbeddingModel(VertexAuthMixin, EmbeddingModel):
         """
         # Clean texts by replacing newlines with spaces
         texts = [self._clean_text(text) for text in texts]
-        
-        results = []
+
+        results: List[List[float]] = []
         model_path = self._get_model_path()
-        
-        for text in texts:
-            # Prepare request payload for Vertex AI embedding
-            payload = {
-                "instances": [{
-                    "content": text
-                }]
-            }
-            
+
+        for batch in self._iter_embed_batches(texts):
+            # Vertex :predict accepts multiple instances per request.
+            payload = {"instances": [{"content": text} for text in batch]}
+
             # Make async HTTP request
             response = await self.async_client.post(
                 f"{self.base_url}/{model_path}:predict",
@@ -137,12 +137,13 @@ class VertexEmbeddingModel(VertexAuthMixin, EmbeddingModel):
                 json=payload
             )
             self._handle_error(response)
-            
+
             response_data = response.json()
-            # Extract embedding from response
-            embedding = response_data["predictions"][0]["embeddings"]["values"]
-            results.append([float(value) for value in embedding])
-        
+            # Predictions come back in instance order.
+            for prediction in response_data["predictions"]:
+                embedding = prediction["embeddings"]["values"]
+                results.append([float(value) for value in embedding])
+
         return results
 
     def _get_default_model(self) -> str:

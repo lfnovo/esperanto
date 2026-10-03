@@ -91,8 +91,7 @@ class CohereEmbeddingModel(EmbeddingModel):
         texts = [self._clean_text(text) for text in texts]
 
         results: List[List[float]] = []
-        for start in range(0, len(texts), self.MAX_BATCH_SIZE):
-            batch = texts[start : start + self.MAX_BATCH_SIZE]
+        for batch in self._iter_embed_batches(texts):
             payload = self._build_payload(batch, **kwargs)
 
             response = self.client.post(
@@ -110,8 +109,7 @@ class CohereEmbeddingModel(EmbeddingModel):
         texts = [self._clean_text(text) for text in texts]
 
         results: List[List[float]] = []
-        for start in range(0, len(texts), self.MAX_BATCH_SIZE):
-            batch = texts[start : start + self.MAX_BATCH_SIZE]
+        for batch in self._iter_embed_batches(texts):
             payload = self._build_payload(batch, **kwargs)
 
             response = await self.async_client.post(

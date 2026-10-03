@@ -111,21 +111,21 @@ class TestAnthropicChat:
     """Real integration tests for Anthropic chat completion."""
 
     def test_sync_chat_complete(self):
-        model = AIFactory.create_language("anthropic", "claude-3-5-haiku-latest")
+        model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
         response = model.chat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     async def test_async_chat_complete(self):
-        model = AIFactory.create_language("anthropic", "claude-3-5-haiku-latest")
+        model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
         response = await model.achat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     def test_sync_streaming(self):
-        model = AIFactory.create_language("anthropic", "claude-3-5-haiku-latest")
+        model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
         response = model.chat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         for chunk in response:
@@ -135,7 +135,7 @@ class TestAnthropicChat:
         assert len(total_content) > 0
 
     async def test_async_streaming(self):
-        model = AIFactory.create_language("anthropic", "claude-3-5-haiku-latest")
+        model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
         response = await model.achat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         async for chunk in response:
@@ -160,7 +160,7 @@ class TestGoogleChat:
 
     def test_sync_chat_complete(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        model = AIFactory.create_language("google", "gemini-2.0-flash", config={"api_key": api_key})
+        model = AIFactory.create_language("google", "gemini-2.5-flash", config={"api_key": api_key})
         response = model.chat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
@@ -168,7 +168,7 @@ class TestGoogleChat:
 
     async def test_async_chat_complete(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        model = AIFactory.create_language("google", "gemini-2.0-flash", config={"api_key": api_key})
+        model = AIFactory.create_language("google", "gemini-2.5-flash", config={"api_key": api_key})
         response = await model.achat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
@@ -176,7 +176,7 @@ class TestGoogleChat:
 
     def test_sync_streaming(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        model = AIFactory.create_language("google", "gemini-2.0-flash", config={"api_key": api_key})
+        model = AIFactory.create_language("google", "gemini-2.5-flash", config={"api_key": api_key})
         response = model.chat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         for chunk in response:
@@ -187,7 +187,7 @@ class TestGoogleChat:
 
     async def test_async_streaming(self):
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        model = AIFactory.create_language("google", "gemini-2.0-flash", config={"api_key": api_key})
+        model = AIFactory.create_language("google", "gemini-2.5-flash", config={"api_key": api_key})
         response = await model.achat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         async for chunk in response:
@@ -217,21 +217,21 @@ class TestVertexChat:
     """
 
     def test_sync_chat_complete(self):
-        model = AIFactory.create_language("vertex", "gemini-2.0-flash")
+        model = AIFactory.create_language("vertex", "gemini-2.5-flash")
         response = model.chat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     async def test_async_chat_complete(self):
-        model = AIFactory.create_language("vertex", "gemini-2.0-flash")
+        model = AIFactory.create_language("vertex", "gemini-2.5-flash")
         response = await model.achat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     def test_sync_streaming(self):
-        model = AIFactory.create_language("vertex", "gemini-2.0-flash")
+        model = AIFactory.create_language("vertex", "gemini-2.5-flash")
         response = model.chat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         for chunk in response:
@@ -241,7 +241,7 @@ class TestVertexChat:
         assert len(total_content) > 0
 
     async def test_async_streaming(self):
-        model = AIFactory.create_language("vertex", "gemini-2.0-flash")
+        model = AIFactory.create_language("vertex", "gemini-2.5-flash")
         response = await model.achat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         async for chunk in response:
@@ -752,6 +752,59 @@ class TestDashScopeChat:
 
 
 # =============================================================================
+# SiliconFlow Tests
+# =============================================================================
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("SILICONFLOW_API_KEY"),
+    reason="SILICONFLOW_API_KEY not configured",
+)
+class TestSiliconFlowChat:
+    """Real integration tests for SiliconFlow chat and model discovery."""
+
+    MODEL = "deepseek-ai/DeepSeek-V3.1-Terminus"
+
+    def test_sync_chat_complete(self):
+        model = AIFactory.create_language("siliconflow", self.MODEL)
+        response = model.chat_complete(messages=MESSAGES)
+        assert isinstance(response, ChatCompletion)
+        assert response.choices[0].message.content
+
+    async def test_async_chat_complete(self):
+        model = AIFactory.create_language("siliconflow", self.MODEL)
+        response = await model.achat_complete(messages=MESSAGES)
+        assert isinstance(response, ChatCompletion)
+        assert response.choices[0].message.content
+
+    def test_sync_streaming(self):
+        model = AIFactory.create_language("siliconflow", self.MODEL)
+        response = model.chat_complete(messages=MESSAGES, stream=True)
+        total_content = ""
+        for chunk in response:
+            assert isinstance(chunk, ChatCompletionChunk)
+            if chunk.choices[0].delta.content:
+                total_content += chunk.choices[0].delta.content
+        assert total_content
+
+    async def test_async_streaming(self):
+        model = AIFactory.create_language("siliconflow", self.MODEL)
+        response = await model.achat_complete(messages=MESSAGES, stream=True)
+        total_content = ""
+        async for chunk in response:
+            assert isinstance(chunk, ChatCompletionChunk)
+            if chunk.choices[0].delta.content:
+                total_content += chunk.choices[0].delta.content
+        assert total_content
+
+    def test_model_discovery(self):
+        models = AIFactory.get_provider_models("siliconflow")
+        assert models
+        assert any(model.id == self.MODEL for model in models)
+
+
+# =============================================================================
 # MiniMax Tests
 # =============================================================================
 
@@ -765,21 +818,21 @@ class TestMiniMaxChat:
     """Real integration tests for MiniMax chat completion."""
 
     def test_sync_chat_complete(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = model.chat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     async def test_async_chat_complete(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = await model.achat_complete(messages=MESSAGES)
         assert isinstance(response, ChatCompletion)
         assert response.choices[0].message.content is not None
         assert len(response.choices[0].message.content) > 0
 
     def test_sync_streaming(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = model.chat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         for chunk in response:
@@ -789,7 +842,7 @@ class TestMiniMaxChat:
         assert len(total_content) > 0
 
     async def test_async_streaming(self):
-        model = AIFactory.create_language("minimax", "MiniMax-M2.5")
+        model = AIFactory.create_language("minimax", "MiniMax-M3")
         response = await model.achat_complete(messages=MESSAGES, stream=True)
         total_content = ""
         async for chunk in response:

@@ -46,7 +46,7 @@ ANTHROPIC_API_KEY="sk-ant-..."
 from esperanto.factory import AIFactory
 
 # Create Claude model
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 
 # Chat completion
 messages = [{"role": "user", "content": "Explain quantum computing"}]
@@ -62,7 +62,7 @@ from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 # Create model instance
 model = AnthropicLanguageModel(
     api_key="your-api-key",
-    model_name="claude-3-5-sonnet-20241022"
+    model_name="claude-sonnet-5"
 )
 
 # Use the model
@@ -79,11 +79,14 @@ print(response.choices[0].message.content)
 
 | Model | Context Window | Best For |
 |-------|----------------|----------|
-| **claude-3-5-sonnet-20241022** | 200K tokens | Latest, balanced performance and speed |
-| **claude-3-5-haiku-20241022** | 200K tokens | Fast responses, cost-effective |
-| **claude-3-opus-20240229** | 200K tokens | Complex tasks, highest capability |
-| **claude-3-sonnet-20240229** | 200K tokens | Balanced performance |
-| **claude-3-haiku-20240307** | 200K tokens | Speed and efficiency |
+| **claude-sonnet-5** | 200K tokens | Default. Balanced performance and speed |
+| **claude-opus-5** | 200K tokens | Complex tasks, highest capability |
+| **claude-sonnet-4-5-20250929** | 200K tokens | Pinned Sonnet, stable across releases |
+| **claude-haiku-4-5-20251001** | 200K tokens | Fast responses, cost-effective |
+
+The undated aliases (`claude-sonnet-5`, `claude-opus-5`) track Anthropic's
+current release of that tier; pin a dated id when you need the model to stay
+fixed.
 
 **Configuration:**
 
@@ -92,7 +95,7 @@ from esperanto.factory import AIFactory
 
 model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={
         "temperature": 0.7,           # Randomness (0.0 - 1.0)
         "max_tokens": 1024,           # Maximum response length (required)
@@ -110,7 +113,7 @@ model = AIFactory.create_language(
 from esperanto.factory import AIFactory
 
 # Create Claude model
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 
 # Simple chat
 messages = [
@@ -138,7 +141,7 @@ print(response.choices[0].message.content)
 
 ```python
 async def chat_async():
-    model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+    model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 
     messages = [{"role": "user", "content": "Explain quantum computing"}]
     response = await model.achat_complete(messages)
@@ -166,7 +169,7 @@ async for chunk in model.achat_complete(messages, stream=True):
 # Enable JSON output
 model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={"structured": {"type": "json"}}
 )
 
@@ -216,14 +219,14 @@ print(response.choices[0].message.content)
 # More creative (higher temperature)
 creative_model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={"temperature": 1.0, "max_tokens": 1024}
 )
 
 # More focused (lower temperature)
 focused_model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={"temperature": 0.2, "max_tokens": 1024}
 )
 
@@ -241,7 +244,7 @@ Claude supports structured JSON output:
 ```python
 model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={"structured": {"type": "json"}}
 )
 
@@ -267,7 +270,7 @@ class TravelPlan(BaseModel):
 
 model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={
         "structured": {
             "type": "json_schema",
@@ -297,7 +300,7 @@ Claude prioritizes temperature over top_p when both are specified:
 # Temperature takes precedence
 model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={
         "temperature": 0.7,  # This will be used
         "top_p": 0.9         # This will be ignored
@@ -312,7 +315,7 @@ Customize request timeouts:
 # Extended timeout for complex tasks
 model = AIFactory.create_language(
     "anthropic",
-    "claude-3-5-sonnet-20241022",
+    "claude-sonnet-5",
     config={
         "timeout": 120.0,    # 2 minutes
         "max_tokens": 4096
@@ -326,7 +329,7 @@ Convert to LangChain models:
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 langchain_model = model.to_langchain()
 
 # Use with LangChain
@@ -344,7 +347,7 @@ chain = ConversationChain(llm=langchain_model)
 - 200K token context window
 
 ```python
-model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 ```
 
 ### Claude 3.5 Haiku
@@ -355,7 +358,7 @@ model = AIFactory.create_language("anthropic", "claude-3-5-sonnet-20241022")
 - Still maintains strong capabilities
 
 ```python
-model = AIFactory.create_language("anthropic", "claude-3-5-haiku-20241022")
+model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
 ```
 
 ### Claude 3 Opus
@@ -366,7 +369,7 @@ model = AIFactory.create_language("anthropic", "claude-3-5-haiku-20241022")
 - Use when quality is paramount
 
 ```python
-model = AIFactory.create_language("anthropic", "claude-3-opus-20240229")
+model = AIFactory.create_language("anthropic", "claude-opus-5")
 ```
 
 ## Performance Characteristics

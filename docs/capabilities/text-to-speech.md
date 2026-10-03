@@ -157,6 +157,7 @@ audio = speaker.generate_speech("Test audio", voice="alloy")
 - **ElevenLabs**: Best voice quality, voice cloning, emotional control
 - **Google**: Wide language support, neural voices, good quality
 - **Azure**: Enterprise compliance, custom neural voices
+- **MiniMax**: Multilingual speech, emotion control, cloned/generated voices
 - **OpenAI-Compatible**: Local deployment options
 
 ## Examples

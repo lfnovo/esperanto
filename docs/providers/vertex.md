@@ -103,7 +103,7 @@ tts = VertexTextToSpeech(
 ### Language Models (LLM)
 
 **Available Models:**
-- **gemini-2.0-flash** - Latest, fast and capable model
+- **gemini-2.5-flash** - Latest, fast and capable model
 - **gemini-1.5-pro** - Most capable Gemini 1.5 model
 - **gemini-1.5-flash** - Fast and efficient
 
@@ -161,7 +161,7 @@ async for chunk in model.achat_complete(messages, stream=True):
 ```python
 model = AIFactory.create_language(
     "vertex",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash",
     config={"structured": {"type": "json"}}
 )
 
@@ -185,7 +185,7 @@ class ServiceInfo(BaseModel):
 
 model = AIFactory.create_language(
     "vertex",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash",
     config={
         "structured": {
             "type": "json_schema",
@@ -436,7 +436,7 @@ eu_model = AIFactory.create_language(
 # US deployment
 us_model = AIFactory.create_language(
     "vertex",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash",
     config={
         "project": "us-project",
         "location": "us-central1"  # US region
@@ -560,7 +560,7 @@ Error: Quota exceeded
 **Use Appropriate Models:**
 ```python
 # For simple tasks, use Gemini 2.0 Flash (cheaper)
-simple_model = AIFactory.create_language("vertex", "gemini-2.0-flash")
+simple_model = AIFactory.create_language("vertex", "gemini-2.5-flash")
 
 # For complex tasks, use Gemini 1.5 Pro
 complex_model = AIFactory.create_language("vertex", "gemini-1.5-pro")

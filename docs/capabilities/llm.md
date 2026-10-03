@@ -256,7 +256,7 @@ print(response.content)
 
 ```python
 model = AIFactory.create_language(
-    "anthropic", "claude-3-5-sonnet-20241022",
+    "anthropic", "claude-sonnet-5",
     config={"streaming": True, "temperature": 0.3}
 )
 

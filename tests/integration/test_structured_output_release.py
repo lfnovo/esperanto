@@ -30,6 +30,12 @@ PROMPT = [
 
 STRUCTURED_CONFIG = {"structured": {"type": "json_schema", "schema": Capital}}
 
+# Several current models (gemini-2.5-flash, groq's gpt-oss-120b) spend reasoning
+# tokens from the same budget as the answer, so a tight cap truncates the JSON
+# mid-string. The failure then reads like a schema problem when it is a budget
+# problem — keep the budget generous enough that these tests only fail for real.
+MAX_TOKENS = 800
+
 
 def _assert_capital(response):
     """Every provider must surface a validated ``Capital`` on ``response.structured``."""
@@ -46,7 +52,7 @@ def test_openai_structured_output_real():
     model = AIFactory.create_language(
         "openai", "gpt-4o-mini", config=STRUCTURED_CONFIG
     )
-    response = model.chat_complete(PROMPT, max_tokens=100)
+    response = model.chat_complete(PROMPT, max_tokens=MAX_TOKENS)
     _assert_capital(response)
 
 
@@ -56,9 +62,9 @@ def test_openai_structured_output_real():
 )
 def test_anthropic_structured_output_real():
     model = AIFactory.create_language(
-        "anthropic", "claude-3-5-haiku-latest", config=STRUCTURED_CONFIG
+        "anthropic", "claude-haiku-4-5-20251001", config=STRUCTURED_CONFIG
     )
-    response = model.chat_complete(PROMPT, max_tokens=100)
+    response = model.chat_complete(PROMPT, max_tokens=MAX_TOKENS)
     _assert_capital(response)
 
 
@@ -69,9 +75,9 @@ def test_anthropic_structured_output_real():
 )
 def test_google_structured_output_real():
     model = AIFactory.create_language(
-        "google", "gemini-2.0-flash", config=STRUCTURED_CONFIG
+        "google", "gemini-2.5-flash", config=STRUCTURED_CONFIG
     )
-    response = model.chat_complete(PROMPT, max_tokens=100)
+    response = model.chat_complete(PROMPT, max_tokens=MAX_TOKENS)
     _assert_capital(response)
 
 
@@ -80,10 +86,12 @@ def test_google_structured_output_real():
     not os.getenv("GROQ_API_KEY"), reason="GROQ_API_KEY not configured"
 )
 def test_groq_structured_output_real():
+    # llama-3.3-70b-versatile does not support response_format json_schema on
+    # Groq; gpt-oss-120b does. See https://console.groq.com/docs/structured-outputs
     model = AIFactory.create_language(
-        "groq", "llama-3.3-70b-versatile", config=STRUCTURED_CONFIG
+        "groq", "openai/gpt-oss-120b", config=STRUCTURED_CONFIG
     )
-    response = model.chat_complete(PROMPT, max_tokens=100)
+    response = model.chat_complete(PROMPT, max_tokens=MAX_TOKENS)
     _assert_capital(response)
 
 
@@ -95,7 +103,7 @@ def test_mistral_structured_output_real():
     model = AIFactory.create_language(
         "mistral", "mistral-large-latest", config=STRUCTURED_CONFIG
     )
-    response = model.chat_complete(PROMPT, max_tokens=100)
+    response = model.chat_complete(PROMPT, max_tokens=MAX_TOKENS)
     _assert_capital(response)
 
 
@@ -107,5 +115,91 @@ def test_cohere_structured_output_real():
     model = AIFactory.create_language(
         "cohere", "command-a-03-2025", config=STRUCTURED_CONFIG
     )
-    response = model.chat_complete(PROMPT, max_tokens=100)
+    response = model.chat_complete(PROMPT, max_tokens=MAX_TOKENS)
     _assert_capital(response)
+
+
+# ---------------------------------------------------------------------------
+# OpenAI strict-mode schema shapes
+#
+# The Capital tests above are the simplest possible schema: flat, all-required.
+# These cover the two shapes that used to fail before the strict-mode
+# normalization — a nested model (which puts objects under $defs) and a model
+# with an optional field (which strict mode forbids outright).
+# ---------------------------------------------------------------------------
+
+
+class Address(BaseModel):
+    street: str
+    city: str
+
+
+class Person(BaseModel):
+    name: str
+    address: Address
+
+
+class LooseCapital(BaseModel):
+    city: str
+    nickname: str = "unknown"
+
+
+NESTED_PROMPT = [
+    {
+        "role": "user",
+        "content": "Invent a person with a name and an address (street and city). Return JSON.",
+    }
+]
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not configured"
+)
+def test_openai_structured_output_nested_schema_real():
+    """A nested model puts its child under $defs, which also needs the flag."""
+    model = AIFactory.create_language(
+        "openai", "gpt-4o-mini", config={"structured": {"type": "json_schema", "schema": Person}}
+    )
+    response = model.chat_complete(NESTED_PROMPT, max_tokens=MAX_TOKENS)
+
+    assert isinstance(response.structured, Person)
+    assert response.structured.address.city
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not configured"
+)
+def test_openai_structured_output_optional_field_real():
+    """An optional field can't satisfy strict mode; the call must still work."""
+    model = AIFactory.create_language(
+        "openai",
+        "gpt-4o-mini",
+        config={"structured": {"type": "json_schema", "schema": LooseCapital}},
+    )
+    response = model.chat_complete(PROMPT, max_tokens=MAX_TOKENS)
+
+    assert isinstance(response.structured, LooseCapital)
+    assert response.structured.city
+
+
+@pytest.mark.release
+@pytest.mark.skipif(
+    not (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")),
+    reason="GOOGLE_API_KEY or GEMINI_API_KEY not configured",
+)
+def test_google_structured_output_nested_schema_real():
+    """Google accepts the same normalized schema the OpenAI family needs."""
+    model = AIFactory.create_language(
+        "google",
+        "gemini-2.5-flash",
+        config={
+            "api_key": os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"),
+            "structured": {"type": "json_schema", "schema": Person},
+        },
+    )
+    response = model.chat_complete(NESTED_PROMPT, max_tokens=MAX_TOKENS)
+
+    assert isinstance(response.structured, Person)
+    assert response.structured.address.city

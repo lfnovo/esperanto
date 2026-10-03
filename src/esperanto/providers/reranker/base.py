@@ -14,11 +14,11 @@ from esperanto.utils.connect import HttpConnectionMixin
 class RerankerModel(HttpConnectionMixin, ABC):
     """Base class for all reranker providers."""
 
-    api_key: Optional[str] = None
+    api_key: Optional[str] = field(default=None, repr=False)
     base_url: Optional[str] = None
     model_name: Optional[str] = None
-    config: Optional[Dict[str, Any]] = None
-    _config: Dict[str, Any] = field(default_factory=dict)
+    config: Optional[Dict[str, Any]] = field(default=None, repr=False)
+    _config: Dict[str, Any] = field(default_factory=dict, repr=False)
 
     def __post_init__(self):
         """Initialize configuration after dataclass initialization."""

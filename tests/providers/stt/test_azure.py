@@ -395,3 +395,110 @@ async def test_azure_atranscribe_maps_segments(audio_file, mock_verbose_httpx_cl
     assert len(response.segments) == 2
     assert response.duration == pytest.approx(4.2)
     assert response.language == "english"
+
+
+# ---------------------------------------------------------------------------
+# Non-Whisper deployments must not request verbose_json (issue #263)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_plain_json_httpx_clients():
+    """Mock httpx clients returning the plain json payload (no segments)."""
+    payload = {"text": "Hello from gpt-4o transcribe."}
+
+    client = Mock()
+    async_client = AsyncMock()
+
+    def make_response(status_code, data):
+        r = Mock()
+        r.status_code = status_code
+        r.json.return_value = data
+        return r
+
+    def make_async_response(status_code, data):
+        r = AsyncMock()
+        r.status_code = status_code
+        r.json = Mock(return_value=data)
+        return r
+
+    def post_side_effect(url, **kwargs):
+        if "audio/transcriptions" in url:
+            return make_response(200, payload)
+        return make_response(404, {"error": {"message": "Not found"}})
+
+    async def async_post_side_effect(url, **kwargs):
+        if "audio/transcriptions" in url:
+            return make_async_response(200, payload)
+        return make_async_response(404, {"error": {"message": "Not found"}})
+
+    client.post.side_effect = post_side_effect
+    async_client.post.side_effect = async_post_side_effect
+
+    return client, async_client
+
+
+@pytest.mark.parametrize(
+    "deployment_name",
+    ["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "gpt-transcribe", "my-transcriber"],
+)
+def test_azure_non_whisper_deployment_sends_json(
+    deployment_name, audio_file, mock_plain_json_httpx_clients
+):
+    """Deployments that aren't recognizable as Whisper must get json.
+
+    Azure serves the gpt-4o-*-transcribe family through the same deployment
+    API, and those models reject verbose_json outright.
+    """
+    model = AzureSpeechToTextModel(api_key="test-key", model_name=deployment_name)
+    model.client, model.async_client = mock_plain_json_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "json"
+    assert call_args[1]["data"]["model"] == deployment_name
+    assert response.text == "Hello from gpt-4o transcribe."
+    assert response.segments is None
+    assert response.duration is None
+
+
+@pytest.mark.asyncio
+async def test_azure_non_whisper_deployment_async_sends_json(
+    audio_file, mock_plain_json_httpx_clients
+):
+    """Async path resolves the format the same way."""
+    model = AzureSpeechToTextModel(
+        api_key="test-key", model_name="gpt-4o-mini-transcribe"
+    )
+    model.client, model.async_client = mock_plain_json_httpx_clients
+
+    response = await model.atranscribe(audio_file)
+
+    call_args = model.async_client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "json"
+    assert response.segments is None
+    assert response.duration is None
+
+
+def test_azure_response_format_config_forces_verbose_json(
+    audio_file, mock_verbose_httpx_clients
+):
+    """A Whisper deployment under an opaque name can opt back in via config.
+
+    Azure deployment names are user-chosen, so name-based detection can't see
+    through e.g. "prod-stt" — config is the escape hatch.
+    """
+    model = AzureSpeechToTextModel(
+        api_key="test-key",
+        model_name="prod-stt",
+        config={"response_format": "verbose_json"},
+    )
+    model.client, model.async_client = mock_verbose_httpx_clients
+
+    response = model.transcribe(audio_file)
+
+    call_args = model.client.post.call_args
+    assert call_args[1]["data"]["response_format"] == "verbose_json"
+    assert response.segments is not None
+    assert len(response.segments) == 2

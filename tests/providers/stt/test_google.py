@@ -122,9 +122,10 @@ class TestGoogleSpeechToTextModel:
         with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
             model = GoogleSpeechToTextModel()
             models = model._get_models()
-            assert len(models) >= 2
+            assert len(models) >= 1
             assert any(m.id == "gemini-2.5-flash" for m in models)
-            assert any(m.id == "gemini-2.0-flash" for m in models)
+            # gemini-2.0-flash was retired by Google — never advertise it.
+            assert not any(m.id == "gemini-2.0-flash" for m in models)
             assert all(m.owned_by == "Google" for m in models)
 
     def test_get_mime_type_mp3(self):

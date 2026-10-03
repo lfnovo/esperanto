@@ -352,6 +352,11 @@ def _azure_env(monkeypatch, modality_suffix: str) -> None:
         "https://test-endpoint.openai.azure.com/",
     )
     monkeypatch.setenv("AZURE_OPENAI_API_VERSION", f"2024-{modality_suffix}-01")
+    # Each Azure provider prefers its modality-specific endpoint override over
+    # AZURE_OPENAI_ENDPOINT. Clear them so a value present in the host env (or an
+    # auto-loaded .env) can't win over the endpoint this helper sets.
+    for suffix in ("LLM", "EMBEDDING", "STT", "TTS"):
+        monkeypatch.delenv(f"AZURE_OPENAI_ENDPOINT_{suffix}", raising=False)
 
 
 def test_azure_llm_endpoint_trailing_slash_stripped(monkeypatch):

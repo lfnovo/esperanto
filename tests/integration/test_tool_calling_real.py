@@ -211,7 +211,7 @@ class TestAnthropicToolCalling:
 
     def test_basic_tool_call(self, weather_tools):
         """Test that Anthropic returns a tool call for a weather query."""
-        model = AIFactory.create_language("anthropic", "claude-3-5-haiku-latest")
+        model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
 
         response = model.chat_complete(
             messages=TOOL_TRIGGER_MESSAGE,
@@ -240,7 +240,7 @@ class TestAnthropicToolCalling:
 
     def test_multi_turn_with_tool_result(self, weather_tools):
         """Test multi-turn conversation with tool result."""
-        model = AIFactory.create_language("anthropic", "claude-3-5-haiku-latest")
+        model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
 
         # First call - should get tool call
         response1 = model.chat_complete(
@@ -1038,7 +1038,7 @@ class TestGoogleToolCalling:
         # Google provider accepts either GOOGLE_API_KEY or GEMINI_API_KEY
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         model = AIFactory.create_language(
-            "google", "gemini-2.0-flash", config={"api_key": api_key}
+            "google", "gemini-2.5-flash", config={"api_key": api_key}
         )
 
         response = model.chat_complete(
@@ -1070,7 +1070,7 @@ class TestGoogleToolCalling:
         """Test multi-turn conversation with tool result."""
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         model = AIFactory.create_language(
-            "google", "gemini-2.0-flash", config={"api_key": api_key}
+            "google", "gemini-2.5-flash", config={"api_key": api_key}
         )
 
         # First call - should get tool call
