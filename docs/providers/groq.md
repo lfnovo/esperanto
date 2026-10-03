@@ -473,8 +473,9 @@ as `openai/gpt-oss-20b` are the fastest. Actual speed varies by model and load.
 - **Whisper Large V3 Turbo**: faster than Large V3, with slightly lower accuracy
 
 ### Context Windows
-Current Groq chat models offer 128K tokens.
-`AIFactory.get_provider_models("groq")` reports each model's context window.
+Context windows vary by model (the GPT-OSS and Qwen models listed above offer
+128K tokens). `AIFactory.get_provider_models("groq")` reports each model's
+context window.
 
 ## Troubleshooting
 

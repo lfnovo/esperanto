@@ -213,7 +213,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Anthropic](./anthropic.md) | ✅ | ✅ | ✅ | 200K-1M |
 | [Google](./google.md) | ✅ | ✅ | ✅ | 2M (Gemini 1.5) |
 | [Azure](./azure.md) | ✅ | ✅ | ✅ | 128K-200K |
-| [Groq](./groq.md) | ✅ | ✅ | ❌ | 8K-32K |
+| [Groq](./groq.md) | ✅ | ✅ | ✅ | Model-dependent (128K on GPT-OSS) |
 | [Mistral](./mistral.md) | ✅ | ✅ | ✅ | 128K |
 | [DeepSeek](./deepseek.md) | ✅ | ✅ | ✅ | 64K |
 | [SiliconFlow](./siliconflow.md) | ✅ | ✅ | ✅ | Model-dependent |
