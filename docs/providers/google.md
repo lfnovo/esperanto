@@ -409,6 +409,14 @@ model = AIFactory.create_speech_to_text(
 
 ### Text-to-Speech
 
+**Supported Models:**
+
+- `gemini-3.1-flash-tts-preview` (default)
+- `gemini-3.8-flash-tts` and `gemini-3.8-flash-lite-tts`
+- `gemini-2.5-flash-preview-tts` and `gemini-2.5-pro-preview-tts` (legacy)
+
+Every model returns `audio/wav`. Gemini 3.8 sends a complete WAV file, which Esperanto passes through unchanged. Older models send raw PCM, which Esperanto wraps in a WAV header.
+
 **Available Voices:**
 
 Google TTS provides 30+ unique voices with distinct personalities:

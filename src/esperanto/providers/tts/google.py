@@ -2,6 +2,7 @@
 import base64
 import io
 import os
+import re
 import wave
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -17,6 +18,8 @@ DEFAULT_MODEL = "gemini-3.1-flash-tts-preview"
 # "Developer instruction is not enabled for this model".
 # So the field has to be conditional on the model family.
 _LEGACY_MODEL_PREFIX = "gemini-2.5"
+# Sample rate of the raw PCM returned when the mime type carries no rate.
+DEFAULT_SAMPLE_RATE = 24000
 
 
 def _needs_system_instruction(model_name: str) -> bool:
@@ -91,16 +94,35 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         """Get the provider name."""
         return "google"
 
-    def _convert_pcm_to_wav(self, pcm_data: bytes) -> bytes:
+    def _decode_audio(self, inline_data: Dict[str, str]) -> bytes:
+        """Decode an inlineData audio part into WAV bytes.
+
+        Gemini 3.8 TTS returns a complete WAV file (``audio/wav``); earlier
+        models return headerless PCM (``audio/l16``) that needs a WAV header.
+        """
+        audio_bytes = base64.b64decode(inline_data["data"])
+        mime_type = inline_data.get("mimeType", "").lower()
+
+        is_wav_container = audio_bytes[:4] == b"RIFF" and audio_bytes[8:12] == b"WAVE"
+        if mime_type.startswith(("audio/wav", "audio/x-wav")) or is_wav_container:
+            return audio_bytes
+
+        # Match the `rate` parameter only, not the tail of e.g. `bitrate=`.
+        match = re.search(r"(?:^|;)\s*rate=(\d+)", mime_type)
+        sample_rate = int(match.group(1)) if match else DEFAULT_SAMPLE_RATE
+        return self._convert_pcm_to_wav(audio_bytes, sample_rate=sample_rate)
+
+    def _convert_pcm_to_wav(
+        self, pcm_data: bytes, sample_rate: int = DEFAULT_SAMPLE_RATE
+    ) -> bytes:
         """Convert PCM audio data to WAV format.
-        
-        Google returns 16-bit PCM at 24kHz sample rate.
+
+        Google returns 16-bit mono PCM, at 24kHz unless the mime type says otherwise.
         """
         # Create a WAV file in memory
         wav_buffer = io.BytesIO()
-        
+
         # PCM format parameters from Google's API
-        sample_rate = 24000  # 24kHz
         sample_width = 2     # 16-bit = 2 bytes
         channels = 1         # Mono
         
@@ -305,6 +327,12 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         """List all available models for this provider."""
         return [
             Model(id=DEFAULT_MODEL, owned_by="Google", context_window=None),
+            Model(id="gemini-3.8-flash-tts", owned_by="Google", context_window=None),
+            Model(
+                id="gemini-3.8-flash-lite-tts",
+                owned_by="Google",
+                context_window=None,
+            ),
             Model(
                 id="gemini-2.5-flash-preview-tts",
                 owned_by="Google",
@@ -374,15 +402,12 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         response_data = response.json()
         
         # Extract audio data from response
-        audio_data_b64 = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]["data"]
-        pcm_data = base64.b64decode(audio_data_b64)
-        
-        # Convert PCM to WAV format
-        audio_data = self._convert_pcm_to_wav(pcm_data)
+        inline_data = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]
+        audio_data = self._decode_audio(inline_data)
 
         response_audio = AudioResponse(
             audio_data=audio_data,
-            content_type="audio/wav",  # Converted to WAV format
+            content_type="audio/wav",
             model=model_name,
             voice=voice,
             provider="google"
@@ -452,15 +477,12 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         response_data = response.json()
         
         # Extract audio data from response
-        audio_data_b64 = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]["data"]
-        pcm_data = base64.b64decode(audio_data_b64)
-        
-        # Convert PCM to WAV format
-        audio_data = self._convert_pcm_to_wav(pcm_data)
+        inline_data = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]
+        audio_data = self._decode_audio(inline_data)
 
         response_audio = AudioResponse(
             audio_data=audio_data,
-            content_type="audio/wav",  # Converted to WAV format
+            content_type="audio/wav",
             model=model_name,
             voice=voice,
             provider="google"
@@ -546,15 +568,12 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         response_data = response.json()
         
         # Extract audio data from response
-        audio_data_b64 = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]["data"]
-        pcm_data = base64.b64decode(audio_data_b64)
-        
-        # Convert PCM to WAV format
-        audio_data = self._convert_pcm_to_wav(pcm_data)
+        inline_data = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]
+        audio_data = self._decode_audio(inline_data)
 
         response_audio = AudioResponse(
             audio_data=audio_data,
-            content_type="audio/wav",  # Converted to WAV format
+            content_type="audio/wav",
             model=model_name,
             voice="multi-speaker",
             provider="google"
@@ -634,15 +653,12 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         response_data = response.json()
         
         # Extract audio data from response
-        audio_data_b64 = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]["data"]
-        pcm_data = base64.b64decode(audio_data_b64)
-        
-        # Convert PCM to WAV format
-        audio_data = self._convert_pcm_to_wav(pcm_data)
+        inline_data = response_data["candidates"][0]["content"]["parts"][0]["inlineData"]
+        audio_data = self._decode_audio(inline_data)
 
         response_audio = AudioResponse(
             audio_data=audio_data,
-            content_type="audio/wav",  # Converted to WAV format
+            content_type="audio/wav",
             model=model_name,
             voice="multi-speaker",
             provider="google"
