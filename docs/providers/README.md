@@ -217,7 +217,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Mistral](./mistral.md) | ✅ | ✅ | ✅ | 128K |
 | [DeepSeek](./deepseek.md) | ✅ | ✅ | ✅ | 64K |
 | [SiliconFlow](./siliconflow.md) | ✅ | ✅ | ✅ | Model-dependent |
-| [Perplexity](./perplexity.md) | ✅ | ✅ | ❌ | 32K |
+| [Perplexity](./perplexity.md) | ✅ | ✅ | ✅ | 127K-200K |
 | [xAI](./xai.md) | ✅ | ❌ | ✅ | 128K |
 | [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
 | [MiniMax](./minimax.md) | ✅ | ✅ | ✅ | 1M |
