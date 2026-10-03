@@ -95,10 +95,10 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 
 **Best Overall Quality:**
 - **[OpenAI](./openai.md)**: GPT-4o, o1, o3, o4 (industry standard)
-- **[Anthropic](./anthropic.md)**: Claude 3.5 (excellent reasoning, long context)
+- **[Anthropic](./anthropic.md)**: Claude Sonnet 5.5, Opus 5.5 (excellent reasoning, 1M-token context)
 
 **Best for Reasoning:**
-- **[Anthropic](./anthropic.md)**: Claude 3.5 Sonnet, Opus (complex reasoning)
+- **[Anthropic](./anthropic.md)**: Claude Opus 5.5, Fable 5.1 (complex reasoning)
 - **[DeepSeek](./deepseek.md)**: deepseek-reasoner (step-by-step reasoning)
 - **[SiliconFlow](./siliconflow.md)**: DeepSeek and Qwen model access through one OpenAI-compatible API
 - **[OpenAI](./openai.md)**: o1, o3, o4 series (advanced reasoning)
@@ -109,7 +109,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 
 **Best for Code:**
 - **[OpenAI](./openai.md)**: GPT-4o, o1 series
-- **[Anthropic](./anthropic.md)**: Claude 3.5 Sonnet
+- **[Anthropic](./anthropic.md)**: Claude Sonnet 5.5, Opus 5.5
 - **[DeepSeek](./deepseek.md)**: Strong coding capabilities
 - **[SiliconFlow](./siliconflow.md)**: DeepSeek and Qwen coding models
 

@@ -419,7 +419,8 @@ Claude Opus 4.5 support 200K. See the [models table](#language-models-llm) or
 `AIFactory.get_provider_models("anthropic")` for each model's window.
 
 ### Response Quality
-- **Opus**: Highest quality, best reasoning
+- **Fable**: Highest quality, for the hardest reasoning tasks
+- **Opus**: Very high quality, strong reasoning at a lower cost than Fable
 - **Sonnet**: Excellent balance of quality and speed
 - **Haiku**: Fast, still maintains good quality
 
