@@ -24,7 +24,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Z.ai](./zai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [oMLX](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
-| [OpenRouter](./openrouter.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [OpenRouter](./openrouter.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [PayPerQ (PPQ)](./ppq.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Jina](./jina.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -118,7 +118,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[xAI](./xai.md)**: Real-time knowledge
 
 **Multiple Models Access:**
-- **[OpenRouter](./openrouter.md)**: 100+ models from various providers
+- **[OpenRouter](./openrouter.md)**: Hundreds of models from many providers
 - **[Novita](./openai-compatible.md)**: 200+ open-source models (OpenAI-compatible profile)
 - **[PayPerQ (PPQ)](./ppq.md)**: hundreds of models across LLM/embedding/STT/TTS, pay-as-you-go with one key
 

@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `UserWarning` recommending `{"type": "json_schema", "schema": ...}`. Request
   behavior is unchanged. (#292)
 
+### Documentation
+
+- **OpenRouter page refreshed.** Model ids checked against OpenRouter's live
+  model list (several, including every `anthropic/claude-3*` id, no longer
+  exist). The page now documents the OpenRouter embedding provider, which it
+  wrongly listed as unavailable. Speech and transcription model lists, the
+  LangChain example (`ConversationChain` no longer exists in LangChain 1.x) and
+  model discovery via `AIFactory.get_provider_models("openrouter")` are
+  updated. The provider matrix now marks OpenRouter embeddings, STT and TTS as
+  supported. (#299)
+
 ### Fixed
 
 - **Gemini 3.8 TTS audio no longer ends in a burst of noise.**

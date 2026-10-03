@@ -2,14 +2,14 @@
 
 ## Overview
 
-OpenRouter provides unified access to multiple AI models from different providers through a single API. It acts as a gateway to models from OpenAI, Anthropic, Google, Meta, Mistral, and many others, offering flexibility and easy model switching.
+OpenRouter provides unified access to models from many providers through a single API. It acts as a gateway to models from OpenAI, Anthropic, Google, Meta, Mistral and many others, offering flexibility and easy model switching.
 
 **Supported Capabilities:**
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Language Models (LLM) | ✅ | Access to 100+ models from multiple providers |
-| Embeddings | ❌ | Not available |
+| Language Models (LLM) | ✅ | Hundreds of models from many providers |
+| Embeddings | ✅ | OpenAI-compatible embeddings (`/embeddings`) |
 | Reranking | ❌ | Not available |
 | Speech-to-Text | ✅ | OpenAI-compatible transcription (`/audio/transcriptions`) |
 | Text-to-Speech | ✅ | OpenAI-compatible speech (`/audio/speech`) |
@@ -51,7 +51,7 @@ from esperanto.factory import AIFactory
 
 # Create OpenRouter model
 # You can use any model available on OpenRouter
-model = AIFactory.create_language("openrouter", "anthropic/claude-3.5-sonnet")
+model = AIFactory.create_language("openrouter", "anthropic/claude-sonnet-5.5")
 
 # Chat completion
 messages = [{"role": "user", "content": "Explain quantum computing"}]
@@ -67,7 +67,7 @@ from esperanto.providers.llm.openrouter import OpenRouterLanguageModel
 # Create model instance
 model = OpenRouterLanguageModel(
     api_key="your-api-key",
-    model_name="anthropic/claude-3.5-sonnet"
+    model_name="anthropic/claude-sonnet-5.5"
 )
 
 # Use the model
@@ -82,36 +82,36 @@ print(response.choices[0].message.content)
 
 **Available Model Categories:**
 
-OpenRouter provides access to 100+ models. Here are some popular choices:
+OpenRouter provides access to hundreds of models, and the lineup changes often. Some popular choices (checked October 2026; see https://openrouter.ai/models for the current list):
 
 **OpenAI Models:**
-- `openai/gpt-4o` - Latest GPT-4 Optimized
-- `openai/gpt-4-turbo` - Fast GPT-4
-- `openai/gpt-3.5-turbo` - Cost-effective
+- `openai/gpt-5.5` - Latest GPT
+- `openai/gpt-5.4-mini` - Fast and cost-effective
+- `openai/gpt-4o` - Widely used multimodal model
 
 **Anthropic Models:**
-- `anthropic/claude-3.5-sonnet` - Latest Claude
-- `anthropic/claude-3-opus` - Most capable Claude
-- `anthropic/claude-3-haiku` - Fast Claude
+- `anthropic/claude-opus-5.5` - Most capable Claude for everyday use
+- `anthropic/claude-sonnet-5.5` - Balanced Claude
+- `anthropic/claude-haiku-4.5` - Fast Claude
 
 **Google Models:**
-- `google/gemini-2.0-flash-exp` - Latest Gemini
-- `google/gemini-pro-1.5` - Balanced Gemini
+- `google/gemini-3.8-flash` - Latest Gemini Flash
+- `google/gemini-2.5-pro` - Stable Gemini Pro
 
 **Meta Models:**
-- `meta-llama/llama-3.1-405b-instruct` - Largest Llama
-- `meta-llama/llama-3.1-70b-instruct` - Balanced Llama
-- `meta-llama/llama-3.1-8b-instruct` - Fast Llama
+- `meta-llama/llama-4-maverick` - Largest Llama 4
+- `meta-llama/llama-4-scout` - Efficient Llama 4
+- `meta-llama/llama-3.3-70b-instruct` - Llama 3.3
 
 **Mistral Models:**
-- `mistralai/mistral-large` - Most capable Mistral
-- `mistralai/mistral-small` - Fast Mistral
-- `mistralai/codestral` - Code specialist
+- `mistralai/mistral-large-2512` - Most capable Mistral
+- `mistralai/mistral-small-2603` - Fast Mistral
+- `mistralai/codestral-2508` - Code specialist
 
 **Other Popular Models:**
-- `perplexity/llama-3.1-sonar-large-128k-online` - With web search
-- `deepseek/deepseek-chat` - Cost-effective
-- `qwen/qwen-2.5-72b-instruct` - Multilingual
+- `perplexity/sonar-pro` - With web search
+- `deepseek/deepseek-v4-flash` - Cost-effective
+- `qwen/qwen3-235b-a22b-2507` - Multilingual
 
 **Configuration:**
 
@@ -120,7 +120,7 @@ from esperanto.factory import AIFactory
 
 model = AIFactory.create_language(
     "openrouter",
-    "anthropic/claude-3.5-sonnet",
+    "anthropic/claude-sonnet-5.5",
     config={
         "temperature": 0.7,           # Randomness (0.0 - 2.0)
         "max_tokens": 1000,           # Maximum response length
@@ -132,13 +132,16 @@ model = AIFactory.create_language(
 )
 ```
 
+Supported parameters vary by model; OpenRouter lists them on each model's page
+(`supported_parameters` in the model API).
+
 **Example - Basic Chat:**
 
 ```python
 from esperanto.factory import AIFactory
 
 # Create OpenRouter model
-model = AIFactory.create_language("openrouter", "anthropic/claude-3.5-sonnet")
+model = AIFactory.create_language("openrouter", "anthropic/claude-sonnet-5.5")
 
 # Simple chat
 messages = [
@@ -155,10 +158,10 @@ print(response.choices[0].message.content)
 ```python
 # Try different models with same code
 models_to_try = [
-    "anthropic/claude-3.5-sonnet",
-    "openai/gpt-4o",
-    "google/gemini-2.0-flash-exp",
-    "meta-llama/llama-3.1-70b-instruct"
+    "anthropic/claude-sonnet-5.5",
+    "openai/gpt-5.5",
+    "google/gemini-3.8-flash",
+    "meta-llama/llama-4-maverick"
 ]
 
 messages = [{"role": "user", "content": "Explain machine learning in simple terms"}]
@@ -173,7 +176,7 @@ for model_name in models_to_try:
 **Example - Streaming:**
 
 ```python
-model = AIFactory.create_language("openrouter", "anthropic/claude-3.5-sonnet")
+model = AIFactory.create_language("openrouter", "anthropic/claude-sonnet-5.5")
 
 messages = [{"role": "user", "content": "Write a short story about AI"}]
 
@@ -182,7 +185,7 @@ for chunk in model.chat_complete(messages, stream=True):
     print(chunk.choices[0].delta.content, end="", flush=True)
 
 # Async streaming
-async for chunk in model.achat_complete(messages, stream=True):
+async for chunk in await model.achat_complete(messages, stream=True):
     print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
@@ -192,7 +195,7 @@ async for chunk in model.achat_complete(messages, stream=True):
 # Note: JSON mode support depends on the specific model
 model = AIFactory.create_language(
     "openrouter",
-    "openai/gpt-4o",
+    "openai/gpt-5.5",
     config={"structured": {"type": "json"}}
 )
 
@@ -215,7 +218,7 @@ class CapitalResponse(BaseModel):
 
 model = AIFactory.create_language(
     "openrouter",
-    "openai/gpt-4o",
+    "openai/gpt-5.5",
     config={
         "structured": {
             "type": "json_schema",
@@ -238,12 +241,13 @@ Notes:
 - Schema mode support depends on the selected OpenRouter model/provider.
 - Esperanto passes schema format through and surfaces upstream incompatibility errors directly (fail-fast, no silent downgrade).
 - Schema mode is non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
+- In both JSON and schema mode, a response with empty content and no tool calls raises `EmptyCompletionError`.
 
 **Example - Free Models:**
 
 ```python
-# OpenRouter offers some free models
-free_model = AIFactory.create_language("openrouter", "meta-llama/llama-3.1-8b-instruct:free")
+# OpenRouter offers some free models (ids ending in :free)
+free_model = AIFactory.create_language("openrouter", "google/gemma-4-31b-it:free")
 
 messages = [{"role": "user", "content": "Hello!"}]
 response = free_model.chat_complete(messages)
@@ -254,7 +258,7 @@ print(response.choices[0].message.content)
 
 ```python
 # Use a code-specialized model
-code_model = AIFactory.create_language("openrouter", "mistralai/codestral")
+code_model = AIFactory.create_language("openrouter", "mistralai/codestral-2508")
 
 messages = [{
     "role": "user",
@@ -269,7 +273,7 @@ print(response.choices[0].message.content)
 
 ```python
 async def chat_async():
-    model = AIFactory.create_language("openrouter", "anthropic/claude-3.5-sonnet")
+    model = AIFactory.create_language("openrouter", "anthropic/claude-sonnet-5.5")
 
     messages = [{"role": "user", "content": "Explain quantum computing"}]
     response = await model.achat_complete(messages)
@@ -283,7 +287,7 @@ async def chat_async():
 
 ```python
 # Build conversation with context
-model = AIFactory.create_language("openrouter", "openai/gpt-4o")
+model = AIFactory.create_language("openrouter", "openai/gpt-5.5")
 
 messages = [
     {"role": "user", "content": "What is Python?"},
@@ -301,17 +305,45 @@ print(response.choices[0].message.content)
 # More creative (higher temperature)
 creative_model = AIFactory.create_language(
     "openrouter",
-    "anthropic/claude-3.5-sonnet",
+    "google/gemini-3.8-flash",
     config={"temperature": 1.2, "max_tokens": 1024}
 )
 
 # More focused (lower temperature)
 focused_model = AIFactory.create_language(
     "openrouter",
-    "anthropic/claude-3.5-sonnet",
+    "google/gemini-3.8-flash",
     config={"temperature": 0.3, "max_tokens": 1024}
 )
 ```
+
+### Embeddings
+
+OpenRouter exposes an OpenAI-compatible embeddings endpoint (`POST /api/v1/embeddings`).
+The default model is `openai/text-embedding-3-small`.
+
+**Popular models:**
+- `openai/text-embedding-3-small` (default), `openai/text-embedding-3-large`
+- `google/gemini-embedding-001`
+- `voyageai/voyage-4`, `voyageai/voyage-code-4`
+- `qwen/qwen3-embedding-8b`
+- `mistralai/mistral-embed-2312`
+
+```python
+from esperanto.factory import AIFactory
+
+embedder = AIFactory.create_embedding("openrouter", "openai/text-embedding-3-small")
+
+vectors = embedder.embed(["Hello world", "Esperanto makes provider swaps easy"])
+print(len(vectors), len(vectors[0]))
+
+# Async
+vectors = await embedder.aembed(["Hello world"])
+```
+
+Large inputs are split automatically into requests of up to 96 texts each and
+the results are returned in input order. Set `config={"embed_batch_size": N}` to
+use smaller batches.
 
 ### Text-to-Speech (TTS)
 
@@ -321,13 +353,13 @@ OpenRouter's `vendor/model` convention.
 
 **Available models** — OpenRouter lists dedicated speech models under its
 `?output_modalities=speech` filter (they do **not** appear in the unfiltered
-`/models` list that `AIFactory.get_provider_models("openrouter")` returns):
-- `microsoft/mai-voice-2` (default)
+`/models` list that `AIFactory.get_provider_models("openrouter")` returns). Some choices:
+- `microsoft/mai-voice-2` (default), `microsoft/mai-voice-2.1`, `microsoft/mai-voice-2.1-flash`
+- `google/gemini-3.8-flash-tts`, `google/gemini-3.1-flash-tts-preview`
 - `x-ai/grok-voice-tts-1.0`
-- `google/gemini-3.1-flash-tts-preview`
 - `mistralai/voxtral-mini-tts-2603`
-- `hexgrad/kokoro-82m`, `sesame/csm-1b`, `canopylabs/orpheus-3b-0.1-ft`,
-  `zyphra/zonos-v0.1-transformer`, `zyphra/zonos-v0.1-hybrid`
+- `deepgram/aura-2`, `minimax/speech-2.8-hd`, `fish-audio/s2.1-pro`
+- `hexgrad/kokoro-82m`, `sesame/csm-1b`, `canopylabs/orpheus-3b-0.1-ft`
 
 > **Voices are model-specific.** There is currently no OpenAI TTS model on
 > OpenRouter, so OpenAI's `alloy`/`nova` voice names do **not** apply. The default
@@ -360,9 +392,10 @@ OpenRouter's transcription endpoint (`POST /api/v1/audio/transcriptions`) accept
 JSON body with base64-encoded audio (not OpenAI's multipart upload). Esperanto handles
 this encoding for you — pass a file path or a binary stream exactly like other providers.
 
-**Popular models:**
-- `openai/whisper-1` (default)
-- `openai/whisper-large-v3`
+**Popular models** (OpenRouter lists them under `?output_modalities=transcription`):
+- `openai/whisper-1` (default), `openai/whisper-large-v3`, `openai/whisper-large-v3-turbo`
+- `openai/gpt-4o-transcribe`, `openai/gpt-4o-mini-transcribe`
+- `deepgram/nova-3`, `mistralai/voxtral-mini-transcribe`, `google/gemini-3.5-transcribe`
 
 ```python
 from esperanto.factory import AIFactory
@@ -391,31 +424,30 @@ returned (`segments` stays `None`).
 
 ### Model Discovery
 
-Browse available models at https://openrouter.ai/models or use the API:
+Browse available models at https://openrouter.ai/models, or list them from Esperanto:
 
 ```python
-import httpx
+from esperanto.factory import AIFactory
 
-response = httpx.get(
-    "https://openrouter.ai/api/v1/models",
-    headers={"Authorization": f"Bearer {your_api_key}"}
-)
-
-models = response.json()
-for model in models['data'][:10]:  # Show first 10
-    print(f"{model['id']}: {model.get('name', 'N/A')}")
+models = AIFactory.get_provider_models("openrouter", api_key="your-api-key")
+for model in models[:10]:  # Show first 10
+    print(model.id)
 ```
+
+The result is cached for an hour. It lists chat models only; speech and
+transcription models are listed on OpenRouter under their own filters (see above).
 
 ### Free Models
 
-OpenRouter offers free access to some models:
+OpenRouter offers free access to some models. Free ids end in `:free`, and the
+set changes often; filter https://openrouter.ai/models by price to see the
+current ones. Free models have stricter rate limits.
 
 ```python
-# Free models (append :free to model ID)
 free_models = [
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "google/gemma-2-9b-it:free",
-    "mistralai/mistral-7b-instruct:free"
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "qwen/qwen3.8-27b:free",
 ]
 
 model = AIFactory.create_language("openrouter", free_models[0])
@@ -426,14 +458,14 @@ model = AIFactory.create_language("openrouter", free_models[0])
 Choose models based on your budget:
 
 ```python
-# Expensive but highest quality
-premium_model = AIFactory.create_language("openrouter", "anthropic/claude-3-opus")
+# Highest quality
+premium_model = AIFactory.create_language("openrouter", "anthropic/claude-opus-5.5")
 
 # Balanced cost/performance
-balanced_model = AIFactory.create_language("openrouter", "openai/gpt-4o-mini")
+balanced_model = AIFactory.create_language("openrouter", "openai/gpt-5.4-mini")
 
 # Budget-friendly
-budget_model = AIFactory.create_language("openrouter", "meta-llama/llama-3.1-8b-instruct")
+budget_model = AIFactory.create_language("openrouter", "deepseek/deepseek-v4-flash")
 ```
 
 ### Timeout Configuration
@@ -444,7 +476,7 @@ Customize request timeouts:
 # Extended timeout for complex tasks
 model = AIFactory.create_language(
     "openrouter",
-    "anthropic/claude-3-opus",
+    "anthropic/claude-opus-5.5",
     config={
         "timeout": 120.0,    # 2 minutes
         "max_tokens": 4096
@@ -457,50 +489,52 @@ model = AIFactory.create_language(
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_language("openrouter", "anthropic/claude-3.5-sonnet")
-langchain_model = model.to_langchain()
+model = AIFactory.create_language("openrouter", "anthropic/claude-sonnet-5.5")
+langchain_model = model.to_langchain()  # a ChatOpenAI pointed at OpenRouter
 
 # Use with LangChain
-from langchain.chains import ConversationChain
-chain = ConversationChain(llm=langchain_model)
+response = langchain_model.invoke("Explain quantum computing in one sentence")
+print(response.content)
 ```
+
+`to_langchain()` requires `langchain-openai` (`pip install langchain-openai`).
 
 ## Model Selection Guide
 
 ### For Quality
-**Best:** Claude 3.5 Sonnet, GPT-4o, Claude 3 Opus
+**Best:** Claude Opus 5.5, GPT-5.5, Gemini 2.5 Pro
 ```python
-model = AIFactory.create_language("openrouter", "anthropic/claude-3.5-sonnet")
+model = AIFactory.create_language("openrouter", "anthropic/claude-opus-5.5")
 ```
 
 ### For Speed
-**Best:** GPT-3.5 Turbo, Claude 3 Haiku, Gemini Flash
+**Best:** Gemini Flash, Claude Haiku 4.5, GPT-5.4 mini
 ```python
-model = AIFactory.create_language("openrouter", "google/gemini-2.0-flash-exp")
+model = AIFactory.create_language("openrouter", "google/gemini-3.8-flash")
 ```
 
 ### For Coding
-**Best:** Codestral, GPT-4o, Claude 3.5 Sonnet
+**Best:** Claude Sonnet 5.5, GPT-5.5, Codestral
 ```python
-model = AIFactory.create_language("openrouter", "mistralai/codestral")
+model = AIFactory.create_language("openrouter", "mistralai/codestral-2508")
 ```
 
 ### For Cost
-**Best:** Free models, Llama 3.1 8B, GPT-4o-mini
+**Best:** Free models, DeepSeek V4 Flash, GPT-5.4 mini
 ```python
-model = AIFactory.create_language("openrouter", "meta-llama/llama-3.1-8b-instruct")
+model = AIFactory.create_language("openrouter", "deepseek/deepseek-v4-flash")
 ```
 
 ### For Long Context
-**Best:** Claude 3 (200K), GPT-4 Turbo (128K), Gemini 1.5 Pro (2M)
+**Best:** Claude Sonnet 5.5, GPT-5.5, Gemini (about 1M tokens each)
 ```python
-model = AIFactory.create_language("openrouter", "google/gemini-pro-1.5")
+model = AIFactory.create_language("openrouter", "google/gemini-2.5-pro")
 ```
 
 ### For Multilingual
-**Best:** Qwen 2.5, Mistral models, Gemini
+**Best:** Qwen 3, Mistral models, Gemini
 ```python
-model = AIFactory.create_language("openrouter", "qwen/qwen-2.5-72b-instruct")
+model = AIFactory.create_language("openrouter", "qwen/qwen3-235b-a22b-2507")
 ```
 
 ## Use Cases
@@ -536,9 +570,9 @@ def compare_models(question, models):
     return results
 
 models = [
-    "anthropic/claude-3.5-sonnet",
-    "openai/gpt-4o",
-    "google/gemini-2.0-flash-exp"
+    "anthropic/claude-sonnet-5.5",
+    "openai/gpt-5.5",
+    "google/gemini-3.8-flash"
 ]
 
 results = compare_models("Explain quantum computing", models)
@@ -549,9 +583,9 @@ results = compare_models("Explain quantum computing", models)
 async def chat_with_fallback(messages):
     # Try models in order of preference
     models = [
-        "anthropic/claude-3.5-sonnet",
-        "openai/gpt-4o",
-        "meta-llama/llama-3.1-70b-instruct"
+        "anthropic/claude-sonnet-5.5",
+        "openai/gpt-5.5",
+        "meta-llama/llama-4-maverick"
     ]
 
     for model_name in models:
@@ -571,11 +605,11 @@ async def chat_with_fallback(messages):
 # Use cheap model for simple tasks, premium for complex
 def smart_completion(question, complexity="low"):
     if complexity == "low":
-        model = AIFactory.create_language("openrouter", "meta-llama/llama-3.1-8b-instruct")
+        model = AIFactory.create_language("openrouter", "deepseek/deepseek-v4-flash")
     elif complexity == "medium":
-        model = AIFactory.create_language("openrouter", "openai/gpt-4o-mini")
+        model = AIFactory.create_language("openrouter", "openai/gpt-5.4-mini")
     else:
-        model = AIFactory.create_language("openrouter", "anthropic/claude-3-opus")
+        model = AIFactory.create_language("openrouter", "anthropic/claude-opus-5.5")
 
     messages = [{"role": "user", "content": question}]
     return model.chat_complete(messages)
@@ -586,10 +620,10 @@ def smart_completion(question, complexity="low"):
 # Use best model for each task type
 def get_specialized_model(task_type):
     models = {
-        "code": "mistralai/codestral",
-        "creative": "anthropic/claude-3.5-sonnet",
-        "analysis": "openai/gpt-4o",
-        "chat": "meta-llama/llama-3.1-70b-instruct"
+        "code": "mistralai/codestral-2508",
+        "creative": "anthropic/claude-sonnet-5.5",
+        "analysis": "openai/gpt-5.5",
+        "chat": "meta-llama/llama-4-maverick"
     }
     return AIFactory.create_language("openrouter", models[task_type])
 
@@ -611,21 +645,21 @@ Error: Invalid API key
 ```
 Error: Insufficient credits
 ```
-**Solution:** Add credits at https://openrouter.ai/credits
+**Solution:** Add credits at https://openrouter.ai/settings/credits
 
 **Model Not Available:**
 ```
 Error: Model not found
 ```
 **Solution:**
-- Check model ID at https://openrouter.ai/models
-- Ensure correct format: `provider/model-name`
+- Check the model ID at https://openrouter.ai/models (models are retired regularly)
+- Ensure correct format: `vendor/model-name`
 
 **Rate Limit Error:**
 ```
 Error: Rate limit exceeded
 ```
-**Solution:** Implement retry logic or upgrade plan
+**Solution:** Implement retry logic or add credits (free models have stricter limits)
 
 **Timeout Error:**
 ```
@@ -638,34 +672,31 @@ config={"timeout": 120.0}
 
 ### Best Practices
 
-1. **Use Full Model IDs:** Always include provider prefix (e.g., `anthropic/claude-3.5-sonnet`)
+1. **Use Full Model IDs:** Always include the vendor prefix (e.g., `anthropic/claude-sonnet-5.5`)
 
 2. **Monitor Costs:** Different models have different pricing - check https://openrouter.ai/models
 
-3. **Free Models:** Append `:free` for free tier (limited availability)
+3. **Free Models:** Ids ending in `:free` are free but rate-limited, and the set changes often
 
 4. **Model Selection:** Choose based on your specific needs (quality, speed, cost)
 
 5. **Fallback Strategy:** Implement fallbacks for production applications
 
-6. **Check Capabilities:** Not all models support all features (JSON mode, function calling, etc.)
+6. **Check Capabilities:** Not all models support all features (JSON mode, tool calling, sampling parameters)
 
 7. **Credits:** Keep credits topped up for uninterrupted service
 
 ## Performance Characteristics
 
 ### Response Times
-Varies by model:
-- **Fast models**: GPT-3.5, Claude Haiku (1-2 seconds)
-- **Balanced**: GPT-4o, Gemini Flash (2-4 seconds)
-- **Premium**: Claude Opus, GPT-4 (3-8 seconds)
+Varies by model, provider load and output length. Small and "flash"/"mini"
+models respond fastest; large reasoning models take longer, especially when
+they think before answering.
 
 ### Context Windows
-Varies by model:
-- **Standard**: 4K-32K tokens (most models)
-- **Extended**: 128K tokens (GPT-4 Turbo, Claude)
-- **Long**: 200K tokens (Claude 3)
-- **Very Long**: 1-2M tokens (Gemini 1.5)
+Varies by model, from a few thousand tokens on small open models to about 1M
+tokens on current Claude, GPT and Gemini models. OpenRouter reports each
+model's `context_length` on its model page and in the model API.
 
 ### Pricing
 Check current pricing at https://openrouter.ai/models
@@ -676,6 +707,7 @@ Check current pricing at https://openrouter.ai/models
 ## See Also
 
 - [Language Models Guide](../capabilities/llm.md)
+- [Embedding Guide](../capabilities/embedding.md)
 - [OpenAI Provider](./openai.md)
 - [Anthropic Provider](./anthropic.md)
 - [Google Provider](./google.md)
