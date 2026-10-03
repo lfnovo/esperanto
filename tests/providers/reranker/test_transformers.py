@@ -567,7 +567,7 @@ class TestTransformersRerankerInputValidation:
             # Verify trust_remote_code=False was used
             mock_model_class.from_pretrained.assert_called_with(
                 "jinaai/jina-reranker-v2-base-multilingual",
-                torch_dtype="auto",
+                dtype="auto",
                 trust_remote_code=False,
                 cache_dir=None
             )
@@ -582,7 +582,7 @@ class TestTransformersRerankerInputValidation:
             # Verify trust_remote_code=True was used
             mock_model_class.from_pretrained.assert_called_with(
                 "jinaai/jina-reranker-v2-base-multilingual", 
-                torch_dtype="auto",
+                dtype="auto",
                 trust_remote_code=True,
                 cache_dir=None
             )
