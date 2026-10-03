@@ -128,7 +128,7 @@ class TestProfileRegistry:
         assert profile.name == "zai"
         assert profile.base_url == "https://api.z.ai/api/paas/v4"
         assert profile.api_key_env == "ZAI_API_KEY"
-        assert profile.default_model == "glm-5.2"
+        assert profile.default_model_for("language") == "glm-5.2"
         assert profile.model_prefix_filter == "glm"
 
     def test_get_unknown_profile_returns_none(self):
@@ -438,6 +438,7 @@ class TestProfileBehavior:
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match=r"Z\.ai API key not found"):
                 AIFactory.create_language("zai", "glm-5.2")
+
     def test_ppq_creation(self):
         model = AIFactory.create_language(
             "ppq", "gpt-5.4-mini", config={"api_key": "test-key"}

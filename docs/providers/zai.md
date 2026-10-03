@@ -60,7 +60,7 @@ print(response.choices[0].message.content)
 | `glm-5.2` | Flagship model, complex tasks |
 | `glm-4.5-flash` | Faster variant, latency-sensitive tasks |
 
-Model discovery via `AIFactory.get_provider_models("zai")` returns only `glm-*` models.
+Listing models through an instance (`model.models`) returns only `glm-*` models.
 
 ## Features
 

@@ -177,10 +177,11 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         base_url="https://api.z.ai/api/paas/v4",
         api_key_env="ZAI_API_KEY",
         base_url_env="ZAI_BASE_URL",
-        default_model="glm-5.2",
+        default_models={"language": "glm-5.2"},
         model_prefix_filter="glm",
         owned_by="Z.ai",
         display_name="Z.ai",
+    ),
     "ppq": OpenAICompatibleProfile(
         name="ppq",
         base_url="https://api.ppq.ai/v1",
