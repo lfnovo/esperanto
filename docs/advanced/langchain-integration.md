@@ -2,17 +2,25 @@
 
 ## Overview
 
-Esperanto provides seamless integration with LangChain, allowing you to convert any language model provider into a LangChain-compatible chat model. This enables you to leverage Esperanto's unified interface while benefiting from LangChain's rich ecosystem of chains, agents, and tools.
+Esperanto converts any language model provider into a LangChain chat model with `.to_langchain()`. You configure the model once through Esperanto's unified interface and then use it anywhere LangChain expects a chat model: LCEL chains, agents, retrieval pipelines and tools.
+
+The examples on this page target LangChain 1.x (`langchain-core` 1.x).
 
 ## Prerequisites
 
-LangChain must be installed to use this feature:
+Install `langchain-core` plus the LangChain integration package for each provider you convert:
 
 ```bash
-pip install langchain
-# Or with LangChain community packages
-pip install langchain langchain-community
+pip install langchain-core langchain-openai   # OpenAI, Azure, OpenAI-compatible, OpenRouter, xAI, ...
+pip install langchain-anthropic               # Anthropic
+pip install langchain-google-genai            # Google (Gemini)
+pip install langchain-groq                    # Groq
+pip install langchain-ollama                  # Ollama
+pip install langchain-mistralai               # Mistral
+pip install langchain                         # only for agents (create_agent)
 ```
+
+`.to_langchain()` raises an `ImportError` naming the missing package when one is needed.
 
 ## Quick Start
 
@@ -21,34 +29,35 @@ Convert any Esperanto language model to LangChain format:
 ```python
 from esperanto import AIFactory
 
-# Create an Esperanto model
-model = AIFactory.create_language("openai", "gpt-4", api_key="your-api-key")
+# Create an Esperanto model (reads OPENAI_API_KEY from the environment)
+model = AIFactory.create_language("openai", "gpt-4o-mini")
 
-# Convert to LangChain chat model
+# Convert to a LangChain chat model
 langchain_model = model.to_langchain()
 
-# Use with LangChain
-from langchain.chains import ConversationChain
-chain = ConversationChain(llm=langchain_model)
+# Use it like any LangChain chat model
+response = langchain_model.invoke("Hello! How are you?")
+print(response.content)
+```
 
-response = chain.run("Hello! How are you?")
-print(response)
+Pass an API key explicitly through `config`:
+
+```python
+model = AIFactory.create_language(
+    "openai", "gpt-4o-mini", config={"api_key": "your-api-key"}
+)
 ```
 
 ## Supported Providers
 
-The `.to_langchain()` method works with all language model providers in Esperanto:
+The `.to_langchain()` method works with all language model providers in Esperanto. The configuration you set in Esperanto (temperature, max tokens, timeouts, base URL, structured output) carries over to the LangChain model.
 
 ### OpenAI
 
 ```python
 from esperanto.providers.llm.openai import OpenAILanguageModel
 
-model = OpenAILanguageModel(
-    api_key="your-api-key",
-    model_name="gpt-4"
-)
-
+model = OpenAILanguageModel(model_name="gpt-4o-mini")
 langchain_model = model.to_langchain()
 ```
 
@@ -57,12 +66,7 @@ langchain_model = model.to_langchain()
 ```python
 from esperanto import AIFactory
 
-model = AIFactory.create_language(
-    "anthropic",
-    "claude-sonnet-5",
-    api_key="your-api-key"
-)
-
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")
 langchain_model = model.to_langchain()
 ```
 
@@ -71,12 +75,7 @@ langchain_model = model.to_langchain()
 ```python
 from esperanto import AIFactory
 
-model = AIFactory.create_language(
-    "google",
-    "gemini-1.5-pro",
-    api_key="your-api-key"
-)
-
+model = AIFactory.create_language("google", "gemini-2.5-flash")
 langchain_model = model.to_langchain()
 ```
 
@@ -85,12 +84,7 @@ langchain_model = model.to_langchain()
 ```python
 from esperanto import AIFactory
 
-model = AIFactory.create_language(
-    "groq",
-    "mixtral-8x7b-32768",
-    api_key="your-api-key"
-)
-
+model = AIFactory.create_language("groq", "openai/gpt-oss-20b")
 langchain_model = model.to_langchain()
 ```
 
@@ -128,324 +122,256 @@ langchain_model = model.to_langchain()
 
 ## Use Cases
 
-### Conversation Chain
+### Prompt Templates and Chains (LCEL)
 
-Create a conversational agent with memory:
+Compose a prompt, the model and an output parser with the `|` operator:
 
 ```python
 from esperanto import AIFactory
-from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
-# Create Esperanto model
-model = AIFactory.create_language("openai", "gpt-4")
-langchain_model = model.to_langchain()
+langchain_model = AIFactory.create_language("anthropic", "claude-sonnet-5").to_langchain()
 
-# Create conversation chain with memory
-conversation = ConversationChain(
-    llm=langchain_model,
-    memory=ConversationBufferMemory()
-)
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You translate {input_language} to {output_language}."),
+    ("human", "{text}"),
+])
 
-# Have a conversation
-response1 = conversation.run("My name is Alice")
-print(response1)  # "Nice to meet you, Alice!"
+chain = prompt | langchain_model | StrOutputParser()
 
-response2 = conversation.run("What's my name?")
-print(response2)  # "Your name is Alice"
+result = chain.invoke({
+    "input_language": "English",
+    "output_language": "Spanish",
+    "text": "Hello, how are you?",
+})
+print(result)  # "Hola, ¿cómo estás?"
 ```
 
-### LLM Chain with Prompt Templates
+### Conversation with Memory
 
-Use LangChain's prompt templating:
+Keep per-session chat history with `RunnableWithMessageHistory`:
 
 ```python
 from esperanto import AIFactory
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
+from langchain_core.chat_history import InMemoryChatMessageHistory
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables.history import RunnableWithMessageHistory
 
-# Create model
-model = AIFactory.create_language("anthropic", "claude-sonnet-5")
-langchain_model = model.to_langchain()
+langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
 
-# Create prompt template
-template = """You are a helpful assistant that translates {input_language} to {output_language}.
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant."),
+    MessagesPlaceholder(variable_name="history"),
+    ("human", "{input}"),
+])
 
-Text to translate: {text}
+histories = {}
 
-Translation:"""
+def get_history(session_id: str) -> InMemoryChatMessageHistory:
+    return histories.setdefault(session_id, InMemoryChatMessageHistory())
 
-prompt = PromptTemplate(
-    input_variables=["input_language", "output_language", "text"],
-    template=template
+conversation = RunnableWithMessageHistory(
+    prompt | langchain_model | StrOutputParser(),
+    get_history,
+    input_messages_key="input",
+    history_messages_key="history",
 )
 
-# Create chain
-chain = LLMChain(llm=langchain_model, prompt=prompt)
-
-# Use chain
-result = chain.run(
-    input_language="English",
-    output_language="Spanish",
-    text="Hello, how are you?"
-)
-print(result)  # "Hola, ¿cómo estás?"
+config = {"configurable": {"session_id": "alice"}}
+print(conversation.invoke({"input": "My name is Alice"}, config=config))
+print(conversation.invoke({"input": "What's my name?"}, config=config))  # "Your name is Alice"
 ```
 
 ### Sequential Chains
 
-Combine multiple chains:
+Feed the output of one step into the next:
 
 ```python
 from esperanto import AIFactory
-from langchain.chains import SimpleSequentialChain, LLMChain
-from langchain.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
-# Create model
-model = AIFactory.create_language("google", "gemini-1.5-pro")
-langchain_model = model.to_langchain()
+langchain_model = AIFactory.create_language("google", "gemini-2.5-flash").to_langchain()
 
-# First chain: Generate a topic
-topic_template = "Generate a single interesting topic about {subject}"
-topic_prompt = PromptTemplate(input_variables=["subject"], template=topic_template)
-topic_chain = LLMChain(llm=langchain_model, prompt=topic_prompt)
-
-# Second chain: Write about the topic
-article_template = "Write a short paragraph about: {topic}"
-article_prompt = PromptTemplate(input_variables=["topic"], template=article_template)
-article_chain = LLMChain(llm=langchain_model, prompt=article_prompt)
-
-# Combine chains
-overall_chain = SimpleSequentialChain(
-    chains=[topic_chain, article_chain],
-    verbose=True
+topic_chain = (
+    ChatPromptTemplate.from_template("Generate a single interesting topic about {subject}. Reply with the topic only.")
+    | langchain_model
+    | StrOutputParser()
 )
 
-# Execute
-result = overall_chain.run("artificial intelligence")
+article_chain = (
+    ChatPromptTemplate.from_template("Write a short paragraph about: {topic}")
+    | langchain_model
+    | StrOutputParser()
+)
+
+overall_chain = {"topic": topic_chain} | article_chain
+
+result = overall_chain.invoke({"subject": "artificial intelligence"})
 print(result)
 ```
 
 ### Agents with Tools
 
-Create agents that can use tools:
+Build a tool-calling agent with `create_agent` (requires `pip install langchain`):
 
 ```python
 from esperanto import AIFactory
-from langchain.agents import initialize_agent, Tool
-from langchain.agents import AgentType
+from langchain.agents import create_agent
+from langchain_core.tools import tool
 
-# Create model
-model = AIFactory.create_language("openai", "gpt-4")
-langchain_model = model.to_langchain()
+langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
 
-# Define tools
-def search_tool(query: str) -> str:
-    """Simulated search tool"""
+@tool
+def search(query: str) -> str:
+    """Search for information."""
     return f"Search results for: {query}"
 
-def calculator_tool(expression: str) -> str:
-    """Simple calculator"""
-    try:
-        return str(eval(expression))
-    except:
-        return "Error in calculation"
+@tool
+def multiply(a: int, b: int) -> int:
+    """Multiply two integers."""
+    return a * b
 
-tools = [
-    Tool(
-        name="Search",
-        func=search_tool,
-        description="Useful for searching information"
-    ),
-    Tool(
-        name="Calculator",
-        func=calculator_tool,
-        description="Useful for mathematical calculations"
-    )
-]
+agent = create_agent(langchain_model, tools=[search, multiply])
 
-# Create agent
-agent = initialize_agent(
-    tools,
-    langchain_model,
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True
-)
-
-# Use agent
-result = agent.run("What is 25 * 17?")
-print(result)
+result = agent.invoke({"messages": [{"role": "user", "content": "What is 25 * 17?"}]})
+print(result["messages"][-1].content)  # "25 * 17 = 425"
 ```
 
 ### RAG (Retrieval-Augmented Generation)
 
-Combine with vector stores for RAG:
+Use Esperanto for both embeddings and generation. A small adapter exposes any Esperanto embedding model through LangChain's `Embeddings` interface:
 
 ```python
 from esperanto import AIFactory
-from langchain.chains import RetrievalQA
-from langchain.vectorstores import Chroma
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.text_splitter import CharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.vectorstores import InMemoryVectorStore
 
-# Create language model
-llm = AIFactory.create_language("openai", "gpt-4")
-langchain_llm = llm.to_langchain()
 
-# Prepare documents
+class EsperantoEmbeddings(Embeddings):
+    """Expose an Esperanto embedding model to LangChain."""
+
+    def __init__(self, model):
+        self.model = model
+
+    def embed_documents(self, texts):
+        return self.model.embed(texts)
+
+    def embed_query(self, text):
+        return self.model.embed([text])[0]
+
+
+embeddings = EsperantoEmbeddings(AIFactory.create_embedding("openai", "text-embedding-3-small"))
+langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
+
 documents = [
-    "Esperanto is a unified interface for AI models.",
-    "It supports multiple providers like OpenAI, Anthropic, and Google.",
-    "You can easily switch between providers without changing your code."
+    Document(page_content="Esperanto is a unified interface for AI models."),
+    Document(page_content="It supports multiple providers like OpenAI, Anthropic, and Google."),
+    Document(page_content="You can switch providers without changing your code."),
 ]
+vectorstore = InMemoryVectorStore.from_documents(documents, embeddings)
+retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
 
-text_splitter = CharacterTextSplitter(chunk_size=100, chunk_overlap=0)
-texts = text_splitter.create_documents(documents)
 
-# Create vector store
-embeddings = OpenAIEmbeddings()
-vectorstore = Chroma.from_documents(texts, embeddings)
+def format_docs(docs):
+    return "\n".join(doc.page_content for doc in docs)
 
-# Create RAG chain
-qa_chain = RetrievalQA.from_chain_type(
-    llm=langchain_llm,
-    chain_type="stuff",
-    retriever=vectorstore.as_retriever()
+
+prompt = ChatPromptTemplate.from_template(
+    "Answer using only this context:\n{context}\n\nQuestion: {question}"
 )
 
-# Query
-response = qa_chain.run("What is Esperanto?")
-print(response)
+rag_chain = (
+    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    | prompt
+    | langchain_model
+    | StrOutputParser()
+)
+
+print(rag_chain.invoke("What is Esperanto?"))
 ```
+
+Swap either provider (for example `create_embedding("voyage", ...)` or `create_language("anthropic", ...)`) without touching the rest of the chain.
 
 ## Advanced Configuration
 
 ### Streaming with LangChain
 
-Esperanto's streaming capabilities work through LangChain:
+LangChain chat models stream with `.stream()` / `.astream()`:
 
 ```python
 from esperanto import AIFactory
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-# Create streaming model
-model = AIFactory.create_language(
-    "openai",
-    "gpt-4",
-    config={"streaming": True}
-)
+langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
 
-langchain_model = model.to_langchain()
-
-# Use with streaming callback
-response = langchain_model.invoke(
-    "Tell me a story",
-    config={"callbacks": [StreamingStdOutCallbackHandler()]}
-)
+for chunk in langchain_model.stream("Tell me a story"):
+    print(chunk.content, end="", flush=True)
 ```
+
+Chains stream too: `chain.stream({...})` yields the parsed output as it arrives.
 
 ### Structured Output with LangChain
 
-Combine Esperanto's structured output with LangChain:
+Use `with_structured_output()` on the converted model to get a validated Pydantic object:
 
 ```python
 from esperanto import AIFactory
-from langchain.output_parsers import PydanticOutputParser
-from langchain.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 
-# Define output structure
+
 class MovieReview(BaseModel):
     title: str = Field(description="Movie title")
     rating: int = Field(description="Rating from 1-10")
     summary: str = Field(description="Brief summary")
 
-# Create model with JSON output
-model = AIFactory.create_language(
-    "openai",
-    "gpt-4",
-    config={"structured": {"type": "json"}}
-)
 
-langchain_model = model.to_langchain()
+langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
+reviewer = langchain_model.with_structured_output(MovieReview)
 
-# Create parser
-parser = PydanticOutputParser(pydantic_object=MovieReview)
-
-# Create prompt with format instructions
-template = """Review the following movie and provide a structured response.
-
-{format_instructions}
-
-Movie: {movie_name}
-"""
-
-prompt = PromptTemplate(
-    template=template,
-    input_variables=["movie_name"],
-    partial_variables={"format_instructions": parser.get_format_instructions()}
-)
-
-# Use chain
-from langchain.chains import LLMChain
-chain = LLMChain(llm=langchain_model, prompt=prompt)
-
-result = chain.run(movie_name="The Matrix")
-review = parser.parse(result)
+review = reviewer.invoke("Review the movie The Matrix.")
 print(f"Title: {review.title}")
 print(f"Rating: {review.rating}/10")
 print(f"Summary: {review.summary}")
 ```
 
-### Multi-Provider Strategy
+Alternatively, set `config={"structured": {"type": "json_schema", "schema": MovieReview}}` on the Esperanto model: every provider except Cohere carries it into the converted model, which then returns JSON text matching the schema (see [Language Models](../capabilities/llm.md#structured-output)).
 
-Use different providers for different parts of your pipeline:
+### Multi-Provider Pipeline
+
+Use different providers for different steps of one chain:
 
 ```python
 from esperanto import AIFactory
-from langchain.chains import SequentialChain, LLMChain
-from langchain.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
 # Fast model for initial processing
-fast_model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
-fast_langchain = fast_model.to_langchain()
+fast_model = AIFactory.create_language("groq", "openai/gpt-oss-20b").to_langchain()
 
-# Powerful model for final output
-powerful_model = AIFactory.create_language("anthropic", "claude-sonnet-5")
-powerful_langchain = powerful_model.to_langchain()
+# More capable model for the final output
+powerful_model = AIFactory.create_language("anthropic", "claude-sonnet-5").to_langchain()
 
-# Chain 1: Fast initial analysis
-analysis_prompt = PromptTemplate(
-    input_variables=["text"],
-    template="Quickly analyze this text and extract key points: {text}"
-)
-analysis_chain = LLMChain(
-    llm=fast_langchain,
-    prompt=analysis_prompt,
-    output_key="analysis"
+analysis_chain = (
+    ChatPromptTemplate.from_template("Quickly analyze this text and extract key points: {text}")
+    | fast_model
+    | StrOutputParser()
 )
 
-# Chain 2: Detailed response with powerful model
-response_prompt = PromptTemplate(
-    input_variables=["analysis"],
-    template="Based on this analysis, write a detailed response: {analysis}"
-)
-response_chain = LLMChain(
-    llm=powerful_langchain,
-    prompt=response_prompt,
-    output_key="response"
+response_chain = (
+    ChatPromptTemplate.from_template("Based on this analysis, write a detailed response: {analysis}")
+    | powerful_model
+    | StrOutputParser()
 )
 
-# Combine chains
-overall_chain = SequentialChain(
-    chains=[analysis_chain, response_chain],
-    input_variables=["text"],
-    output_variables=["response"],
-    verbose=True
-)
+pipeline = {"analysis": analysis_chain} | response_chain
 
-result = overall_chain({"text": "Your input text here"})
-print(result["response"])
+print(pipeline.invoke({"text": "Your input text here"}))
 ```
 
 ## Best Practices
@@ -453,92 +379,90 @@ print(result["response"])
 ### 1. Choose the Right Model for the Task
 
 ```python
-# Use fast models for simple tasks
-fast_model = AIFactory.create_language("groq", "llama3-8b-8192")
-fast_chain = LLMChain(llm=fast_model.to_langchain(), prompt=simple_prompt)
+from esperanto import AIFactory
+from langchain_core.prompts import ChatPromptTemplate
 
-# Use powerful models for complex reasoning
-powerful_model = AIFactory.create_language("anthropic", "claude-sonnet-5")
-complex_chain = LLMChain(llm=powerful_model.to_langchain(), prompt=complex_prompt)
+prompt = ChatPromptTemplate.from_template("Summarize: {text}")
+
+# Fast models for simple steps
+fast_chain = prompt | AIFactory.create_language("groq", "openai/gpt-oss-20b").to_langchain()
+
+# More capable models for complex reasoning
+complex_chain = prompt | AIFactory.create_language("anthropic", "claude-sonnet-5").to_langchain()
 ```
 
 ### 2. Leverage Esperanto's Factory Pattern
 
 ```python
-# Easy provider switching
-def create_langchain_model(provider="openai", model_name="gpt-4"):
-    esperanto_model = AIFactory.create_language(provider, model_name)
-    return esperanto_model.to_langchain()
+from esperanto import AIFactory
+
+def create_langchain_model(provider="openai", model_name="gpt-4o-mini"):
+    return AIFactory.create_language(provider, model_name).to_langchain()
 
 # Switch providers with a config change
 langchain_model = create_langchain_model("anthropic", "claude-haiku-4-5-20251001")
 ```
 
-### 3. Handle Errors Gracefully
+### 3. Fall Back to Another Provider
+
+LangChain runnables support fallbacks directly:
 
 ```python
-from langchain.chains import LLMChain
+from esperanto import AIFactory
+from langchain_core.prompts import ChatPromptTemplate
 
-model = AIFactory.create_language("openai", "gpt-4")
-langchain_model = model.to_langchain()
+prompt = ChatPromptTemplate.from_template("Summarize: {text}")
 
-chain = LLMChain(llm=langchain_model, prompt=prompt)
+primary = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
+backup = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001").to_langchain()
 
-try:
-    result = chain.run(input_text)
-except Exception as e:
-    print(f"Error: {e}")
-    # Fallback to different provider
-    backup_model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
-    backup_chain = LLMChain(llm=backup_model.to_langchain(), prompt=prompt)
-    result = backup_chain.run(input_text)
+model_with_fallback = primary.with_fallbacks([backup])
+chain = prompt | model_with_fallback
 ```
 
 ### 4. Use Caching for Repeated Queries
 
 ```python
-from langchain.cache import InMemoryCache
-from langchain.globals import set_llm_cache
+from esperanto import AIFactory
+from langchain_core.caches import InMemoryCache
+from langchain_core.globals import set_llm_cache
 
 # Enable caching
 set_llm_cache(InMemoryCache())
 
-model = AIFactory.create_language("openai", "gpt-4")
-langchain_model = model.to_langchain()
+langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
 
-# First call - hits API
+# First call - hits the API
 result1 = langchain_model.invoke("What is AI?")
 
-# Second call - returns cached result
+# Second call - returns the cached result
 result2 = langchain_model.invoke("What is AI?")
 ```
 
-## Limitations
+## Async
 
-### Not Supported
-
-The following Esperanto features are not directly available through the LangChain interface:
-
-- **Async methods**: Use Esperanto's native `achat_complete()` instead
-- **Direct streaming control**: Use LangChain's callback system
-- **Custom response handling**: LangChain handles response parsing
-
-### Workarounds
-
-For features not available through LangChain, use Esperanto directly:
+Converted models support LangChain's async API (`ainvoke`, `astream`, `abatch`), and so do chains built from them:
 
 ```python
-# For async operations
-model = AIFactory.create_language("openai", "gpt-4")
+import asyncio
 
-# Use Esperanto directly
-messages = [{"role": "user", "content": "Hello"}]
-async_result = await model.achat_complete(messages)
+from esperanto import AIFactory
 
-# For LangChain compatibility
-langchain_model = model.to_langchain()
-langchain_result = langchain_model.invoke("Hello")
+langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
+
+
+async def main():
+    response = await langchain_model.ainvoke("Hello")
+    print(response.content)
+
+    async for chunk in langchain_model.astream("Tell me a story"):
+        print(chunk.content, end="", flush=True)
+
+
+asyncio.run(main())
 ```
+
+Esperanto's native `achat_complete()` remains available on the original model when you want Esperanto's normalized response types instead of LangChain messages.
 
 ## Migration from Native LangChain Providers
 
@@ -547,12 +471,12 @@ If you're migrating from native LangChain providers to Esperanto:
 ### Before (Native LangChain)
 
 ```python
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
-    model="gpt-4",
+    model="gpt-4o-mini",
     temperature=0.7,
-    openai_api_key="your-api-key"
+    api_key="your-api-key"
 )
 ```
 
@@ -563,9 +487,8 @@ from esperanto import AIFactory
 
 model = AIFactory.create_language(
     "openai",
-    "gpt-4",
-    config={"temperature": 0.7},
-    api_key="your-api-key"
+    "gpt-4o-mini",
+    config={"temperature": 0.7, "api_key": "your-api-key"},
 )
 
 llm = model.to_langchain()
@@ -576,43 +499,29 @@ llm = model.to_langchain()
 - **Provider flexibility**: Easily switch between OpenAI, Anthropic, Google, etc.
 - **Unified interface**: Same code works across providers
 - **Advanced features**: Access Esperanto-specific features
-- **Better error handling**: Consistent error handling across providers
+- **Consistent configuration**: Timeouts, SSL and structured output configured the same way for every provider
 
 ## Troubleshooting
 
-### Import Error: langchain not found
+### ImportError when calling `.to_langchain()`
+
+Install the LangChain package for that provider, for example:
 
 ```bash
-pip install langchain
+pip install langchain-openai      # or langchain-anthropic, langchain-google-genai, ...
 ```
 
-### Type Compatibility Issues
+### `ModuleNotFoundError: No module named 'langchain.chains'`
 
-Some LangChain features expect specific types. Convert as needed:
+`ConversationChain`, `LLMChain`, `SequentialChain`, `RetrievalQA` and `initialize_agent` were removed in LangChain 1.0. Use the LCEL patterns on this page (`prompt | model | parser`, `RunnableWithMessageHistory`, `create_agent`).
+
+### Passing Esperanto-Style Messages
+
+LangChain chat models accept OpenAI-style message dicts directly:
 
 ```python
-# If LangChain expects string input
-langchain_model.invoke("Your prompt here")
-
-# If you have Esperanto messages format
 messages = [{"role": "user", "content": "Your prompt"}]
-# Convert to string for LangChain
-prompt_text = messages[0]["content"]
-langchain_model.invoke(prompt_text)
-```
-
-### Streaming Not Working
-
-Ensure streaming is enabled in the Esperanto model:
-
-```python
-model = AIFactory.create_language(
-    "openai",
-    "gpt-4",
-    config={"streaming": True}
-)
-
-langchain_model = model.to_langchain()
+response = langchain_model.invoke(messages)
 ```
 
 ## See Also

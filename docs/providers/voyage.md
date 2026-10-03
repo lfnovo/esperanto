@@ -423,7 +423,7 @@ reranker = AIFactory.create_reranker("voyage", "rerank-2")
 langchain_reranker = reranker.to_langchain()
 
 # Use with LangChain compression
-from langchain.schema import Document
+from langchain_core.documents import Document
 docs = [Document(page_content=text) for text in texts]
 compressed = langchain_reranker.compress_documents(docs, query)
 ```

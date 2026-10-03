@@ -41,7 +41,7 @@ The older approach used the `.models` property on provider instances:
 
 ```python
 # ❌ Deprecated - Will be removed in version 3.0
-model = AIFactory.create_language("openai", "gpt-4", api_key="your-api-key")
+model = AIFactory.create_language("openai", "gpt-4o-mini", config={"api_key": "your-api-key"})
 models = model.models
 ```
 
@@ -58,7 +58,7 @@ Query models without setting up providers:
 models = AIFactory.get_provider_models("openai", api_key="your-api-key")
 
 # vs the old way (deprecated)
-model_instance = AIFactory.create_language("openai", "gpt-4", api_key="your-api-key")
+model_instance = AIFactory.create_language("openai", "gpt-4o-mini", config={"api_key": "your-api-key"})
 models = model_instance.models  # Deprecated
 ```
 
@@ -731,7 +731,7 @@ If you're using the deprecated `.models` property:
 ### Before (Deprecated)
 
 ```python
-model = AIFactory.create_language("openai", "gpt-4", api_key="your-key")
+model = AIFactory.create_language("openai", "gpt-4o-mini", config={"api_key": "your-key"})
 available_models = model.models
 ```
 

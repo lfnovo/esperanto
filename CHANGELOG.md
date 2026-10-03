@@ -52,6 +52,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model discovery via `AIFactory.get_provider_models("openrouter")` are
   updated. The provider matrix now marks OpenRouter embeddings, STT and TTS as
   supported. (#299)
+- **LangChain and async streaming examples work again.** The LangChain guide
+  is rewritten for LangChain 1.x (LCEL chains, `RunnableWithMessageHistory`,
+  `create_agent`, retrieval with an Esperanto embeddings adapter, streaming,
+  async); 18 of its 24 examples failed before, from removed LangChain APIs
+  and `create_language(..., api_key=...)`, which the factory does not accept.
+  The README and 12 provider pages replace `ConversationChain` with
+  `invoke()`. Async streaming examples now `await achat_complete(...)` before
+  iterating. (#302)
 
 ### Fixed
 
