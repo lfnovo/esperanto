@@ -8,7 +8,7 @@ Anthropic provides access to the Claude family of large language models, known f
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Language Models (LLM) | ✅ | Claude 3.5, Claude 3 Opus/Sonnet/Haiku |
+| Language Models (LLM) | ✅ | Claude Opus 5.5, Sonnet 5.5, Fable 5.1, Sonnet 5, Haiku 4.5 |
 | Embeddings | ❌ | Not available |
 | Reranking | ❌ | Not available |
 | Speech-to-Text | ❌ | Not available |
@@ -195,9 +195,9 @@ print(response.choices[0].message.content)
 **Example - Long Context:**
 
 ```python
-# Claude excels at long-context tasks with 200K token window
+# Current Claude models have a 1M-token context window (Haiku 4.5: 200K)
 long_document = """
-[Your long document content here - can be up to 200K tokens]
+[Your long document content here - up to the model's context window]
 """
 
 messages = [
@@ -371,46 +371,52 @@ chain = ConversationChain(llm=langchain_model)
 
 ## Model Selection Guide
 
-### Claude 3.5 Sonnet (Recommended)
+### Claude Sonnet 5 (Default) and Sonnet 5.5
 **Best for:** Most use cases, balanced performance
-- Excellent reasoning and analysis
-- Fast response times
-- Cost-effective for production
-- 200K token context window
+- Strong reasoning and analysis at moderate cost
+- 1M token context window
+- Sonnet 5.5 is the current Sonnet; it thinks by default and rejects forced tool choice
 
 ```python
-model = AIFactory.create_language("anthropic", "claude-sonnet-5")
+model = AIFactory.create_language("anthropic", "claude-sonnet-5")    # default
+model = AIFactory.create_language("anthropic", "claude-sonnet-5-5")  # current Sonnet
 ```
 
-### Claude 3.5 Haiku
+### Claude Opus 5.5
+**Best for:** Complex reasoning and agentic work
+- Current Opus; thinking is always on and counts against `max_tokens`
+- 1M token context window
+- Rejects forced tool choice
+
+```python
+model = AIFactory.create_language("anthropic", "claude-opus-5-5")
+```
+
+### Claude Fable 5.1
+**Best for:** The hardest reasoning tasks, when quality matters more than cost
+- Anthropic's most capable widely available model
+- Thinking is always on; requests can run for minutes on hard tasks
+- 1M token context window
+
+```python
+model = AIFactory.create_language("anthropic", "claude-fable-5-1")
+```
+
+### Claude Haiku 4.5
 **Best for:** High-volume, fast responses
-- Fastest Claude model
-- Most cost-effective
-- Good for simple tasks
-- Still maintains strong capabilities
+- Fastest and most cost-effective Claude model
+- 200K token context window
 
 ```python
 model = AIFactory.create_language("anthropic", "claude-haiku-4-5-20251001")
 ```
 
-### Claude 3 Opus
-**Best for:** Complex reasoning, highest accuracy
-- Most capable Claude model
-- Best for complex analysis
-- Highest cost
-- Use when quality is paramount
-
-```python
-model = AIFactory.create_language("anthropic", "claude-opus-5")
-```
-
 ## Performance Characteristics
 
 ### Context Window
-All Claude 3 models support 200K token context:
-- Approximately 150,000 words
-- Entire codebases or long documents
-- Extensive conversation history
+Current Claude models support a 1M-token context window; Claude Haiku 4.5 and
+Claude Opus 4.5 support 200K. See the [models table](#language-models-llm) or
+`AIFactory.get_provider_models("anthropic")` for each model's window.
 
 ### Response Quality
 - **Opus**: Highest quality, best reasoning
@@ -442,7 +448,7 @@ Error: Rate limit exceeded
 ```
 Error: Prompt is too long
 ```
-**Solution:** Reduce the total tokens in your messages (Claude 3 supports up to 200K tokens).
+**Solution:** Reduce the total tokens in your messages to fit the model's context window (1M tokens on current models, 200K on Haiku 4.5).
 
 **Missing max_tokens:**
 ```
@@ -473,7 +479,7 @@ config={"timeout": 120.0, "max_tokens": 1024}
 
 3. **System Messages:** Claude handles system messages naturally - use them to set context and behavior.
 
-4. **Long Context:** Take advantage of the 200K context window for complex tasks.
+4. **Long Context:** Take advantage of the 1M-token context window (200K on Haiku 4.5) for complex tasks.
 
 5. **Temperature Settings:** Use lower temperatures (0.2-0.5) for factual tasks, higher (0.7-1.0) for creative tasks.
 

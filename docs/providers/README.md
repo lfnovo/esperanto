@@ -210,7 +210,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | Provider | Streaming | JSON Mode | Long Context | Max Context |
 |----------|-----------|-----------|--------------|-------------|
 | [OpenAI](./openai.md) | ✅ | ✅ | ✅ | 128K-200K |
-| [Anthropic](./anthropic.md) | ✅ | ✅ | ✅ | 200K |
+| [Anthropic](./anthropic.md) | ✅ | ✅ | ✅ | 200K-1M |
 | [Google](./google.md) | ✅ | ✅ | ✅ | 2M (Gemini 1.5) |
 | [Azure](./azure.md) | ✅ | ✅ | ✅ | 128K-200K |
 | [Groq](./groq.md) | ✅ | ✅ | ❌ | 8K-32K |
