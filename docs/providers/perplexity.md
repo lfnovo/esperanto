@@ -46,7 +46,7 @@ PERPLEXITY_API_KEY="pplx-..."
 from esperanto.factory import AIFactory
 
 # Create Perplexity model
-model = AIFactory.create_language("perplexity", "llama-3.1-sonar-large-128k-online")
+model = AIFactory.create_language("perplexity", "sonar-pro")
 
 # Ask a question with real-time web search
 messages = [{"role": "user", "content": "What are the latest AI developments?"}]
@@ -62,7 +62,7 @@ from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 # Create model instance
 model = PerplexityLanguageModel(
     api_key="your-api-key",
-    model_name="llama-3.1-sonar-large-128k-online"
+    model_name="sonar-pro"
 )
 
 # Use the model
@@ -79,9 +79,13 @@ print(response.choices[0].message.content)
 
 | Model | Context Window | Web Search | Best For |
 |-------|----------------|------------|----------|
-| **llama-3.1-sonar-small-128k-online** | 128K tokens | ✅ | Fast, current information |
-| **llama-3.1-sonar-large-128k-online** | 128K tokens | ✅ | Comprehensive research |
-| **llama-3.1-sonar-huge-128k-online** | 128K tokens | ✅ | Most capable, detailed answers |
+| **sonar** | 127K tokens | ✅ | Default. Fast, cost-effective answers |
+| **sonar-pro** | 200K tokens | ✅ | More thorough search and answers |
+| **sonar-reasoning-pro** | 128K tokens | ✅ | Multi-step reasoning with search |
+| **sonar-deep-research** | 128K tokens | ✅ | Exhaustive research reports (slow) |
+
+Perplexity has no model-listing endpoint; `AIFactory.get_provider_models("perplexity")`
+returns this list. See https://docs.perplexity.ai/docs/getting-started/models for updates.
 
 **Configuration:**
 
@@ -90,7 +94,7 @@ from esperanto.factory import AIFactory
 
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "temperature": 0.7,                      # Randomness (0.0 - 1.0)
         "max_tokens": 1000,                      # Maximum response length
@@ -110,7 +114,7 @@ model = AIFactory.create_language(
 from esperanto.factory import AIFactory
 
 # Create Perplexity model with web search
-model = AIFactory.create_language("perplexity", "llama-3.1-sonar-large-128k-online")
+model = AIFactory.create_language("perplexity", "sonar-pro")
 
 # Ask about current events
 messages = [{"role": "user", "content": "What are today's top tech news?"}]
@@ -125,7 +129,7 @@ print(response.choices[0].message.content)
 # Filter search to specific domains
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "search_domain_filter": ["techcrunch.com", "theverge.com", "arstechnica.com"]
     }
@@ -142,7 +146,7 @@ print(response.choices[0].message.content)
 # Exclude specific domains (prefix with -)
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "search_domain_filter": ["-spam.com", "-unreliable.org"]
     }
@@ -158,7 +162,7 @@ response = model.chat_complete(messages)
 # Get only recent information
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "search_recency_filter": "day"  # Options: "day", "week", "month", "year"
     }
@@ -174,7 +178,7 @@ response = model.chat_complete(messages)
 # Request related questions
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"return_related_questions": True}
 )
 
@@ -190,7 +194,7 @@ print(response.choices[0].message.content)
 # Request image results
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"return_images": True}
 )
 
@@ -202,7 +206,7 @@ response = model.chat_complete(messages)
 **Example - Streaming:**
 
 ```python
-model = AIFactory.create_language("perplexity", "llama-3.1-sonar-large-128k-online")
+model = AIFactory.create_language("perplexity", "sonar-pro")
 
 messages = [{"role": "user", "content": "Explain recent developments in AI"}]
 
@@ -238,7 +242,7 @@ print(response.choices[0].message.content)
 
 ```python
 async def research_async():
-    model = AIFactory.create_language("perplexity", "llama-3.1-sonar-large-128k-online")
+    model = AIFactory.create_language("perplexity", "sonar-pro")
 
     messages = [{"role": "user", "content": "Latest findings on renewable energy"}]
     response = await model.achat_complete(messages)
@@ -254,7 +258,7 @@ async def research_async():
 # Enable JSON output
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"structured": {"type": "json"}}
 )
 
@@ -278,7 +282,7 @@ Control which domains are searched:
 # Include specific domains
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "search_domain_filter": [
             "arxiv.org",           # Include research papers
@@ -291,7 +295,7 @@ model = AIFactory.create_language(
 # Exclude unreliable sources
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "search_domain_filter": [
             "-tabloid.com",        # Exclude tabloids
@@ -311,28 +315,28 @@ Filter results by time period:
 # Get very recent information (last 24 hours)
 day_model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"search_recency_filter": "day"}
 )
 
 # Get recent information (last 7 days)
 week_model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"search_recency_filter": "week"}
 )
 
 # Get information from last month
 month_model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"search_recency_filter": "month"}
 )
 
 # Get information from last year
 year_model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"search_recency_filter": "year"}
 )
 ```
@@ -344,7 +348,7 @@ Control search context and behavior:
 ```python
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "web_search_options": {
             "context_size": "large",  # Amount of context to use
@@ -362,7 +366,7 @@ Get additional information with responses:
 # Get images and related questions
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "return_images": True,
         "return_related_questions": True
@@ -379,7 +383,7 @@ response = model.chat_complete(messages)
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_language("perplexity", "llama-3.1-sonar-large-128k-online")
+model = AIFactory.create_language("perplexity", "sonar-pro")
 langchain_model = model.to_langchain()
 
 # Use with LangChain
@@ -389,37 +393,44 @@ print(response.content)
 
 ## Model Selection Guide
 
-### Sonar Small (Recommended for Speed)
+### Sonar (Default, Recommended for Speed)
 **Best for:** Quick answers, high-volume queries
 - Fastest response times
 - Most cost-effective
-- Still provides accurate, current information
 - Good for simple questions
 
 ```python
-model = AIFactory.create_language("perplexity", "llama-3.1-sonar-small-128k-online")
+model = AIFactory.create_language("perplexity", "sonar")
 ```
 
-### Sonar Large (Recommended for Quality)
-**Best for:** Balanced performance, comprehensive answers
-- Excellent balance of speed and quality
-- More detailed responses
-- Better reasoning capabilities
-- Good for most use cases
+### Sonar Pro (Recommended for Quality)
+**Best for:** Comprehensive answers
+- More thorough search and more detailed responses
+- 200K token context window
+- Good for most research use cases
 
 ```python
-model = AIFactory.create_language("perplexity", "llama-3.1-sonar-large-128k-online")
+model = AIFactory.create_language("perplexity", "sonar-pro")
 ```
 
-### Sonar Huge (Best Quality)
-**Best for:** Complex research, detailed analysis
-- Most comprehensive responses
-- Best reasoning and analysis
-- Highest quality answers
-- Use when quality is paramount
+### Sonar Reasoning Pro
+**Best for:** Complex questions that need multi-step reasoning
+- Reasons step by step before answering
+- Use when accuracy on hard questions matters most
 
 ```python
-model = AIFactory.create_language("perplexity", "llama-3.1-sonar-huge-128k-online")
+model = AIFactory.create_language("perplexity", "sonar-reasoning-pro")
+```
+
+### Sonar Deep Research
+**Best for:** Exhaustive research reports
+- Runs many searches and compiles a long report
+- Much slower and more expensive; raise the timeout
+
+```python
+model = AIFactory.create_language(
+    "perplexity", "sonar-deep-research", config={"timeout": 600.0}
+)
 ```
 
 ## Use Cases
@@ -430,7 +441,7 @@ model = AIFactory.create_language("perplexity", "llama-3.1-sonar-huge-128k-onlin
 # Current events
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={"search_recency_filter": "day"}
 )
 
@@ -443,7 +454,7 @@ messages = [{"role": "user", "content": "What happened in tech today?"}]
 # Academic research
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-huge-128k-online",
+    "sonar-reasoning-pro",
     config={
         "search_domain_filter": ["arxiv.org", "scholar.google.com"],
         "return_related_questions": True
@@ -459,7 +470,7 @@ messages = [{"role": "user", "content": "Latest quantum computing research"}]
 # Financial information
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "search_domain_filter": ["bloomberg.com", "reuters.com", "wsj.com"],
         "search_recency_filter": "day"
@@ -475,7 +486,7 @@ messages = [{"role": "user", "content": "Today's market analysis for tech stocks
 # Fact-checking with credible sources
 model = AIFactory.create_language(
     "perplexity",
-    "llama-3.1-sonar-large-128k-online",
+    "sonar-pro",
     config={
         "search_domain_filter": [
             "reuters.com",
@@ -510,7 +521,7 @@ Error: Rate limit exceeded
 ```
 Error: Request exceeds token limit
 ```
-**Solution:** Reduce message history or content length (max 128K tokens)
+**Solution:** Reduce message history or content length to fit the model's context window (about 128K tokens; 200K on `sonar-pro`)
 
 **Invalid Domain Filter:**
 ```
@@ -530,7 +541,7 @@ Error: Invalid search_recency_filter
 
 2. **Set Recency Appropriately:** Use "day" for current events, "month" or "year" for historical
 
-3. **Choose Right Model:** Small for speed, Large for balance, Huge for quality
+3. **Choose Right Model:** `sonar` for speed, `sonar-pro` for quality, `sonar-reasoning-pro` for hard questions
 
 4. **Enable Related Questions:** Helps users explore topics more deeply
 
@@ -541,15 +552,12 @@ Error: Invalid search_recency_filter
 ## Performance Characteristics
 
 ### Response Times
-- **Small**: 1-3 seconds (with web search)
-- **Large**: 2-5 seconds (with web search)
-- **Huge**: 3-8 seconds (with web search)
+`sonar` is the fastest, `sonar-pro` and `sonar-reasoning-pro` take longer, and
+`sonar-deep-research` can run for minutes. All include live web search.
 
 ### Context Window
-All Sonar models support 128K token context:
-- Approximately 96,000 words
-- Extensive conversation history
-- Long document processing
+About 128K tokens on `sonar`, `sonar-reasoning-pro` and `sonar-deep-research`,
+and 200K on `sonar-pro`.
 
 ### Web Search Integration
 - Real-time web search included

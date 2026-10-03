@@ -24,7 +24,7 @@ def mock_httpx_response():
             "id": "cmpl-123",
             "object": "chat.completion",
             "created": 123,
-            "model": "llama-3-sonar-large-32k-online",
+            "model": "sonar",
             "choices": [
                 {
                     "index": 0,
@@ -48,7 +48,7 @@ def perplexity_provider(mock_httpx_response):
     """Fixture for PerplexityLanguageModel."""
     # Set dummy API key for testing
     os.environ["PERPLEXITY_API_KEY"] = "test_api_key"
-    provider = PerplexityLanguageModel(model_name="llama-3-sonar-large-32k-online")
+    provider = PerplexityLanguageModel(model_name="sonar")
     
     # Mock the HTTP clients
     mock_client = Mock()
@@ -87,7 +87,7 @@ def test_perplexity_provider_initialization(perplexity_provider):
     """Test initialization of PerplexityLanguageModel."""
     assert perplexity_provider.provider == "perplexity"
     assert (
-        perplexity_provider.get_model_name() == "llama-3-sonar-large-32k-online"
+        perplexity_provider.get_model_name() == "sonar"
     )  # Default model
     assert perplexity_provider.api_key == "test_api_key"
     assert perplexity_provider.base_url == "https://api.perplexity.ai"
@@ -223,7 +223,7 @@ def test_perplexity_json_schema_payload_and_parsed_result(perplexity_provider):
         "id": "chatcmpl-structured-123",
         "object": "chat.completion",
         "created": 1677652288,
-        "model": "llama-3-sonar-large-32k-online",
+        "model": "sonar",
         "choices": [
             {
                 "index": 0,
@@ -252,7 +252,7 @@ def test_perplexity_json_schema_invalid_json_raises(perplexity_provider):
         "id": "chatcmpl-structured-bad",
         "object": "chat.completion",
         "created": 1677652288,
-        "model": "llama-3-sonar-large-32k-online",
+        "model": "sonar",
         "choices": [
             {"index": 0, "message": {"role": "assistant", "content": "not-json"}, "finish_reason": "stop"}
         ],
@@ -296,7 +296,7 @@ def test_perplexity_providers_property(perplexity_provider):
     """Test the models property (currently hardcoded)."""
     models = perplexity_provider.models
     assert isinstance(models, list)
-    assert len(models) > 5  # Check if it returns a reasonable number of models
+    assert len(models) == 4
     assert all(model.owned_by == "Perplexity" for model in models)
     # Check for some known models
     model_ids = [m.id for m in models]
@@ -349,7 +349,7 @@ def mock_perplexity_tool_call_response():
         "id": "chatcmpl-tool-123",
         "object": "chat.completion",
         "created": 1677652288,
-        "model": "llama-3-sonar-large-32k-online",
+        "model": "sonar",
         "choices": [
             {
                 "index": 0,
@@ -382,7 +382,7 @@ def mock_perplexity_tool_call_response():
 def perplexity_provider_with_tool_response(mock_perplexity_tool_call_response):
     """Create a Perplexity model with tool call response mocked."""
     os.environ["PERPLEXITY_API_KEY"] = "test_api_key"
-    model = PerplexityLanguageModel(model_name="llama-3-sonar-large-32k-online")
+    model = PerplexityLanguageModel(model_name="sonar")
 
     mock_client = Mock()
     mock_async_client = AsyncMock()
@@ -520,12 +520,12 @@ class TestParameterOverrides:
 
     def _make_model(self):
         os.environ["PERPLEXITY_API_KEY"] = "test_api_key"
-        provider = PerplexityLanguageModel(model_name="llama-3-sonar-large-32k-online")
+        provider = PerplexityLanguageModel(model_name="sonar")
         provider.client = Mock()
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            "id": "x", "object": "chat.completion", "created": 1, "model": "llama-3-sonar-large-32k-online",
+            "id": "x", "object": "chat.completion", "created": 1, "model": "sonar",
             "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
         }
@@ -551,3 +551,42 @@ class TestParameterOverrides:
         assert "max_tokens" not in json_payload, (
             "Default 850 with no per-call override should be filtered out"
         )
+
+
+def test_default_model_is_current():
+    """The default must be a model Perplexity still serves.
+
+    llama-3-sonar-large-32k-online, the previous default, is rejected with
+    "Invalid model".
+    """
+    provider = PerplexityLanguageModel(api_key="test-key")
+    assert provider._get_default_model() == "sonar"
+    assert provider.get_model_name() == "sonar"
+
+
+def test_model_list_has_current_models_and_context_windows():
+    provider = PerplexityLanguageModel(api_key="test-key")
+    windows = {m.id: m.context_window for m in provider._get_models()}
+
+    assert windows == {
+        "sonar": 127_072,
+        "sonar-pro": 200_000,
+        "sonar-reasoning-pro": 128_000,
+        "sonar-deep-research": 128_000,
+    }
+    # Retired or deprecated ids must not be advertised
+    assert not any(model_id.startswith("llama-") for model_id in windows)
+    assert "sonar-reasoning" not in windows
+    assert "r1-1776" not in windows
+
+
+def test_static_discovery_matches_provider_list():
+    from esperanto.model_discovery import _model_cache, get_perplexity_models
+
+    _model_cache.clear()
+    provider = PerplexityLanguageModel(api_key="test-key")
+
+    discovered = [(m.id, m.context_window) for m in get_perplexity_models()]
+    listed = [(m.id, m.context_window) for m in provider._get_models()]
+
+    assert discovered == listed

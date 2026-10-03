@@ -63,6 +63,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Perplexity works again without an explicit model.** The default
+  Perplexity model, `llama-3-sonar-large-32k-online`, is rejected by
+  Perplexity as invalid, so `create_language("perplexity")` failed. The default
+  is now `sonar`. `get_provider_models("perplexity")` listed only retired
+  `llama-3.1-sonar-*` models and the provider's own list included the
+  deprecated `sonar-reasoning` and the invalid `r1-1776`; both now share one
+  list of current models (`sonar`, `sonar-pro`, `sonar-reasoning-pro`,
+  `sonar-deep-research`) with context windows. Docs updated. (#309)
 - **Groq works again without an explicit model.** The default Groq model,
   `mixtral-8x7b-32768`, was retired by Groq, so `create_language("groq")`
   failed. The default is now `openai/gpt-oss-120b`. Groq model discovery

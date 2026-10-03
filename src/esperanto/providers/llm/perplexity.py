@@ -43,6 +43,17 @@ if TYPE_CHECKING:
     from langchain_openai import ChatOpenAI
 
 
+# Known Perplexity models and their context windows. Perplexity has no models
+# endpoint; ids are checked against the API and its models page. Used by the
+# provider's model list and by static discovery.
+PERPLEXITY_MODELS = (
+    ("sonar", 127_072),
+    ("sonar-pro", 200_000),
+    ("sonar-reasoning-pro", 128_000),
+    ("sonar-deep-research", 128_000),
+)
+
+
 @dataclass
 class PerplexityLanguageModel(LanguageModel):
     """Perplexity AI language model implementation using httpx."""
@@ -532,31 +543,17 @@ class PerplexityLanguageModel(LanguageModel):
 
     def _get_models(self) -> List[Model]:
         """List all available models for this provider.
-        Note: Perplexity API docs don't specify a models endpoint.
-        Hardcoding based on known models from docs.
+
+        Perplexity has no models endpoint, so this returns the known list.
         """
-        # TODO: Check if Perplexity adds a models endpoint later
-        known_models = [
-            "sonar-deep-research",
-            "sonar-reasoning-pro",
-            "sonar-reasoning",
-            "sonar-pro",
-            "sonar",
-            "r1-1776",
-        ]
         return [
-            Model(
-                id=model_id,
-                owned_by="Perplexity",
-                context_window=None,  # Context window info not readily available
-            )
-            for model_id in known_models
+            Model(id=model_id, owned_by="Perplexity", context_window=context_window)
+            for model_id, context_window in PERPLEXITY_MODELS
         ]
 
     def _get_default_model(self) -> str:
         """Get the default model name."""
-        # Using sonar-medium-online as a reasonable default with web access
-        return "llama-3-sonar-large-32k-online"
+        return "sonar"
 
     @property
     def provider(self) -> str:

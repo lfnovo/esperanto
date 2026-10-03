@@ -545,7 +545,7 @@ from esperanto.providers.llm.perplexity import PerplexityLanguageModel
 
 model = PerplexityLanguageModel(
     api_key="your-api-key",  # Or set PERPLEXITY_API_KEY env var
-    model_name="llama-3-sonar-large-32k-online", # Recommended default
+    model_name="sonar",      # Default; also sonar-pro, sonar-reasoning-pro, sonar-deep-research
     temperature=0.7,         # Optional
     max_tokens=850,         # Optional
     streaming=False,        # Optional
