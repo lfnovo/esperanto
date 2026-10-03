@@ -214,7 +214,7 @@ class TransformersRerankerModel(RerankerModel):
             
             self.model = AutoModelForSequenceClassification.from_pretrained(
                 model_name,
-                torch_dtype="auto",
+                dtype="auto",
                 trust_remote_code=self.trust_remote_code,
                 cache_dir=self.cache_dir
             )
@@ -245,7 +245,7 @@ class TransformersRerankerModel(RerankerModel):
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 cache_dir=self.cache_dir,
-                torch_dtype=torch.float16 if self.device in ["cuda", "mps"] else torch.float32
+                dtype=torch.float16 if self.device in ["cuda", "mps"] else torch.float32
             )
             
             # Move model to device
