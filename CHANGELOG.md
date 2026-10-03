@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   updated. The provider matrix now marks OpenRouter embeddings, STT and TTS as
   supported. (#299)
 - **LangChain and async streaming examples work again.** The LangChain guide
-  is rewritten for LangChain 1.x (LCEL chains, `RunnableWithMessageHistory`,
+  is rewritten for LangChain 1.x (LCEL chains, message-list memory,
   `create_agent`, retrieval with an Esperanto embeddings adapter, streaming,
   async); 18 of its 24 examples failed before, from removed LangChain APIs
   and `create_language(..., api_key=...)`, which the factory does not accept.

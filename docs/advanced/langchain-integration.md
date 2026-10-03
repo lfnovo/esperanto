@@ -50,7 +50,7 @@ model = AIFactory.create_language(
 
 ## Supported Providers
 
-The `.to_langchain()` method works with all language model providers in Esperanto. The configuration you set in Esperanto (temperature, max tokens, timeouts, base URL, structured output) carries over to the LangChain model.
+The `.to_langchain()` method works with all language model providers in Esperanto. The model, temperature, max tokens and base URL you set in Esperanto carry over to the LangChain model, and so does structured output (except on Cohere). Timeouts carry over for OpenAI, Azure, Groq, Ollama, Perplexity and OpenAI-compatible providers; for the others, set the timeout on the LangChain model.
 
 ### OpenAI
 
@@ -150,39 +150,27 @@ print(result)  # "Hola, ¿cómo estás?"
 
 ### Conversation with Memory
 
-Keep per-session chat history with `RunnableWithMessageHistory`:
+Keep the conversation as a list of messages and send the whole history on each turn:
 
 ```python
 from esperanto import AIFactory
-from langchain_core.chat_history import InMemoryChatMessageHistory
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.messages import HumanMessage, SystemMessage
 
 langchain_model = AIFactory.create_language("openai", "gpt-4o-mini").to_langchain()
 
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant."),
-    MessagesPlaceholder(variable_name="history"),
-    ("human", "{input}"),
-])
+history = [SystemMessage("You are a helpful assistant.")]
 
-histories = {}
+def chat(text: str) -> str:
+    history.append(HumanMessage(text))
+    reply = langchain_model.invoke(history)
+    history.append(reply)
+    return reply.content
 
-def get_history(session_id: str) -> InMemoryChatMessageHistory:
-    return histories.setdefault(session_id, InMemoryChatMessageHistory())
-
-conversation = RunnableWithMessageHistory(
-    prompt | langchain_model | StrOutputParser(),
-    get_history,
-    input_messages_key="input",
-    history_messages_key="history",
-)
-
-config = {"configurable": {"session_id": "alice"}}
-print(conversation.invoke({"input": "My name is Alice"}, config=config))
-print(conversation.invoke({"input": "What's my name?"}, config=config))  # "Your name is Alice"
+print(chat("My name is Alice"))
+print(chat("What's my name?"))  # "Your name is Alice"
 ```
+
+For persistent, multi-session memory, use an agent built with `create_agent` and a LangGraph checkpointer (see the LangChain docs on short-term memory).
 
 ### Sequential Chains
 
@@ -513,7 +501,7 @@ pip install langchain-openai      # or langchain-anthropic, langchain-google-gen
 
 ### `ModuleNotFoundError: No module named 'langchain.chains'`
 
-`ConversationChain`, `LLMChain`, `SequentialChain`, `RetrievalQA` and `initialize_agent` were removed in LangChain 1.0. Use the LCEL patterns on this page (`prompt | model | parser`, `RunnableWithMessageHistory`, `create_agent`).
+`ConversationChain`, `LLMChain`, `SequentialChain`, `RetrievalQA` and `initialize_agent` were removed in LangChain 1.0. Use the LCEL patterns on this page (`prompt | model | parser`, message lists for memory, `create_agent`).
 
 ### Passing Esperanto-Style Messages
 
