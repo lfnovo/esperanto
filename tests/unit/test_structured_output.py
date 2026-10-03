@@ -14,6 +14,8 @@ from pydantic import BaseModel
 from esperanto.common_types import (
     ChatCompletion,
     Choice,
+    EmptyCompletionError,
+    EsperantoError,
     FunctionCall,
     Message,
     StructuredOutputValidationError,
@@ -40,13 +42,13 @@ DICT_SCHEMA = {
 }
 
 
-def _completion(content=None, tool_calls=None, n=1):
+def _completion(content=None, tool_calls=None, n=1, finish_reason="stop"):
     """Build a ChatCompletion with n choices, all sharing content/tool_calls."""
     choices = [
         Choice(
             index=i,
             message=Message(role="assistant", content=content, tool_calls=tool_calls),
-            finish_reason="stop",
+            finish_reason=finish_reason,
         )
         for i in range(n)
     ]
@@ -224,6 +226,45 @@ def test_apply_tool_calls_guard_leaves_structured_none():
     out = apply_structured_output(result, resolved)
     # Guard: tool-call response is not parsed, no crash
     assert out.structured is None
+
+
+@pytest.mark.parametrize("structured", [{"type": "json_object"}, {"type": "json_schema", "schema": Capital}])
+@pytest.mark.parametrize("content", [None, "", "  \n "])
+def test_apply_empty_content_raises_empty_completion_error(structured, content):
+    resolved = resolve_structured_output(structured)
+    result = _completion(content=content, finish_reason="length")
+    with pytest.raises(EmptyCompletionError) as exc_info:
+        apply_structured_output(result, resolved)
+    assert exc_info.value.model == "m"
+    assert exc_info.value.finish_reason == "length"
+    assert isinstance(exc_info.value, EsperantoError)
+
+
+def test_apply_tool_calls_guard_applies_to_json_object_mode():
+    resolved = resolve_structured_output({"type": "json_object"})
+    tc = [ToolCall(id="1", type="function", function=FunctionCall(name="f", arguments="{}"))]
+    result = _completion(content=None, tool_calls=tc)
+    assert apply_structured_output(result, resolved) is result
+
+
+def test_apply_empty_content_without_structured_is_returned():
+    result = _completion(content=None, finish_reason="length")
+    assert apply_structured_output(result, None) is result
+
+
+def test_empty_completion_error_messages():
+    length = EmptyCompletionError(model="claude-opus-5-5", finish_reason="length")
+    assert "claude-opus-5-5" in str(length)
+    assert "finish_reason='length'" in str(length)
+    assert "increase max_tokens" in str(length)
+
+    refusal = EmptyCompletionError(model="claude-opus-5-5", finish_reason="content_filter")
+    assert "refused" in str(refusal)
+    assert "max_tokens" not in str(refusal)
+
+    unknown = EmptyCompletionError(model="m")
+    assert unknown.finish_reason is None
+    assert "finish_reason=None" in str(unknown)
 
 
 def test_apply_multi_choice_parses_each():

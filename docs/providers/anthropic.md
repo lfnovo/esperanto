@@ -180,7 +180,7 @@ messages = [{
 
 response = model.chat_complete(messages)
 print(response.choices[0].message.content)
-# Response will be valid JSON
+# JSON mode is prompt-guided on Anthropic; see "JSON Mode" below
 ```
 
 **Example - Long Context:**
@@ -239,16 +239,17 @@ focused_response = focused_model.chat_complete(messages)
 ## Advanced Features
 
 ### JSON Mode
-Claude supports structured JSON output:
+`structured={"type": "json"}` is **prompt-guided only** on Anthropic. The Anthropic API has no generic JSON mode: current models reject assistant prefill, and `output_config` only accepts a concrete schema. Esperanto therefore sends no constraint, and the model usually returns JSON because the prompt asks for it. Esperanto emits a `UserWarning` when you use this mode with Anthropic, in `chat_complete()`, `achat_complete()` and `to_langchain()`.
+
+For guaranteed JSON, use [schema-driven structured output](#schema-driven-structured-output-v1) (`{"type": "json_schema", "schema": ...}`), which Anthropic enforces on Claude 4.5 models and newer (Opus 4.5+, Sonnet 4.5+, Haiku 4.5).
 
 ```python
 model = AIFactory.create_language(
     "anthropic",
     "claude-sonnet-5",
-    config={"structured": {"type": "json"}}
+    config={"structured": {"type": "json"}}  # warns: prompt-guided only
 )
 
-# Claude will return valid JSON
 messages = [{
     "role": "user",
     "content": "Create a JSON object with user information"
@@ -256,6 +257,27 @@ messages = [{
 
 response = model.chat_complete(messages)
 ```
+
+### Empty Structured Responses and Thinking Budgets
+Claude Opus 5.5 always thinks, and its `max_tokens` covers thinking **plus** the answer. When thinking uses up the whole budget, or the model refuses, the response has no text. In any structured mode, when a response has no text and no tool calls, Esperanto raises `EmptyCompletionError` instead of returning empty content:
+
+```python
+from esperanto import AIFactory, EmptyCompletionError
+
+model = AIFactory.create_language(
+    "anthropic",
+    "claude-opus-5-5",
+    config={"structured": {"type": "json"}, "max_tokens": 4096}
+)
+messages = [{"role": "user", "content": "List three fruits and their colors as JSON"}]
+
+try:
+    response = model.chat_complete(messages)
+except EmptyCompletionError as e:
+    print(e.model, e.finish_reason)  # e.g. "claude-opus-5-5", "length"
+```
+
+`finish_reason` is `"length"` when the budget ran out (raise `max_tokens`) and `"content_filter"` when the model refused. Anthropic stop reasons are normalized to the same values the other providers use: `end_turn` becomes `"stop"`, `tool_use` becomes `"tool_calls"`, `max_tokens` becomes `"length"`, and `refusal` becomes `"content_filter"`.
 
 ### Schema-Driven Structured Output (v1)
 Anthropic also supports schema-constrained outputs via `structured={"type": "json_schema", ...}`:
@@ -291,6 +313,7 @@ print(response.structured)   # Parsed/validated TravelPlan instance
 
 Notes:
 - Schema mode is currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
+- A response with empty content and no tool calls raises `EmptyCompletionError` (see [Empty Structured Responses](#empty-structured-responses-and-thinking-budgets)).
 - Anthropic strict tool-use schema enforcement (`tools[].strict`) is a separate feature and is not part of this v1 schema-output path.
 
 ### Temperature and Top-P Priority

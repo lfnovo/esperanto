@@ -9,7 +9,10 @@ from typing import Any, Dict, Optional, Tuple, Type, Union, cast
 
 from pydantic import BaseModel, ValidationError
 
-from esperanto.common_types.exceptions import StructuredOutputValidationError
+from esperanto.common_types.exceptions import (
+    EmptyCompletionError,
+    StructuredOutputValidationError,
+)
 from esperanto.common_types.response import ChatCompletion
 
 logger = logging.getLogger(__name__)
@@ -337,26 +340,38 @@ def apply_structured_output(
     result: ChatCompletion,
     resolved: Optional[ResolvedStructuredOutput],
 ) -> ChatCompletion:
-    """Populate ``message.structured`` on each choice for schema mode.
+    """Validate structured responses and populate ``message.structured``.
 
-    Centralizes the schema-mode gate and the tool-calls guard so every provider
-    behaves identically: when the model returns tool calls instead of JSON
-    content, parsing is skipped and ``structured`` is left as ``None`` (rather
-    than crashing on empty content). Parsing runs per-choice, so multi-choice
-    (``n>1``) responses each carry their own parsed object, surfaced at the top
-    level via ``ChatCompletion.structured`` (first choice). No-op when not in
-    schema mode or there are no choices.
+    Centralizes the structured-output checks so every provider behaves
+    identically. For any structured mode (``json_object`` or ``json_schema``),
+    a choice with empty or whitespace-only content and no tool calls raises
+    ``EmptyCompletionError`` instead of handing the caller an empty string.
+
+    In schema mode, each choice's content is also parsed into
+    ``message.structured``. When the model returns tool calls instead of JSON
+    content, the choice is left alone and ``structured`` stays ``None``.
+    Parsing runs per-choice, so multi-choice (``n>1``) responses each carry
+    their own parsed object, surfaced at the top level via
+    ``ChatCompletion.structured`` (first choice). No-op without a structured
+    mode or without choices.
     """
-    if not (resolved and resolved.is_schema_mode) or not result.choices:
+    if not resolved or not result.choices:
         return result
 
     new_choices = []
     changed = False
     for choice in result.choices:
         message = choice.message
-        # Tool-calls guard: a schema-mode response that returns tool calls has
+        # Tool-calls guard: a structured response that returns tool calls has
         # no JSON content to parse — leave structured as None instead of raising.
         if message.tool_calls:
+            new_choices.append(choice)
+            continue
+        if not (message.content or "").strip():
+            raise EmptyCompletionError(
+                model=result.model, finish_reason=choice.finish_reason
+            )
+        if not resolved.is_schema_mode:
             new_choices.append(choice)
             continue
         parsed = parse_structured_output_content(message.content, resolved)

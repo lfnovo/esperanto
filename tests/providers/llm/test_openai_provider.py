@@ -1404,3 +1404,37 @@ class TestParameterOverridesReasoningModel:
                 "Instance default 850 should still be filtered when no per-call override"
             )
             assert "max_tokens" not in kwargs
+
+
+@pytest.mark.parametrize(
+    "structured", [{"type": "json_object"}, {"type": "json_schema", "schema": CapitalsResponse}]
+)
+def test_empty_structured_response_raises(openai_model, structured):
+    """The shared structured-output path rejects empty content on every provider (#292)."""
+    from esperanto.common_types import EmptyCompletionError
+
+    openai_model.structured = structured
+    custom_response = Mock()
+    custom_response.status_code = 200
+    custom_response.json.return_value = {
+        "id": "chatcmpl-empty",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-5",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": ""},
+                "finish_reason": "length",
+            }
+        ],
+        "usage": {"prompt_tokens": 9, "completion_tokens": 0, "total_tokens": 9},
+    }
+    openai_model.client.post.side_effect = None
+    openai_model.client.post.return_value = custom_response
+
+    with pytest.raises(EmptyCompletionError) as exc_info:
+        openai_model.chat_complete([{"role": "user", "content": "List capitals"}])
+
+    assert exc_info.value.finish_reason == "length"
+    assert exc_info.value.model == "gpt-5"

@@ -89,9 +89,11 @@ supported. Shared machinery lives in `structured_output.py`:
 
 - `resolve_structured_output()` normalizes `self.structured` into a
   `ResolvedStructuredOutput` (canonical OpenAI-shaped `response_format`).
-- `apply_structured_output(result, resolved)` centralizes the schema-mode gate,
-  the tool-calls guard (skip parsing when the model returned tool calls), and
-  per-choice parsing; it sets `message.structured` on each choice.
+- `apply_structured_output(result, resolved)` centralizes the tool-calls guard
+  (skip parsing when the model returned tool calls; the choice is kept unchanged), the empty-content check
+  (any structured mode: empty/whitespace content raises `EmptyCompletionError`
+  with the choice's `finish_reason`), and schema-mode per-choice parsing; it sets
+  `message.structured` on each choice.
 - `parse_structured_output_content()` validates content (Pydantic `model_validate`
   or `jsonschema` for dict schemas), raising `StructuredOutputValidationError`.
 - `is_json_schema_unsupported_error()` detects "endpoint can't do json_schema"
@@ -105,6 +107,12 @@ Per-provider request shape (schema mode):
 - Anthropic: `output_config.format` (native, requires Opus 4.5+/Sonnet 4.5+/Haiku 4.5)
 - Ollama: `format=<schema dict>`
 - Cohere: `response_format={"type": "json_object", "schema": ...}`
+
+Anthropic has no enforceable JSON mode: `{"type": "json"}` sends no constraint
+(prompt-guided only) and emits a `UserWarning`; only `json_schema` is enforced.
+Anthropic `stop_reason` maps to OpenAI `finish_reason` vocabulary
+(`end_turn`→`stop`, `tool_use`→`tool_calls`, `max_tokens`→`length`,
+`refusal`→`content_filter`).
 
 The parsed object is exposed at `response.structured` (a property mirroring
 `content`, reading `choices[0].message.structured`). Schema mode is non-streaming

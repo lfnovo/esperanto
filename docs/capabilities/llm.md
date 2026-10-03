@@ -203,6 +203,8 @@ print(response.structured)   # parsed/validated CountryList
 
 Notes:
 - Schema mode is config-driven and currently non-streaming in Esperanto v1 (`stream=True` raises `ValueError`).
+- In both JSON and schema mode, a non-streaming response with empty content and no tool calls raises `EmptyCompletionError` (an `EsperantoError` carrying `model` and `finish_reason`) on every provider, instead of returning an empty string. `finish_reason="length"` usually means reasoning used up `max_tokens`.
+- Anthropic has no enforceable JSON mode: `{"type": "json"}` is prompt-guided only and emits a `UserWarning`. Use schema mode for guaranteed JSON.
 - OpenAI-compatible endpoints fail fast when `json_schema` response format is unsupported.
 - OpenRouter schema mode is model/provider-dependent and fail-fast (unsupported schema requests are surfaced directly).
 - xAI and Perplexity schema mode are model/provider-dependent and fail-fast (unsupported schema requests are surfaced directly).

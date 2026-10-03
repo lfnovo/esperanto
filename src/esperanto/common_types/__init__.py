@@ -1,6 +1,7 @@
 """Types module for Esperanto."""
 
 from .exceptions import (
+    EmptyCompletionError,
     EsperantoError,
     ProviderCapabilityError,
     StructuredOutputValidationError,
@@ -41,6 +42,7 @@ __all__ = [
     "ToolCall",
     "FunctionCall",
     # Errors
+    "EmptyCompletionError",
     "EsperantoError",
     "ProviderCapabilityError",
     # Validation

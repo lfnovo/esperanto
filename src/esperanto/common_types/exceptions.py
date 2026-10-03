@@ -1,6 +1,6 @@
 """Exceptions for Esperanto common types."""
 
-from typing import List
+from typing import List, Optional
 
 
 class EsperantoError(Exception):
@@ -19,6 +19,35 @@ class ProviderCapabilityError(EsperantoError):
     For example, requesting an embedding model from an OpenAI-compatible profile
     that only declares ``language`` support.
     """
+
+
+class EmptyCompletionError(EsperantoError):
+    """Raised when structured output was requested but the model returned no content.
+
+    Typically the output budget was consumed by reasoning before any text was
+    produced (``finish_reason='length'``), or the model refused
+    (``finish_reason='content_filter'``).
+
+    Attributes:
+        model: Name of the model that returned no content.
+        finish_reason: Normalized finish reason reported for the choice.
+    """
+
+    def __init__(self, model: str, finish_reason: Optional[str] = None):
+        self.model = model
+        self.finish_reason = finish_reason
+        message = (
+            f"Model '{model}' returned no content for a structured output request "
+            f"(finish_reason={finish_reason!r})."
+        )
+        if finish_reason == "length":
+            message += (
+                " The output budget may have been consumed by reasoning; "
+                "increase max_tokens."
+            )
+        elif finish_reason == "content_filter":
+            message += " The model refused or its output was filtered."
+        super().__init__(message)
 
 
 class ToolCallValidationError(Exception):

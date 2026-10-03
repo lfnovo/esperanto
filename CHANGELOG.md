@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Z.ai provider.** New built-in OpenAI-compatible profile (`zai`) for Z.ai's
   GLM models, defaulting to `glm-5.2`. Configure with `ZAI_API_KEY`; override the
   endpoint with `ZAI_BASE_URL`. (#234)
+- **`EmptyCompletionError` for empty structured responses.** When `structured`
+  is set (`json` or `json_schema`) and a choice comes back with empty content
+  and no tool calls, every LLM provider now raises
+  `EmptyCompletionError(EsperantoError)` instead of returning an empty string.
+  The error carries `model` and `finish_reason`, and its message suggests
+  raising `max_tokens` when the budget ran out. This mainly affects Claude
+  Opus 5.5, whose thinking can consume the whole `max_tokens` budget. Plain
+  chat (no `structured`) is unchanged. Streaming is not checked. (#292)
+
+### Changed
+
+- **Anthropic finish reasons use the shared vocabulary.** `stop_reason:
+  "max_tokens"` is now reported as `finish_reason="length"`, and `"refusal"` as
+  `"content_filter"`, matching the other providers. This applies to streaming
+  and non-streaming responses. Code that compared Anthropic's `finish_reason`
+  to `"max_tokens"` or `"refusal"` must use the new values. (#292)
+- **Anthropic warns on `structured={"type": "json"}`.** Anthropic cannot
+  enforce a generic JSON mode, so the output is prompt-guided only.
+  `chat_complete()`, `achat_complete()` and `to_langchain()` now emit a
+  `UserWarning` recommending `{"type": "json_schema", "schema": ...}`. Request
+  behavior is unchanged. (#292)
 
 ### Fixed
 

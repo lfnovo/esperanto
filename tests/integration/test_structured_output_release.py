@@ -13,7 +13,7 @@ import os
 import pytest
 from pydantic import BaseModel
 
-from esperanto import AIFactory
+from esperanto import AIFactory, EmptyCompletionError
 
 
 class Capital(BaseModel):
@@ -203,3 +203,35 @@ def test_google_structured_output_nested_schema_real():
 
     assert isinstance(response.structured, Person)
     assert response.structured.address.city
+
+
+# Opus 5.5 always thinks, and thinking counts against max_tokens. A
+# reasoning-heavy prompt with a tiny budget ends during thinking: the API
+# returns stop_reason "max_tokens" and no text block (#292).
+REASONING_PROMPT = [
+    {
+        "role": "user",
+        "content": (
+            "Find every prime p below 500 such that p^2 + 2 is also prime, and every "
+            "pair of twin primes below 300 whose sum is a perfect square. Check each "
+            "case carefully before answering. Answer as a JSON object with keys "
+            "'p_values' and 'twin_pairs'."
+        ),
+    }
+]
+
+
+@pytest.mark.release
+@pytest.mark.filterwarnings("ignore:Anthropic does not enforce:UserWarning")
+@pytest.mark.skipif(
+    not os.getenv("ANTHROPIC_API_KEY"), reason="ANTHROPIC_API_KEY not configured"
+)
+def test_anthropic_thinking_exhausts_budget_raises_empty_completion_real():
+    model = AIFactory.create_language(
+        "anthropic", "claude-opus-5-5", config={"structured": {"type": "json"}}
+    )
+
+    with pytest.raises(EmptyCompletionError) as exc_info:
+        model.chat_complete(REASONING_PROMPT, max_tokens=64)
+
+    assert exc_info.value.finish_reason == "length"

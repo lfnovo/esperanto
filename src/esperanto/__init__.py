@@ -4,6 +4,7 @@ This module exports all public components of the library.
 """
 
 from esperanto.common_types import (
+    EmptyCompletionError,
     EsperantoError,
     FunctionCall,
     ProviderCapabilityError,
@@ -184,6 +185,7 @@ __all__ = [
     "validate_tool_calls",
     "find_tool_by_name",
     # Errors
+    "EmptyCompletionError",
     "EsperantoError",
     "ProviderCapabilityError",
     # Profiles
