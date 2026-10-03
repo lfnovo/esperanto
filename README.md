@@ -49,6 +49,7 @@ Whether you're building a quick prototype or a production application serving mi
   - SiliconFlow (DeepSeek, Qwen, and other OpenAI-compatible models)
   - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
   - MiniMax (MiniMax-M3 with 1M context, Text-to-Speech)
+  - Z.ai (GLM models: glm-5.2, glm-4.5-flash)
   - PayPerQ / PPQ (pay-as-you-go gateway to hundreds of models)
   - Voyage (Embeddings, Reranking)
   - Jina (Advanced embedding models with task optimization, Reranking)
@@ -158,6 +159,7 @@ pip install "langchain_deepseek>=0.1.3"
 | xAI          | ✅          | ❌               | ❌                | ❌             | ❌             | ❌        |
 | DashScope    | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | MiniMax      | ✅          | ❌               | ❌                | ❌             | ✅             | ✅        |
+| Z.ai         | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | OpenRouter   | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | PayPerQ (PPQ)| ✅          | ✅               | ❌                | ✅             | ✅             | ✅        |
 
@@ -179,7 +181,7 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'siliconflow', 'vertex', 'xai'],
+#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'siliconflow', 'vertex', 'xai', 'zai'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter', 'cohere'],
 #     'reranker': ['jina', 'voyage', 'transformers', 'cohere'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs', 'openai-compatible', 'azure', 'google', 'mistral', 'deepgram'],

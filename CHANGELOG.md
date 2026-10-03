@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Z.ai provider.** New built-in OpenAI-compatible profile (`zai`) for Z.ai's
+  GLM models, defaulting to `glm-5.2`. Configure with `ZAI_API_KEY`; override the
+  endpoint with `ZAI_BASE_URL`. (#234)
+
 ## [2.27.0] - 2026-09-05
 
 ### Added
