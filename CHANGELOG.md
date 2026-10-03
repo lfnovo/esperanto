@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Anthropic model lists include the current generation.** The offline
+  fallback list and `AIFactory.get_provider_models("anthropic")` now include
+  `claude-opus-5-5`, `claude-sonnet-5-5` and `claude-fable-5-1`. Context windows
+  now match Anthropic's Models API: `claude-opus-5`, `claude-sonnet-5` and
+  `claude-sonnet-4-5-20250929` report 1M tokens instead of 200K. When the live
+  `/models` call succeeds, `context_window` now comes from `max_input_tokens`
+  instead of `max_tokens` (the output cap). Both lists now share one
+  definition. The default model is unchanged (`claude-sonnet-5`).
 - **Anthropic finish reasons use the shared vocabulary.** `stop_reason:
   "max_tokens"` is now reported as `finish_reason="length"`, and `"refusal"` as
   `"content_filter"`, matching the other providers. This applies to streaming

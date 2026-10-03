@@ -217,6 +217,38 @@ class TestAnthropicDiscovery:
         # not recommend models that can no longer be called.
         assert not any(m.id.startswith("claude-3") for m in models)
 
+    def test_get_anthropic_models_context_windows(self):
+        """Context windows match Anthropic's Models API (max_input_tokens)."""
+        _model_cache.clear()
+        windows = {m.id: m.context_window for m in get_anthropic_models()}
+
+        assert windows == {
+            "claude-opus-5-5": 1_000_000,
+            "claude-sonnet-5-5": 1_000_000,
+            "claude-fable-5-1": 1_000_000,
+            "claude-opus-5": 1_000_000,
+            "claude-sonnet-5": 1_000_000,
+            "claude-opus-4-5-20251101": 200_000,
+            "claude-sonnet-4-5-20250929": 1_000_000,
+            "claude-haiku-4-5-20251001": 200_000,
+        }
+
+    def test_get_anthropic_models_matches_provider_fallback(self):
+        """Static discovery and the provider's offline fallback list the same models."""
+        from unittest.mock import Mock
+
+        from esperanto.providers.llm.anthropic import AnthropicLanguageModel
+
+        provider = AnthropicLanguageModel(api_key="test-key")
+        provider.client = Mock()
+        provider.client.get.side_effect = Exception("no network")
+
+        _model_cache.clear()
+        discovered = [(m.id, m.context_window) for m in get_anthropic_models()]
+        fallback = [(m.id, m.context_window) for m in provider._get_models()]
+
+        assert discovered == fallback
+
     def test_get_anthropic_models_caching(self):
         """Test that Anthropic models are cached."""
         _model_cache.clear()
