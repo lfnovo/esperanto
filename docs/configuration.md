@@ -700,7 +700,7 @@ def create_llm_with_fallback():
         return AIFactory.create_language("openai", "gpt-4", config={"timeout": 30.0})
     except Exception as e:
         print(f"Primary failed: {e}, falling back to Groq")
-        return AIFactory.create_language("groq", "mixtral-8x7b-32768")
+        return AIFactory.create_language("groq", "openai/gpt-oss-120b")
 
 model = create_llm_with_fallback()
 ```

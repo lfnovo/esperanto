@@ -86,8 +86,8 @@ def test_google_structured_output_real():
     not os.getenv("GROQ_API_KEY"), reason="GROQ_API_KEY not configured"
 )
 def test_groq_structured_output_real():
-    # llama-3.3-70b-versatile does not support response_format json_schema on
-    # Groq; gpt-oss-120b does. See https://console.groq.com/docs/structured-outputs
+    # gpt-oss-120b (Esperanto's Groq default) supports response_format
+    # json_schema. See https://console.groq.com/docs/structured-outputs
     model = AIFactory.create_language(
         "groq", "openai/gpt-oss-120b", config=STRUCTURED_CONFIG
     )

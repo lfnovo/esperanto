@@ -205,9 +205,9 @@ def test_groq_llm_api_key_config_propagates(monkeypatch):
 
     config = {"api_key": "config-groq-key"}
     _check_propagation(
-        direct_factory=lambda: GroqLanguageModel(model_name="llama-3.1-70b-versatile", config=dict(config)),
+        direct_factory=lambda: GroqLanguageModel(model_name="openai/gpt-oss-120b", config=dict(config)),
         factory_factory=lambda: AIFactory.create_language(
-            "groq", "llama-3.1-70b-versatile", config=dict(config)
+            "groq", "openai/gpt-oss-120b", config=dict(config)
         ),
         expected={"api_key": "config-groq-key"},
     )
