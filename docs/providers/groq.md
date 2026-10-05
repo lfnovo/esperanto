@@ -8,7 +8,7 @@ Groq provides ultra-fast inference for open-source language models and Whisper s
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Language Models (LLM) | ✅ | GPT-OSS and Qwen models |
+| Language Models (LLM) | ✅ | Mixtral, Llama, Gemma models |
 | Embeddings | ❌ | Not available |
 | Reranking | ❌ | Not available |
 | Speech-to-Text | ✅ | Whisper models with faster inference |
@@ -46,7 +46,7 @@ GROQ_API_KEY="gsk_..."
 from esperanto.factory import AIFactory
 
 # Language model
-model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
+model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
 
 # Speech-to-text
 transcriber = AIFactory.create_speech_to_text("groq", "whisper-large-v3")
@@ -61,7 +61,7 @@ from esperanto.providers.speech_to_text.groq import GroqSpeechToText
 # Language model
 llm = GroqLanguageModel(
     api_key="your-api-key",
-    model_name="openai/gpt-oss-120b"
+    model_name="mixtral-8x7b-32768"
 )
 
 # Speech-to-text
@@ -79,12 +79,12 @@ stt = GroqSpeechToText(
 
 | Model | Context Window | Best For |
 |-------|----------------|----------|
-| **openai/gpt-oss-120b** | 128K tokens | Default. Strong reasoning, tool use and structured output |
-| **openai/gpt-oss-20b** | 128K tokens | Faster and cheaper, good for simple tasks |
-| **qwen/qwen3.8-27b** | 128K tokens | Multilingual, general-purpose |
-
-Groq's catalog changes often; list the current models with
-`AIFactory.get_provider_models("groq")` or see https://console.groq.com/docs/models.
+| **openai/gpt-oss-120b** | 128K tokens | Balanced performance, high quality |
+| **llama-3.3-70b-versatile** | 128K tokens | Latest Llama, versatile tasks |
+| **llama-3.1-70b-versatile** | 128K tokens | Previous Llama version |
+| **llama-3.1-8b-instant** | 128K tokens | Fast responses, cost-effective |
+| **gemma2-9b-it** | 8K tokens | Google's Gemma, instruction-tuned |
+| **gemma-7b-it** | 8K tokens | Smaller Gemma variant |
 
 **Configuration:**
 
@@ -93,7 +93,7 @@ from esperanto.factory import AIFactory
 
 model = AIFactory.create_language(
     "groq",
-    "openai/gpt-oss-120b",
+    "mixtral-8x7b-32768",
     config={
         "temperature": 0.7,           # Randomness (0.0 - 2.0)
         "max_tokens": 1000,           # Maximum response length
@@ -111,7 +111,7 @@ model = AIFactory.create_language(
 from esperanto.factory import AIFactory
 
 # Create model
-model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
+model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
 
 # Chat completion
 messages = [
@@ -123,22 +123,22 @@ response = model.chat_complete(messages)
 print(response.choices[0].message.content)
 ```
 
-**Example - Fast Inference:**
+**Example - Fast Inference with Llama:**
 
 ```python
-# Use the smaller GPT-OSS model for fast responses
-model = AIFactory.create_language("groq", "openai/gpt-oss-20b")
+# Use Llama 3.1 8B for ultra-fast responses
+model = AIFactory.create_language("groq", "llama-3.1-8b-instant")
 
 messages = [{"role": "user", "content": "What is Python?"}]
 response = model.chat_complete(messages)
 # Extremely fast response time thanks to Groq's LPU
 ```
 
-**Example - Long Context:**
+**Example - Large Context with Llama 70B:**
 
 ```python
-# 128K context window
-model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
+# Llama 3.3 70B with 128K context window
+model = AIFactory.create_language("groq", "llama-3.3-70b-versatile")
 
 # Handle long documents
 long_doc = "..." * 10000  # Large document
@@ -173,7 +173,7 @@ asyncio.run(stream_async())
 ```python
 model = AIFactory.create_language(
     "groq",
-    "openai/gpt-oss-120b",
+    "mixtral-8x7b-32768",
     config={"structured": {"type": "json"}}
 )
 
@@ -190,7 +190,7 @@ response = model.chat_complete(messages)
 
 ```python
 async def chat_async():
-    model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
+    model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
 
     messages = [{"role": "user", "content": "Explain quantum computing"}]
     response = await model.achat_complete(messages)
@@ -205,6 +205,7 @@ async def chat_async():
 |-------|----------|
 | **whisper-large-v3** | Highest accuracy, multiple languages |
 | **whisper-large-v3-turbo** | Faster inference, good accuracy |
+| **distil-whisper-large-v3-en** | English-only, optimized for speed |
 
 **Configuration:**
 
@@ -238,14 +239,15 @@ with open("audio.mp3", "rb") as f:
     print(response.text)
 ```
 
-**Example - Fast Transcription:**
+**Example - Fast English Transcription:**
 
 ```python
-# Use the turbo model for faster processing
-model = AIFactory.create_speech_to_text("groq", "whisper-large-v3-turbo")
+# Use distil-whisper for English-only, faster processing
+model = AIFactory.create_speech_to_text("groq", "distil-whisper-large-v3-en")
 
 response = model.transcribe("english_audio.mp3")
 print(response.text)
+# Extremely fast transcription for English content
 ```
 
 **Example - With Language and Context:**
@@ -344,7 +346,7 @@ Groq's LPU (Language Processing Unit) provides exceptional inference speed:
 ```python
 import time
 
-model = AIFactory.create_language("groq", "openai/gpt-oss-20b")
+model = AIFactory.create_language("groq", "llama-3.1-8b-instant")
 
 messages = [{"role": "user", "content": "What is the speed of light?"}]
 
@@ -362,7 +364,7 @@ Groq excels at streaming with high token generation speeds:
 ```python
 import time
 
-model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
+model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
 
 messages = [{"role": "user", "content": "Write a short story about AI."}]
 
@@ -387,7 +389,7 @@ Customize request timeouts:
 # LLM with custom timeout
 model = AIFactory.create_language(
     "groq",
-    "openai/gpt-oss-120b",
+    "mixtral-8x7b-32768",
     config={"timeout": 120.0}  # 2 minutes
 )
 
@@ -405,7 +407,7 @@ Convert to LangChain models:
 ```python
 from esperanto.factory import AIFactory
 
-model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
+model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
 langchain_model = model.to_langchain()
 
 # Use with LangChain
@@ -415,32 +417,37 @@ print(response.content)
 
 ## Model Selection Guide
 
-### GPT-OSS 120B (Default)
-**Best for:** Reasoning, tool use and structured output
-- OpenAI's open-weight model, served on Groq's LPU
+### GPT-OSS-120B
+**Best for:** Balanced performance and quality
+- Excellent reasoning capabilities (open-source, Apache 2.0) (open-source, Apache 2.0)
+- Good for complex tasks
 - 128K context window
-- Supports `json_schema` structured output
+- Fast inference on Groq LPU
 
 ```python
 model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
 ```
 
-### GPT-OSS 20B
+### Llama 3.3 70B Versatile
+**Best for:** Latest capabilities, long context
+- Latest Llama model
+- 128K context window
+- Versatile for various tasks
+- Strong performance
+
+```python
+model = AIFactory.create_language("groq", "llama-3.3-70b-versatile")
+```
+
+### Llama 3.1 8B Instant
 **Best for:** Speed and cost-efficiency
-- Faster and cheaper than the 120B model
+- Ultra-fast responses
+- Cost-effective
 - 128K context window
 - Good for simple tasks
 
 ```python
-model = AIFactory.create_language("groq", "openai/gpt-oss-20b")
-```
-
-### Qwen 3.8 27B
-**Best for:** Multilingual tasks
-- 128K context window
-
-```python
-model = AIFactory.create_language("groq", "qwen/qwen3.8-27b")
+model = AIFactory.create_language("groq", "llama-3.1-8b-instant")
 ```
 
 ### Whisper Large V3
@@ -463,19 +470,34 @@ transcriber = AIFactory.create_speech_to_text("groq", "whisper-large-v3")
 transcriber = AIFactory.create_speech_to_text("groq", "whisper-large-v3-turbo")
 ```
 
+### Distil-Whisper Large V3 EN
+**Best for:** English-only, maximum speed
+- English-only
+- Fastest transcription
+- Optimized model
+
+```python
+transcriber = AIFactory.create_speech_to_text("groq", "distil-whisper-large-v3-en")
+```
+
 ## Performance Characteristics
 
 ### LLM Inference Speed
-Groq's LPU serves models at hundreds of tokens per second; smaller models such
-as `openai/gpt-oss-20b` are the fastest. Actual speed varies by model and load.
+Groq's LPU provides exceptional speed:
+- **Llama 3.1 8B**: 500+ tokens/second
+- **GPT-OSS-120B**: 300+ tokens/second
+- **Llama 3.3 70B**: 200+ tokens/second
 
 ### Speech-to-Text Speed
-- **Whisper Large V3 Turbo**: faster than Large V3, with slightly lower accuracy
+Faster than traditional Whisper implementations:
+- **Whisper Large V3**: 5-10x faster than CPU
+- **Whisper Turbo**: 2-3x faster than large v3
+- **Distil-Whisper**: Fastest for English
 
 ### Context Windows
-Context windows vary by model (the GPT-OSS and Qwen models listed above offer
-128K tokens). `AIFactory.get_provider_models("groq")` reports each model's
-context window.
+- **GPT-OSS-120B**: 128K tokens
+- **Llama 3.x**: 128K tokens
+- **Gemma**: 8K tokens
 
 ## Troubleshooting
 
@@ -515,13 +537,13 @@ Error: Request timed out
 
 1. **Leverage Speed:** Take advantage of Groq's ultra-fast inference for real-time applications.
 
-2. **Choose Right Model:** Use `openai/gpt-oss-20b` for speed and `openai/gpt-oss-120b` for quality.
+2. **Choose Right Model:** Use 8B models for speed, 70B models for quality, Mixtral for balance.
 
 3. **Streaming:** Always use streaming for better user experience with Groq's high token generation speed.
 
 4. **Context Windows:** Utilize large context windows (128K) for long documents.
 
-5. **Fast Audio:** Use `whisper-large-v3-turbo` when speed matters more than maximum accuracy.
+5. **English-Only Audio:** Use distil-whisper for English content for maximum speed.
 
 6. **Batch Processing:** Process multiple requests efficiently thanks to fast inference.
 
@@ -529,8 +551,8 @@ Error: Request timed out
 
 ### Real-time Chat Applications
 ```python
-# Fast responses for interactive chat
-model = AIFactory.create_language("groq", "openai/gpt-oss-20b")
+# Ultra-fast responses for interactive chat
+model = AIFactory.create_language("groq", "llama-3.1-8b-instant")
 
 # Sub-second response times
 response = model.chat_complete(messages)
@@ -548,7 +570,7 @@ response = transcriber.transcribe("live_chunk.wav")
 ### High-Volume Processing
 ```python
 # Process many requests quickly
-model = AIFactory.create_language("groq", "openai/gpt-oss-120b")
+model = AIFactory.create_language("groq", "mixtral-8x7b-32768")
 
 # Fast inference allows high throughput
 for item in large_dataset:
