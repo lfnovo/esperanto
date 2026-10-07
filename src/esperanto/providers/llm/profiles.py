@@ -208,6 +208,27 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         owned_by="oMLX",
         display_name="oMLX",
     ),
+    # Eden AI is a French company and the gateway runs on EU infrastructure.
+    # It exposes two endpoints on the same API surface, with the same key:
+    #   https://api.edenai.run/v3     default, serves the full catalog
+    #   https://api.eu.edenai.run/v3  keeps inference inside the EU, and serves
+    #                                 only the subset of the catalog available
+    #                                 there, so it is a genuinely smaller list
+    # Set EDENAI_BASE_URL to the EU one to switch; model ids are identical.
+    "edenai": OpenAICompatibleProfile(
+        name="edenai",
+        base_url="https://api.edenai.run/v3",
+        api_key_env="EDENAI_API_KEY",
+        base_url_env="EDENAI_BASE_URL",
+        capabilities={"language", "embedding"},
+        # Model ids are namespaced by the upstream vendor, as <vendor>/<model>.
+        default_models={
+            "language": "openai/gpt-5.5",
+            "embedding": "openai/text-embedding-3-small",
+        },
+        owned_by="Eden AI",
+        display_name="Eden AI",
+    ),
 }
 
 _USER_PROFILES: Dict[str, OpenAICompatibleProfile] = {}

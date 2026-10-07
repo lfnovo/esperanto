@@ -16,6 +16,7 @@ from esperanto.model_discovery import (
     _model_cache,
     get_anthropic_models,
     get_cohere_models,
+    get_edenai_models,
     get_google_models,
     get_minimax_models,
     get_openai_compatible_models,
@@ -465,6 +466,242 @@ class TestOpenAICompatibleDiscovery:
 
         call_args = mock_get.call_args
         assert call_args.args[0] == "http://localhost:1234/v1/models"
+
+
+class TestEdenAIDiscovery:
+    """Test Eden AI model discovery."""
+
+    @pytest.fixture(autouse=True)
+    def isolate_edenai_env(self):
+        """Keep EDENAI_* out of the tests that assert the default base URL.
+
+        A developer with EDENAI_BASE_URL set to the EU endpoint would otherwise
+        see the default-URL assertions fail. Tests that exercise an override
+        set the variable themselves inside a patch.dict block.
+        """
+        _model_cache.clear()
+        with patch.dict(
+            os.environ,
+            {k: v for k, v in os.environ.items() if not k.startswith("EDENAI_")},
+            clear=True,
+        ):
+            yield
+        _model_cache.clear()
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_success(self, mock_get):
+        """Test successful Eden AI model discovery."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "object": "list",
+            "data": [
+                {
+                    "id": "openai/gpt-5.5",
+                    "owned_by": "openai",
+                    "context_length": 400000,
+                },
+                {
+                    "id": "mistral/mistral-large-latest",
+                    "owned_by": "mistral",
+                    "context_length": 131072,
+                },
+            ],
+        }
+        mock_get.return_value = mock_response
+
+        models = get_edenai_models(api_key="test-key", model_type="language")
+
+        assert len(models) == 2
+        assert all(isinstance(m, Model) for m in models)
+        assert models[0].id == "openai/gpt-5.5"
+        assert models[0].owned_by == "openai"
+        assert models[0].context_window == 400000
+        assert models[0].type == "language"
+        assert mock_get.call_args.args[0] == "https://api.edenai.run/v3/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_queries_both_listings(self, mock_get):
+        """Language and embedding models live on two separate endpoints.
+
+        openai/text-embedding-3-small is absent from /v3/models and present on
+        /v3/embeddings/models, so a single call to the former cannot discover
+        the advertised default embedding model.
+        """
+        language_response = MagicMock()
+        language_response.status_code = 200
+        language_response.json.return_value = {
+            "data": [
+                {
+                    "id": "openai/gpt-5.5",
+                    "owned_by": "openai",
+                    "context_length": 400000,
+                }
+            ]
+        }
+        embedding_response = MagicMock()
+        embedding_response.status_code = 200
+        embedding_response.json.return_value = {
+            "data": [
+                {
+                    "id": "openai/text-embedding-3-small",
+                    "owned_by": "openai",
+                }
+            ]
+        }
+        mock_get.side_effect = [language_response, embedding_response]
+
+        models = get_edenai_models(api_key="test-key")
+
+        assert [call.args[0] for call in mock_get.call_args_list] == [
+            "https://api.edenai.run/v3/models",
+            "https://api.edenai.run/v3/embeddings/models",
+        ]
+        assert {m.id: m.type for m in models} == {
+            "openai/gpt-5.5": "language",
+            "openai/text-embedding-3-small": "embedding",
+        }
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_embedding_only(self, mock_get):
+        """model_type='embedding' hits the embeddings listing and nothing else."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [{"id": "openai/text-embedding-3-small", "owned_by": "openai"}]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_edenai_models(api_key="test-key", model_type="embedding")
+
+        assert mock_get.call_count == 1
+        assert (
+            mock_get.call_args.args[0]
+            == "https://api.edenai.run/v3/embeddings/models"
+        )
+        assert models[0].type == "embedding"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_without_api_key(self, mock_get):
+        """The Eden AI model listings are public, so no key is required."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        models = get_edenai_models()
+
+        assert models == []
+        assert "Authorization" not in mock_get.call_args.kwargs["headers"]
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_eu_base_url_param(self, mock_get):
+        """Test that explicit base_url can target the EU endpoint."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_edenai_models(
+            api_key="test-key",
+            base_url="https://api.eu.edenai.run/v3",
+        )
+
+        assert [call.args[0] for call in mock_get.call_args_list] == [
+            "https://api.eu.edenai.run/v3/models",
+            "https://api.eu.edenai.run/v3/embeddings/models",
+        ]
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_eu_base_url_env(self, mock_get):
+        """EDENAI_BASE_URL switches both listings to the EU endpoint."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        with patch.dict(
+            os.environ, {"EDENAI_BASE_URL": "https://api.eu.edenai.run/v3"}
+        ):
+            get_edenai_models(api_key="test-key")
+
+        assert [call.args[0] for call in mock_get.call_args_list] == [
+            "https://api.eu.edenai.run/v3/models",
+            "https://api.eu.edenai.run/v3/embeddings/models",
+        ]
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_strips_trailing_slash(self, mock_get):
+        """Test that trailing slash is stripped from base_url."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_edenai_models(
+            api_key="test-key",
+            base_url="https://api.edenai.run/v3/",
+            model_type="language",
+        )
+
+        assert mock_get.call_args.args[0] == "https://api.edenai.run/v3/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_edenai_models_missing_context_length(self, mock_get):
+        """A model without context_length yields context_window None."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [{"id": "ionos/openai/gpt-oss-120b", "owned_by": "ionos"}]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_edenai_models(api_key="test-key", model_type="language")
+
+        assert len(models) == 1
+        assert models[0].context_window is None
+        assert models[0].owned_by == "ionos"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_factory_filters_edenai_by_model_type(self, mock_get):
+        """AIFactory.get_provider_models forwards model_type to Eden AI."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [{"id": "openai/text-embedding-3-small", "owned_by": "openai"}]
+        }
+        mock_get.return_value = mock_response
+
+        models = AIFactory.get_provider_models("edenai", model_type="embedding")
+
+        assert mock_get.call_count == 1
+        assert (
+            mock_get.call_args.args[0]
+            == "https://api.edenai.run/v3/embeddings/models"
+        )
+        assert [m.type for m in models] == ["embedding"]
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_factory_filters_edenai_by_model_type_on_eu_endpoint(self, mock_get):
+        """The same filtering holds when the EU base URL is supplied."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [{"id": "mistral/mistral-embed", "owned_by": "mistral"}]
+        }
+        mock_get.return_value = mock_response
+
+        models = AIFactory.get_provider_models(
+            "edenai",
+            model_type="embedding",
+            base_url="https://api.eu.edenai.run/v3",
+        )
+
+        assert (
+            mock_get.call_args.args[0]
+            == "https://api.eu.edenai.run/v3/embeddings/models"
+        )
+        assert [m.id for m in models] == ["mistral/mistral-embed"]
 
 
 class TestSiliconFlowDiscovery:

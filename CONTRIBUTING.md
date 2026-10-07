@@ -164,6 +164,7 @@ Each release-gated test class is `skipif`-gated on the env vars its provider nee
 | MiniMax | `MINIMAX_API_KEY` |
 | SiliconFlow | `SILICONFLOW_API_KEY` |
 | Z.ai | `ZAI_API_KEY` |
+| Eden AI | `EDENAI_API_KEY`; optional `EDENAI_BASE_URL` to target the EU endpoint |
 | DashScope (Qwen) | `DASHSCOPE_API_KEY` |
 | Jina | `JINA_API_KEY` |
 | Voyage | `VOYAGE_API_KEY` |

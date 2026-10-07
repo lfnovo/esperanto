@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Eden AI built-in profile.** Eden AI is now available as an
+  OpenAI-compatible profile serving language and embedding, via
+  `AIFactory.create_language("edenai", "openai/gpt-5.5")` and
+  `AIFactory.create_embedding("edenai", "openai/text-embedding-3-small")` with
+  `EDENAI_API_KEY`. Eden AI is a French company and the gateway runs on EU
+  infrastructure; two endpoints share the same API surface and the same key, the
+  default `https://api.edenai.run/v3` and `https://api.eu.edenai.run/v3`, which
+  keeps inference inside the EU and serves only the subset of the catalog
+  available there. Set `EDENAI_BASE_URL` to switch. Discovery covers both
+  declared modalities: language models come from `/v3/models` and embedding
+  models from `/v3/embeddings/models`, which do not overlap, so
+  `AIFactory.get_provider_models("edenai", model_type="embedding")` reaches the
+  default embedding model. Neither listing requires a key. Closes #264.
+
 ## [2.28.0] - 2026-10-03
 
 ### Added

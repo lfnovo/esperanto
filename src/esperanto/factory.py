@@ -262,7 +262,7 @@ class AIFactory:
         discovery_func = PROVIDER_MODELS_REGISTRY[provider]
 
         # Providers with multi-modality discovery use model_type for filtering.
-        if provider in {"openai", "minimax"} and model_type is not None:
+        if provider in {"openai", "minimax", "edenai"} and model_type is not None:
             config["model_type"] = model_type
 
         # Call the discovery function with config
