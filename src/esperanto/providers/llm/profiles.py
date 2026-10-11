@@ -208,6 +208,17 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         owned_by="oMLX",
         display_name="oMLX",
     ),
+    "litellm": OpenAICompatibleProfile(
+        name="litellm",
+        base_url="http://localhost:4000/v1",
+        api_key_env="LITELLM_API_KEY",
+        base_url_env="LITELLM_BASE_URL",
+        capabilities={"language", "embedding"},
+        default_models={},  # model names are aliases from the proxy config
+        requires_api_key=False,
+        owned_by="LiteLLM",
+        display_name="LiteLLM",
+    ),
 }
 
 _USER_PROFILES: Dict[str, OpenAICompatibleProfile] = {}
