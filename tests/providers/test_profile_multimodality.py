@@ -349,6 +349,46 @@ class TestOmlxProfile:
         assert model.base_url == "http://localhost:9999/v1"
 
 
+class TestLiteLLMProfile:
+    def test_litellm_language_and_embedding_without_key(self, monkeypatch):
+        for var in ("LITELLM_API_KEY", "LITELLM_BASE_URL"):
+            monkeypatch.delenv(var, raising=False)
+        llm = AIFactory.create_language("litellm", "gpt-6-luna")
+        emb = AIFactory.create_embedding("litellm", "text-embedding-3-large")
+        assert llm.api_key == "not-required"
+        assert emb.api_key == "not-required"
+        assert llm.base_url == "http://localhost:4000/v1"
+        assert emb.base_url == "http://localhost:4000/v1"
+        assert llm.provider == "litellm"
+        assert emb.provider == "litellm"
+
+    def test_litellm_uses_api_key_when_set(self, monkeypatch):
+        monkeypatch.setenv("LITELLM_API_KEY", "sk-proxy-key")
+        model = AIFactory.create_language("litellm", "gpt-6-luna")
+        assert model.api_key == "sk-proxy-key"
+
+    def test_litellm_audio_modalities_unsupported(self, monkeypatch):
+        monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+        with pytest.raises(ProviderCapabilityError):
+            AIFactory.create_speech_to_text("litellm", "x")
+        with pytest.raises(ProviderCapabilityError):
+            AIFactory.create_text_to_speech("litellm", "x")
+
+    def test_litellm_no_default_requires_model(self, monkeypatch):
+        monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+        with pytest.raises(ValueError, match="no default model"):
+            AIFactory.create_embedding("litellm", None)
+        llm = AIFactory.create_language("litellm", None)
+        with pytest.raises(ValueError, match="no default model"):
+            llm.get_model_name()
+
+    def test_litellm_base_url_override(self, monkeypatch):
+        monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+        monkeypatch.setenv("LITELLM_BASE_URL", "http://proxy.internal:8080/v1")
+        model = AIFactory.create_language("litellm", "gpt-6-luna")
+        assert model.base_url == "http://proxy.internal:8080/v1"
+
+
 class TestHybridProvider:
     def test_xai_tts_falls_through_to_first_class(self, monkeypatch):
         monkeypatch.setenv("XAI_API_KEY", "test-key")

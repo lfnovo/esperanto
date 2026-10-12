@@ -24,6 +24,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Novita](./openai-compatible.md)* | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Z.ai](./zai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [oMLX](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
+| [LiteLLM](./openai-compatible.md)* | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️* |
 | [OpenRouter](./openrouter.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [PayPerQ (PPQ)](./ppq.md) | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | [Transformers](./transformers.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -37,6 +38,8 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 *Novita is available as a built-in OpenAI-compatible LLM profile. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY`. See [OpenAI-Compatible](./openai-compatible.md) for the shared setup path.
 
 *oMLX is a built-in OpenAI-compatible profile for the local [oMLX](https://github.com/madroidmaq/omlx) MLX server (language + embedding, no API key). Use `AIFactory.create_language("omlx", "<your-model>")`; base URL defaults to `http://localhost:11435/v1` (override via `OMLX_API_BASE`). See [OpenAI-Compatible](./openai-compatible.md).
+
+*LiteLLM is a built-in OpenAI-compatible profile for a [LiteLLM proxy](https://docs.litellm.ai/docs/simple_proxy) (language + embedding, API key optional). Use `AIFactory.create_language("litellm", "gpt-6-luna")`; the model name is an alias from your proxy config. Base URL defaults to `http://localhost:4000/v1` (override via `LITELLM_BASE_URL`); set `LITELLM_API_KEY` if your proxy uses a master or virtual key. See [OpenAI-Compatible](./openai-compatible.md).
 
 ## Quick Selection Guide
 
@@ -64,6 +67,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[OpenAI-Compatible](./openai-compatible.md)**: Connect to local LM Studio, vLLM, or Ollama
 
 **Self-Hosted Options:**
+- **[LiteLLM](./openai-compatible.md)**: LLM + Embedding through a self-hosted LiteLLM proxy. Locality, privacy and cost depend on the upstream models that the proxy routes to.
 - **[Azure OpenAI](./azure.md)**: Private cloud deployment
 - **[Vertex AI](./vertex.md)**: Google Cloud with VPC/security controls
 
@@ -348,6 +352,7 @@ Require API keys, pay-per-use:
 Enterprise features, private deployment:
 - [Azure OpenAI](./azure.md)
 - [Vertex AI](./vertex.md)
+- [LiteLLM](./openai-compatible.md) (self-hosted proxy in front of local or cloud models, OpenAI-compatible profile)
 
 ### Local/Self-Hosted Providers
 

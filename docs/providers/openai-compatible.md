@@ -95,8 +95,7 @@ model = AIFactory.create_language("my-company", "llama-3-70b")
 response = model.chat_complete(messages)
 ```
 
-Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, **Novita**, and **Z.ai**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile, or `AIFactory.create_language("zai", "glm-5.2")` with `ZAI_API_KEY` for the built-in Z.ai profile.
-Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, **Novita**, **PayPerQ (PPQ)**, and **oMLX**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile.
+Several OpenAI-compatible providers are already registered as built-in profiles: **DeepSeek**, **xAI**, **DashScope** (Qwen), **MiniMax**, **Novita**, **Z.ai**, **PayPerQ (PPQ)**, **oMLX**, and **LiteLLM**. Use `AIFactory.create_language("novita", "moonshotai/kimi-k2.5")` with `NOVITA_API_KEY` for the built-in Novita profile, or `AIFactory.create_language("zai", "glm-5.2")` with `ZAI_API_KEY` for the built-in Z.ai profile.
 
 ### Multi-Modality Profiles
 
@@ -145,6 +144,13 @@ Notes:
   base URL `http://localhost:11435/v1`, override via `OMLX_API_BASE`) uses this.
   It sets no default models, so pass a `model_name` for whatever MLX model you
   have loaded.
+- **LiteLLM proxy.** The built-in **LiteLLM** profile (`litellm`,
+  `capabilities={"language", "embedding"}`, `requires_api_key=False`) targets a
+  [LiteLLM proxy](https://docs.litellm.ai/docs/simple_proxy). The base URL
+  defaults to `http://localhost:4000/v1` and can be overridden via
+  `LITELLM_BASE_URL`. Set `LITELLM_API_KEY` when the proxy enforces a master or
+  virtual key. The profile sets no default models: pass the model alias from your
+  proxy config, for example `AIFactory.create_language("litellm", "gpt-6-luna")`.
 
 ## Quick Start
 

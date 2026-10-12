@@ -60,6 +60,7 @@ class TestProfileRegistry:
         assert "siliconflow" in BUILTIN_PROFILES
         assert "xai" in BUILTIN_PROFILES
         assert "novita" in BUILTIN_PROFILES
+        assert "litellm" in BUILTIN_PROFILES
 
     def test_get_builtin_profile(self):
         profile = get_profile("deepseek")

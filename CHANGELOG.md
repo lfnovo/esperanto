@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **LiteLLM built-in profile.** New OpenAI-compatible profile (`litellm`) for a
+  [LiteLLM proxy](https://docs.litellm.ai/docs/simple_proxy), serving `language`
+  and `embedding`. The base URL defaults to `http://localhost:4000/v1`; override
+  it with `LITELLM_BASE_URL`. `LITELLM_API_KEY` is optional (`requires_api_key=False`).
+  The profile sets no default models, so pass a model alias from your proxy
+  config.
+
 ## [2.28.0] - 2026-10-03
 
 ### Added
