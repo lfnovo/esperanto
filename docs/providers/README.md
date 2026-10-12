@@ -64,10 +64,10 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[Ollama](./ollama.md)**: LLM + Embedding (simple setup, no API costs)
 - **[Transformers](./transformers.md)**: Embedding + Reranking (100+ models, offline)
 - **[oMLX](./openai-compatible.md)**: LLM + Embedding on Apple Silicon (MLX, no API key)
-- **[LiteLLM](./openai-compatible.md)**: LLM + Embedding through a self-hosted LiteLLM proxy
 - **[OpenAI-Compatible](./openai-compatible.md)**: Connect to local LM Studio, vLLM, or Ollama
 
 **Self-Hosted Options:**
+- **[LiteLLM](./openai-compatible.md)**: LLM + Embedding through a self-hosted LiteLLM proxy. Locality, privacy and cost depend on the upstream models that the proxy routes to.
 - **[Azure OpenAI](./azure.md)**: Private cloud deployment
 - **[Vertex AI](./vertex.md)**: Google Cloud with VPC/security controls
 
@@ -352,6 +352,7 @@ Require API keys, pay-per-use:
 Enterprise features, private deployment:
 - [Azure OpenAI](./azure.md)
 - [Vertex AI](./vertex.md)
+- [LiteLLM](./openai-compatible.md) (self-hosted proxy in front of local or cloud models, OpenAI-compatible profile)
 
 ### Local/Self-Hosted Providers
 
@@ -359,7 +360,6 @@ No API costs, privacy-focused:
 - [Ollama](./ollama.md)
 - [Transformers](./transformers.md)
 - [oMLX](./openai-compatible.md) (Apple Silicon MLX, OpenAI-compatible profile)
-- [LiteLLM](./openai-compatible.md) (self-hosted proxy, OpenAI-compatible profile)
 - [OpenAI-Compatible](./openai-compatible.md)
 
 ## Next Steps
