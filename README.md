@@ -47,6 +47,7 @@ Whether you're building a quick prototype or a production application serving mi
   - Mistral (Mistral Large, Small, Embedding, etc.)
   - DeepSeek (deepseek-chat)
   - SiliconFlow (DeepSeek, Qwen, and other OpenAI-compatible models)
+  - AIHubMix (gateway access to OpenAI, Anthropic, Google, and other vendors)
   - DashScope / Qwen (qwen-turbo, qwen-plus, qwen-max)
   - MiniMax (MiniMax-M3 with 1M context, Text-to-Speech)
   - Z.ai (GLM models: glm-5.2, glm-4.5-flash)
@@ -153,6 +154,7 @@ pip install "langchain-mistralai>=1.1.1,<2.0.0"
 | Mistral      | ✅          | ✅               | ❌                | ❌             | ❌             | ✅        |
 | DeepSeek     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | SiliconFlow  | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
+| AIHubMix     | ✅          | ❌               | ❌                | ❌             | ❌             | ✅        |
 | Voyage       | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Jina         | ❌          | ✅               | ✅                | ❌             | ❌             | ❌        |
 | Cohere       | ✅          | ✅               | ✅                | ❌             | ❌             | ✅        |
@@ -181,7 +183,7 @@ providers = AIFactory.get_available_providers()
 print(providers)
 # Output:
 # {
-#     'language': ['anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'siliconflow', 'vertex', 'xai', 'zai'],
+#     'language': ['aihubmix', 'anthropic', 'azure', 'cohere', 'dashscope', 'deepseek', 'google', 'groq', 'minimax', 'mistral', 'ollama', 'openai', 'openai-compatible', 'openrouter', 'perplexity', 'ppq', 'siliconflow', 'vertex', 'xai', 'zai'],
 #     'embedding': ['openai', 'openai-compatible', 'google', 'ollama', 'vertex', 'transformers', 'voyage', 'mistral', 'azure', 'jina', 'openrouter', 'cohere'],
 #     'reranker': ['jina', 'voyage', 'transformers', 'cohere'],
 #     'speech_to_text': ['openai', 'groq', 'elevenlabs', 'openai-compatible', 'azure', 'google', 'mistral', 'deepgram'],

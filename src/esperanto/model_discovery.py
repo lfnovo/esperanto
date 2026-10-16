@@ -706,6 +706,74 @@ def get_siliconflow_models(
         raise RuntimeError(f"Failed to fetch SiliconFlow models: {e}")
 
 
+def get_aihubmix_models(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> List[Model]:
+    """Get available models from AIHubMix.
+
+    Args:
+        api_key: AIHubMix API key (or AIHUBMIX_API_KEY env var)
+        base_url: Base URL for API (default: https://aihubmix.com/v1)
+
+    Returns:
+        List of available models
+
+    Raises:
+        ValueError: If API key is not provided
+        RuntimeError: If API request fails
+    """
+    api_key = api_key or os.getenv("AIHUBMIX_API_KEY")
+    if not api_key:
+        raise ValueError("AIHubMix API key not found. Provide api_key or set AIHUBMIX_API_KEY environment variable.")
+
+    base_url = (
+        base_url or os.getenv("AIHUBMIX_BASE_URL") or "https://aihubmix.com/v1"
+    ).rstrip("/")
+
+    cache_key = _create_cache_key("aihubmix", api_key=api_key, base_url=base_url)
+    cached_models = _model_cache.get(cache_key)
+    if cached_models is not None:
+        return cached_models
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = httpx.get(
+            f"{base_url}/models",
+            headers=headers,
+            timeout=60.0
+        )
+
+        if response.status_code >= 400:
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
+            except Exception:
+                error_message = f"HTTP {response.status_code}: {response.text}"
+            raise RuntimeError(f"AIHubMix API error: {error_message}")
+
+        models_data = response.json()
+
+        all_models = []
+        for model in models_data.get("data", []):
+            all_models.append(Model(
+                id=model["id"],
+                owned_by=model.get("owned_by") or "AIHubMix",
+                context_window=model.get("context_window", None),
+            ))
+
+        _model_cache.set(cache_key, all_models)
+
+        return all_models
+
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"Failed to fetch AIHubMix models: {e}")
+
+
 def get_openrouter_models(
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
@@ -1236,6 +1304,7 @@ PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
     "groq": get_groq_models,
     "deepseek": get_deepseek_models,
     "siliconflow": get_siliconflow_models,
+    "aihubmix": get_aihubmix_models,
     "ollama": get_ollama_models,
     "openrouter": get_openrouter_models,
     "xai": get_xai_models,

@@ -627,6 +627,29 @@ Passing `extra_body=None` or `extra_body={}` at call time leaves the instance-le
 
 If you pass any of these inside `extra_body`, they are dropped with a debug log. Use the dedicated arguments instead.
 
+### Sending Custom Headers
+
+Some OpenAI-compatible providers recognize optional custom HTTP headers — for example, a channel/app attribution code used for discount or usage tracking. You can send these via `extra_headers`, configured at the instance level:
+
+```python
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_language(
+    "openai-compatible",
+    "my-model",
+    config={
+        "base_url": "http://localhost:8000/v1",
+        "extra_headers": {"X-App-Code": "my-app-code"},
+    },
+)
+
+response = model.chat_complete(messages)  # X-App-Code included on every request
+```
+
+Unlike `extra_body`, `extra_headers` is instance-level only — there is no per-call override, since custom headers like these are static identifiers rather than values that vary per request.
+
+**Reserved keys** — `Authorization` and `Content-Type` (matched case-insensitively) are stripped from `extra_headers` before merging, because they are derived from first-class state (`api_key`, the JSON payload) and allowing an override would desync the wire request from that state. If you pass either of these inside `extra_headers`, it is dropped with a debug log.
+
 ### Multi-Endpoint Configuration
 
 Use different endpoints for different capabilities:

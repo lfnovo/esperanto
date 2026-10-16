@@ -17,6 +17,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Mistral](./mistral.md) | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | [DeepSeek](./deepseek.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [SiliconFlow](./siliconflow.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| [AIHubMix](./aihubmix.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [Perplexity](./perplexity.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | [xAI](./xai.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | [DashScope (Qwen)](./dashscope.md) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -83,6 +84,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 - **[OpenAI-Compatible](./openai-compatible.md)**: Free (local deployment)
 - **[DeepSeek](./deepseek.md)**: Low API costs, strong performance
 - **[SiliconFlow](./siliconflow.md)**: Cost-effective access to DeepSeek, Qwen, and other models
+- **[AIHubMix](./aihubmix.md)**: Gateway access to OpenAI, Anthropic, Google, and other vendors, single key
 - **[OpenRouter](./openrouter.md)**: Compare prices across providers, some free models
 
 **Good Value:**
@@ -119,6 +121,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 
 **Multiple Models Access:**
 - **[OpenRouter](./openrouter.md)**: Hundreds of models from many providers
+- **[AIHubMix](./aihubmix.md)**: OpenAI, Anthropic, Google, and other vendors' models behind one key
 - **[Novita](./openai-compatible.md)**: 200+ open-source models (OpenAI-compatible profile)
 - **[PayPerQ (PPQ)](./ppq.md)**: hundreds of models across LLM/embedding/STT/TTS, pay-as-you-go with one key
 
@@ -217,6 +220,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Mistral](./mistral.md) | ✅ | ✅ | ✅ | 128K |
 | [DeepSeek](./deepseek.md) | ✅ | ✅ | ✅ | 64K |
 | [SiliconFlow](./siliconflow.md) | ✅ | ✅ | ✅ | Model-dependent |
+| [AIHubMix](./aihubmix.md) | ✅ | ✅ | ✅ | Model-dependent |
 | [Perplexity](./perplexity.md) | ✅ | ✅ | ✅ | 127K-200K |
 | [xAI](./xai.md) | ✅ | ❌ | ✅ | 128K |
 | [DashScope](./dashscope.md) | ✅ | ✅ | ✅ | 1M (qwen-max-longcontext) |
@@ -330,6 +334,7 @@ Require API keys, pay-per-use:
 - [Mistral](./mistral.md)
 - [DeepSeek](./deepseek.md)
 - [SiliconFlow](./siliconflow.md)
+- [AIHubMix](./aihubmix.md)
 - [DashScope (Qwen)](./dashscope.md)
 - [MiniMax](./minimax.md)
 - [Perplexity](./perplexity.md)

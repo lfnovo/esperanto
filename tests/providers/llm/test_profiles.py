@@ -58,6 +58,7 @@ class TestProfileRegistry:
     def test_builtin_profiles_exist(self):
         assert "deepseek" in BUILTIN_PROFILES
         assert "siliconflow" in BUILTIN_PROFILES
+        assert "aihubmix" in BUILTIN_PROFILES
         assert "xai" in BUILTIN_PROFILES
         assert "novita" in BUILTIN_PROFILES
 
@@ -78,6 +79,16 @@ class TestProfileRegistry:
         assert profile.base_url_env == "SILICONFLOW_BASE_URL"
         assert profile.default_model_for("language") == "deepseek-ai/DeepSeek-V3.1-Terminus"
         assert profile.display_name == "SiliconFlow"
+
+    def test_get_aihubmix_profile(self):
+        profile = get_profile("aihubmix")
+        assert profile is not None
+        assert profile.name == "aihubmix"
+        assert profile.base_url == "https://aihubmix.com/v1"
+        assert profile.api_key_env == "AIHUBMIX_API_KEY"
+        assert profile.base_url_env == "AIHUBMIX_BASE_URL"
+        assert profile.default_model_for("language") == "gpt-4o-mini"
+        assert profile.display_name == "AIHubMix"
 
     def test_get_xai_profile(self):
         profile = get_profile("xai")
@@ -171,6 +182,7 @@ class TestProfileRegistry:
         names = get_all_profile_names()
         assert "deepseek" in names
         assert "siliconflow" in names
+        assert "aihubmix" in names
         assert "xai" in names
         assert "novita" in names
 
@@ -203,6 +215,14 @@ class TestFactoryIntegration:
         )
         assert model.provider == "siliconflow"
         assert model.base_url == "https://api.siliconflow.com/v1"
+        assert model.api_key == "test-key"
+
+    def test_create_language_with_aihubmix_profile(self):
+        model = AIFactory.create_language(
+            "aihubmix", "gpt-4o-mini", config={"api_key": "test-key"}
+        )
+        assert model.provider == "aihubmix"
+        assert model.base_url == "https://aihubmix.com/v1"
         assert model.api_key == "test-key"
 
     def test_create_language_with_xai_profile(self):
@@ -243,6 +263,7 @@ class TestFactoryIntegration:
         providers = AIFactory.get_available_providers()
         assert "deepseek" in providers["language"]
         assert "siliconflow" in providers["language"]
+        assert "aihubmix" in providers["language"]
         assert "xai" in providers["language"]
         assert "novita" in providers["language"]
         # Class-based providers also present
@@ -279,6 +300,12 @@ class TestProfileBehavior:
         )
         assert model._get_default_model() == "deepseek-ai/DeepSeek-V3.1-Terminus"
 
+    def test_aihubmix_default_model(self):
+        model = AIFactory.create_language(
+            "aihubmix", "gpt-4o-mini", config={"api_key": "test-key"}
+        )
+        assert model._get_default_model() == "gpt-4o-mini"
+
     def test_xai_default_model(self):
         model = AIFactory.create_language(
             "xai", "grok-2-latest", config={"api_key": "test-key"}
@@ -293,6 +320,11 @@ class TestProfileBehavior:
     def test_siliconflow_env_var_api_key(self):
         with patch.dict(os.environ, {"SILICONFLOW_API_KEY": "env-key"}, clear=False):
             model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
+            assert model.api_key == "env-key"
+
+    def test_aihubmix_env_var_api_key(self):
+        with patch.dict(os.environ, {"AIHUBMIX_API_KEY": "env-key"}, clear=False):
+            model = AIFactory.create_language("aihubmix", "gpt-4o-mini")
             assert model.api_key == "env-key"
 
     def test_xai_env_var_api_key(self):
@@ -320,6 +352,18 @@ class TestProfileBehavior:
         ):
             model = AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
             assert model.base_url == "https://api.siliconflow.cn/v1"
+
+    def test_aihubmix_env_var_base_url(self):
+        with patch.dict(
+            os.environ,
+            {
+                "AIHUBMIX_API_KEY": "key",
+                "AIHUBMIX_BASE_URL": "https://custom.aihubmix.com/v1",
+            },
+            clear=False,
+        ):
+            model = AIFactory.create_language("aihubmix", "gpt-4o-mini")
+            assert model.base_url == "https://custom.aihubmix.com/v1"
 
     def test_config_overrides_profile_defaults(self):
         model = AIFactory.create_language(
@@ -352,6 +396,11 @@ class TestProfileBehavior:
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="SiliconFlow API key not found"):
                 AIFactory.create_language("siliconflow", "deepseek-ai/DeepSeek-V3.1-Terminus")
+
+    def test_missing_aihubmix_api_key_raises_with_provider_name(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="AIHubMix API key not found"):
+                AIFactory.create_language("aihubmix", "gpt-4o-mini")
 
     def test_missing_xai_api_key_raises_with_provider_name(self):
         with patch.dict(os.environ, {}, clear=True):

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **AIHubMix provider.** New built-in OpenAI-compatible profile (`aihubmix`)
+  for AIHubMix's gateway, which proxies models from OpenAI, Anthropic, Google,
+  and other upstream vendors behind a single API key. Static model discovery
+  is available via `AIFactory.get_provider_models("aihubmix")`. Configure with
+  `AIHUBMIX_API_KEY`; override the endpoint with `AIHUBMIX_BASE_URL` (default:
+  `https://aihubmix.com/v1`).
+- **`extra_headers` passthrough on `OpenAICompatibleLanguageModel`** —
+  instance-level via `config={"extra_headers": {...}}`, merged on top of the
+  base `Authorization`/`Content-Type` headers on every request this model
+  instance makes (chat completions, streaming, and model discovery). Added to
+  support AIHubMix's optional `APP-Code` header (channel/app attribution and
+  discount), but the mechanism is generic — any provider built on
+  `OpenAICompatibleLanguageModel` can use it. Unlike `extra_body`, there is no
+  per-call override: custom headers like these are static instance identifiers,
+  not values that vary per request. `Authorization` and `Content-Type` are
+  reserved (matched case-insensitively) and silently stripped if present in
+  `extra_headers`, since they are derived from first-class state (`api_key`,
+  the JSON payload) and an override would desync the wire request from that
+  state. Scoped to the openai-compatible class only; first-class providers and
+  the static `model_discovery.py` functions are unaffected.
+
 ## [2.28.0] - 2026-10-03
 
 ### Added

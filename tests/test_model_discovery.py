@@ -14,6 +14,7 @@ from esperanto.model_discovery import (
     PROVIDER_MODELS_REGISTRY,
     _create_cache_key,
     _model_cache,
+    get_aihubmix_models,
     get_anthropic_models,
     get_cohere_models,
     get_google_models,
@@ -565,6 +566,104 @@ class TestSiliconFlowDiscovery:
         assert mock_get.call_args.args[0] == "https://api.siliconflow.cn/v1/models"
 
 
+class TestAIHubMixDiscovery:
+    """Test AIHubMix model discovery."""
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_aihubmix_models_success(self, mock_get):
+        """Test successful AIHubMix model discovery."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"id": "gpt-4o-mini", "owned_by": "OpenAI"},
+                {"id": "claude-sonnet-5", "owned_by": "Anthropic"},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_aihubmix_models(api_key="test-key")
+
+        assert len(models) == 2
+        assert all(isinstance(m, Model) for m in models)
+        assert models[0].id == "gpt-4o-mini"
+        assert mock_get.call_args.args[0] == "https://aihubmix.com/v1/models"
+
+    def test_get_aihubmix_models_no_api_key(self):
+        """Test that ValueError is raised when API key is missing."""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="AIHubMix API key not found"):
+                get_aihubmix_models()
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_aihubmix_models_base_url_param(self, mock_get):
+        """Test that explicit base_url overrides the default."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_aihubmix_models(
+            api_key="test-key",
+            base_url="https://custom.aihubmix.com/v1",
+        )
+
+        assert mock_get.call_args.args[0] == "https://custom.aihubmix.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_aihubmix_models_strips_trailing_slash(self, mock_get):
+        """Test that trailing slash is stripped from base_url."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        get_aihubmix_models(
+            api_key="test-key",
+            base_url="https://aihubmix.com/v1/",
+        )
+
+        assert mock_get.call_args.args[0] == "https://aihubmix.com/v1/models"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_aihubmix_models_empty_owned_by_falls_back(self, mock_get):
+        """Test empty owned_by values fall back to the provider owner."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [{"id": "some-model", "owned_by": ""}]
+        }
+        mock_get.return_value = mock_response
+
+        models = get_aihubmix_models(api_key="test-key")
+
+        assert models[0].owned_by == "AIHubMix"
+
+    @patch("esperanto.model_discovery.httpx.get")
+    def test_get_aihubmix_models_base_url_from_env(self, mock_get):
+        """Test that AIHUBMIX_BASE_URL is used when no explicit base_url is given."""
+        _model_cache.clear()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        with patch.dict(
+            os.environ,
+            {
+                "AIHUBMIX_API_KEY": "env-key",
+                "AIHUBMIX_BASE_URL": "https://custom.aihubmix.com/v1",
+            },
+        ):
+            get_aihubmix_models()
+
+        assert mock_get.call_args.args[0] == "https://custom.aihubmix.com/v1/models"
+
+
 class TestMiniMaxDiscovery:
     """Test MiniMax language and TTS model discovery."""
 
@@ -608,7 +707,7 @@ class TestProviderRegistry:
         """Test that registry has entries for all supported providers."""
         expected_providers = [
             "openai", "openai-compatible", "anthropic", "google", "vertex", "mistral",
-            "groq", "deepseek", "siliconflow", "ollama", "openrouter", "xai",
+            "groq", "deepseek", "siliconflow", "aihubmix", "ollama", "openrouter", "xai",
             "perplexity", "jina", "voyage", "azure", "transformers", "minimax"
         ]
 

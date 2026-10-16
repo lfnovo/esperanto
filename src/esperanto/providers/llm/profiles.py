@@ -134,6 +134,15 @@ BUILTIN_PROFILES: Dict[str, OpenAICompatibleProfile] = {
         owned_by="SiliconFlow",
         display_name="SiliconFlow",
     ),
+    "aihubmix": OpenAICompatibleProfile(
+        name="aihubmix",
+        base_url="https://aihubmix.com/v1",
+        api_key_env="AIHUBMIX_API_KEY",
+        base_url_env="AIHUBMIX_BASE_URL",
+        default_models={"language": "gpt-4o-mini"},
+        owned_by="AIHubMix",
+        display_name="AIHubMix",
+    ),
     "xai": OpenAICompatibleProfile(
         name="xai",
         base_url="https://api.x.ai/v1",

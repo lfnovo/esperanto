@@ -929,3 +929,193 @@ class TestExtraBody:
         assert len(payload["tools"]) == 1
         assert payload["tools"][0]["function"]["name"] == "get_weather"
         assert payload["top_k"] == 40
+
+
+class TestExtraHeaders:
+    """Tests for extra_headers passthrough via config={"extra_headers": {...}}."""
+
+    MESSAGES = [{"role": "user", "content": "hi"}]
+
+    def _model(self, **kwargs):
+        return OpenAICompatibleLanguageModel(
+            api_key="test-key",
+            base_url="http://localhost:8080",
+            **kwargs,
+        )
+
+    # ------------------------------------------------------------------ #
+    # Sync                                                                 #
+    # ------------------------------------------------------------------ #
+
+    def test_instance_extra_headers_sent_in_request(self):
+        """Instance-level extra_headers appear in the outgoing request headers."""
+        model = self._model(config={"extra_headers": {"APP-Code": "my-app"}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        headers = model.client.post.call_args[1]["headers"]
+        assert headers["APP-Code"] == "my-app"
+        assert headers["Authorization"] == "Bearer test-key"
+        assert headers["Content-Type"] == "application/json"
+
+    def test_no_extra_headers_at_all(self):
+        """With no extra_headers configured, headers contain only the standard keys."""
+        model = self._model()
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        headers = model.client.post.call_args[1]["headers"]
+        assert headers == {
+            "Authorization": "Bearer test-key",
+            "Content-Type": "application/json",
+        }
+
+    def test_extra_headers_cannot_override_authorization(self):
+        """`Authorization` is reserved — extra_headers cannot desync wire auth from api_key."""
+        model = self._model(config={"extra_headers": {"Authorization": "Bearer fake"}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        headers = model.client.post.call_args[1]["headers"]
+        assert headers["Authorization"] == "Bearer test-key"
+
+    def test_extra_headers_cannot_override_authorization_case_insensitive(self):
+        """Reserved-key matching is case-insensitive."""
+        model = self._model(config={"extra_headers": {"authorization": "Bearer fake"}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        headers = model.client.post.call_args[1]["headers"]
+        assert headers["Authorization"] == "Bearer test-key"
+        assert "authorization" not in headers
+
+    def test_extra_headers_cannot_override_content_type(self):
+        """`Content-Type` is reserved — extra_headers cannot override it (any casing)."""
+        model = self._model(config={"extra_headers": {"content-type": "text/plain"}})
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        headers = model.client.post.call_args[1]["headers"]
+        assert headers["Content-Type"] == "application/json"
+        assert "content-type" not in headers
+
+    def test_extra_headers_coexist_with_extra_body(self):
+        """extra_headers and extra_body apply independently in the same request."""
+        model = self._model(
+            config={
+                "extra_headers": {"APP-Code": "my-app"},
+                "extra_body": {"top_k": 40},
+            }
+        )
+        mock_resp = _make_mock_response()
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        model.chat_complete(self.MESSAGES)
+
+        call_kwargs = model.client.post.call_args[1]
+        assert call_kwargs["headers"]["APP-Code"] == "my-app"
+        assert call_kwargs["json"]["top_k"] == 40
+
+    def test_streaming_sends_extra_headers(self):
+        """Streaming chat_complete includes configured extra_headers."""
+        model = self._model(config={"extra_headers": {"APP-Code": "my-app"}})
+
+        mock_resp = Mock()
+        mock_resp.status_code = 200
+        mock_resp.iter_text.return_value = iter([
+            'data: {"id":"c","choices":[{"index":0,"delta":{"content":"hi","role":"assistant"},"finish_reason":null}],"created":1,"model":"m"}\n',
+            "data: [DONE]\n",
+        ])
+        model.client = Mock()
+        model.client.post.return_value = mock_resp
+
+        gen = model.chat_complete(self.MESSAGES, stream=True)
+        list(gen)  # exhaust generator to ensure post was called
+
+        headers = model.client.post.call_args[1]["headers"]
+        assert headers["APP-Code"] == "my-app"
+
+    def test_get_models_sends_extra_headers(self):
+        """_get_models() reuses the same _get_headers() override as chat requests."""
+        model = self._model(config={"extra_headers": {"APP-Code": "my-app"}})
+
+        mock_resp = Mock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"data": []}
+        model.client = Mock()
+        model.client.get.return_value = mock_resp
+
+        model._get_models()
+
+        headers = model.client.get.call_args[1]["headers"]
+        assert headers["APP-Code"] == "my-app"
+
+    # ------------------------------------------------------------------ #
+    # Async                                                                #
+    # ------------------------------------------------------------------ #
+
+    @pytest.mark.asyncio
+    async def test_async_instance_extra_headers_sent_in_request(self):
+        """Async: instance-level extra_headers appear in the outgoing request headers."""
+        model = self._model(config={"extra_headers": {"APP-Code": "my-app"}})
+        mock_resp = _make_mock_response()
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        await model.achat_complete(self.MESSAGES)
+
+        headers = model.async_client.post.call_args[1]["headers"]
+        assert headers["APP-Code"] == "my-app"
+        assert headers["Authorization"] == "Bearer test-key"
+
+    @pytest.mark.asyncio
+    async def test_async_extra_headers_cannot_override_authorization(self):
+        """Async: `Authorization` is reserved on the async path too."""
+        model = self._model(config={"extra_headers": {"Authorization": "Bearer fake"}})
+        mock_resp = _make_mock_response()
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        await model.achat_complete(self.MESSAGES)
+
+        headers = model.async_client.post.call_args[1]["headers"]
+        assert headers["Authorization"] == "Bearer test-key"
+
+    @pytest.mark.asyncio
+    async def test_async_streaming_sends_extra_headers(self):
+        """Async streaming: configured extra_headers appear in the outgoing request headers."""
+        model = self._model(config={"extra_headers": {"APP-Code": "my-app"}})
+
+        mock_resp = Mock()
+        mock_resp.status_code = 200
+
+        async def _aiter():
+            yield 'data: {"id":"c","choices":[{"index":0,"delta":{"content":"hi","role":"assistant"},"finish_reason":null}],"created":1,"model":"m"}\n'
+            yield "data: [DONE]\n"
+
+        mock_resp.aiter_text = _aiter
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = mock_resp
+
+        gen = await model.achat_complete(self.MESSAGES, stream=True)
+        async for _ in gen:
+            pass
+
+        headers = model.async_client.post.call_args[1]["headers"]
+        assert headers["APP-Code"] == "my-app"

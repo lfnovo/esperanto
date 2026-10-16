@@ -140,6 +140,21 @@ model = AIFactory.create_language(
 
 → **[Full SiliconFlow Setup Guide](./providers/siliconflow.md)**
 
+#### AIHubMix
+```bash
+AIHUBMIX_API_KEY=...
+# Optional: AIHUBMIX_BASE_URL defaults to https://aihubmix.com/v1;
+# only set it if you're routing through a custom AIHubMix gateway endpoint.
+```
+
+```python
+from esperanto.factory import AIFactory
+
+model = AIFactory.create_language("aihubmix", "gpt-4o-mini")
+```
+
+→ **[Full AIHubMix Setup Guide](./providers/aihubmix.md)**
+
 #### Perplexity
 ```bash
 PERPLEXITY_API_KEY=...
