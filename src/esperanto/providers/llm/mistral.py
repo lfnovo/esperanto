@@ -374,16 +374,26 @@ class MistralLanguageModel(LanguageModel):
         if resolved_parallel is not None:
             payload["parallel_tool_calls"] = resolved_parallel
 
-        # Make HTTP request
+        if should_stream:
+            response = self._open_stream(
+                f"{self.base_url}/chat/completions", self._get_headers(), payload
+            )
+            def generate():
+                try:
+                    yield from (
+                        self._normalize_chunk(chunk_data)
+                        for chunk_data in self._parse_sse_stream(response)
+                    )
+                finally:
+                    response.close()
+            return generate()
+
         response = self.client.post(
             f"{self.base_url}/chat/completions",
             headers=self._get_headers(),
             json=payload
         )
         self._handle_error(response)
-
-        if should_stream:
-            return (self._normalize_chunk(chunk_data) for chunk_data in self._parse_sse_stream(response))
 
         response_data = response.json()
         result = self._normalize_response(response_data)
@@ -481,20 +491,25 @@ class MistralLanguageModel(LanguageModel):
         if resolved_parallel is not None:
             payload["parallel_tool_calls"] = resolved_parallel
 
-        # Make async HTTP request
+        if should_stream:
+            response = await self._aopen_stream(
+                f"{self.base_url}/chat/completions", self._get_headers(), payload
+            )
+            async def generate():
+                try:
+                    async for chunk_data in self._parse_sse_stream_async(response):
+                        yield self._normalize_chunk(chunk_data)
+                finally:
+                    await response.aclose()
+
+            return generate()
+
         response = await self.async_client.post(
             f"{self.base_url}/chat/completions",
             headers=self._get_headers(),
             json=payload
         )
         self._handle_error(response)
-
-        if should_stream:
-            async def generate():
-                async for chunk_data in self._parse_sse_stream_async(response):
-                    yield self._normalize_chunk(chunk_data)
-
-            return generate()
 
         response_data = response.json()
         result = self._normalize_response(response_data)

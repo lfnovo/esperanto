@@ -774,21 +774,26 @@ class AnthropicLanguageModel(LanguageModel):
             top_p=effective_top_p,
         )
 
-        # Make HTTP request
+        if should_stream:
+            response = self._open_stream(
+                f"{self.base_url}/messages", self._get_headers(), payload
+            )
+            def generate():
+                try:
+                    for event_data in self._parse_sse_stream(response):
+                        chunk = self._normalize_stream_event(event_data)
+                        if chunk:
+                            yield chunk
+                finally:
+                    response.close()
+            return generate()
+
         response = self.client.post(
             f"{self.base_url}/messages",
             headers=self._get_headers(),
             json=payload
         )
         self._handle_error(response)
-
-        if should_stream:
-            def generate():
-                for event_data in self._parse_sse_stream(response):
-                    chunk = self._normalize_stream_event(event_data)
-                    if chunk:
-                        yield chunk
-            return generate()
 
         response_data = response.json()
         result = self._normalize_response(response_data)
@@ -891,21 +896,26 @@ class AnthropicLanguageModel(LanguageModel):
             top_p=effective_top_p,
         )
 
-        # Make async HTTP request
+        if should_stream:
+            response = await self._aopen_stream(
+                f"{self.base_url}/messages", self._get_headers(), payload
+            )
+            async def generate():
+                try:
+                    async for event_data in self._parse_sse_stream_async(response):
+                        chunk = self._normalize_stream_event(event_data)
+                        if chunk:
+                            yield chunk
+                finally:
+                    await response.aclose()
+            return generate()
+
         response = await self.async_client.post(
             f"{self.base_url}/messages",
             headers=self._get_headers(),
             json=payload
         )
         self._handle_error(response)
-
-        if should_stream:
-            async def generate():
-                async for event_data in self._parse_sse_stream_async(response):
-                    chunk = self._normalize_stream_event(event_data)
-                    if chunk:
-                        yield chunk
-            return generate()
 
         response_data = response.json()
         result = self._normalize_response(response_data)

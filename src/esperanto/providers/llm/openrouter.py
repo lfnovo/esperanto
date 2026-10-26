@@ -83,24 +83,30 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
                 error_message = f"HTTP {response.status_code}: {response.text}"
             raise RuntimeError(f"OpenAI API error: {error_message}")
 
-    def _make_http_request(self, payload: Dict[str, Any]) -> Any:
+    def _make_http_request(self, payload: Dict[str, Any], stream: bool = False) -> Any:
         """Make HTTP request in OpenRouter's expected format."""
         headers = self._get_headers()
 
+        if stream:
+            return self._open_stream(
+                f"{self.base_url}/chat/completions", headers, payload
+            )
         response = self.client.post(
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=payload
+            f"{self.base_url}/chat/completions", headers=headers, json=payload
         )
         self._handle_error(response)
         return response
 
-    async def _make_async_http_request(self, payload: Dict[str, Any]) -> Any:
+    async def _make_async_http_request(
+        self, payload: Dict[str, Any], stream: bool = False
+    ) -> Any:
         """Make async HTTP request in OpenRouter's expected format."""
+        if stream:
+            return await self._aopen_stream(
+                f"{self.base_url}/chat/completions", self._get_headers(), payload
+            )
         response = await self.async_client.post(
-            f"{self.base_url}/chat/completions",
-            headers=self._get_headers(),
-            json=payload
+            f"{self.base_url}/chat/completions", headers=self._get_headers(), json=payload
         )
         self._handle_error(response)
         return response
@@ -259,13 +265,21 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
 
         # Make HTTP request using OpenRouter format
         try:
-            response = self._make_http_request(payload)
+            response = self._make_http_request(payload, stream=should_stream)
         except RuntimeError as e:
             self._raise_if_schema_unsupported(e, resolved_structured)
             raise
 
         if should_stream:
-            return (self._normalize_chunk(chunk_data) for chunk_data in self._parse_sse_stream(response))
+            def generate():
+                try:
+                    yield from (
+                        self._normalize_chunk(chunk_data)
+                        for chunk_data in self._parse_sse_stream(response)
+                    )
+                finally:
+                    response.close()
+            return generate()
 
         response_data = response.json()
         result = self._normalize_response(response_data)
@@ -373,15 +387,18 @@ class OpenRouterLanguageModel(OpenAILanguageModel):
 
         # Make async HTTP request using OpenRouter format
         try:
-            response = await self._make_async_http_request(payload)
+            response = await self._make_async_http_request(payload, stream=should_stream)
         except RuntimeError as e:
             self._raise_if_schema_unsupported(e, resolved_structured)
             raise
 
         if should_stream:
             async def generate():
-                async for chunk_data in self._parse_sse_stream_async(response):
-                    yield self._normalize_chunk(chunk_data)
+                try:
+                    async for chunk_data in self._parse_sse_stream_async(response):
+                        yield self._normalize_chunk(chunk_data)
+                finally:
+                    await response.aclose()
 
             return generate()
 

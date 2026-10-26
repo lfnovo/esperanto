@@ -3,6 +3,7 @@ import json
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 from pydantic import BaseModel
 
@@ -819,7 +820,10 @@ class TestStreamingWithTools:
         response = Mock()
         response.status_code = 200
         response.iter_text.return_value = mock_google_stream_with_tool_call
-        client.post.return_value = response
+        client.build_request.side_effect = (
+            lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+        )
+        client.send.return_value = response
         model.client = client
 
         messages = [{"role": "user", "content": "What's the weather?"}]
@@ -829,9 +833,11 @@ class TestStreamingWithTools:
         assert len(chunks) > 0
 
         # Check that tools were included in payload
-        call_args = client.post.call_args
-        json_payload = call_args[1]["json"]
+        request = client.send.call_args.args[0]
+        json_payload = json.loads(request.content)
         assert "tools" in json_payload
+        assert json_payload["contents"]
+        assert client.send.call_args.kwargs["stream"] is True
 
 
 class TestErrorHandling:

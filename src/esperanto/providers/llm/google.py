@@ -499,21 +499,20 @@ class GoogleLanguageModel(LanguageModel):
             endpoint = "generateContent"
             url = f"{self.base_url}/models/{model_name}:{endpoint}?key={self.api_key}"
 
-        # Make HTTP request
-        response = self.client.post(
-            url,
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
-
         if should_stream:
+            response = self._open_stream(url, self._get_headers(), payload)
             def generate():
-                for chunk_data in self._parse_sse_stream(response):
-                    chunk = self._normalize_chunk(chunk_data)
-                    if chunk:  # Only yield if chunk is not None
-                        yield chunk
+                try:
+                    for chunk_data in self._parse_sse_stream(response):
+                        chunk = self._normalize_chunk(chunk_data)
+                        if chunk:  # Only yield if chunk is not None
+                            yield chunk
+                finally:
+                    response.close()
             return generate()
+
+        response = self.client.post(url, headers=self._get_headers(), json=payload)
+        self._handle_error(response)
 
         response_data = response.json()
         result = self._normalize_response(response_data)
@@ -774,22 +773,21 @@ class GoogleLanguageModel(LanguageModel):
             endpoint = "generateContent"
             url = f"{self.base_url}/models/{model_name}:{endpoint}?key={self.api_key}"
 
-        # Make async HTTP request
-        response = await self.async_client.post(
-            url,
-            headers=self._get_headers(),
-            json=payload
-        )
-        self._handle_error(response)
-
         if should_stream:
+            response = await self._aopen_stream(url, self._get_headers(), payload)
             async def generate():
-                async for chunk_data in self._parse_sse_stream_async(response):
-                    chunk = self._normalize_chunk(chunk_data)
-                    if chunk:  # Only yield if chunk is not None
-                        yield chunk
+                try:
+                    async for chunk_data in self._parse_sse_stream_async(response):
+                        chunk = self._normalize_chunk(chunk_data)
+                        if chunk:  # Only yield if chunk is not None
+                            yield chunk
+                finally:
+                    await response.aclose()
 
             return generate()
+
+        response = await self.async_client.post(url, headers=self._get_headers(), json=payload)
+        self._handle_error(response)
 
         response_data = response.json()
         result = self._normalize_response(response_data)

@@ -2,6 +2,7 @@ import os
 import warnings
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 from pydantic import BaseModel
 
@@ -393,7 +394,10 @@ def test_chat_complete_streaming():
     
     # Mock the client
     mock_client = Mock()
-    mock_client.post.return_value = mock_response
+    mock_client.build_request.side_effect = (
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    )
+    mock_client.send.return_value = mock_response
     model.client = mock_client
 
     # Test streaming
@@ -410,7 +414,7 @@ def test_chat_complete_streaming():
 @pytest.mark.asyncio
 async def test_achat_complete_streaming():
     """Test async streaming chat completion."""
-    from unittest.mock import Mock
+    from unittest.mock import AsyncMock, Mock
 
     from esperanto.providers.llm.anthropic import AnthropicLanguageModel
 
@@ -428,12 +432,15 @@ async def test_achat_complete_streaming():
     # Mock response with aiter_text method following OpenAI pattern
     mock_response = Mock()  # Use regular Mock, not AsyncMock
     mock_response.status_code = 200
+    mock_response.aclose = AsyncMock()
     mock_response.aiter_text = mock_aiter_text  # Set as the function itself
 
     # Mock the async client
-    from unittest.mock import AsyncMock
     mock_async_client = AsyncMock()
-    mock_async_client.post.return_value = mock_response
+    mock_async_client.build_request.side_effect = (
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    )
+    mock_async_client.send.return_value = mock_response
     model.async_client = mock_async_client
 
     # Test streaming

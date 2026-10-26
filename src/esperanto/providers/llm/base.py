@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
+import httpx
+
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.utils.connect import HttpConnectionMixin
 
@@ -89,6 +91,40 @@ class LanguageModel(HttpConnectionMixin, ABC):
     def _clean_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Remove None values from config dictionary."""
         return {k: v for k, v in config.items() if v is not None}
+
+    def _handle_error(self, response: httpx.Response) -> None:
+        """Raise the provider-specific error for an unsuccessful response."""
+        raise NotImplementedError
+
+    def _open_stream(
+        self,
+        url: str,
+        headers: Dict[str, str],
+        payload: Dict[str, Any],
+    ) -> httpx.Response:
+        """Open an HTTP response without buffering its streaming body."""
+        request = self.client.build_request("POST", url, headers=headers, json=payload)
+        response = self.client.send(request, stream=True)
+        if response.status_code >= 400:
+            response.read()
+            response.close()
+            self._handle_error(response)
+        return response
+
+    async def _aopen_stream(
+        self,
+        url: str,
+        headers: Dict[str, str],
+        payload: Dict[str, Any],
+    ) -> httpx.Response:
+        """Open an async HTTP response without buffering its streaming body."""
+        request = self.async_client.build_request("POST", url, headers=headers, json=payload)
+        response = await self.async_client.send(request, stream=True)
+        if response.status_code >= 400:
+            await response.aread()
+            await response.aclose()
+            self._handle_error(response)
+        return response
 
     def _resolve_tools(
         self, tools: Optional[List[Tool]] = None

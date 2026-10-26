@@ -2,6 +2,7 @@
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 from pydantic import BaseModel
 
@@ -98,6 +99,7 @@ def mock_httpx_clients(mock_openai_chat_response, mock_openai_models_response, m
     def make_async_response(status_code, json_data=None, stream_lines=None):
         response = Mock()  # Use regular Mock, not AsyncMock
         response.status_code = status_code
+        response.aclose = AsyncMock()
         if json_data is not None:
             # Make json() synchronous like httpx does
             response.json.return_value = json_data
@@ -142,9 +144,25 @@ def mock_httpx_clients(mock_openai_chat_response, mock_openai_models_response, m
     client.post.side_effect = mock_post_side_effect
     client.get.side_effect = mock_get_side_effect
 
+    def mock_send_side_effect(request, **kwargs):
+        return make_response(200, stream_lines=mock_openai_chat_stream_chunks)
+
+    client.send.side_effect = mock_send_side_effect
+    client.build_request.side_effect = lambda method, url, **kwargs: httpx.Request(
+        method, url, **kwargs
+    )
+
     # Mock async HTTP client
     async_client.post.side_effect = mock_async_post_side_effect
     async_client.get.side_effect = mock_async_get_side_effect
+
+    async def mock_async_send_side_effect(request, **kwargs):
+        return make_async_response(200, stream_lines=mock_openai_chat_stream_chunks)
+
+    async_client.send.side_effect = mock_async_send_side_effect
+    async_client.build_request.side_effect = lambda method, url, **kwargs: httpx.Request(
+        method, url, **kwargs
+    )
 
     return client, async_client
 
@@ -326,11 +344,12 @@ def test_chat_complete_streaming(openai_model):
     # Test streaming
     chunks = list(openai_model.chat_complete(messages, stream=True))
 
-    # Verify HTTP POST was called with stream=True
-    openai_model.client.post.assert_called_once()
-    call_args = openai_model.client.post.call_args
-    json_payload = call_args[1]["json"]
-    assert json_payload["stream"] is True
+    # Verify the request was sent as a streaming request.
+    openai_model.client.send.assert_called_once()
+    call_args = openai_model.client.send.call_args
+    json_payload = call_args[0][0].content
+    assert call_args[1]["stream"] is True
+    assert b'"stream":true' in json_payload
 
     # Verify we got chunks
     assert len(chunks) == 3  # 3 chunks before [DONE]
@@ -353,11 +372,10 @@ async def test_achat_complete_streaming(openai_model):
     async for chunk in await openai_model.achat_complete(messages, stream=True):
         chunks.append(chunk)
 
-    # Verify async HTTP POST was called with stream=True
-    openai_model.async_client.post.assert_called_once()
-    call_args = openai_model.async_client.post.call_args
-    json_payload = call_args[1]["json"]
-    assert json_payload["stream"] is True
+    # Verify the async request was sent as a streaming request.
+    openai_model.async_client.send.assert_called_once()
+    call_args = openai_model.async_client.send.call_args
+    assert call_args[1]["stream"] is True
 
     # Verify we got chunks
     assert len(chunks) == 3  # 3 chunks before [DONE]

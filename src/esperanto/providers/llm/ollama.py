@@ -357,16 +357,26 @@ class OllamaLanguageModel(LanguageModel):
         if resolved_tools:
             payload["tools"] = self._convert_tools_to_ollama(resolved_tools)
 
-        # Make HTTP request
+        if should_stream:
+            response = self._open_stream(
+                f"{self.base_url}/api/chat", self._get_headers(), payload
+            )
+            def generate():
+                try:
+                    yield from (
+                        self._normalize_chunk(chunk)
+                        for chunk in self._parse_stream(response)
+                    )
+                finally:
+                    response.close()
+            return generate()
+
         response = self.client.post(
             f"{self.base_url}/api/chat",
             headers=self._get_headers(),
             json=payload
         )
         self._handle_error(response)
-
-        if should_stream:
-            return (self._normalize_chunk(chunk) for chunk in self._parse_stream(response))
 
         response_data = response.json()
         result = self._normalize_response(response_data)
@@ -473,20 +483,25 @@ class OllamaLanguageModel(LanguageModel):
         if resolved_tools:
             payload["tools"] = self._convert_tools_to_ollama(resolved_tools)
 
-        # Make async HTTP request
+        if should_stream:
+            response = await self._aopen_stream(
+                f"{self.base_url}/api/chat", self._get_headers(), payload
+            )
+            async def generate():
+                try:
+                    async for chunk in self._parse_stream_async(response):
+                        yield self._normalize_chunk(chunk)
+                finally:
+                    await response.aclose()
+
+            return generate()
+
         response = await self.async_client.post(
             f"{self.base_url}/api/chat",
             headers=self._get_headers(),
             json=payload
         )
         self._handle_error(response)
-
-        if should_stream:
-            async def generate():
-                async for chunk in self._parse_stream_async(response):
-                    yield self._normalize_chunk(chunk)
-
-            return generate()
 
         response_data = response.json()
         result = self._normalize_response(response_data)

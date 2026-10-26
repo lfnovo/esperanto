@@ -97,6 +97,24 @@ def openai_model():
     mock_client.post.side_effect = mock_post_side_effect
     mock_client.get.side_effect = mock_get_side_effect
     mock_async_client.post.side_effect = mock_async_post_side_effect
+
+    def mock_stream_response():
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.iter_text = MagicMock(return_value=iter([
+            'data: {"choices":[{"delta":{"content":"Test"},"index":0}]}\n',
+            'data: [DONE]\n',
+        ]))
+        async def async_iter():
+            yield 'data: {"choices":[{"delta":{"content":"Test"},"index":0}]}\n'
+            yield 'data: [DONE]\n'
+        mock_response.aiter_text = MagicMock(return_value=async_iter())
+        return mock_response
+
+    mock_client.send.side_effect = lambda request, stream=False: mock_stream_response()
+    mock_async_client.send = AsyncMock(
+        side_effect=lambda request, stream=False: mock_stream_response()
+    )
     
     model.client = mock_client
     model.async_client = mock_async_client

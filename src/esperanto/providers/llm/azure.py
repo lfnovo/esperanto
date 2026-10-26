@@ -321,17 +321,10 @@ class AzureLanguageModel(LanguageModel):
         return {k: v for k, v in effective_kwargs.items() if v is not None}
 
     def _chat_complete_streaming(
-        self, messages: List[Dict[str, Any]], api_kwargs: Dict[str, Any]
+        self, response: httpx.Response
     ) -> Generator[ChatCompletionChunk, None, None]:
         """Handle streaming chat completion."""
-        url = self._build_url("chat/completions")
-        with self.client.stream(
-            "POST",
-            url,
-            headers=self._get_headers(),
-            json={"messages": messages, "stream": True, **api_kwargs},
-        ) as response:
-            self._handle_error(response)
+        try:
             for chunk_data in self._parse_sse_stream(response):
                 # Azure can emit metadata-only chunks (e.g., content-filter
                 # results) before the content stream begins. These chunks
@@ -342,6 +335,8 @@ class AzureLanguageModel(LanguageModel):
                 if not chunk_data.get("choices"):
                     continue
                 yield self._normalize_chunk(chunk_data)
+        finally:
+            response.close()
 
     def chat_complete(
         self,
@@ -428,7 +423,12 @@ class AzureLanguageModel(LanguageModel):
 
         if effective_stream_setting:
             # Return streaming generator
-            return self._chat_complete_streaming(messages, api_kwargs)
+            response = self._open_stream(
+                self._build_url("chat/completions"),
+                self._get_headers(),
+                {"messages": messages, "stream": True, **api_kwargs},
+            )
+            return self._chat_complete_streaming(response)
         else:
             # Non-streaming request
             url = self._build_url("chat/completions")
@@ -451,23 +451,18 @@ class AzureLanguageModel(LanguageModel):
             return result
 
     async def _achat_complete_streaming(
-        self, messages: List[Dict[str, Any]], api_kwargs: Dict[str, Any]
+        self, response: httpx.Response
     ) -> AsyncGenerator[ChatCompletionChunk, None]:
         """Handle async streaming chat completion."""
-        url = self._build_url("chat/completions")
-        async with self.async_client.stream(
-            "POST",
-            url,
-            headers=self._get_headers(),
-            json={"messages": messages, "stream": True, **api_kwargs},
-        ) as response:
-            self._handle_error(response)
+        try:
             async for chunk_data in self._parse_sse_stream_async(response):
                 # See sync variant above — Azure metadata-only chunks have
                 # empty `choices`; skip for provider parity.
                 if not chunk_data.get("choices"):
                     continue
                 yield self._normalize_chunk(chunk_data)
+        finally:
+            await response.aclose()
 
     async def achat_complete(
         self,
@@ -554,7 +549,12 @@ class AzureLanguageModel(LanguageModel):
 
         if effective_stream_setting:
             # Return async streaming generator
-            return self._achat_complete_streaming(messages, api_kwargs)
+            response = await self._aopen_stream(
+                self._build_url("chat/completions"),
+                self._get_headers(),
+                {"messages": messages, "stream": True, **api_kwargs},
+            )
+            return self._achat_complete_streaming(response)
         else:
             # Non-streaming async request
             url = self._build_url("chat/completions")

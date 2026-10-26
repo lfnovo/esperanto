@@ -1,7 +1,9 @@
 """Test cases for the Cohere language model provider."""
 
+import json
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 from pydantic import BaseModel
 
@@ -61,6 +63,7 @@ def _make_model(response_data=NON_STREAM_RESPONSE, config=None):
     def post(url, **kwargs):
         resp = Mock()
         resp.status_code = 200
+        resp.aclose = AsyncMock()
         resp.json.return_value = response_data
         resp.iter_text = Mock(return_value=iter(STREAM_LINES))
 
@@ -78,6 +81,20 @@ def _make_model(response_data=NON_STREAM_RESPONSE, config=None):
     mock_async_client = AsyncMock()
     mock_client.post.side_effect = post
     mock_async_client.post.side_effect = apost
+    mock_client.build_request.side_effect = (
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    )
+    mock_client.send.side_effect = lambda request, **kwargs: post(
+        str(request.url), json=json.loads(request.content)
+    )
+    mock_async_client.build_request = Mock(side_effect=(
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    ))
+
+    async def asend(request, **kwargs):
+        return await apost(str(request.url), json=json.loads(request.content))
+
+    mock_async_client.send.side_effect = asend
     model.client = mock_client
     model.async_client = mock_async_client
     return model

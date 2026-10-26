@@ -1,8 +1,10 @@
 """Tests for OpenAI-compatible language model provider."""
 
+import json
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 
 from esperanto.providers.llm.openai_compatible import OpenAICompatibleLanguageModel
@@ -712,17 +714,22 @@ class TestExtraBody:
 
         mock_resp = Mock()
         mock_resp.status_code = 200
+        mock_resp.aclose = AsyncMock()
         mock_resp.iter_text.return_value = iter([
             'data: {"id":"c","choices":[{"index":0,"delta":{"content":"hi","role":"assistant"},"finish_reason":null}],"created":1,"model":"m"}\n',
             "data: [DONE]\n",
         ])
         model.client = Mock()
-        model.client.post.return_value = mock_resp
+        model.client.build_request.side_effect = (
+            lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+        )
+        model.client.send.return_value = mock_resp
 
         gen = model.chat_complete(self.MESSAGES, stream=True, extra_body={"guided_json": {}})
         list(gen)  # exhaust generator to ensure post was called
 
-        payload = model.client.post.call_args[1]["json"]
+        payload = json.loads(model.client.send.call_args.args[0].content)
+        assert model.client.send.call_args.kwargs["stream"] is True
         assert payload["top_k"] == 40
         assert payload["guided_json"] == {}
 
@@ -777,6 +784,7 @@ class TestExtraBody:
 
         mock_resp = Mock()
         mock_resp.status_code = 200
+        mock_resp.aclose = AsyncMock()
 
         async def _aiter():
             yield 'data: {"id":"c","choices":[{"index":0,"delta":{"content":"hi","role":"assistant"},"finish_reason":null}],"created":1,"model":"m"}\n'
@@ -784,13 +792,17 @@ class TestExtraBody:
 
         mock_resp.aiter_text = _aiter
         model.async_client = AsyncMock()
-        model.async_client.post.return_value = mock_resp
+        model.async_client.build_request = Mock(side_effect=(
+            lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+        ))
+        model.async_client.send = AsyncMock(return_value=mock_resp)
 
         gen = await model.achat_complete(self.MESSAGES, stream=True, extra_body={"guided_json": {}})
         async for _ in gen:
             pass
 
-        payload = model.async_client.post.call_args[1]["json"]
+        payload = json.loads(model.async_client.send.call_args.args[0].content)
+        assert model.async_client.send.call_args.kwargs["stream"] is True
         assert payload["top_k"] == 40
         assert payload["guided_json"] == {}
 

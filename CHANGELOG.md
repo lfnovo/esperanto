@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **LLM streaming now yields chunks as they arrive.** Errors on a streamed call are
+  raised when the call is made, before iteration begins.
+
 ## [2.28.0] - 2026-10-03
 
 ### Added

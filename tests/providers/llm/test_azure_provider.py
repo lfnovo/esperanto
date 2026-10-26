@@ -1,9 +1,11 @@
 """Tests for the Azure OpenAI language model provider."""
 
+import json
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import httpx
 import pytest
 from pydantic import BaseModel
 
@@ -189,21 +191,22 @@ def test_chat_complete_streaming(azure_model):
         'data: [DONE]\n\n'
     ]
 
-    # Mock the stream context manager
-    mock_stream_context = MagicMock()
-    mock_stream_context.__enter__.return_value = mock_stream_response
-    mock_stream_context.__exit__.return_value = None
-    azure_model.client.stream.return_value = mock_stream_context
+    azure_model.client.build_request.side_effect = (
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    )
+    azure_model.client.send.return_value = mock_stream_response
 
     response_gen = azure_model.chat_complete(messages, stream=True)
     responses = list(response_gen)
 
-    azure_model.client.stream.assert_called_once()
-    call_args = azure_model.client.stream.call_args
+    azure_model.client.send.assert_called_once()
+    request = azure_model.client.send.call_args.args[0]
 
     # Check it was called with POST and correct URL
-    assert call_args[0][0] == "POST"
-    assert "deployments/test-deployment/chat/completions" in call_args[0][1]
+    assert request.method == "POST"
+    assert "deployments/test-deployment/chat/completions" in str(request.url)
+    assert json.loads(request.content)["stream"] is True
+    assert azure_model.client.send.call_args.kwargs["stream"] is True
 
     assert len(responses) == 1
     chunk = responses[0]
@@ -219,6 +222,7 @@ async def test_achat_complete_streaming(azure_model):
     # Mock async streaming response using httpx SSE format
     mock_stream_response = MagicMock()
     mock_stream_response.status_code = 200
+    mock_stream_response.aclose = AsyncMock()
 
     async def mock_aiter_text():
         yield 'data: {"id":"chatcmpl-asyncstream-test","choices":[{"index":0,"delta":{"content":"Async Hello ","role":"assistant"},"finish_reason":null}],"created":1677652291,"model":"gpt-35-turbo"}\n\n'
@@ -226,21 +230,22 @@ async def test_achat_complete_streaming(azure_model):
 
     mock_stream_response.aiter_text.return_value = mock_aiter_text()
 
-    # Mock the async stream context manager
-    mock_stream_context = MagicMock()
-    mock_stream_context.__aenter__ = AsyncMock(return_value=mock_stream_response)
-    mock_stream_context.__aexit__ = AsyncMock(return_value=None)
-    azure_model.async_client.stream.return_value = mock_stream_context
+    azure_model.async_client.build_request = Mock(side_effect=(
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    ))
+    azure_model.async_client.send = AsyncMock(return_value=mock_stream_response)
 
     response_gen = await azure_model.achat_complete(messages, stream=True)
     responses = [chunk async for chunk in response_gen]
 
-    azure_model.async_client.stream.assert_called_once()
-    call_args = azure_model.async_client.stream.call_args
+    azure_model.async_client.send.assert_awaited_once()
+    request = azure_model.async_client.send.call_args.args[0]
 
     # Check it was called with POST and correct URL
-    assert call_args[0][0] == "POST"
-    assert "deployments/test-deployment/chat/completions" in call_args[0][1]
+    assert request.method == "POST"
+    assert "deployments/test-deployment/chat/completions" in str(request.url)
+    assert json.loads(request.content)["stream"] is True
+    assert azure_model.async_client.send.call_args.kwargs["stream"] is True
 
     assert len(responses) == 1
     chunk = responses[0]

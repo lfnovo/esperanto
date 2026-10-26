@@ -3,6 +3,7 @@
 import os
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 from pydantic import BaseModel
 
@@ -161,7 +162,10 @@ def test_ollama_chat_complete_streaming():
     
     # Mock the client
     mock_client = Mock()
-    mock_client.post.return_value = mock_response
+    mock_client.build_request.side_effect = (
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    )
+    mock_client.send.return_value = mock_response
     model.client = mock_client
 
     stream = model.chat_complete(messages, stream=True)
@@ -232,11 +236,15 @@ async def test_ollama_achat_complete_streaming():
     # Mock HTTP response for streaming
     mock_response = Mock()
     mock_response.status_code = 200
+    mock_response.aclose = AsyncMock()
     mock_response.aiter_lines = mock_aiter_lines
     
     # Mock the async client
     mock_async_client = AsyncMock()
-    mock_async_client.post.return_value = mock_response
+    mock_async_client.build_request = Mock(side_effect=(
+        lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+    ))
+    mock_async_client.send = AsyncMock(return_value=mock_response)
     model.async_client = mock_async_client
 
     stream = await model.achat_complete(messages, stream=True)
@@ -884,7 +892,10 @@ class TestOllamaThinkingModels:
         mock_response.iter_lines.return_value = stream_data
 
         mock_client = Mock()
-        mock_client.post.return_value = mock_response
+        mock_client.build_request.side_effect = (
+            lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+        )
+        mock_client.send.return_value = mock_response
         model.client = mock_client
 
         chunks = list(
@@ -910,10 +921,14 @@ class TestOllamaThinkingModels:
 
         mock_response = Mock()
         mock_response.status_code = 200
+        mock_response.aclose = AsyncMock()
         mock_response.aiter_lines = mock_aiter_lines
 
         mock_async_client = AsyncMock()
-        mock_async_client.post.return_value = mock_response
+        mock_async_client.build_request = Mock(side_effect=(
+            lambda method, url, **kwargs: httpx.Request(method, url, **kwargs)
+        ))
+        mock_async_client.send = AsyncMock(return_value=mock_response)
         model.async_client = mock_async_client
 
         stream = await model.achat_complete(
