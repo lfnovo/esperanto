@@ -31,6 +31,7 @@ Welcome to the Esperanto provider guide. This page helps you choose the right AI
 | [Voyage](./voyage.md) | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | [Cohere](./cohere.md) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | [ElevenLabs](./elevenlabs.md) | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| [FonadaLabs](./fonadalabs.md) | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 
 *⚠️ OpenAI-Compatible: JSON mode support depends on the specific endpoint implementation
 
@@ -342,6 +343,7 @@ Require API keys, pay-per-use:
 - [Voyage](./voyage.md)
 - [Cohere](./cohere.md)
 - [ElevenLabs](./elevenlabs.md)
+- [FonadaLabs](./fonadalabs.md)
 
 ### Cloud Enterprise Providers
 

@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional
 import httpx
 
 from esperanto.common_types import Model
+from esperanto.providers.stt.fonadalabs import FONADALABS_MODELS
 from esperanto.utils import ModelCache
 
 # Global cache instance for model discovery
@@ -1225,8 +1226,14 @@ def get_cohere_models(
         raise RuntimeError(f"Failed to fetch Cohere models: {e}")
 
 
+def get_fonadalabs_models(api_key: Optional[str] = None, **kwargs) -> List[Model]:
+    """Static catalog; discovery does not validate credentials or bill audio."""
+    return list(FONADALABS_MODELS)
+
+
 # Provider registry mapping provider names to discovery functions
 PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
+    "fonadalabs": get_fonadalabs_models,
     "openai": get_openai_models,
     "openai-compatible": get_openai_compatible_models,
     "anthropic": get_anthropic_models,
