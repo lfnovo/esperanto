@@ -125,6 +125,11 @@ except ImportError:
     MistralSpeechToTextModel = None  # type: ignore[assignment,misc]
 
 try:
+    from esperanto.providers.stt.fonadalabs import FonadaLabsSpeechToTextModel
+except ImportError:
+    FonadaLabsSpeechToTextModel = None  # type: ignore[assignment,misc]
+
+try:
     from esperanto.providers.tts.deepgram import DeepgramTextToSpeechModel
 except ImportError:
     DeepgramTextToSpeechModel = None  # type: ignore[assignment,misc]
@@ -211,6 +216,7 @@ __all__ = [
     "VertexTextToSpeechModel",
     "MistralTextToSpeechModel",
     "MistralSpeechToTextModel",
+    "FonadaLabsSpeechToTextModel",
     "DeepgramTextToSpeechModel",
     "DeepgramSpeechToTextModel",
     "OpenRouterTextToSpeechModel",
@@ -220,7 +226,3 @@ __all__ = [
     "CohereEmbeddingModel",
     "CohereRerankerModel",
 ]
-try:
-    from esperanto.providers.stt.fonadalabs import FonadaLabsSpeechToTextModel
-except ImportError:
-    FonadaLabsSpeechToTextModel = None  # type: ignore[assignment,misc]

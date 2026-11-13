@@ -23,6 +23,9 @@ from esperanto.providers.stt.base import (
 logger = logging.getLogger(__name__)
 
 MAX_UPLOAD_BYTES = 25_000_000
+FONADALABS_MODELS = [
+    Model(id="kapture-v3", owned_by="FonadaLabs", type="speech_to_text")
+]
 
 
 class FonadaLabsAPIError(RuntimeError):
@@ -59,7 +62,7 @@ class FonadaLabsSpeechToTextModel(SpeechToTextModel):
         return "kapture-v3"
 
     def _get_models(self) -> List[Model]:
-        return [Model(id="kapture-v3", owned_by="FonadaLabs", type="speech_to_text")]
+        return list(FONADALABS_MODELS)
 
     def _prepare(
         self,
@@ -72,7 +75,8 @@ class FonadaLabsSpeechToTextModel(SpeechToTextModel):
         language_id = (
             language
             or self._config.get("language")
-            or os.getenv("FONADALABS_LANGUAGE", "en")
+            or os.getenv("FONADALABS_LANGUAGE")
+            or "en"
         )
         if not isinstance(language_id, str) or not language_id.strip():
             raise ValueError("A non-empty FonadaLabs language code is required.")
@@ -81,7 +85,8 @@ class FonadaLabsSpeechToTextModel(SpeechToTextModel):
             with open(audio_file, "rb") as stream:
                 data = stream.read(MAX_UPLOAD_BYTES + 1)
         else:
-            filename = Path(str(getattr(audio_file, "name", "audio.wav"))).name
+            stream_name = getattr(audio_file, "name", None)
+            filename = Path(stream_name).name if isinstance(stream_name, str) and stream_name else "audio.wav"
             data = audio_file.read(MAX_UPLOAD_BYTES + 1)
         if not data or len(data) > MAX_UPLOAD_BYTES:
             raise ValueError(

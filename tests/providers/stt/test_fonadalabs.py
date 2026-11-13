@@ -87,6 +87,16 @@ def test_size_and_prompt_validation(model):
     model.client.close()
 
 
+def test_empty_language_environment_and_stream_without_name_use_defaults(model, monkeypatch):
+    monkeypatch.setenv("FONADALABS_LANGUAGE", "")
+    stream = BytesIO(b"audio")
+    stream.name = None
+    files, data = model._prepare(stream, language=None, prompt=None)
+    assert data["language_id"] == "en"
+    assert files["file"][0] == "audio.wav"
+    model.client.close()
+
+
 def test_static_discovery():
     assert AIFactory.get_provider_models("fonadalabs")[0].id == "kapture-v3"
 

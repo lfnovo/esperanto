@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional
 import httpx
 
 from esperanto.common_types import Model
+from esperanto.providers.stt.fonadalabs import FONADALABS_MODELS
 from esperanto.utils import ModelCache
 
 # Global cache instance for model discovery
@@ -1227,7 +1228,7 @@ def get_cohere_models(
 
 def get_fonadalabs_models(api_key: Optional[str] = None, **kwargs) -> List[Model]:
     """Static catalog; discovery does not validate credentials or bill audio."""
-    return [Model(id="kapture-v3", owned_by="FonadaLabs", type="speech_to_text")]
+    return list(FONADALABS_MODELS)
 
 
 # Provider registry mapping provider names to discovery functions
