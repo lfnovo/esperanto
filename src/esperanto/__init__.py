@@ -220,3 +220,7 @@ __all__ = [
     "CohereEmbeddingModel",
     "CohereRerankerModel",
 ]
+try:
+    from esperanto.providers.stt.fonadalabs import FonadaLabsSpeechToTextModel
+except ImportError:
+    FonadaLabsSpeechToTextModel = None  # type: ignore[assignment,misc]

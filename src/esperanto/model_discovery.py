@@ -1225,8 +1225,14 @@ def get_cohere_models(
         raise RuntimeError(f"Failed to fetch Cohere models: {e}")
 
 
+def get_fonadalabs_models(api_key: Optional[str] = None, **kwargs) -> List[Model]:
+    """Static catalog; discovery does not validate credentials or bill audio."""
+    return [Model(id="kapture-v3", owned_by="FonadaLabs", type="speech_to_text")]
+
+
 # Provider registry mapping provider names to discovery functions
 PROVIDER_MODELS_REGISTRY: Dict[str, Callable[..., List[Model]]] = {
+    "fonadalabs": get_fonadalabs_models,
     "openai": get_openai_models,
     "openai-compatible": get_openai_compatible_models,
     "anthropic": get_anthropic_models,

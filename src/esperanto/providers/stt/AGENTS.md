@@ -12,6 +12,7 @@ Speech-to-text (STT) provider implementations for audio transcription.
 - **`elevenlabs.py`**: ElevenLabs speech recognition
 - **`openai_compatible.py`**: Generic OpenAI-compatible STT API
 - **`mistral.py`**: Mistral transcription API
+- **`fonadalabs.py`**: Native Kapture V3 REST API; 25 MB uploads, language_id, plain text, no retries
 - **`deepgram.py`**: Deepgram transcription API
 - **`openrouter.py`**: OpenRouter transcription API
 

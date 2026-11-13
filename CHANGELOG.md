@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- FonadaLabs honors longer Retry-After cooldowns and logs generated request IDs, status and elapsed time without exposing request content.
+
+- FonadaLabs waits 60 seconds and retries once on HTTP 429; timeouts and other failures are not automatically retried.
+
+- Native FonadaLabs Kapture V3 speech-to-text with customer API keys, explicit language mapping, a 25 MB upload guard and no automatic request retries.
+
 ## [2.28.0] - 2026-10-03
 
 ### Added

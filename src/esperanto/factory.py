@@ -48,6 +48,7 @@ class AIFactory:
             "cohere": "esperanto.providers.embedding.cohere:CohereEmbeddingModel",
         },
         "speech_to_text": {
+            "fonadalabs": "esperanto.providers.stt.fonadalabs:FonadaLabsSpeechToTextModel",
             "openai": "esperanto.providers.stt.openai:OpenAISpeechToTextModel",
             "groq": "esperanto.providers.stt.groq:GroqSpeechToTextModel",
             "elevenlabs": "esperanto.providers.stt.elevenlabs:ElevenLabsSpeechToTextModel",
