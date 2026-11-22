@@ -64,7 +64,7 @@ model = AIFactory.create_language("google", "gemini-2.5-flash")
 embedder = AIFactory.create_embedding("google", "text-embedding-004")
 
 # Text-to-speech
-speaker = AIFactory.create_text_to_speech("google", "gemini-3.1-flash-tts-preview")
+speaker = AIFactory.create_text_to_speech("google", "gemini-3.8-flash-tts")
 ```
 
 ### Direct Instantiation
@@ -72,7 +72,7 @@ speaker = AIFactory.create_text_to_speech("google", "gemini-3.1-flash-tts-previe
 ```python
 from esperanto.providers.llm.google import GoogleLanguageModel
 from esperanto.providers.embedding.google import GoogleEmbeddingModel
-from esperanto.providers.text_to_speech.google import GoogleTextToSpeech
+from esperanto.providers.tts.google import GoogleTextToSpeechModel
 
 # Language model
 llm = GoogleLanguageModel(
@@ -87,9 +87,9 @@ embedder = GoogleEmbeddingModel(
 )
 
 # Text-to-speech
-tts = GoogleTextToSpeech(
+tts = GoogleTextToSpeechModel(
     api_key="your-api-key",
-    model_name="gemini-3.1-flash-tts-preview"
+    model_name="gemini-3.8-flash-tts"
 )
 ```
 
@@ -416,8 +416,8 @@ model = AIFactory.create_speech_to_text(
 
 **Supported Models:**
 
-- `gemini-3.1-flash-tts-preview` (default)
-- `gemini-3.8-flash-tts` and `gemini-3.8-flash-lite-tts`
+- `gemini-3.8-flash-tts` (default)
+- `gemini-3.8-flash-lite-tts`
 - `gemini-2.5-flash-preview-tts` and `gemini-2.5-pro-preview-tts` (legacy)
 
 Every model returns `audio/wav`. Gemini 3.8 sends a complete WAV file, which Esperanto passes through unchanged. Older models send raw PCM, which Esperanto wraps in a WAV header.
@@ -450,7 +450,7 @@ from esperanto.factory import AIFactory
 
 speaker = AIFactory.create_text_to_speech(
     "google",
-    "gemini-3.1-flash-tts-preview",
+    "gemini-3.8-flash-tts",
     config={
         "timeout": 300.0  # 5 minutes timeout
     }
@@ -463,7 +463,7 @@ speaker = AIFactory.create_text_to_speech(
 from esperanto.factory import AIFactory
 
 # Create text-to-speech model
-model = AIFactory.create_text_to_speech("google", "gemini-3.1-flash-tts-preview")
+model = AIFactory.create_text_to_speech("google", "gemini-3.8-flash-tts")
 
 # Generate speech
 response = model.generate_speech(
@@ -495,7 +495,8 @@ response = model.generate_speech(
 
 **Example - Multi-Speaker Conversations:**
 
-Google TTS supports creating dialogues with different voices for each speaker:
+Google TTS supports creating dialogues with different voices for each speaker.
+Start each turn with the configured speaker name followed by a colon:
 
 ```python
 # Define conversation with speaker names
@@ -526,7 +527,7 @@ print(f"Generated multi-speaker dialogue with {len(speaker_configs)} voices")
 
 ```python
 async def create_dialogue():
-    model = AIFactory.create_text_to_speech("google", "gemini-3.1-flash-tts-preview")
+    model = AIFactory.create_text_to_speech("google", "gemini-3.8-flash-tts")
 
     interview_text = """
     Interviewer: Welcome to our tech podcast. Today we're discussing AI.

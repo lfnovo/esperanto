@@ -5,13 +5,14 @@ import os
 import re
 import wave
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import httpx
 
 from .base import AudioResponse, Model, TextToSpeechModel, Voice
 
-DEFAULT_MODEL = "gemini-3.1-flash-tts-preview"
+DEFAULT_MODEL = "gemini-3.8-flash-tts"
+_GEMINI_38_TTS_MODELS = {DEFAULT_MODEL, "gemini-3.8-flash-lite-tts"}
 # Legacy gemini-2.5-* TTS models reject bare `contents` text with
 # "Model tried to generate text" unless a systemInstruction is attached.
 # Newer gemini-3.x models reject systemInstruction with
@@ -327,7 +328,6 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         """List all available models for this provider."""
         return [
             Model(id=DEFAULT_MODEL, owned_by="Google", context_window=None),
-            Model(id="gemini-3.8-flash-tts", owned_by="Google", context_window=None),
             Model(
                 id="gemini-3.8-flash-lite-tts",
                 owned_by="Google",
@@ -495,6 +495,35 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
 
         return response_audio
 
+    @staticmethod
+    def _multi_speaker_text_parts(
+        text: str, speaker_configs: List[Dict[str, str]], model_name: str
+    ) -> List[Dict[str, Any]]:
+        if model_name not in _GEMINI_38_TTS_MODELS:
+            return [{"text": text}]
+
+        # Gemini 3.8 reads text verbatim and needs a speaker on each part.
+        # Preserve the existing "Name: dialogue" input format.
+        speakers = {config["speaker"] for config in speaker_configs}
+        turns: List[Tuple[str, List[str]]] = []
+        for line in text.splitlines():
+            label, separator, dialogue = line.lstrip().partition(":")
+            if separator and label in speakers:
+                turns.append((label, [dialogue.lstrip()]))
+            elif turns:
+                turns[-1][1].append(line)
+            elif line.strip():
+                raise ValueError("Dialogue must start with a configured speaker followed by ':'.")
+
+        parts = [
+            {"text": dialogue, "speechMetadata": {"speaker": speaker}}
+            for speaker, lines in turns
+            if (dialogue := "\n".join(lines).strip())
+        ]
+        if not parts:
+            raise ValueError("Dialogue must contain text for at least one configured speaker.")
+        return parts
+
     def generate_multi_speaker_speech(
         self,
         text: str,
@@ -505,7 +534,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         """Generate speech with multiple speakers (Google-specific feature).
 
         Args:
-            text: Text containing the conversation with speaker names
+            text: Conversation where each turn begins with the configured speaker and a colon
             speaker_configs: List of dicts with 'speaker' and 'voice' keys
             output_file: Optional path to save the audio file
             **kwargs: Additional arguments passed to the provider
@@ -536,9 +565,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         # Prepare request payload for multi-speaker
         payload = {
             "contents": [{
-                "parts": [{
-                    "text": text
-                }]
+                "parts": self._multi_speaker_text_parts(text, speaker_configs, model_name)
             }],
             # systemInstruction is added below for legacy gemini-2.5-* models only.
             "generationConfig": {
@@ -596,7 +623,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         """Generate speech with multiple speakers asynchronously (Google-specific feature).
 
         Args:
-            text: Text containing the conversation with speaker names
+            text: Conversation where each turn begins with the configured speaker and a colon
             speaker_configs: List of dicts with 'speaker' and 'voice' keys
             output_file: Optional path to save the audio file
             **kwargs: Additional arguments passed to the provider
@@ -621,9 +648,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         # Prepare request payload for multi-speaker
         payload = {
             "contents": [{
-                "parts": [{
-                    "text": text
-                }]
+                "parts": self._multi_speaker_text_parts(text, speaker_configs, model_name)
             }],
             # systemInstruction is added below for legacy gemini-2.5-* models only.
             "generationConfig": {

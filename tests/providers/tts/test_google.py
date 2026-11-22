@@ -37,15 +37,14 @@ def _make_mock_response():
     return response
 
 
-def test_default_model_is_gemini_31():
-    """Default model is gemini-3.1-flash-tts-preview (newer; gemini-2.5-* preview models
-    are now flaky on Google's side and require the legacy systemInstruction quirk)."""
+def test_default_model_is_gemini_38():
+    """The default must stay available after the Gemini 3.1 preview shuts down."""
     model = GoogleTextToSpeechModel(api_key="test-key")
-    assert model._get_default_model() == "gemini-3.1-flash-tts-preview"
+    assert model._get_default_model() == "gemini-3.8-flash-tts"
 
 
 def test_generate_speech_default_model_omits_system_instruction():
-    """Default model (gemini-3.1-*) must NOT include systemInstruction — the new API
+    """Default model must NOT include systemInstruction — the new API
     rejects it with 'Developer instruction is not enabled for this model'."""
     model = GoogleTextToSpeechModel(api_key="test-key")
     mock_client = Mock()
@@ -54,7 +53,7 @@ def test_generate_speech_default_model_omits_system_instruction():
 
     response = model.generate_speech(text="Hello world", voice="achernar")
 
-    assert response.model == "gemini-3.1-flash-tts-preview"
+    assert response.model == "gemini-3.8-flash-tts"
     assert response.voice == "achernar"
     assert response.provider == "google"
     payload = mock_client.post.call_args.kwargs["json"]
@@ -81,7 +80,7 @@ def test_generate_speech_legacy_model_includes_system_instruction():
 
 @pytest.mark.asyncio
 async def test_agenerate_speech_default_model_omits_system_instruction():
-    """Async path: default model (3.1) omits systemInstruction."""
+    """Async path: default model omits systemInstruction."""
     model = GoogleTextToSpeechModel(api_key="test-key")
     mock_async_client = AsyncMock()
     mock_async_client.post.return_value = _make_mock_response()
@@ -89,7 +88,7 @@ async def test_agenerate_speech_default_model_omits_system_instruction():
 
     response = await model.agenerate_speech(text="Hello world", voice="achernar")
 
-    assert response.model == "gemini-3.1-flash-tts-preview"
+    assert response.model == "gemini-3.8-flash-tts"
     payload = mock_async_client.post.call_args.kwargs["json"]
     assert "systemInstruction" not in payload
 
@@ -132,6 +131,40 @@ def test_multi_speaker_default_model_omits_system_instruction():
     assert "systemInstruction" not in payload
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method", ["generate_multi_speaker_speech", "agenerate_multi_speaker_speech"])
+@pytest.mark.parametrize("model_name", [None, "gemini-3.8-flash-lite-tts"])
+async def test_gemini_38_sends_speaker_metadata_for_each_turn(method, model_name):
+    """GenerateContent needs speaker metadata on every 3.8 dialogue turn."""
+    options = {"model_name": model_name} if model_name else {}
+    model = GoogleTextToSpeechModel(api_key="test-key", **options)
+    response = _make_mock_response()
+    if method.startswith("a"):
+        client = AsyncMock()
+        model.async_client = client
+    else:
+        client = Mock()
+        model.client = client
+    client.post.return_value = response
+
+    audio = getattr(model, method)(
+        text="\nJoe: Wait: what?\nHere's my point.\nJane: I agree.\nJoe: Thanks!\n",
+        speaker_configs=SPEAKERS,
+    )
+    if method.startswith("a"):
+        audio = await audio
+    expected_model = model_name or "gemini-3.8-flash-tts"
+    assert audio.model == expected_model
+    assert f"/v1beta/models/{expected_model}:generateContent" in client.post.call_args.args[0]
+    payload = client.post.call_args.kwargs["json"]
+    assert payload["contents"][0]["parts"] == [
+        {"text": "Wait: what?\nHere's my point.", "speechMetadata": {"speaker": "Joe"}},
+        {"text": "I agree.", "speechMetadata": {"speaker": "Jane"}},
+        {"text": "Thanks!", "speechMetadata": {"speaker": "Joe"}},
+    ]
+    assert "systemInstruction" not in payload
+
+
 def test_multi_speaker_legacy_model_includes_system_instruction():
     """Multi-speaker variant on legacy gemini-2.5-* still emits systemInstruction."""
     model = GoogleTextToSpeechModel(
@@ -154,6 +187,7 @@ def test_multi_speaker_legacy_model_includes_system_instruction():
     assert payload["systemInstruction"] == {
         "parts": [{"text": "Read aloud the following text."}]
     }
+    assert payload["contents"] == [{"parts": [{"text": "Joe: hi\nJane: hello"}]}]
 
 
 def test_available_voices():
