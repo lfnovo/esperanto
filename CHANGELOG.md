@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Google TTS defaults to Gemini 3.8 Flash TTS.** Gemini 3.8 multi-speaker
+  transcripts need at least one labeled turn, using a configured speaker name
+  followed by a colon. For unlabeled plain text, use single-speaker synthesis.
+  Explicit legacy model selections continue to receive the original transcript.
+
 ## [2.28.0] - 2026-10-03
 
 ### Added
