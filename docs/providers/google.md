@@ -418,6 +418,7 @@ model = AIFactory.create_speech_to_text(
 
 - `gemini-3.8-flash-tts` (default)
 - `gemini-3.8-flash-lite-tts`
+- `gemini-3.1-flash-tts-preview` (legacy, scheduled to retire December 18, 2026)
 - `gemini-2.5-flash-preview-tts` and `gemini-2.5-pro-preview-tts` (legacy)
 
 Every model returns `audio/wav`. Gemini 3.8 sends a complete WAV file, which Esperanto passes through unchanged. Older models send raw PCM, which Esperanto wraps in a WAV header.
@@ -496,7 +497,13 @@ response = model.generate_speech(
 **Example - Multi-Speaker Conversations:**
 
 Google TTS supports creating dialogues with different voices for each speaker.
-Start each turn with the configured speaker name followed by a colon:
+For Gemini 3.8, start each turn with a configured speaker name followed by a
+colon. Capitalization and surrounding spaces do not matter unless names are
+ambiguous. Any introductory lines are read by the first labeled speaker. Lines
+that do not match a configured speaker are treated as part of the current turn,
+so they can contain ordinary colons. If your text has no speaker labels, use
+single-speaker synthesis or add labels before migrating. Legacy models still
+receive the text unchanged.
 
 ```python
 # Define conversation with speaker names

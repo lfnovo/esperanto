@@ -148,7 +148,10 @@ async def test_gemini_38_sends_speaker_metadata_for_each_turn(method, model_name
     client.post.return_value = response
 
     audio = getattr(model, method)(
-        text="\nJoe: Wait: what?\nHere's my point.\nJane: I agree.\nJoe: Thanks!\n",
+        text=(
+            "\nToday's topic: Testing\n\n joe : Wait: what?\n"
+            "Note: Here's my point.\nJANE: I agree.\nJoe: Thanks!\n"
+        ),
         speaker_configs=SPEAKERS,
     )
     if method.startswith("a"):
@@ -158,10 +161,42 @@ async def test_gemini_38_sends_speaker_metadata_for_each_turn(method, model_name
     assert f"/v1beta/models/{expected_model}:generateContent" in client.post.call_args.args[0]
     payload = client.post.call_args.kwargs["json"]
     assert payload["contents"][0]["parts"] == [
-        {"text": "Wait: what?\nHere's my point.", "speechMetadata": {"speaker": "Joe"}},
+        {
+            "text": "Today's topic: Testing\n\nWait: what?\nNote: Here's my point.",
+            "speechMetadata": {"speaker": "Joe"},
+        },
         {"text": "I agree.", "speechMetadata": {"speaker": "Jane"}},
         {"text": "Thanks!", "speechMetadata": {"speaker": "Joe"}},
     ]
+    assert "systemInstruction" not in payload
+
+
+def test_gemini_38_unlabeled_dialogue_explains_migration():
+    model = GoogleTextToSpeechModel(api_key="test-key")
+    model.client = Mock()
+
+    with pytest.raises(ValueError, match="label each turn with a configured speaker"):
+        model.generate_multi_speaker_speech(
+            text="This is an unlabeled paragraph.",
+            speaker_configs=SPEAKERS,
+        )
+
+    model.client.post.assert_not_called()
+
+
+def test_gemini_31_remains_discoverable_and_sends_unmodified_dialogue():
+    model = GoogleTextToSpeechModel(
+        api_key="test-key", model_name="gemini-3.1-flash-tts-preview"
+    )
+    assert model.model_name in [item.id for item in model._get_models()]
+
+    client = Mock()
+    client.post.return_value = _make_mock_response()
+    model.client = client
+    dialogue = "Intro: Today's topic.\njoe: Let's start."
+    model.generate_multi_speaker_speech(text=dialogue, speaker_configs=SPEAKERS)
+    payload = client.post.call_args.kwargs["json"]
+    assert payload["contents"] == [{"parts": [{"text": dialogue}]}]
     assert "systemInstruction" not in payload
 
 

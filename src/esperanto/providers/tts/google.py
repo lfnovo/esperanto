@@ -334,6 +334,11 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
                 context_window=None,
             ),
             Model(
+                id="gemini-3.1-flash-tts-preview",
+                owned_by="Google",
+                context_window=None,
+            ),
+            Model(
                 id="gemini-2.5-flash-preview-tts",
                 owned_by="Google",
                 context_window=None,
@@ -503,18 +508,38 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
             return [{"text": text}]
 
         # Gemini 3.8 reads text verbatim and needs a speaker on each part.
-        # Preserve the existing "Name: dialogue" input format.
         speakers = {config["speaker"] for config in speaker_configs}
+        normalized_speakers: Dict[str, List[str]] = {}
+        for speaker in speakers:
+            normalized_speakers.setdefault(speaker.strip().casefold(), []).append(speaker)
+
+        leading_lines: List[str] = []
         turns: List[Tuple[str, List[str]]] = []
         for line in text.splitlines():
-            label, separator, dialogue = line.lstrip().partition(":")
-            if separator and label in speakers:
-                turns.append((label, [dialogue.lstrip()]))
+            label, separator, dialogue = line.partition(":")
+            label = label.strip()
+            speaker = None
+            if separator:
+                if label in speakers:
+                    speaker = label
+                else:
+                    matches = normalized_speakers.get(label.casefold(), [])
+                    if len(matches) == 1:
+                        speaker = matches[0]
+
+            if speaker is not None:
+                lines = [] if turns else leading_lines
+                turns.append((speaker, [*lines, dialogue.lstrip()]))
             elif turns:
                 turns[-1][1].append(line)
-            elif line.strip():
-                raise ValueError("Dialogue must start with a configured speaker followed by ':'.")
+            else:
+                leading_lines.append(line)
 
+        if not turns:
+            raise ValueError(
+                "For Gemini 3.8 multi-speaker dialogue, label each turn with a "
+                "configured speaker followed by ':'. Use single-speaker synthesis for plain text."
+            )
         parts = [
             {"text": dialogue, "speechMetadata": {"speaker": speaker}}
             for speaker, lines in turns
@@ -534,7 +559,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         """Generate speech with multiple speakers (Google-specific feature).
 
         Args:
-            text: Conversation where each turn begins with the configured speaker and a colon
+            text: Conversation with turns labeled by configured speaker names and a colon
             speaker_configs: List of dicts with 'speaker' and 'voice' keys
             output_file: Optional path to save the audio file
             **kwargs: Additional arguments passed to the provider
@@ -623,7 +648,7 @@ class GoogleTextToSpeechModel(TextToSpeechModel):
         """Generate speech with multiple speakers asynchronously (Google-specific feature).
 
         Args:
-            text: Conversation where each turn begins with the configured speaker and a colon
+            text: Conversation with turns labeled by configured speaker names and a colon
             speaker_configs: List of dicts with 'speaker' and 'voice' keys
             output_file: Optional path to save the audio file
             **kwargs: Additional arguments passed to the provider
