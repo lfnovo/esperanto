@@ -44,6 +44,19 @@ if TYPE_CHECKING:
     from langchain_ollama import ChatOllama
 
 
+def _ollama_think_value(effort: Optional[str]) -> Optional[Union[bool, str]]:
+    """Translate a normalized ``reasoning_effort`` into Ollama's ``think`` value.
+
+    ``None`` means "send nothing", ``"none"`` turns thinking off, and levels are
+    sent as strings (``True`` would be rejected by models without thinking).
+    """
+    if effort is None:
+        return None
+    if effort == "none":
+        return False
+    return effort
+
+
 class OllamaLanguageModel(LanguageModel):
     """Ollama language model implementation."""
 
@@ -51,6 +64,9 @@ class OllamaLanguageModel(LanguageModel):
         """Initialize HTTP clients."""
         # Call parent's post_init to handle config initialization
         super().__post_init__()
+
+        # Fail at construction on an invalid reasoning_effort
+        self._resolve_reasoning_effort()
 
         # Set default base URL if not provided
         self.base_url = (
@@ -122,6 +138,11 @@ class OllamaLanguageModel(LanguageModel):
         keep_alive = self._config.get("keep_alive")
         if keep_alive is not None:
             kwargs["keep_alive"] = keep_alive
+
+        # reasoning_effort -> top-level "think"; unset sends nothing
+        think = _ollama_think_value(self._resolve_reasoning_effort())
+        if think is not None:
+            kwargs["think"] = think
 
         if resolved_structured is None:
             resolved_structured = resolve_structured_output(
@@ -668,6 +689,11 @@ class OllamaLanguageModel(LanguageModel):
         keep_alive = self._config.get("keep_alive")
         if keep_alive is not None:
             langchain_kwargs["keep_alive"] = keep_alive
+
+        # reasoning_effort -> ChatOllama.reasoning (False must survive _clean_config)
+        think = _ollama_think_value(self._resolve_reasoning_effort())
+        if think is not None:
+            langchain_kwargs["reasoning"] = think
 
         resolved_structured = resolve_structured_output(
             self.structured,

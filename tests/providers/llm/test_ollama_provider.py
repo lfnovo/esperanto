@@ -719,6 +719,152 @@ class TestParameterOverrides:
         assert json_payload["options"]["num_predict"] == 500
 
 
+class TestOllamaReasoningEffort:
+    """reasoning_effort config maps to Ollama's think / ChatOllama.reasoning."""
+
+    MESSAGES = [{"role": "user", "content": "Hello"}]
+    BODY = {
+        "model": "gemma2",
+        "message": {"role": "assistant", "content": "Test"},
+        "done": True,
+    }
+
+    def _model(self, **config):
+        model = OllamaLanguageModel(model_name="gemma2", config=config)
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = self.BODY
+        model.client = Mock()
+        model.client.post.return_value = response
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = response
+        return model
+
+    @staticmethod
+    def _payload(model):
+        return model.client.post.call_args[1]["json"]
+
+    def test_think_absent_when_reasoning_effort_unset(self):
+        model = self._model()
+        model.chat_complete(self.MESSAGES)
+        assert "think" not in self._payload(model)
+
+    def test_think_absent_when_reasoning_effort_is_none_value(self):
+        model = self._model(reasoning_effort=None)
+        model.chat_complete(self.MESSAGES)
+        assert "think" not in self._payload(model)
+
+    def test_reasoning_effort_none_sends_think_false(self):
+        model = self._model(reasoning_effort="none")
+        model.chat_complete(self.MESSAGES)
+        assert self._payload(model)["think"] is False
+
+    @pytest.mark.parametrize("level", ["low", "medium", "high"])
+    def test_reasoning_effort_level_sends_think_level(self, level):
+        model = self._model(reasoning_effort=level)
+        model.chat_complete(self.MESSAGES)
+        assert self._payload(model)["think"] == level
+
+    @pytest.mark.parametrize("value", ["none", "high"])
+    def test_reasoning_effort_not_leaked_as_top_level_key(self, value):
+        model = self._model(reasoning_effort=value)
+        model.chat_complete(self.MESSAGES)
+        assert "reasoning_effort" not in self._payload(model)
+        assert "reasoning_effort" not in self._payload(model)["options"]
+
+    @pytest.mark.parametrize("value", ["off", "HIGH", "", True])
+    def test_invalid_reasoning_effort_raises_value_error(self, value):
+        with pytest.raises(ValueError, match="reasoning_effort"):
+            OllamaLanguageModel(
+                model_name="gemma2", config={"reasoning_effort": value}
+            )
+
+    @pytest.mark.asyncio
+    async def test_async_reasoning_effort_none_sends_think_false(self):
+        model = self._model(reasoning_effort="none")
+        await model.achat_complete(self.MESSAGES)
+        payload = model.async_client.post.call_args[1]["json"]
+        assert payload["think"] is False
+
+    def test_streaming_sync_sends_think(self):
+        model = self._model(reasoning_effort="none")
+        stream_response = Mock()
+        stream_response.status_code = 200
+        stream_response.iter_lines.return_value = [
+            '{"model":"gemma2","message":{"role":"assistant","content":""},"done":true}\n'
+        ]
+        model.client.post.return_value = stream_response
+        list(model.chat_complete(self.MESSAGES, stream=True))
+        assert self._payload(model)["think"] is False
+
+    @pytest.mark.asyncio
+    async def test_streaming_async_sends_think(self):
+        model = self._model(reasoning_effort="low")
+
+        async def lines():
+            yield '{"model":"gemma2","message":{"role":"assistant","content":""},"done":true}\n'
+
+        stream_response = Mock()
+        stream_response.status_code = 200
+        stream_response.aiter_lines = lines
+        model.async_client.post.return_value = stream_response
+        stream = await model.achat_complete(self.MESSAGES, stream=True)
+        async for _ in stream:
+            pass
+        assert model.async_client.post.call_args[1]["json"]["think"] == "low"
+
+    def test_think_coexists_with_keep_alive_and_num_ctx(self):
+        model = self._model(
+            reasoning_effort="none", keep_alive="10m", num_ctx=4096
+        )
+        model.chat_complete(self.MESSAGES)
+        payload = self._payload(model)
+        assert payload["think"] is False
+        assert payload["keep_alive"] == "10m"
+        assert payload["options"]["num_ctx"] == 4096
+
+    def test_think_coexists_with_structured_output(self):
+        model = OllamaLanguageModel(
+            model_name="gemma2",
+            structured={"type": "json"},
+            config={"reasoning_effort": "none"},
+        )
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            **self.BODY,
+            "message": {"role": "assistant", "content": "{}"},
+        }
+        model.client = Mock()
+        model.client.post.return_value = response
+        model.chat_complete(self.MESSAGES)
+        payload = self._payload(model)
+        assert payload["format"] == "json"
+        assert payload["think"] is False
+
+    def test_to_langchain_reasoning_unset_by_default(self):
+        assert OllamaLanguageModel(model_name="gemma2").to_langchain().reasoning is None
+
+    def test_to_langchain_reasoning_none_value_in_config_leaves_default(self):
+        lc = OllamaLanguageModel(
+            model_name="gemma2", config={"reasoning_effort": None}
+        ).to_langchain()
+        assert lc.reasoning is None
+
+    def test_to_langchain_reasoning_effort_none_sets_reasoning_false(self):
+        lc = OllamaLanguageModel(
+            model_name="gemma2", config={"reasoning_effort": "none"}
+        ).to_langchain()
+        assert lc.reasoning is False
+
+    @pytest.mark.parametrize("level", ["low", "medium", "high"])
+    def test_to_langchain_reasoning_effort_level(self, level):
+        lc = OllamaLanguageModel(
+            model_name="gemma2", config={"reasoning_effort": level}
+        ).to_langchain()
+        assert lc.reasoning == level
+
+
 class TestToolCallValidation:
     """Tests for tool call validation."""
 
