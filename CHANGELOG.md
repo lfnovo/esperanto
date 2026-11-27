@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Ollama `reasoning_effort` config.** New optional config key
+  (`"none" | "low" | "medium" | "high"`) for the Ollama language model.
+  `"none"` sends `think: false` and levels send `think: "<level>"`; on
+  `to_langchain()` it sets `ChatOllama(reasoning=...)`. Unset keeps the previous
+  behavior (nothing is sent). Invalid values raise `ValueError` at construction.
+  Fixes thinking models exhausting `max_tokens` on their reasoning trace. Other
+  providers are not mapped yet. (Part of #293)
+
 ## [2.28.0] - 2026-10-03
 
 ### Added

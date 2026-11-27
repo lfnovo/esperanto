@@ -2,6 +2,7 @@
 
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
+import pytest
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from esperanto import LanguageModel
@@ -419,3 +420,25 @@ def test_language_model_backward_compatible_without_tools():
 
     assert response is not None
     assert isinstance(response, ChatCompletion)
+
+
+def test_resolve_reasoning_effort_unset_returns_none():
+    assert TestLanguageModel(model_name="m")._resolve_reasoning_effort() is None
+
+
+def test_resolve_reasoning_effort_none_value_returns_none():
+    model = TestLanguageModel(model_name="m", config={"reasoning_effort": None})
+    assert model._resolve_reasoning_effort() is None
+
+
+@pytest.mark.parametrize("value", ["none", "low", "medium", "high"])
+def test_resolve_reasoning_effort_accepts_each_value(value):
+    model = TestLanguageModel(model_name="m", config={"reasoning_effort": value})
+    assert model._resolve_reasoning_effort() == value
+
+
+@pytest.mark.parametrize("value", ["off", "HIGH", "", True, 1])
+def test_resolve_reasoning_effort_rejects_invalid(value):
+    model = TestLanguageModel(model_name="m", config={"reasoning_effort": value})
+    with pytest.raises(ValueError, match="reasoning_effort"):
+        model._resolve_reasoning_effort()
