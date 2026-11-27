@@ -252,6 +252,31 @@ model = AIFactory.create_language(
 )
 ```
 
+**Reasoning Effort (`reasoning_effort`):**
+
+Thinking models (for example GGUF builds of reasoning models) can spend the whole `max_tokens` budget on their reasoning trace and return an empty `content` with `finish_reason="length"`. Set `reasoning_effort` in `config` to control this:
+
+```python
+# Turn thinking off (sends think: false)
+model = AIFactory.create_language(
+    "ollama",
+    "my-reasoning-model",
+    config={"reasoning_effort": "none"}
+)
+```
+
+| Value | Sent to Ollama |
+|---|---|
+| unset (default) | nothing: Ollama's own default applies |
+| `"none"` | `think: false` |
+| `"low"`, `"medium"`, `"high"` | `think: "low"` / `"medium"` / `"high"` |
+
+- Any other value raises `ValueError` when the model is created.
+- It applies to `chat_complete()`, `achat_complete()` (streaming or not) and `to_langchain()` (`ChatOllama(reasoning=...)`).
+- Levels only change behavior on models that support them (gpt-oss). On other thinking models, any level behaves like "thinking on".
+- Models without thinking support ignore `"none"` and the levels without error.
+- Not verified on Ollama versions that predate thinking levels.
+
 **Example - Remote Ollama Server:**
 
 ```python

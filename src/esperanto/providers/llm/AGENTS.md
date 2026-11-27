@@ -238,3 +238,10 @@ Some providers (OpenAI o1, DeepSeek R1) have reasoning models with special const
 - Reasoning traces in responses
 
 Handle these models separately or with conditional logic based on model name.
+
+**Ollama `reasoning_effort`** (config-only key, `none|low|medium|high`; validated by
+`LanguageModel._resolve_reasoning_effort()` at construction): `none` → `think: false`,
+levels → `think: "<level>"` (never `true`: models without thinking answer 400). On
+`to_langchain()` it becomes `ChatOllama(reasoning=...)`. Unset sends nothing. The key is
+read from `self._config`; it is not a dataclass attribute and must not leak into the
+payload. Other providers do not map it yet.
