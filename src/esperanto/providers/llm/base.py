@@ -8,6 +8,9 @@ from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 from esperanto.common_types import ChatCompletion, ChatCompletionChunk, Model, Tool
 from esperanto.utils.connect import HttpConnectionMixin
 
+REASONING_EFFORT_VALUES = ("none", "low", "medium", "high")
+"""Accepted values for the optional ``reasoning_effort`` config key."""
+
 
 @dataclass
 class LanguageModel(HttpConnectionMixin, ABC):
@@ -85,6 +88,22 @@ class LanguageModel(HttpConnectionMixin, ABC):
             for key, value in self._config.items():
                 if hasattr(self, key):
                     setattr(self, key, value)
+
+    def _resolve_reasoning_effort(self) -> Optional[str]:
+        """Return the validated ``reasoning_effort`` config value, if any.
+
+        Raises:
+            ValueError: If the value is set and not in ``REASONING_EFFORT_VALUES``.
+        """
+        value = self._config.get("reasoning_effort")
+        if value is None:
+            return None
+        if not isinstance(value, str) or value not in REASONING_EFFORT_VALUES:
+            raise ValueError(
+                f"Invalid reasoning_effort {value!r}. "
+                f"Expected one of: {', '.join(REASONING_EFFORT_VALUES)}."
+            )
+        return value
 
     def _clean_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Remove None values from config dictionary."""
