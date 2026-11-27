@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Ollama reports `finish_reason` from `done_reason`.** The native Ollama
+  provider always returned `finish_reason="stop"`. It now returns `"length"`
+  when Ollama reports `done_reason: "length"` (output truncated by the token
+  limit), in both full responses and the final streaming chunk. Tool calls still
+  take precedence (`"tool_calls"`). Code that compared `finish_reason == "stop"`
+  on truncated Ollama responses will now see `"length"`.
+
 ## [2.28.0] - 2026-10-03
 
 ### Added

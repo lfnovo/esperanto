@@ -719,6 +719,86 @@ class TestParameterOverrides:
         assert json_payload["options"]["num_predict"] == 500
 
 
+class TestOllamaFinishReason:
+    """finish_reason is derived from Ollama's done_reason."""
+
+    MESSAGES = [{"role": "user", "content": "Hello"}]
+
+    @staticmethod
+    def _body(content="Test", done_reason=None, tool_calls=None):
+        message = {"role": "assistant", "content": content}
+        if tool_calls:
+            message["tool_calls"] = tool_calls
+        body = {"model": "gemma2", "message": message, "done": True}
+        if done_reason is not None:
+            body["done_reason"] = done_reason
+        return body
+
+    def _model(self, body):
+        model = OllamaLanguageModel(model_name="gemma2")
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = body
+        model.client = Mock()
+        model.client.post.return_value = response
+        return model
+
+    def test_length_with_empty_content(self):
+        model = self._model(self._body(content="", done_reason="length"))
+        result = model.chat_complete(self.MESSAGES)
+        assert result.choices[0].finish_reason == "length"
+
+    def test_stop(self):
+        model = self._model(self._body(done_reason="stop"))
+        result = model.chat_complete(self.MESSAGES)
+        assert result.choices[0].finish_reason == "stop"
+
+    def test_missing_done_reason_defaults_to_stop(self):
+        model = self._model(self._body())
+        result = model.chat_complete(self.MESSAGES)
+        assert result.choices[0].finish_reason == "stop"
+
+    def test_tool_calls_take_precedence_over_length(self):
+        tool_calls = [
+            {"function": {"name": "get_weather", "arguments": {"city": "Paris"}}}
+        ]
+        model = self._model(self._body(done_reason="length", tool_calls=tool_calls))
+        result = model.chat_complete(self.MESSAGES)
+        assert result.choices[0].finish_reason == "tool_calls"
+
+    def test_streaming_final_chunk_reports_length(self):
+        lines = [
+            '{"model":"gemma2","message":{"role":"assistant","content":"Te"},"done":false}\n',
+            '{"model":"gemma2","message":{"role":"assistant","content":"st"},"done":false}\n',
+            '{"model":"gemma2","message":{"role":"assistant","content":""},"done":true,"done_reason":"length"}\n',
+        ]
+        model = OllamaLanguageModel(model_name="gemma2")
+        response = Mock()
+        response.status_code = 200
+        response.iter_lines.return_value = lines
+        model.client = Mock()
+        model.client.post.return_value = response
+
+        chunks = list(model.chat_complete(self.MESSAGES, stream=True))
+        reasons = [c.choices[0].finish_reason for c in chunks]
+        # StreamChoice stringifies a passed None to "None" (existing quirk in
+        # common_types); either form means "no finish reason yet".
+        assert all(r in (None, "None") for r in reasons[:-1])
+        assert reasons[-1] == "length"
+
+    @pytest.mark.asyncio
+    async def test_async_length(self):
+        model = OllamaLanguageModel(model_name="gemma2")
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = self._body(content="", done_reason="length")
+        model.async_client = AsyncMock()
+        model.async_client.post.return_value = response
+
+        result = await model.achat_complete(self.MESSAGES)
+        assert result.choices[0].finish_reason == "length"
+
+
 class TestToolCallValidation:
     """Tests for tool call validation."""
 
