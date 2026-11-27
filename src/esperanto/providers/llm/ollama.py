@@ -532,9 +532,9 @@ class OllamaLanguageModel(LanguageModel):
                 )
 
         # Determine finish_reason
-        finish_reason = "stop"
-        if tool_calls:
-            finish_reason = "tool_calls"
+        finish_reason = self._map_finish_reason(
+            response.get("done_reason"), bool(tool_calls)
+        )
 
         return ChatCompletion(
             id=str(uuid.uuid4()),
@@ -559,6 +559,15 @@ class OllamaLanguageModel(LanguageModel):
                 total_tokens=response.get("eval_count", 0) + response.get("prompt_eval_count", 0),
             ),
         )
+
+    @staticmethod
+    def _map_finish_reason(done_reason: Optional[str], has_tool_calls: bool) -> str:
+        """Map Ollama's done_reason to the OpenAI finish_reason vocabulary."""
+        if has_tool_calls:
+            return "tool_calls"
+        if done_reason == "length":
+            return "length"
+        return "stop"
 
     def _normalize_chunk(self, chunk: Dict[str, Any]) -> ChatCompletionChunk:
         """Normalize a streaming chat completion chunk."""
@@ -589,7 +598,9 @@ class OllamaLanguageModel(LanguageModel):
         # Determine finish_reason
         finish_reason = None
         if chunk.get("done", False):
-            finish_reason = "tool_calls" if tool_calls_data else "stop"
+            finish_reason = self._map_finish_reason(
+                chunk.get("done_reason"), bool(tool_calls_data)
+            )
 
         return ChatCompletionChunk(
             id=str(uuid.uuid4()),

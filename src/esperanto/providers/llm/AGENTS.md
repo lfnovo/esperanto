@@ -118,6 +118,11 @@ Anthropic has no enforceable JSON mode: `{"type": "json"}` sends no constraint
 Anthropic `stop_reason` maps to OpenAI `finish_reason` vocabulary
 (`end_turn`→`stop`, `tool_use`→`tool_calls`, `max_tokens`→`length`,
 `refusal`→`content_filter`).
+Ollama (native path) derives `finish_reason` from `done_reason`: tool calls →
+`tool_calls`, else `length` → `length`, else `stop`. When streaming, only the
+final chunk (`done: true`) carries a `finish_reason`, and it is `tool_calls`
+only if that same chunk holds the tool calls; Ollama usually sends them in an
+earlier chunk, so the final chunk then reports `stop`.
 
 The parsed object is exposed at `response.structured` (a property mirroring
 `content`, reading `choices[0].message.structured`). Schema mode is non-streaming
